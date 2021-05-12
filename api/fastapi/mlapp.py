@@ -393,11 +393,13 @@ async def qa_infer(query: dict, response: Response) -> dict:
             context = "\n\n".join([context, page])
 
 
-        answers = qa_model.answer(query_text, wiki_text)
-        answers_list = answers.split("/")
-        answers_list = [x.strip() for x in answers_list if x.rstrip()]
-        logger.info(answers_list)
-        results["answers"] = answers_list
+        answers = qa_model.answer(query_text, context)
+        #answers_list = answers.split("/")
+        #answers_list = [x.strip() for x in answers_list if x.rstrip()]
+        #logger.info(answers_list)
+        logger.info(answers)
+        results["answers"] = answers
+        #results["answers"] = answers_list
 
         results["question"] = query_text
     except Exception:
