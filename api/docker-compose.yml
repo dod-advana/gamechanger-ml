@@ -19,9 +19,12 @@ services:
         reservations:
           devices:
           - capabilities: [gpu]
+            #runtime: nvidia
+            #command: nvidia-smi
     ports:
       - "5000:5000"
     environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
       - GC_ML_HOST=${GC_ML_HOST}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
