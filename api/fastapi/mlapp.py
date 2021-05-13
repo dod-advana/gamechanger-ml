@@ -20,6 +20,7 @@ from dataScience.src.featurization.keywords.extract_keywords import get_keywords
 # from dataScience.models.topic_models.tfidf import bigrams, tfidf_model
 from dataScience.src.text_handling.process import topic_processing
 from dataScience.src.featurization.summary import GensimSumm
+from dataScience.configs.config import QAConfig
 
 import urllib3
 import redis
@@ -30,6 +31,7 @@ import os
 import json
 import logging
 import en_core_web_lg
+import time
 
 # start API
 app = FastAPI()
@@ -139,7 +141,7 @@ async def initQA():
         qa_model_path = os.path.join(
             LOCAL_TRANSFORMERS_DIR, "bert-base-cased-squad2")
         logger.info("Starting QA pipeline")
-        qa_model = QAReader(qa_model_path, use_gpu=True)
+        qa_model = QAReader(qa_model_path, use_gpu=True, **QAConfig.MODEL_ARGS)
         cache.set("latest_qa_model", qa_model_path)
         logger.info("Finished loading QA Reader")
     except OSError:
@@ -384,30 +386,23 @@ async def qa_infer(query: dict, response: Response) -> dict:
     """
     logger.debug("QUESTION ANSWER - predicting query: " + str(query["query"]))
     results = {}
+    
     try:
         query_text = query["query"]
         query_context = query["search_context"]
-        context = ""
-        # need 10 documents
-        for page in query_context:
-            context = "\n\n".join([context, page])
-
-
-        answers = qa_model.answer(query_text, context)
-        #answers_list = answers.split("/")
-        #answers_list = [x.strip() for x in answers_list if x.rstrip()]
-        #logger.info(answers_list)
+        start = time.perf_counter()
+        answers = qa_model.answer(query_text, query_context)
+        end = time.perf_counter()
         logger.info(answers)
+        logger.info(f"time: {end - start:0.4f} seconds")
         results["answers"] = answers
-        #results["answers"] = answers_list
-
         results["question"] = query_text
+
     except Exception:
         logger.error(f"Unable to get results from QA model for {query}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise
     return results
-
 
 def unquoted(term):
     """unquoted - unquotes string
@@ -420,7 +415,6 @@ def unquoted(term):
         return term[1:-1]
     else:
         return term
-
 
 @app.post("/expandTerms", status_code=200)
 async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
