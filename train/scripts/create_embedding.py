@@ -31,9 +31,9 @@ def create_tgz_from_dir(
         args=[
             "tar",
             "-czf",
-            str(dst_archive),
-            "-C",
             str(src_dir),
+            "-C",
+            str(dst_archive),
             *(exclude_junk_args if exclude_junk else []),
             ".",
         ],
