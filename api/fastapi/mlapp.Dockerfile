@@ -1,4 +1,12 @@
-FROM nvidia/cuda:11.0-base
+FROM python:3.6.13-buster
+#FROM nvidia/cuda:11.0-base
+RUN curl -s -L https://nvidia.github.io/nvidia-container-runtime/gpgkey | \
+  apt-key add -
+# distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+RUN curl -s -L https://nvidia.github.io/nvidia-container-runtime/ubuntu18.04/nvidia-container-runtime.list | \
+  tee /etc/apt/sources.list.d/nvidia-container-runtime.list
+RUN apt-get update
+RUN apt-get install -y nvidia-container-runtime
 CMD nvidia-smi
 #set up environment
 RUN apt-get update && apt-get install --no-install-recommends --no-install-suggests -y curl
