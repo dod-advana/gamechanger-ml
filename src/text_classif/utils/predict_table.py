@@ -34,7 +34,7 @@ from dataScience.src.featurization.abbreviations_utils import get_references, ge
 
 logger = logging.getLogger(__name__)
 
-#TODO: Replace Spacy reference with GC spacy module?
+#TODO: Replace Spacy reference with GC spacy module
 spacy_model_ = spacy.load('en_core_web_lg')
 
 if __name__ == "__main__":
