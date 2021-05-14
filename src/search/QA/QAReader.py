@@ -273,7 +273,7 @@ class DocumentReader:
         inputs, tracker = self.tokenize(question, context)
         ## TODO: check this works on gpu
         if self.use_gpu:
-            inputs = {key: value.detach().cpu() for key, value in inputs.items()}
+            inputs = [{key: value.detach().cpu() for key, value in input.items()} for input in inputs]
         all_answers = []
         if self.qa_type == 'scored_answer':
             for idx, values in enumerate(inputs):
