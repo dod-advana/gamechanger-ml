@@ -10,15 +10,15 @@ import torch
 from collections import OrderedDict
 import collections
 import numpy as np
-from typing import List
+from typing import List, NamedTuple, Tuple, Dict, Union, Any
 
-def to_list(tensor):
-    """Converts tensor to list"""
+def to_list(tensor: torch.Tensor) -> List[float]:
+    """ Converts tensor to list """
 
     return tensor.detach().cpu().tolist()
 
-def prediction_probabilities(predictions):
-    """Calculates probabilities of answers (optional, not used)"""
+def prediction_probabilities(predictions: NamedTuple) -> float:
+    """ Calculates probabilities of answers (optional, not used) """
 
     def softmax(x):
         """Compute softmax values for each sets of scores in x."""
@@ -28,7 +28,7 @@ def prediction_probabilities(predictions):
     all_scores = [pred.start_logit + pred.end_logit for pred in predictions]
     return softmax(np.array(all_scores))
 
-def compute_score_difference(predictions):
+def compute_score_difference(predictions: NamedTuple) -> float:
     """ Calculates difference in scores from null answer and best answer """
     # assumes that the null answer is always the last prediction
     score_null = predictions[-1].start_logit + predictions[-1].end_logit
@@ -36,7 +36,7 @@ def compute_score_difference(predictions):
 
     return score_null - score_non_null
 
-def sort_answers(answers):
+def sort_answers(answers: List[Tuple]) -> List[Dict[str, Union[str, float]]]:
     """ Sorts the answers of all context based on null score difference (scored_answer only) """
     sorted_answers = sorted(answers, key=lambda x: x[1], reverse=False)
     app_answers = []
@@ -52,7 +52,7 @@ def sort_answers(answers):
     return app_answers
 
 class DocumentReader:
-    def __init__(self, model_path, qa_type, nbest, null_threshold, use_gpu=False):
+    def __init__(self, model_path: str, qa_type: str, nbest: int, null_threshold: float, use_gpu: bool=False):
 
         self.READER_PATH = model_path
         self.tokenizer = AutoTokenizer.from_pretrained(self.READER_PATH)
@@ -70,7 +70,7 @@ class DocumentReader:
             else:
                 self.use_gpu = False
 
-    def tokenize(self, question: str, context: List[str]):
+    def tokenize(self, question: str, context: List[str]) -> Tuple[List[Dict[str, torch.Tensor]], List[int]]:
         """Takes in a question and context and creates tokenized inputs for each chunk/context."""
         all_inputs = []
         context_flag = 0 # which piece of context in list of context produced the input
@@ -79,7 +79,9 @@ class DocumentReader:
             inputs = self.tokenizer.encode_plus(question, i, add_special_tokens=True, return_tensors="pt")
             input_ids = inputs["input_ids"].tolist()[0]
             if len(input_ids) > self.max_len: # if the context paragraph is too long, break it up
+                print(f"CHUNKING INPUT {i}")
                 inputs = self.chunkify(inputs)
+                print(inputs)
                 all_inputs.extend(inputs)
                 context_tracker.extend([context_flag] * len(inputs))
             else:
@@ -87,9 +89,11 @@ class DocumentReader:
                 context_tracker.append(context_flag)
             context_flag += 1
 
+        print("ALL INPUTS")
+        print(all_inputs)
         return all_inputs, context_tracker
 
-    def chunkify(self, inputs):
+    def chunkify(self, inputs: Dict[str, torch.Tensor]) -> List[Dict[str, torch.Tensor]]:
         """
         Break up a long article into chunks that fit within the max token
         requirement for that Transformer model.
@@ -123,14 +127,17 @@ class DocumentReader:
                         thing = torch.cat((thing, torch.tensor([1])))
 
                 chunked_input[i][k] = torch.unsqueeze(thing, dim=0)
-        return chunked_input
 
-    def get_clean_text(self, input_ids):
+        new_inputs = [i for i in chunked_input.values()]
+
+        return new_inputs
+
+    def get_clean_text(self, input_ids: List[int]) -> str:
         """ Convert tokens back to text """
         text = self.tokenizer.convert_tokens_to_string(self.tokenizer.convert_ids_to_tokens(input_ids))
         return " ".join(text.strip().split())
 
-    def preliminary_predictions(self, start_logits, end_logits, input_ids):
+    def preliminary_predictions(self, start_logits: torch.Tensor, end_logits: torch.Tensor, input_ids: List[int]) -> NamedTuple:
         """ Get possible predicted pairs """
 
         # convert tensors to lists
@@ -174,7 +181,7 @@ class DocumentReader:
 
         return prelim_preds
 
-    def best_predictions(self, prelim_preds, start_logits, end_logits, input_ids):
+    def best_predictions(self, prelim_preds: NamedTuple, start_logits: torch.Tensor, end_logits: torch.Tensor, input_ids: List[int]) -> NamedTuple:
         """Get nbest predictions from the preliminary predictions"""
         # keep track of all best predictions
         start_logits = to_list(start_logits)[0]
@@ -219,7 +226,7 @@ class DocumentReader:
 
         return nbest_predictions
 
-    def one_passage_answers(self, start_logits, end_logits, input_ids):
+    def one_passage_answers(self, start_logits: torch.Tensor, end_logits: torch.Tensor, input_ids: List[int]) -> Tuple[str, float]:
         """ Get best (scored) answers for one context input """
         prelim_preds = self.preliminary_predictions(start_logits, end_logits, input_ids)
         nbest_preds = self.best_predictions(prelim_preds, start_logits, end_logits, input_ids)
@@ -231,7 +238,7 @@ class DocumentReader:
         else:
             return nbest_preds[0].text, score_difference
 
-    def get_argmax_answer(self, inputs):
+    def get_argmax_answer(self, inputs: Dict[str, torch.Tensor]) -> str:
         """ Simple Answer: retrieves the start/end pair with the highest score."""
         answer_start = torch.argmax(self.model(**inputs)["start_logits"])
         answer_end = torch.argmax(self.model(**inputs)["end_logits"]) + 1
@@ -242,7 +249,7 @@ class DocumentReader:
         else:
             return ""
 
-    def get_robust_prediction(self, inputs):
+    def get_robust_prediction(self, inputs: Dict[str, torch.Tensor]) -> Tuple[str, float]:
         """ Score Answer: retrieves up to nbest answers per context input and their difference from the null score."""
         start_logits = self.model(**inputs)["start_logits"]
         end_logits = self.model(**inputs)["end_logits"]
@@ -251,16 +258,15 @@ class DocumentReader:
 
         return ans, diff
 
-    def answer(self, question, context):
+    def answer(self, question: str, context: List[str]) -> List[Dict[str, Union[str, float, int]]]:
         """
-        Main function called by mlapp. 
+        Main function called by mlapp to query QA model.
         
         Args:
             - question (str)
             - context (List[str])
-
         Returns:
-            - 
+            - answers (List[Dict]): each answer is a dictionary including text, context index, and score (if scored)
         """
         print(f"Question: {question}")
 
@@ -273,11 +279,10 @@ class DocumentReader:
             for idx, values in enumerate(inputs):
                 answer, diff = self.get_robust_prediction(values)
                 all_answers.append((answer, diff, tracker[idx]))
-            app_answers = sort_answers(all_answers)
+            all_answers = sort_answers(all_answers)
         elif self.qa_type == 'simple_answer':
             for idx, values in enumerate(inputs):
                 answer = self.get_argmax_answer(values)
-                all_answers.append((answer, tracker[idx]))
-            app_answers = all_answers
+                all_answers.append({"text": answer, "context": tracker[idx]})
         
-        return app_answers
+        return all_answers
