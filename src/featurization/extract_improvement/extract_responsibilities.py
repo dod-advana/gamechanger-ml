@@ -1,9 +1,3 @@
-import os
-try:
-    os.chdir(os.path.join(os.getcwd(), 'c:\\Users\\602870\\Desktop\\gamechanger\\gamechanger'))
-except:
-    pass
-
 import pandas as pd
 import numpy as np
 import re
