@@ -7,6 +7,16 @@ from dataScience.src.featurization.extract_improvement.extract_utils import \
     extract_entities, create_list_from_dict, remove_articles, match_parenthesis
 
 def get_agency(df, spacy_model):
+    """
+    Extract potential agencies from responsibilities text and cleans output.
+
+    Args:
+    df: Input responsibilities dataframe
+    spacy_model: Spacy langauge model (typically 'en_core_web_lg')
+
+    Returns:
+    [List]
+    """
     clean_df = df['agencies'].replace(np.nan, '', regex=True)
     all_docs = []
 
