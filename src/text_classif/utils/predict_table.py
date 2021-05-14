@@ -115,7 +115,6 @@ if __name__ == "__main__":
     }
 
     start = time.time()
-    #TODO: Figure out how to loop through the generator properly--ask Chris
     for f in os.listdir(args.data_path):
         entity_coref = EntityCoref()
         _ = entity_coref.make_table(
