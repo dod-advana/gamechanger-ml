@@ -77,6 +77,8 @@ class DocumentReader:
         context_tracker = [] # keeps track of where inputs came from
         for i in context:
             inputs = self.tokenizer.encode_plus(question, i, add_special_tokens=True, return_tensors="pt")
+            print("NORMAL INPUTS")
+            print(inputs)
             input_ids = inputs["input_ids"].tolist()[0]
             if len(input_ids) > self.max_len: # if the context paragraph is too long, break it up
                 print(f"CHUNKING INPUT {i}")
@@ -272,17 +274,21 @@ class DocumentReader:
 
         inputs, tracker = self.tokenize(question, context)
         ## TODO: check this works on gpu
-        if self.use_gpu:
-            inputs = [{key: value.detach().cpu() for key, value in input.items()} for input in inputs]
+        #if self.use_gpu:
+        #    inputs = [{key: value.detach().cpu() for key, value in input.items()} for input in inputs]
         all_answers = []
         if self.qa_type == 'scored_answer':
-            for idx, values in enumerate(inputs):
-                answer, diff = self.get_robust_prediction(values)
+            for idx, inp in enumerate(inputs):
+                if self.use_gpu:
+                    inp = {key: value.cuda() for key, value in inp}
+                answer, diff = self.get_robust_prediction(inp)
                 all_answers.append((answer, diff, tracker[idx]))
             all_answers = sort_answers(all_answers)
         elif self.qa_type == 'simple_answer':
-            for idx, values in enumerate(inputs):
-                answer = self.get_argmax_answer(values)
+            for idx, inp in enumerate(inp):
+                if self.use_gpu:
+                    inp = {key: value.cuda() for key, value in inp}
+                answer = self.get_argmax_answer(inp)
                 all_answers.append({"text": answer, "context": tracker[idx]})
         
         return all_answers
