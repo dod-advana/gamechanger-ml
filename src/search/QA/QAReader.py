@@ -280,14 +280,14 @@ class DocumentReader:
         if self.qa_type == 'scored_answer':
             for idx, inp in enumerate(inputs):
                 if self.use_gpu:
-                    inp = {key: value.cuda() for key, value in inp}
+                    inp = {key: value.cuda() for (key, value) in inp.items()}
                 answer, diff = self.get_robust_prediction(inp)
                 all_answers.append((answer, diff, tracker[idx]))
             all_answers = sort_answers(all_answers)
         elif self.qa_type == 'simple_answer':
-            for idx, inp in enumerate(inp):
+            for idx, inp in enumerate(inputs):
                 if self.use_gpu:
-                    inp = {key: value.cuda() for key, value in inp}
+                    inp = {key: value.cuda() for (key, value) in inp.items()}
                 answer = self.get_argmax_answer(inp)
                 all_answers.append({"text": answer, "context": tracker[idx]})
         
