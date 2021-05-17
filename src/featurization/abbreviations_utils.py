@@ -1,10 +1,9 @@
-import os
 import pandas as pd
 from nltk import tokenize
-import pickle
 import re
 
-from common.document_parser.issuance_ref import collect_ref_list
+# from common.document_parser.issuance_ref import collect_ref_list
+from common.document_parser.lib.ref_list import collect_ref_list
 
 
 # FUNCTIONS
@@ -19,10 +18,7 @@ def get_agencies_dict(agencies_file):
 
     """
     df = pd.read_csv(agencies_file)
-    # agencies = list(df["Agency_Name"])
-    # agencies = [x.lower() for x in agencies]
 
-    agencies = []
     aliases = {}
     duplicates = []
 
@@ -109,7 +105,6 @@ def get_references(file_dataframe, doc_title_col='doc'):
                     refs.append(list(collect_ref_list(row[j]).keys()))
         flat_r = [item for sublist in refs for item in sublist]
         flat_r = list(set(flat_r))
-        # df.at[i,'ref'] = flat_r
         all_refs.append(flat_r)
 
     return all_refs
