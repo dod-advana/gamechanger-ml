@@ -4,7 +4,8 @@ from nltk import tokenize
 import pickle
 import re
 
-from common.document_parser.issuance_ref import collect_ref_list
+# from common.document_parser.issuance_ref import collect_ref_list
+from common.document_parser.lib.ref_list import collect_ref_list
 
 
 # FUNCTIONS
