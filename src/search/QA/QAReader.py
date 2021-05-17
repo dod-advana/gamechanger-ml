@@ -77,13 +77,9 @@ class DocumentReader:
         context_tracker = [] # keeps track of where inputs came from
         for i in context:
             inputs = self.tokenizer.encode_plus(question, i, add_special_tokens=True, return_tensors="pt")
-            print("NORMAL INPUTS")
-            print(inputs)
             input_ids = inputs["input_ids"].tolist()[0]
             if len(input_ids) > self.max_len: # if the context paragraph is too long, break it up
-                print(f"CHUNKING INPUT {i}")
                 inputs = self.chunkify(inputs)
-                print(inputs)
                 all_inputs.extend(inputs)
                 context_tracker.extend([context_flag] * len(inputs))
             else:
@@ -91,8 +87,6 @@ class DocumentReader:
                 context_tracker.append(context_flag)
             context_flag += 1
 
-        print("ALL INPUTS")
-        print(all_inputs)
         return all_inputs, context_tracker
 
     def chunkify(self, inputs: Dict[str, torch.Tensor]) -> List[Dict[str, torch.Tensor]]:
