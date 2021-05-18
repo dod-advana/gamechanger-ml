@@ -498,12 +498,8 @@ class Classifier(object):
 
         if self.cfg.checkpoint_path is not None:
             self.runtime["timestamp"] = time.time()
-            checkpoint_dir = os.path.join(
-                self.cfg.checkpoint_path,
-                self.cfg.checkpoint_path + "_epoch_{}".format(epoch + 1),
-            )
             ch.write_checkpoint(
-                checkpoint_dir,
+                self.cfg.checkpoint_path,
                 self.model,
                 self.tokenizer,
                 avg_val_loss,

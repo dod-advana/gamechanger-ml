@@ -85,7 +85,7 @@ def main(config_yaml, data_file, model_type, num_samples, checkpoint_path):
         rs = clf.fit(train_txt, train_labels)
         return rs
     except (FileNotFoundError, ValueError, AttributeError) as e:
-        logger.fatal("{}: {}".format(type(e), str(e)), exc_info=True)
+        logger.fatal("{}: {}".format(type(e), str(e)), exc_info=False)
         raise e
 
 
