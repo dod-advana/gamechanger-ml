@@ -70,5 +70,5 @@ class QAConfig:
     MODEL_ARGS = {
         "qa_type": 'scored_answer', # options are: ['scored_answer', 'simple_answer']
         "nbest": 1, # number of answers to retrieve from each context for comparison
-        "null_threshold": -5.6 # if diff between the answer score and null answer score is greater than this threshold, don't return answer
+        "null_threshold": -3 # if diff between the answer score and null answer score is greater than this threshold, don't return answer
     }
