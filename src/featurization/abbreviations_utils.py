@@ -71,12 +71,12 @@ def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
     for i, row in combined_cols.iterrows():
         agencies = []
         for x in aliases.keys():
-            if " "+x in row['text']:
+            if " " + x in row['text']:
                 if x not in duplicates:
                     agencies.append(aliases[x])
                 if doc_dups is not None:
                     if doc_dups[i] is not None:
-                            agencies.append(doc_dups[i])
+                        agencies.append(doc_dups[i])
         flat_a = [item for sublist in agencies for item in sublist]
         flat_a = [''.join(x) for x in flat_a]
         flat_a = set(flat_a)
@@ -99,12 +99,12 @@ def get_references(file_dataframe, doc_title_col='doc'):
     all_refs = []
 
     for i, row in df.iterrows():
-        for j in list(df.columns):
-            if isinstance(row[j],str):
-                if ":" in row[j]:
-                    if "shall" in row[j]:
-                        a = tokenize.sent_tokenize(re.sub('\n',' ',row[j]))[-1].split("shall")[0]
-                        df.at[i,'entity'] = a
+        # for j in list(df.columns):
+        #     if isinstance(row[j],str):
+        #         if ":" in row[j]:
+        #             if "shall" in row[j]:
+        #                 a = tokenize.sent_tokenize(re.sub('\n',' ',row[j]))[-1].split("shall")[0]
+        #                 df.at[i,'entity'] = a
 
         refs = []
         for j in list(df.columns):

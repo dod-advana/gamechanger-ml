@@ -80,7 +80,7 @@ class EntityCoref(object):
             elif entry[self.TC] == 1:
                 if curr_entity == self.NA:
                     curr_entity = last_entity
-                    last_entity = curr_entity
+                    # last_entity = curr_entity
                 new_entry[self.ENT] = curr_entity
                 logger.debug("entity : {}".format(curr_entity))
             entity_list.append(new_entry)
@@ -98,9 +98,7 @@ class EntityCoref(object):
                 entity_list.append(e_dict)
         return entity_list
 
-    def make_table(
-        self, model_path, data_path, glob, max_seq_len, batch_size, output_csv
-    ):
+    def make_table(self, model_path, data_path, glob, max_seq_len, batch_size):
         """
         Loop through the documents, predict each piece of text and attach
         an entity.
