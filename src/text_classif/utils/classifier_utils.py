@@ -25,6 +25,8 @@ PL = "P.L."
 PL_SPACE = "P. L."
 USC_RE = "\\b" + USC + "\\b"
 
+dd_re = re.compile("(^\\d\\..*?\\d+\\. )")
+
 # TODO consolidate these into something better
 
 
@@ -76,7 +78,6 @@ def cola_data(data_file):
         logger.fatal("{} : {}".format(type(e), str(e)))
         logger.fatal("\n\n\tThat was a fatal error my friend")
         raise e
-
 
 def _read_gc_df(data_file):
     df = pd.read_csv(
@@ -170,7 +171,7 @@ def gc_data(data_file, neg_data_file, shuffle=True, topn=0):
         logger.fatal("\n\n\tThat was a fatal error my friend")
         raise e
 
-
+        
 def gc_data_tvt(data_file, topn=0, ident="", split=0.90):
     try:
         df = _read_gc_df(data_file)
@@ -215,7 +216,7 @@ def gc_data_tvt(data_file, topn=0, ident="", split=0.90):
         logger.fatal("\n\n\tThat was a fatal error my friend")
         raise e
 
-
+        
 def gen_gc_docs(doc_path, glob, key="raw_text"):
     file_list = [f for f in os.listdir(doc_path) if fnmatch.fnmatch(f, glob)]
     logger.info("num files : {:>3,d}".format(len(file_list)))
@@ -270,11 +271,15 @@ def load_data(data_file, n_samples, shuffle=False):
     ]
     return examples
 
-
-def scrubber(txt):
+  
+def scrubber(txt, no_sec=False):
     txt = re.sub("[\\n\\t\\r]+", " ", txt)
-    txt = re.sub("\\s{2,}", " ", txt)
-    return txt.strip()
+    txt = re.sub("\\s{2,}", " ", txt).strip()
+    if no_sec:
+        mobj = dd_re.search(txt)
+        if mobj:
+            txt = txt.replace(mobj.group(1), "").strip()
+    return txt
 
 
 def _extract_batch_length(preds):
@@ -315,7 +320,6 @@ def new_df():
     return pd.DataFrame(columns=["src", "label", "sentence"])
 
 
-
 def make_sentences(text, src):
     """
     Builds a list of dictionaries, one for each sentence resulting from
@@ -332,9 +336,10 @@ def make_sentences(text, src):
     Returns:
         List[Dict]
     """
+    no_sec = True
     text = text.replace(USC_DOT, USC)
     text = text.replace(PL, PL_SPACE)
-    sents = [scrubber(sent) for sent in sent_tokenize(text)]
+    sents = [scrubber(sent, no_sec=no_sec) for sent in sent_tokenize(text)]
     sent_list = list()
     for sent in sents:
         if not sent:
@@ -342,18 +347,16 @@ def make_sentences(text, src):
         sent_list.append({"src": src, "label": 0, "sentence": sent})
     return sent_list
 
-
 def get_document_title(doc_directory):
     with open(doc_directory) as json_data:
         data = json.load(json_data)
     return data['title']
 
-
 def get_source_pdf(doc_directory):
     with open(doc_directory) as json_data:
         data = json.load(json_data)
     return data['filename']
-
+  
 def raw2dict(src_path, glob, key="raw_text"):
     """
     Generator to step through `glob` and extract each file's sentences;

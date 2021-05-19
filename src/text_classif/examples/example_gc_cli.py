@@ -32,8 +32,7 @@ logger = logging.getLogger(__name__)
 
 def main(config_yaml, data_file, model_type, num_samples, checkpoint_path):
     """
-    Example illustrating how to train the classifier model using the
-    on a given dataset.
+    Example illustrating how to train the classifier model.
 
     Args:
         config_yaml (str): path to the configuration file
@@ -145,5 +144,6 @@ if __name__ == "__main__":
             args.data_file,
             args.model_type,
             args.num_samples,
+            args.checkpoint_path,
         )
     )

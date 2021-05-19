@@ -26,7 +26,7 @@ def write_checkpoint(output_dir, model, tokenizer, loss, stats):
         stats (dict): performance metrics for this checkpoint
 
     """
-    logger.info("saving model with loss : {:0.3f}".format(loss))
+    logger.info("saving model with  val loss : {:0.3f}".format(loss))
     model_to_save = model.module if hasattr(model, "module") else model
     model_to_save.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
@@ -64,7 +64,7 @@ def load_checkpoint(chkpt_path, model_class, tokenizer_class, device, version):
     except (FileNotFoundError, RuntimeError) as e:
         raise e
 
-
+        
 def checkpoint_meta(chkpt_path, version_in):
     stats_path = os.path.join(chkpt_path, "run_stats.json")
     if not os.path.isfile(stats_path):
@@ -86,7 +86,7 @@ def checkpoint_meta(chkpt_path, version_in):
                     "Checkpoint was created with v{}, you're using v{}".format(
                         c_version, version_in
                     )
-                )  # noqa
+                )
                 msg1 = "...your mileage may vary."
                 logger.warning(msg)
                 logger.warning(msg1)

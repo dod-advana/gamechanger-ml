@@ -48,6 +48,7 @@ Close Combat Lethality Task Force (CCLTF)
 Protecting Critical Technology Task Force (PCTTF)
 Department of the Army
 U.S. Army Criminal Investigation Command (CIC)
+Army Criminal Investigation Command (CIC)
 U.S. Army Corps of Engineers
 Missouri River Regional Headquarters (CENWD-MR)
 North Pacific Regional Headquarters (CENWD-NP)
@@ -100,9 +101,6 @@ Air Force Global Strike Command (AFGSC)
 Air Force Materiel Command (AFMC)
 Air Force Reserve Command (AFRC)
 Air Force Space Command (AFSPC)
-Combatant Commands
-Combatant Commanders
-Component Heads
 U.S. Africa Command (USAFRICOM)
 U.S. Central Command (USCENTCOM)
 U.S. European Command (USEUCOM)
@@ -113,7 +111,7 @@ U.S. Cyber Command (USCYBERCOM)
 U.S. Special Operations Command (USSOCOM)
 U.S. Strategic Command (USSTRATCOM)
 U.S. Transportation Command (USTRANSCOM)
-Chairman, Joint Chiefs of Staff
+Chairman, Joint Chiefs of Staff (CJCS)
 Vice Chairman, Joint Chiefs of Staff
 Director, Joint Staff
 Vice Director, Joint Staff
@@ -142,7 +140,7 @@ Under Secretary of Defense for Acquisition and Sustainment (A&S)
 Deputy Under Secretary of Defense for Installations and Environment (I&E)
 Assistant Secretary of Defense for Logistics and Materiel Readiness (L&MR)
 Assistant Secretary of Defense for Nuclear, Chemical & Biological Defense Programs (NCB)
-Under Secretary of Defense for Intelligence (I)
+Under Secretary of Defense for Intelligence
 Under Secretary of Defense for Personnel and Readiness (P&R)
 Assistant Secretary of Defense for Health Affairs (HA)
 Assistant Secretary of Defense for Reserve Affairs (RA)
@@ -162,4 +160,5 @@ Director of the Office of Corrosion Policy and Oversight
 Director, Operational Test and Evaluation (DOT&E)
 Director of Small Business Programs
 Defense Prisoner of War/Missing Personnel Office (DPMO)
-DoD Components
+Combatant Commanders
+Heads of the DoD Components
