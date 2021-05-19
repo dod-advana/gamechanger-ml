@@ -115,8 +115,8 @@ if __name__ == "__main__":
     }
 
     start = time.time()
+    entity_coref = EntityCoref()
     for f in os.listdir(args.data_path):
-        entity_coref = EntityCoref()
         _ = entity_coref.make_table(
             args.model_path,
             args.data_path,
