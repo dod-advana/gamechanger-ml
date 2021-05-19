@@ -127,9 +127,11 @@ if __name__ == "__main__":
         )
 
         df = df.append(entity_coref.to_df())
+        logger.info("current total time : {:}".format(cu.format_time(time.time() - start)))
     
     df = df[df.top_class == 1].reset_index()
 
+    logger.info("generate agencies and refs: {:}".format(cu.format_time(time.time() - start)))
     df['agencies'] = get_agencies(file_dataframe=df, 
              doc_dups=None, 
              duplicates=duplicates, 
