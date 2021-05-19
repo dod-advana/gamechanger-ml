@@ -30,12 +30,16 @@ import dataScience.src.text_classif.utils.classifier_utils as cu
 from dataScience.src.text_classif.utils.entity_coref import EntityCoref
 from dataScience.src.text_classif.utils.log_init import initialize_logger
 from dataScience.src.text_classif.examples.output_utils import get_agency
-from dataScience.src.featurization.abbreviations_utils import get_references, get_agencies_dict, get_agencies
+from dataScience.src.featurization.abbreviations_utils import (
+    get_references,
+    get_agencies_dict,
+    get_agencies,
+)
 
 logger = logging.getLogger(__name__)
 
-#TODO: Replace Spacy reference with GC spacy module
-spacy_model_ = spacy.load('en_core_web_lg')
+# TODO: Replace Spacy reference with GC spacy module
+spacy_model_ = spacy.load("en_core_web_lg")
 
 if __name__ == "__main__":
 
@@ -103,48 +107,53 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    df = pd.DataFrame(columns=['entity', 'top_class', 'prob', 'src', 'label', 'sentence'])
-    duplicates, aliases = get_agencies_dict(args.agencies_path)
+    # df = pd.DataFrame(
+    #     columns=["entity", "top_class", "prob", "src", "label", "sentence"]
+    # )
     rename_dict = {
-        'entity': 'Organization / Personnel',
-        'sentence': 'Responsibility Text',
-        'agencies': 'Other Organization(s) / Personnel Mentioned',
-        'refs': 'Documents Referenced',
-        'title': 'Document Title',
-        'source': 'Source Document'
+        "entity": "Organization / Personnel",
+        "sentence": "Responsibility Text",
+        "agencies": "Other Organization(s) / Personnel Mentioned",
+        "refs": "Documents Referenced",
+        "title": "Document Title",
+        "source": "Source Document",
     }
 
     start = time.time()
-    for f in os.listdir(args.data_path):
-        entity_coref = EntityCoref()
-        _ = entity_coref.make_table(
+    entity_coref = EntityCoref()
+    entity_coref.make_table(
             args.model_path,
             args.data_path,
-            f,
+            args.glob,
             args.max_seq_len,
             args.batch_size,
-            output_csv=None
-        )
-
-        df = df.append(entity_coref.to_df())
-    
+            output_csv=None,
+    )
+    df = entity_coref.to_df()
     df = df[df.top_class == 1].reset_index()
 
-    df['agencies'] = get_agencies(file_dataframe=df, 
-             doc_dups=None, 
-             duplicates=duplicates, 
-             agencies_dict=aliases)
+    duplicates, aliases = get_agencies_dict(args.agencies_path)
+    df["agencies"] = get_agencies(
+        file_dataframe=df,
+        doc_dups=None,
+        duplicates=duplicates,
+        agencies_dict=aliases,
+    )
     df = get_agency(df, spacy_model_)
-    df['refs'] = get_references(df, doc_title_col='src')
+    df["refs"] = get_references(df, doc_title_col="src")
 
     renamed_df = df.rename(columns=rename_dict)
-    final_df = renamed_df[['Source Document',
-                        'Document Title', 
-                        'Organization / Personnel', 
-                        'Responsibility Text', 
-                        'Other Organization(s) / Personnel Mentioned', 
-                        'Documents Referenced']]
-    
+    final_df = renamed_df[
+        [
+            "Source Document",
+            "Document Title",
+            "Organization / Personnel",
+            "Responsibility Text",
+            "Other Organization(s) / Personnel Mentioned",
+            "Documents Referenced",
+        ]
+    ]
+
     final_df.to_csv(args.output_csv, index=False)
 
     elapsed = time.time() - start

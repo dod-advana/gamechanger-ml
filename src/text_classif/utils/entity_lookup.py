@@ -56,19 +56,20 @@ def build_entity_lookup():
     )
     return abbrvs, orgs
 
+
 def update_dod_org_list(agencies_file_path, dodorg_file_path):
     agencies = pd.read_csv(agencies_file_path)
-    dodorgs = pd.read_csv(dodorg_file_path, sep=":", names=['org'])
+    dodorgs = pd.read_csv(dodorg_file_path, sep=":", names=["org"])
     update_list = []
 
     for i in range(len(agencies)):
-        temp = agencies['Agency_Aliases'][i].split(';')
+        temp = agencies["Agency_Aliases"][i].split(";")
         for j in temp:
             if str.isupper(j):
-                update_list.append(agencies['Agency_Name'][i] + ' (' + j + ')')
-    
-    new = {'org': update_list}
+                update_list.append(agencies["Agency_Name"][i] + " (" + j + ")")
+
+    new = {"org": update_list}
     updated_orgs = dodorgs.append(pd.DataFrame(new))
-    new_orgs = updated_orgs['org'].unique()
+    new_orgs = updated_orgs["org"].unique()
 
     return new_orgs

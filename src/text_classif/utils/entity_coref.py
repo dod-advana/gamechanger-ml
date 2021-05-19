@@ -126,17 +126,12 @@ class EntityCoref(object):
             model_path, data_path, glob, max_seq_len, batch_size
         ):
             logger.debug("num input : {:,}".format(len(output_list)))
-            self.pop_entities = self._populate_entity(output_list)
-            logger.debug(
-                "processed : {:,}  {}".format(
+            self.pop_entities.extend(self._populate_entity(output_list))
+            logger.info(
+                "processed : {:>4,d}  {}".format(
                     len(self.pop_entities), file_name
                 )
             )
-        try:
-            if output_csv is not None:
-                self.to_csv(output_csv)
-        except FileNotFoundError as e:
-            raise e
 
     def to_df(self):
         df = pd.DataFrame(self.pop_entities)

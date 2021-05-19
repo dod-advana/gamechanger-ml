@@ -315,7 +315,6 @@ def new_df():
     return pd.DataFrame(columns=["src", "label", "sentence"])
 
 
-
 def make_sentences(text, src):
     """
     Builds a list of dictionaries, one for each sentence resulting from
@@ -346,13 +345,14 @@ def make_sentences(text, src):
 def get_document_title(doc_directory):
     with open(doc_directory) as json_data:
         data = json.load(json_data)
-    return data['title']
+    return data["title"]
 
 
 def get_source_pdf(doc_directory):
     with open(doc_directory) as json_data:
         data = json.load(json_data)
-    return data['filename']
+    return data["filename"]
+
 
 def raw2dict(src_path, glob, key="raw_text"):
     """
@@ -369,10 +369,10 @@ def raw2dict(src_path, glob, key="raw_text"):
         str: name of the file
     """
     for raw_text, fname in gen_gc_docs(src_path, glob, key=key):
-        title = get_document_title(src_path + '/' + fname)
-        source = get_source_pdf(src_path + '/' + fname)
+        title = get_document_title(src_path + "/" + fname)
+        source = get_source_pdf(src_path + "/" + fname)
         sent_list = make_sentences(raw_text, fname)
         for sent in sent_list:
-            sent.update({'title':title, 'source': source})
+            sent.update({"title": title, "source": source})
         logger.info("{:>25s} : {:>5,d}".format(fname, len(sent_list)))
         yield sent_list, fname

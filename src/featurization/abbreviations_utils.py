@@ -62,8 +62,11 @@ def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
     aliases = agencies_dict
     duplicates = duplicates
     all_agencies = []
-    #speeds up iterating through the various dataframe columns dynamically, excludes doc name and primary entity
-    combined_cols = pd.DataFrame(file_dataframe[file_dataframe.columns[2:]].apply(lambda x: ','.join(x.dropna().astype(str)), axis=1), columns=['text'])
+    # speeds up iterating through the various dataframe columns dynamically,
+    # excludes doc name and primary entity
+    combined_cols = pd.DataFrame(
+        file_dataframe[file_dataframe.columns[2:]].apply(lambda x: ','.join(x.dropna().astype(str)), axis=1), columns=['text']
+    )
 
     for i, row in combined_cols.iterrows():
         agencies = []

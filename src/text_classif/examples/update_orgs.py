@@ -1,10 +1,13 @@
 import pandas as pd
+
 # import numpy as np
 from argparse import ArgumentParser
 import logging
 import time
 
-from dataScience.src.text_classif.utils.entity_lookup import update_dod_org_list
+from dataScience.src.text_classif.utils.entity_lookup import (
+    update_dod_org_list,
+)
 from dataScience.src.text_classif.utils.log_init import initialize_logger
 import dataScience.src.text_classif.utils.classifier_utils as cu
 
@@ -40,8 +43,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     start = time.time()
-    updated_file = pd.DataFrame(update_dod_org_list(args.agencies_path, args.dodorg_path))
-    updated_file.to_csv('updated_dod_orgs.txt', header=False, index=False)
+    updated_file = pd.DataFrame(
+        update_dod_org_list(args.agencies_path, args.dodorg_path)
+    )
+    updated_file.to_csv("updated_dod_orgs.txt", header=False, index=False)
     elapsed = time.time() - start
 
     logger.info("total time : {:}".format(cu.format_time(elapsed)))
