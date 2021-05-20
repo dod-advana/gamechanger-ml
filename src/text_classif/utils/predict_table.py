@@ -50,6 +50,18 @@ def predict_table(
     output_csv,
     raw_output,
 ):
+    """
+    See the preamble (help) for a description of these arguments.
+
+    For each file matching `glob`, the `raw_text` is parsed into sentences
+    and run through the classifier. Recognized entities are then associated
+    with sentences classified as `1` or `responsibility`. The final output
+    is assembled by usisng sentences classified as `1` with organization
+    information, references, document title, etc.
+
+    Returns:
+        pandas.DataFrame
+    """
     if not os.path.isdir(data_path):
         raise ValueError("no path {}".format(data_path))
     if not os.path.isdir(model_path):
