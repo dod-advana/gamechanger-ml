@@ -25,6 +25,8 @@ PL = "P.L."
 PL_SPACE = "P. L."
 USC_RE = "\\b" + USC + "\\b"
 
+dd_re = re.compile("(^\\d\\..*?\\d+\\. )")
+
 # TODO consolidate these into something better
 
 
@@ -271,10 +273,14 @@ def load_data(data_file, n_samples, shuffle=False):
     return examples
 
 
-def scrubber(txt):
+def scrubber(txt, no_sec=False):
     txt = re.sub("[\\n\\t\\r]+", " ", txt)
-    txt = re.sub("\\s{2,}", " ", txt)
-    return txt.strip()
+    txt = re.sub("\\s{2,}", " ", txt).strip()
+    if no_sec:
+        mobj = dd_re.search(txt)
+        if mobj:
+            txt = txt.replace(mobj.group(1), "").strip()
+    return txt
 
 
 def _extract_batch_length(preds):
@@ -331,9 +337,10 @@ def make_sentences(text, src):
     Returns:
         List[Dict]
     """
+    no_sec = True
     text = text.replace(USC_DOT, USC)
     text = text.replace(PL, PL_SPACE)
-    sents = [scrubber(sent) for sent in sent_tokenize(text)]
+    sents = [scrubber(sent, no_sec=no_sec) for sent in sent_tokenize(text)]
     sent_list = list()
     for sent in sents:
         if not sent:

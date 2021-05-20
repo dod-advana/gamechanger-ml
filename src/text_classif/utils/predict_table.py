@@ -1,6 +1,7 @@
 """
 usage: python predict_table.py [-h] -m MODEL_PATH -d DATA_PATH [-b BATCH_SIZE]
-                              [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV]
+                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV] -a
+                               AGENCIES_PATH [-r]
 
 Binary classification of each sentence in the files matching the 'glob' in
 data_path
@@ -18,13 +19,15 @@ optional arguments:
   -g GLOB, --glob GLOB  file glob pattern
   -o OUTPUT_CSV, --output-csv OUTPUT_CSV
                         the .csv for output
+  -a AGENCIES_PATH, --agencies-path AGENCIES_PATH
+                        the .csv for agency abbreviations
+  -r, --raw-output      write the results of the classifier / entity
+                        attachment
 """
 import logging
 import os
 import time
 from argparse import ArgumentParser
-
-import spacy
 
 import dataScience.src.text_classif.utils.classifier_utils as cu
 from dataScience.src.featurization.abbreviations_utils import (
@@ -32,20 +35,20 @@ from dataScience.src.featurization.abbreviations_utils import (
     get_agencies_dict,
     get_agencies,
 )
-from dataScience.src.text_classif.examples.output_utils import get_agency
 from dataScience.src.text_classif.utils.entity_coref import EntityCoref
 from dataScience.src.text_classif.utils.log_init import initialize_logger
 
 logger = logging.getLogger(__name__)
 
 
-def predict_table(
-    model_path, data_path, glob, max_seq_len, batch_size, output_csv
-):
+def predict_table(model_path, data_path, glob, max_seq_len, batch_size,
+                  output_csv, raw_output):
     if not os.path.isdir(data_path):
         raise ValueError("no path {}".format(data_path))
     if not os.path.isdir(model_path):
         raise ValueError("no path {}".format(model_path))
+
+    raw_output_csv = None
 
     rename_dict = {
         "entity": "Organization / Personnel",
@@ -66,7 +69,11 @@ def predict_table(
         batch_size,
     )
     df = entity_coref.to_df()
-    entity_coref.to_csv("dodim_raw.csv")
+    if raw_output and raw_output_csv is not None:
+        fn, ext = os.path.splitext(output_csv)
+        raw_output_csv = fn + "_raw" + "." + ext
+        entity_coref.to_csv(raw_output_csv)
+        logger.info("coref output written")
 
     df = df[df.top_class == 1].reset_index()
 
@@ -78,9 +85,7 @@ def predict_table(
         duplicates=duplicates,
         agencies_dict=aliases,
     )
-    # logger.info("loading spaCy...")
-    # spacy_model_ = spacy.load("en_core_web_lg")
-    # df = get_agency(df, spacy_model_)
+
     df["refs"] = get_references(df, doc_title_col="src")
 
     renamed_df = df.rename(columns=rename_dict)
@@ -94,8 +99,9 @@ def predict_table(
             "Documents Referenced",
         ]
     ]
-    if args.output_csv is not None:
+    if output_csv is not None:
         final_df.to_csv(output_csv, index=False)
+        logger.info("final csv written")
 
     elapsed = time.time() - start
 
@@ -164,16 +170,18 @@ if __name__ == "__main__":
         required=True,
         help="the .csv for agency abbreviations",
     )
+    parser.add_argument(
+        "-r",
+        "--raw-output",
+        dest="raw_output",
+        action="store_true",
+        help="write the results of the classifier / entity attachment"
+    )
 
     initialize_logger(to_file=False, log_name="none")
 
     args = parser.parse_args()
 
-    _ = predict_table(
-        args.model_path,
-        args.data_path,
-        args.glob,
-        args.max_seq_len,
-        args.batch_size,
-        args.output_csv,
-    )
+    _ = predict_table(args.model_path, args.data_path, args.glob,
+                      args.max_seq_len, args.batch_size, args.output_csv,
+                      args.raw_output)
