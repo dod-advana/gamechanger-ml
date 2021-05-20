@@ -65,7 +65,7 @@ gamechangerml
 - If a config is used for a piece of code (such as training a model), the config should be placed in the relevant section of the repo (dataPipeline, api, etc.) and should clearly designate which environment the config is for (if relevant).
 
 ## Getting Started
-####To use gamechangerml as a python module
+### To use gamechangerml as a python module
 - `pip install .`
 - you should now be able to import gamechangerml anywhere python is available.
 
