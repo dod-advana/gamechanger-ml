@@ -16,6 +16,7 @@ from dataScience.api.fastapi.model_config import Config
 from dataScience.api.utils.pathselect import get_model_paths
 from dataScience.src.search.query_expansion.utils import remove_original_kw
 from dataScience.src.featurization.keywords.extract_keywords import get_keywords
+from dataScience.api.fastapi.version import __version__
 
 # from dataScience.models.topic_models.tfidf import bigrams, tfidf_model
 from dataScience.src.text_handling.process import topic_processing
@@ -284,7 +285,10 @@ async def check_health():
 
 @app.get("/")
 async def home():
-    return {"API": "FOR TRANSFORMERS"}
+    return {
+        "API": "FOR TRANSFORMERS",
+        "Version": __version__
+    }
 
 
 @app.post("/transformerSearch", status_code=200)
