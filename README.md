@@ -7,7 +7,7 @@
 
 ## Directory
 ```
-dataScience
+gamechangerml
 ├── api
 │   ├── fastapi
 │   └── utils
@@ -55,33 +55,33 @@ dataScience
 ```
 
 ## Development Rules
-- Everything in dataScience/src should be independent of things outside of that structure (should not need to import from dataPipeline, common, etc).
+- Everything in gamechangerml/src should be independent of things outside of that structure (should not need to import from dataPipeline, common, etc).
 - Where ever possible, code should be modular and broken down into smallest logical pieces and placed in the most logical subfolder.
 - Include README.md file and/or example scripts demonstrating the functionality of your code.
 - Models/large files should not be stored on Github.
-- Data should not be stored on Github, there is a script in the `dataScience/scripts` folder to download a corpus from s3.
-- File paths in dataScience/configs config files should be relative to dataScience and only used for local testing purposes (feel free to change on your local machine, but do not commit to repo with system specific paths).
+- Data should not be stored on Github, there is a script in the `gamechangerml/scripts` folder to download a corpus from s3.
+- File paths in gamechangerml/configs config files should be relative to gamechangerml and only used for local testing purposes (feel free to change on your local machine, but do not commit to repo with system specific paths).
 - A config should not be required as an input parameter to a function; however a config can be used to provide parameters to a function (`foo(path=Config.path)`, rather than `foo(Config)`).
 - If a config is used for a piece of code (such as training a model), the config should be placed in the relevant section of the repo (dataPipeline, api, etc.) and should clearly designate which environment the config is for (if relevant).
 
 
 ## Train Models
 1. Setup your environment, and make any changes to configs: 
-- `source ./dataScience/setup_env.sh DEV`
+- `source ./gamechangerml/setup_env.sh DEV`
 2. Ensure your AWS enviroment is setup (you have a default profile)
 3. Get dependencies
-- `source ./dataScience/scripts/download_dependencies.sh`
+- `source ./gamechangerml/scripts/download_dependencies.sh`
 4. For query expansion:
-- `python -m dataScience.train.scripts.run_train_models --flag {MODEL_NAME_SUFFIX} --saveremote {True or False} --model_dest {FILE_PATH_MODEL_OUTPUT} --corpus {CORPUS_DIR}`
+- `python -m gamechangerml.train.scripts.run_train_models --flag {MODEL_NAME_SUFFIX} --saveremote {True or False} --model_dest {FILE_PATH_MODEL_OUTPUT} --corpus {CORPUS_DIR}`
 5. For sentence embeddings:
-- `python -m dataScience.train.scripts.create_embeddings -c {CORPUS LOCATION} --gpu True --em msmarco-distilbert-base-v2`
+- `python -m gamechangerml.train.scripts.create_embeddings -c {CORPUS LOCATION} --gpu True --em msmarco-distilbert-base-v2`
 
 ## ML API
 1. Setup your environment, make any changes to configs: 
-- `source ./dataScience/setup_env.sh DEV`
+- `source ./gamechangerml/setup_env.sh DEV`
 2. Ensure your AWS enviroment is setup (you have a default profile)
 3. Dependencies will be automatically downloaded and extracted.
-4. `cd dataScience/api`
+4. `cd gamechangerml/api`
 5. `docker-compose build`
 6. `docker-compose up`
 7. visit `localhost:5000/docs`
