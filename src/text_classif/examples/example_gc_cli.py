@@ -63,10 +63,10 @@ def main(config_yaml, data_file, model_type, num_samples, checkpoint_path):
         else:
             raise ValueError("unsupported model; got `{}`".format(model_type))
 
-        if checkpoint_path is not None and not os.path.isdir(checkpoint_path):
-            raise ValueError("no directory named {}".format(checkpoint_path))
-        else:
-            clf.cfg.checkpoint_path = checkpoint_path
+        # if checkpoint_path is not None and not os.path.isdir(checkpoint_path):
+        #     raise ValueError("no directory named {}".format(checkpoint_path))
+        # else:
+        clf.cfg.checkpoint_path = checkpoint_path
 
         initialize_logger(
             to_file=True, log_name=clf.cfg.log_id, output_dir=here
