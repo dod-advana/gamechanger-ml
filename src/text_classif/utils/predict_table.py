@@ -41,8 +41,15 @@ from dataScience.src.text_classif.utils.log_init import initialize_logger
 logger = logging.getLogger(__name__)
 
 
-def predict_table(model_path, data_path, glob, max_seq_len, batch_size,
-                  output_csv, raw_output):
+def predict_table(
+    model_path,
+    data_path,
+    glob,
+    max_seq_len,
+    batch_size,
+    output_csv,
+    raw_output,
+):
     if not os.path.isdir(data_path):
         raise ValueError("no path {}".format(data_path))
     if not os.path.isdir(model_path):
@@ -175,13 +182,19 @@ if __name__ == "__main__":
         "--raw-output",
         dest="raw_output",
         action="store_true",
-        help="write the results of the classifier / entity attachment"
+        help="write the results of the classifier / entity attachment",
     )
 
     initialize_logger(to_file=False, log_name="none")
 
     args = parser.parse_args()
 
-    _ = predict_table(args.model_path, args.data_path, args.glob,
-                      args.max_seq_len, args.batch_size, args.output_csv,
-                      args.raw_output)
+    _ = predict_table(
+        args.model_path,
+        args.data_path,
+        args.glob,
+        args.max_seq_len,
+        args.batch_size,
+        args.output_csv,
+        args.raw_output,
+    )
