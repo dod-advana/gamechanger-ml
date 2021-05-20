@@ -64,6 +64,11 @@ gamechangerml
 - A config should not be required as an input parameter to a function; however a config can be used to provide parameters to a function (`foo(path=Config.path)`, rather than `foo(Config)`).
 - If a config is used for a piece of code (such as training a model), the config should be placed in the relevant section of the repo (dataPipeline, api, etc.) and should clearly designate which environment the config is for (if relevant).
 
+## Getting Started
+####To use gamechangerml as a python module
+- `pip install .`
+- you should now be able to import gamechangerml anywhere python is available.
+
 
 ## Train Models
 1. Setup your environment, and make any changes to configs: 
