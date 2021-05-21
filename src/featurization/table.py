@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 import dataScience.src.utilities.spacy_model as spacy_
-from common.document_parser.issuance_ref import collect_ref_list
+from common.document_parser.lib.ref_list import collect_ref_list
 from dataScience.src.featurization.abbreviations_utils import (
     get_agencies_dict,
     check_duplicates,
@@ -103,15 +103,20 @@ class Table:
             .strip()
             .split("\n")[-1]
             .strip()
-        )  # noqa
+        )
         self.next_it = re.sub(
             self.decimal_digits, lambda x: str(int(x.group(1)) + 1), prev
         )
         new = new.split("\n" + self.next_it + " ", 1)[0]
         new = new.split("GLOSSARY", 1)[0]
         entity = new.split(":", 1)[0]
-        entity = entity.split("shall", 1)[0]
-        entity = entity.split(".")[-1].strip()
+        logger.info("entity : {}".format(entity))
+        if "shall" in entity:
+            entity = entity.split("shall", 1)[0]
+            entity = entity.split(".")[-1].strip()
+        else:
+            entity = ""
+        logger.info("entity : {}".format(entity))
 
         # get rid of headers
         header = r"\d*\s*" + file[:12] + "(.*)\n"

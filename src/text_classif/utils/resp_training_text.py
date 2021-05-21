@@ -162,7 +162,7 @@ if __name__ == "__main__":
         args.glob,
     )
 
-    extract_obj.extract_pos_neg(min_len=16, neg_only=False)
+    extract_obj.extract_pos_neg(min_len=1, neg_only=False)
     logger.info(extract_obj.train_df.head())
     extract_obj.train_df.to_csv(
         args.output, index=False, header=False, doublequote=True
