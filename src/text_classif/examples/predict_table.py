@@ -96,7 +96,6 @@ if __name__ == "__main__":
         args.glob,
         args.max_seq_len,
         args.batch_size,
-        args.output_csv,
     )
     elapsed = time.time() - start
 
