@@ -7,14 +7,14 @@ import re
 import numpy as np
 import pandas as pd
 
-import dataScience.src.utilities.spacy_model as spacy_
-from common.document_parser.issuance_ref import collect_ref_list
-from dataScience.src.featurization.abbreviations_utils import (
+import src.utilities.spacy_model as spacy_
+from src.featurization.ref_list import collect_ref_list
+from src.featurization.abbreviations_utils import (
     get_agencies_dict,
     check_duplicates,
     get_agencies,
 )
-from dataScience.src.featurization.extract_improvement.extract_utils import (
+from src.featurization.extract_improvement.extract_utils import (
     extract_entities,
     create_list_from_dict,
     remove_articles,
