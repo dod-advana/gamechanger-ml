@@ -1,11 +1,9 @@
 import re
-import json
-import argparse
-from pathlib import Path
-from common.document_parser.ref_utils import make_dict
-from collections import defaultdict
-from typing import Pattern, List
 import typing as t
+from collections import defaultdict
+
+from src.featurization.ref_utils import make_dict
+
 ref_regex = make_dict()
 
 

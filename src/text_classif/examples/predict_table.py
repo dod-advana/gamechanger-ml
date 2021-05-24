@@ -1,6 +1,7 @@
 """
 usage: python predict_table.py [-h] -m MODEL_PATH -d DATA_PATH [-b BATCH_SIZE]
-                              [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV]
+                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV] -a
+                               AGENCIES_PATH [-r]
 
 Binary classification of each sentence in the files matching the 'glob' in
 data_path
@@ -18,6 +19,10 @@ optional arguments:
   -g GLOB, --glob GLOB  file glob pattern
   -o OUTPUT_CSV, --output-csv OUTPUT_CSV
                         the .csv for output
+  -a AGENCIES_PATH, --agencies-path AGENCIES_PATH
+                        the .csv for agency abbreviations
+  -r, --raw-output      write the results of the classifier / entity
+                        attachment
 """
 import logging
 import os
