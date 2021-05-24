@@ -19,8 +19,8 @@ import re
 import pandas as pd
 from nltk.tokenize import sent_tokenize
 
-import dataScience.src.utilities.spacy_model as spacy_m
-from dataScience.src.featurization.table import Table
+import src.utilities.spacy_model as spacy_m
+from src.featurization.table import Table
 
 logger = logging.getLogger(__name__)
 

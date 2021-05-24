@@ -19,13 +19,13 @@ optional arguments:
 import logging
 import os
 
-import dataScience.src.text_classif.utils.classifier_utils as cu
-from dataScience.src.text_classif.bert_classifier import BertClassifier
-from dataScience.src.text_classif.distilbert_classifier import (
+import src.text_classif.utils.classifier_utils as cu
+from src.text_classif.bert_classifier import BertClassifier
+from src.text_classif.distilbert_classifier import (
     DistilBertClassifier,
 )
-from dataScience.src.text_classif.roberta_classifier import RobertaClassifier
-from dataScience.src.text_classif.utils.log_init import initialize_logger
+from src.text_classif.roberta_classifier import RobertaClassifier
+from src.text_classif.utils.log_init import initialize_logger
 
 logger = logging.getLogger(__name__)
 

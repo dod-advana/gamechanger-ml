@@ -31,10 +31,10 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from dataScience.src.text_classif.predictor import Predictor
-from dataScience.src.text_classif.utils.log_init import initialize_logger
-import dataScience.src.text_classif.utils.classifier_utils as cu
-import dataScience.src.text_classif.utils.metrics as m
+from src.text_classif.predictor import Predictor
+from src.text_classif.utils.log_init import initialize_logger
+import src.text_classif.utils.classifier_utils as cu
+import src.text_classif.utils.metrics as m
 
 logger = logging.getLogger(__name__)
 

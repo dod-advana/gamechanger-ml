@@ -4,8 +4,8 @@ import time
 
 from tqdm import tqdm
 
-import dataScience.src.text_classif.utils.classifier_utils as cu
-from dataScience.src.text_classif.predictor import Predictor
+import src.text_classif.utils.classifier_utils as cu
+from src.text_classif.predictor import Predictor
 
 logger = logging.getLogger(__name__)
 

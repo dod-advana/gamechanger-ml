@@ -379,8 +379,8 @@ def raw2dict(src_path, glob, key="raw_text"):
         str: name of the file
     """
     for raw_text, fname in gen_gc_docs(src_path, glob, key=key):
-        title = get_document_title(src_path + "/" + fname)
-        source = get_source_pdf(src_path + "/" + fname)
+        title = get_document_title(os.path.join(src_path, fname))
+        source = get_source_pdf(os.path.join(src_path, fname))
         sent_list = make_sentences(raw_text, fname)
         for sent in sent_list:
             sent.update({"title": title, "source": source})

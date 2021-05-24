@@ -3,8 +3,8 @@ import re
 
 import pandas as pd
 
-import dataScience.src.text_classif.utils.entity_lookup as el
-from dataScience.src.text_classif.utils.predict_glob import predict_glob
+import src.text_classif.utils.entity_lookup as el
+from src.text_classif.utils.predict_glob import predict_glob
 
 logger = logging.getLogger(__name__)
 

@@ -29,14 +29,14 @@ import os
 import time
 from argparse import ArgumentParser
 
-import dataScience.src.text_classif.utils.classifier_utils as cu
-from dataScience.src.featurization.abbreviations_utils import (
+import src.text_classif.utils.classifier_utils as cu
+from src.featurization.abbreviations_utils import (
     get_references,
     get_agencies_dict,
     get_agencies,
 )
-from dataScience.src.text_classif.utils.entity_coref import EntityCoref
-from dataScience.src.text_classif.utils.log_init import initialize_logger
+from src.text_classif.utils.entity_coref import EntityCoref
+from src.text_classif.utils.log_init import initialize_logger
 
 logger = logging.getLogger(__name__)
 

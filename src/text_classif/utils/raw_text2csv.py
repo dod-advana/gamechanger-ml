@@ -19,7 +19,7 @@ import os
 
 import pandas as pd
 
-import dataScience.src.text_classif.utils.classifier_utils as cu
+import src.text_classif.utils.classifier_utils as cu
 
 logger = logging.getLogger(__name__)
 here = os.path.dirname(os.path.realpath(__file__))

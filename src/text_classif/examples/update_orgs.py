@@ -5,11 +5,11 @@ from argparse import ArgumentParser
 import logging
 import time
 
-from dataScience.src.text_classif.utils.entity_lookup import (
+from src.text_classif.utils.entity_lookup import (
     update_dod_org_list,
 )
-from dataScience.src.text_classif.utils.log_init import initialize_logger
-import dataScience.src.text_classif.utils.classifier_utils as cu
+from src.text_classif.utils.log_init import initialize_logger
+import src.text_classif.utils.classifier_utils as cu
 
 """Sample command line: python dataScience/src/text_classif/examples/update_orgs.py 
                         --dodorg-path dataScience/src/text_classif/utils/dod-orgs.txt 

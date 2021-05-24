@@ -5,7 +5,7 @@ import logging
 from transformers import BertForSequenceClassification
 from transformers import BertTokenizer
 
-from dataScience.src.text_classif.classifier import Classifier
+from src.text_classif.classifier import Classifier
 
 logger = logging.getLogger(__name__)
 

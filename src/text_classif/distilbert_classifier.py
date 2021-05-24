@@ -5,7 +5,7 @@ import logging
 from transformers import DistilBertForSequenceClassification
 from transformers import DistilBertTokenizer
 
-from dataScience.src.text_classif.classifier import Classifier
+from src.text_classif.classifier import Classifier
 
 logger = logging.getLogger(__name__)
 

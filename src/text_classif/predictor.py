@@ -8,8 +8,8 @@ import torch.nn.functional as nnf
 import transformers as trf
 from packaging import version
 
-import dataScience.src.text_classif.version as v
-from dataScience.src.text_classif.utils import classifier_utils as cu
+import src.text_classif.version as v
+from src.text_classif.utils import classifier_utils as cu
 
 logger = logging.getLogger(__name__)
 

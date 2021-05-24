@@ -15,11 +15,11 @@ from tqdm import tqdm
 from transformers import AdamW
 from transformers import get_linear_schedule_with_warmup
 
-import dataScience.src.text_classif.utils.config as config
-import dataScience.src.text_classif.version as v
-from dataScience.src.text_classif.utils import checkpoint_handler as ch
-from dataScience.src.text_classif.utils import classifier_utils as cu
-from dataScience.src.text_classif.utils import metrics as clf_metrics
+import src.text_classif.utils.config as config
+import src.text_classif.version as v
+from src.text_classif.utils import checkpoint_handler as ch
+from src.text_classif.utils import classifier_utils as cu
+from src.text_classif.utils import metrics as clf_metrics
 
 logger = logging.getLogger(__name__)
 
