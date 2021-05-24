@@ -12,10 +12,26 @@ import collections
 import numpy as np
 from typing import List, NamedTuple, Tuple, Dict, Union, Any
 
+question_words = {
+    "what's": "what is",
+    "when's": "when is",
+    "why's": "why is",
+    "who's": "who is",
+    "where's": "where is",
+    "how's": "how is"
+}
+
 def to_list(tensor: torch.Tensor) -> List[float]:
     """ Converts tensor to list """
 
     return tensor.detach().cpu().tolist()
+
+def clean_query(query: str, question_words=question_words) -> str:
+    """ Cleans queries so they are standard """
+    for key in question_words.keys():
+        query = query.replace(key, question_words[key])
+
+    return query.lower().strip('?')
 
 def prediction_probabilities(predictions: NamedTuple) -> float:
     """ Calculates probabilities of answers (optional, not used) """
@@ -38,15 +54,16 @@ def compute_score_difference(predictions: NamedTuple) -> float:
 
 def sort_answers(answers: List[Tuple]) -> List[Dict[str, Union[str, float]]]:
     """ Sorts the answers of all context based on null score difference (scored_answer only) """
-    sorted_answers = sorted(answers, key=lambda x: x[1], reverse=False)
+    sorted_answers = sorted(answers, key=lambda x: x[2], reverse=False)
     app_answers = []
     for ans in sorted_answers:
         if ans[0].lstrip().split(" ")[0] != "[CLS]": # ignore these non-answers
             mydict = {}
             mydict['text'] = ans[0]
-            #mydict['probability'] = ans[1] # if getting probability
-            mydict['null_score_diff'] = ans[1]
-            mydict['context'] = ans[2]
+            mydict['probability'] = ans[1] # if getting probability
+            mydict['null_score_diff'] = ans[2]
+            mydict['status'] = ans[3]
+            mydict['context'] = ans[4]
             app_answers.append(mydict)
 
     return app_answers
@@ -226,13 +243,13 @@ class DocumentReader:
         """ Get best (scored) answers for one context input """
         prelim_preds = self.preliminary_predictions(start_logits, end_logits, input_ids)
         nbest_preds = self.best_predictions(prelim_preds, start_logits, end_logits, input_ids)
-        #probabilities = prediction_probabilities(nbest_preds)
+        probabilities = prediction_probabilities(nbest_preds)
         score_difference = compute_score_difference(nbest_preds)
         # if score difference > threshold, return the null answer
         if score_difference > self.null_threshold:
-            return "", score_difference
+            return nbest_preds[0].text, probabilities[0], score_difference, "failed"
         else:
-            return nbest_preds[0].text, score_difference
+            return nbest_preds[0].text, probabilities[0], score_difference, "passed"
 
     def get_argmax_answer(self, inputs: Dict[str, torch.Tensor]) -> str:
         """ Simple Answer: retrieves the start/end pair with the highest score."""
@@ -250,9 +267,7 @@ class DocumentReader:
         start_logits = self.model(**inputs)["start_logits"]
         end_logits = self.model(**inputs)["end_logits"]
         input_ids = inputs["input_ids"].tolist()[0]
-        ans, diff = self.one_passage_answers(start_logits, end_logits, input_ids)
-
-        return ans, diff
+        return self.one_passage_answers(start_logits, end_logits, input_ids)
 
     def answer(self, question: str, context: List[str]) -> List[Dict[str, Union[str, float, int]]]:
         """
@@ -264,19 +279,17 @@ class DocumentReader:
         Returns:
             - answers (List[Dict]): each answer is a dictionary including text, context index, and score (if scored)
         """
+        question = clean_query(question)
         print(f"Question: {question}")
 
         inputs, tracker = self.tokenize(question, context)
-        ## TODO: check this works on gpu
-        #if self.use_gpu:
-        #    inputs = [{key: value.detach().cpu() for key, value in input.items()} for input in inputs]
         all_answers = []
         if self.qa_type == 'scored_answer':
             for idx, inp in enumerate(inputs):
                 if self.use_gpu:
                     inp = {key: value.cuda() for (key, value) in inp.items()}
-                answer, diff = self.get_robust_prediction(inp)
-                all_answers.append((answer, diff, tracker[idx]))
+                answer, prob, diff, status = self.get_robust_prediction(inp)
+                all_answers.append((answer, prob, diff, status, tracker[idx]))
             all_answers = sort_answers(all_answers)
         elif self.qa_type == 'simple_answer':
             for idx, inp in enumerate(inputs):
