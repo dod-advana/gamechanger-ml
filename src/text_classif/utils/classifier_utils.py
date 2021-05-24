@@ -23,6 +23,8 @@ USC = "USC"
 # P.L. is expressed both ways, so we go with "P. L.".
 PL = "P.L."
 PL_SPACE = "P. L."
+EO = "E.O."
+EO_SPACE = "E. O."
 USC_RE = "\\b" + USC + "\\b"
 
 dd_re = re.compile("(^\\d\\..*?\\d+\\. )")
@@ -340,6 +342,7 @@ def make_sentences(text, src):
     no_sec = True
     text = text.replace(USC_DOT, USC)
     text = text.replace(PL, PL_SPACE)
+    text = text.replace(EO, EO_SPACE)
     sents = [scrubber(sent, no_sec=no_sec) for sent in sent_tokenize(text)]
     sent_list = list()
     for sent in sents:

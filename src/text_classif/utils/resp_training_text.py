@@ -31,11 +31,6 @@ class ExtractRespText(Table):
             input_dir, output, spacy_model, agency_file, glob, True
         )
         logger.info("input dir : {}".format(input_dir))
-        # if spacy_model is not None:
-        #     self.spacy_model = spacy_model
-        #     self.spacy_model.add_pipe(
-        #         self.spacy_model.create_pipe("sentencizer")
-        #     )
         self.train_df = pd.DataFrame(columns=["source", "label", "text"])
 
         # matches 1.2.3., etc. at the start of the text
