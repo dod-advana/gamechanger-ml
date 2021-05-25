@@ -287,6 +287,7 @@ async def check_health():
 async def home():
     return {
         "API": "FOR TRANSFORMERS",
+        "API_Name":"GAMECHANGER ML API",
         "Version": __version__
     }
 
