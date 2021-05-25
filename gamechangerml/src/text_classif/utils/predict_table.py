@@ -28,6 +28,7 @@ import logging
 import os
 import time
 from argparse import ArgumentParser
+import pandas as pd
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
 from gamechangerml.src.featurization.abbreviations_utils import (
@@ -37,6 +38,7 @@ from gamechangerml.src.featurization.abbreviations_utils import (
 )
 from gamechangerml.src.text_classif.utils.entity_coref import EntityCoref
 from gamechangerml.src.text_classif.utils.log_init import initialize_logger
+from gamechangerml.src.text_classif.utils.resp_stats import count_output
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +123,16 @@ def predict_table(
     if output_csv is not None:
         final_df.to_csv(output_csv, index=False)
         logger.info("final csv written")
+    resp_per_doc, resp_no_entity, n_uniq_entities, n_docs = count_output(
+        final_df
+    )
 
+    if resp_per_doc:
+        df_resp_doc = pd.DataFrame(list(resp_per_doc.items()), columns=['doc','count'])
+        df_resp_doc.to_csv("resp-in-doc.csv", index=False)
+    if resp_no_entity:
+        df_resp_no_e = resp_no_entity.to_csv("resp-no-entity.csv", index=False)
+        df_resp_no_e.to_csv("resp-no-entity.csv", index=False)
     elapsed = time.time() - start
 
     logger.info("total time : {:}".format(cu.format_time(elapsed)))
