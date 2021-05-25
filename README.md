@@ -18,11 +18,6 @@ gamechangerml
 │   │   ├── evaluation
 │   │   ├── portion_marking_demo
 │   │   └── sentence-transformer
-│   └── policy
-│       └── text_classif
-│           ├── configuration
-│           ├── examples
-│           └── utils
 ├── mlflow
 ├── models
 │   ├── qexp_*
@@ -45,6 +40,7 @@ gamechangerml
 │   │   ├── ranking
 │   │   ├── semantic
 │   │   └── sent_transformer
+│   ├── text_classif
 │   ├── text_handling
 │   │   └── assets
 │   └── utilities
