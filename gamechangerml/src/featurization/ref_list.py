@@ -2,7 +2,7 @@ import re
 import typing as t
 from collections import defaultdict
 
-from src.featurization.ref_utils import make_dict
+from gamechangerml.src.featurization.ref_utils import make_dict
 
 ref_regex = make_dict()
 

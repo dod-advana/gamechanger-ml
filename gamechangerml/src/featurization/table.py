@@ -7,14 +7,14 @@ import re
 import numpy as np
 import pandas as pd
 
-import src.utilities.spacy_model as spacy_
-from src.featurization.ref_list import collect_ref_list
-from src.featurization.abbreviations_utils import (
+import gamechangerml.src.utilities.spacy_model as spacy_
+from gamechangerml.src.featurization.ref_list import collect_ref_list
+from gamechangerml.src.featurization.abbreviations_utils import (
     get_agencies_dict,
     check_duplicates,
     get_agencies,
 )
-from src.featurization.extract_improvement.extract_utils import (
+from gamechangerml.src.featurization.extract_improvement.extract_utils import (
     extract_entities,
     create_list_from_dict,
     remove_articles,
