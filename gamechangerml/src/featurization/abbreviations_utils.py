@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.featurization.ref_list import collect_ref_list
+from gamechangerml.src.featurization.ref_list import collect_ref_list
 
 
 # FUNCTIONS
@@ -20,16 +20,16 @@ def get_agencies_dict(agencies_file):
     duplicates = []
 
     for index, row in df.iterrows():
-        temp = list(str(row['Agency_Aliases']).split(';'))
+        temp = list(str(row["Agency_Aliases"]).split(";"))
         for i in temp:
             agency_list = []
             if i not in aliases:
-                agency_list.append(row['Agency_Name'])
+                agency_list.append(row["Agency_Name"])
                 aliases[i] = agency_list
             else:
                 duplicates.append(i)
-                aliases[i].append(row['Agency_Name'])
-        aliases[row['Agency_Name']] = [row['Agency_Name']]
+                aliases[i].append(row["Agency_Name"])
+        aliases[row["Agency_Name"]] = [row["Agency_Name"]]
 
     return duplicates, aliases
 
@@ -54,27 +54,30 @@ def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
     # speeds up iterating through the various dataframe columns dynamically,
     # excludes doc name and primary entity
     combined_cols = pd.DataFrame(
-        file_dataframe[file_dataframe.columns[2:]].apply(lambda x: ','.join(x.dropna().astype(str)), axis=1), columns=['text']
+        file_dataframe[file_dataframe.columns[2:]].apply(
+            lambda x: ",".join(x.dropna().astype(str)), axis=1
+        ),
+        columns=["text"],
     )
 
     for i, row in combined_cols.iterrows():
         agencies = []
         for x in aliases.keys():
-            if " " + x in row['text']:
+            if " " + x in row["text"]:
                 if x not in duplicates:
                     agencies.append(aliases[x])
                 if doc_dups is not None:
                     if doc_dups[i] is not None:
                         agencies.append(doc_dups[i])
         flat_a = [item for sublist in agencies for item in sublist]
-        flat_a = [''.join(x) for x in flat_a]
+        flat_a = ["".join(x) for x in flat_a]
         flat_a = set(flat_a)
         all_agencies.append(",".join(flat_a))
 
     return all_agencies
 
 
-def get_references(file_dataframe, doc_title_col='doc'):
+def get_references(file_dataframe, doc_title_col="doc"):
     """
     Get all the refs for a list of documents.
 

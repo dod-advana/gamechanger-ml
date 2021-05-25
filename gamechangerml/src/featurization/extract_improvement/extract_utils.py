@@ -1,10 +1,13 @@
-import pandas as pd
-import numpy as np
 import re
 
-from dataScience.src.utilities.text_utils import simple_clean
+from gamechangerml.src.utilities.text_utils import simple_clean
 
-def extract_entities(document, spacy_model, entity_types=('ORG', 'GPE', 'NORP', 'LAW', 'LOC', 'PERSON')):
+
+def extract_entities(
+    document,
+    spacy_model,
+    entity_types=("ORG", "GPE", "NORP", "LAW", "LOC", "PERSON"),
+):
     """
     Creates a dictionary of entities in a given document using the provided NER model.
 
@@ -24,13 +27,14 @@ def extract_entities(document, spacy_model, entity_types=('ORG', 'GPE', 'NORP', 
         entities[i] = []
 
     for entity in doc.ents:
-        if (entity.label_ in entities.keys()):
+        if entity.label_ in entities.keys():
             entities[entity.label_].append(entity.text)
-    
+
     for i in entities.keys():
         entities[i] = list(set(entities[i]))
 
     return entities
+
 
 def create_list_from_dict(mydict):
     """
@@ -47,8 +51,9 @@ def create_list_from_dict(mydict):
         if len(v) > 0:
             for i in v:
                 outputs.append(i)
-    
+
     return outputs
+
 
 def remove_articles(entities_list):
     """
@@ -62,12 +67,13 @@ def remove_articles(entities_list):
     """
     text_list = entities_list
     for i, v in enumerate(text_list):
-        if v[0:4] == 'the ':
-            text_list[i] = v.replace('the ', '')
-        elif v[0:4] == 'The ':
-            text_list[i] = v.replace('The ','')
+        if v[0:4] == "the ":
+            text_list[i] = v.replace("the ", "")
+        elif v[0:4] == "The ":
+            text_list[i] = v.replace("The ", "")
 
     return text_list
+
 
 def remove_hanging_parenthesis(sample_string):
     """
@@ -77,9 +83,10 @@ def remove_hanging_parenthesis(sample_string):
         sample_string (str): Input string
 
     Returns:
-        str 
+        str
     """
-    return re.sub(r'[^.*]\($', '', sample_string).strip()
+    return re.sub(r"[^.*]\($", "", sample_string).strip()
+
 
 def match_parenthesis(entities_list):
     """
@@ -92,19 +99,25 @@ def match_parenthesis(entities_list):
         list
     """
     text_list = entities_list
-    
+
     for i, v in enumerate(text_list):
         clean_text = remove_hanging_parenthesis(v)
-        if '(' in clean_text:
-            if ')' not in clean_text:
-                paren_split = clean_text.split('(')
-                paren_add = paren_split[1].split(' ', 1)
+        if "(" in clean_text:
+            if ")" not in clean_text:
+                paren_split = clean_text.split("(")
+                paren_add = paren_split[1].split(" ", 1)
                 if len(paren_add) > 1:
-                    clean_text = paren_split[0] + '(' + paren_add[0] + ') ' + paren_add[1]
+                    clean_text = (
+                        paren_split[0]
+                        + "("
+                        + paren_add[0]
+                        + ") "
+                        + paren_add[1]
+                    )
                 else:
-                    clean_text = paren_split[0] + '(' + paren_add[0] + ') '
+                    clean_text = paren_split[0] + "(" + paren_add[0] + ") "
         text_list[i] = clean_text
-    
+
     text_list = [i for i in text_list if i]
 
     return text_list

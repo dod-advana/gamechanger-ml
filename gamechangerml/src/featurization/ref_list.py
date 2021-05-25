@@ -7,7 +7,13 @@ from gamechangerml.src.featurization.ref_utils import make_dict
 ref_regex = make_dict()
 
 
-def look_for_general(m_str: str, ref_dict: defaultdict, base_num: t.Pattern[str], full_num: t.Pattern[str], doc_type: str) -> defaultdict:
+def look_for_general(
+    m_str: str,
+    ref_dict: defaultdict,
+    base_num: t.Pattern[str],
+    full_num: t.Pattern[str],
+    doc_type: str,
+) -> defaultdict:
     """
     Reference Extraction by Regular Expression: For general use
 
