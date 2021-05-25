@@ -24,7 +24,7 @@ class EntityCoref(object):
         self.SENTENCE = "sentence"
         self.KW = "shall"
         self.KW_RE = re.compile("\\b" + self.KW + "\\b[:,]?")
-        self.NA = "Not Available"
+        self.NA = "NA"
         self.TC = "top_class"
         self.ENT = "entity"
 
