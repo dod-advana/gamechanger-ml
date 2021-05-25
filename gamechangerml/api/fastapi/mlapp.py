@@ -96,7 +96,7 @@ logger.info(f"API TRANSFORMERS DIRECTORY is: {LOCAL_TRANSFORMERS_DIR}")
 logger.info(f"API INDEX PATH is: {SENT_INDEX_PATH}")
 logger.info(f"API REDIS HOST is: {REDIS_HOST}")
 logger.info(f"API REDIS PORT is: {REDIS_PORT}")
-
+logger.info("TEST 22")
 
 # init globals
 query_expander = None
@@ -386,7 +386,7 @@ async def qa_infer(query: dict, response: Response) -> dict:
     """
     logger.debug("QUESTION ANSWER - predicting query: " + str(query["query"]))
     results = {}
-    
+
     try:
         query_text = query["query"]
         query_context = query["search_context"]
@@ -404,6 +404,7 @@ async def qa_infer(query: dict, response: Response) -> dict:
         raise
     return results
 
+
 def unquoted(term):
     """unquoted - unquotes string
     Args:
@@ -415,6 +416,7 @@ def unquoted(term):
         return term[1:-1]
     else:
         return term
+
 
 @app.post("/expandTerms", status_code=200)
 async def post_expand_query_terms(termsList: dict, response: Response) -> dict:

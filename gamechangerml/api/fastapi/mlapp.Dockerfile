@@ -14,21 +14,27 @@ RUN apt-get install unzip
 RUN apt-get -y install python3
 RUN apt-get -y install python3-pip
 
-ADD api/requirements.txt .
+#ADD api/requirements.txt .
 #RUN apt install --yes gcc python3-dev libc-dev
 RUN pip3 install --upgrade pip wheel setuptools
-RUN pip3 install --no-deps --trusted-host files.pythonhosted.org -r requirements.txt
+#RUN pip3 install --no-deps --trusted-host files.pythonhosted.org -r requirements.txt
 RUN pip3 install awscli
-RUN mkdir gc
 # add API source code
-COPY api/ gamechangerml/api/
+RUN mkdir gamechanger-ml
+COPY setup.py gamechanger-ml/.
+COPY gc-venv-green.txt gamechanger-ml/.
+COPY README.md gamechanger-ml/.
+RUN pip3 install gamechanger-ml/.
+RUN mkdir gamechanger-ml/gamechangerml
+WORKDIR gamechanger-ml
+# COPY api/ gamechangerml/api/
 # add source code
-COPY src/. gamechangerml/src/
-COPY setup_env.sh/ gamechangerml/setup_env.sh
-COPY configs gamechangerml/configs
-COPY scripts gamechangerml/scripts
+# COPY src/. gamechangerml/src/
+# COPY setup_env.sh/ gamechangerml/setup_env.sh
+# COPY configs gamechangerml/configs
+# COPY scripts gamechangerml/scripts
 # COPY transformer_cache transformer_cache
 
-RUN chmod +x gamechangerml/api/fastapi/startFast.sh
+#RUN chmod +x gamechangerml/api/fastapi/startFast.sh
 #CMD gunicorn gamechangerml.api.fastapi.mlapp:app --bind 0.0.0.0:5000 --workers 1 -k uvicorn.workers.UvicornWorker --log-level debug --timeout 0 --graceful-timeout 0
 ENTRYPOINT  ["/bin/bash",  "gamechangerml/api/fastapi/startFast.sh", "DEV"]
