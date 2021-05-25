@@ -96,7 +96,6 @@ logger.info(f"API TRANSFORMERS DIRECTORY is: {LOCAL_TRANSFORMERS_DIR}")
 logger.info(f"API INDEX PATH is: {SENT_INDEX_PATH}")
 logger.info(f"API REDIS HOST is: {REDIS_HOST}")
 logger.info(f"API REDIS PORT is: {REDIS_PORT}")
-logger.info("TEST 22")
 
 # init globals
 query_expander = None
