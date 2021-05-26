@@ -30,6 +30,9 @@ import time
 from argparse import ArgumentParser
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
+from gamechangerml.src.text_classif.examples.output_utils import (
+    entity_map
+)
 from gamechangerml.src.featurization.abbreviations_utils import (
     get_references,
     get_agencies_dict,
@@ -118,6 +121,9 @@ def predict_table(
             "Documents Referenced",
         ]
     ]
+
+    final_df['Organization / Personnel'] = entity_map(final_df)
+
     if output_csv is not None:
         final_df.to_csv(output_csv, index=False)
         logger.info("final csv written")
