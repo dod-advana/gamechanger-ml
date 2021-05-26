@@ -1,12 +1,14 @@
 import logging
 from collections import defaultdict
+
 import pandas as pd
+
 from gamechangerml.src.text_classif.utils.log_init import initialize_logger
 
 logger = logging.getLogger(__name__)
 
 
-def count_output(df, no_entity_id="not available"):
+def count_output(df, no_entity_id="Not Available"):
     resp_per_doc = defaultdict(int)
     resp_no_entity = defaultdict(int)
     ref_entities = defaultdict(int)
