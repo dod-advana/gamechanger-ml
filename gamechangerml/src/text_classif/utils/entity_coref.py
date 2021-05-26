@@ -24,7 +24,7 @@ class EntityCoref(object):
         self.SENTENCE = "sentence"
         self.KW = "shall"
         self.KW_RE = re.compile("\\b" + self.KW + "\\b[:,]?")
-        self.NA = "NA"
+        self.NA = "Unable to connect Responsibility to Entity"
         self.TC = "top_class"
         self.ENT = "entity"
 
