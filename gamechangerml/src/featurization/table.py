@@ -353,7 +353,7 @@ class Table:
                             .strip()
                             .split(" ")[-1]
                             == "and"
-                        ):  # noqa
+                        ):
                             continue
                         entity = row["text"].split(":", 1)[0]
                         entity = entity.split("shall", 1)[0]

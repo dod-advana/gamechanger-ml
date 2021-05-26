@@ -69,9 +69,11 @@ class EntityCoref(object):
             new_entry.update(entry)
 
             if entry[self.TC] == 0 and self.KW in sentence:
+                # current entity is the lhs of the split
                 curr_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
                     0
                 ].strip()
+                # if it's not in the list, set curr_entity to NA
                 if not el.contains_entity(
                     curr_entity, self.abrv_lu, self.ent_lu
                 ):
