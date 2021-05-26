@@ -8,7 +8,9 @@ from gamechangerml.src.text_classif.utils.log_init import initialize_logger
 logger = logging.getLogger(__name__)
 
 
-def count_output(df, no_entity_id="Not Available"):
+def count_output(
+        df, no_entity_id="Unable to connect Responsibility to Entity"
+):
     resp_per_doc = defaultdict(int)
     resp_no_entity = defaultdict(int)
     ref_entities = defaultdict(int)
