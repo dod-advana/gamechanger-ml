@@ -78,6 +78,7 @@ class SentenceCorpus(object):
                 c = metadata["subseries"]
                 d = metadata["number"]
                 e = metadata["issuance"]
+                self.metadata = metadata
                 dir_rank.update([a, b, c, d, e], metadata["path"])
             else:
                 self.metadata = self._get_doc(file)
@@ -169,7 +170,7 @@ class SentenceCorpus(object):
             else:
                 fpath = random.sample(dic, 1)[0]
             fname = fpath.split("/")[-1].replace("_parsed", "")
-            fname = self.metadata[fname]
+            #fname = self.metadata[fname]
             doc_data = self._get_doc(fpath)
         return doc, doc_data, fname, fpath
 
@@ -192,15 +193,17 @@ class SentenceCorpus(object):
 
         # Filter dictionary to specific headers
         header_text = []
+        temp = {}
         if headers:
             for key in headers:
-                dic = dic[key]
+                temp[key] = dic[key]
                 if isinstance(dic, str):
-                    header_text.append(dic)
+                    header_text.append(temp[key])
                 else:
-                    header_text.append(dic["text"])
+                    header_text.append(temp[key]["text"])
         else:
             headers = []
+        dic = temp
 
         # Randomly explore the hierarchy and append section text
         # and generate the header and text data
@@ -215,15 +218,17 @@ class SentenceCorpus(object):
             if key != "text":
                 headers.append(key)
         header_text = ". ".join(header_text)
-        if "text" in dic:
+        '''if "text" in dic:
+            
             if isinstance(dic, str):
                 text = dic
             else:
+                print(type(dic))
                 text = dic["text"]
         else:
             text = ""
-
-        return headers, text
+        '''
+        return headers, header_text
 
     def _get_sample(self, doc_meta = None, headers = None, fpath = None):
         """
