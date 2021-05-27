@@ -68,7 +68,6 @@ def predict_glob(
 
         batch_size (int): batch size
 
-
     Yields:
         List[Dict]
 
@@ -86,7 +85,7 @@ def predict_glob(
     if not glob.strip():
         raise ValueError("invalid file glob; got '{}'".format(glob))
     if not os.path.isfile(os.path.join(model_path_name, "config.json")):
-        raise FileNotFoundError("model_path_dir has no 'config.json'")
+        raise FileNotFoundError("model_path_name has no 'config.json'")
 
     predictor = Predictor(model_path_name, num_labels=2)
 

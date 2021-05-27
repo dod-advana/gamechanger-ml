@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 from sklearn import metrics
 
-from gamechangerml.src.text_classif.utils.classifier_utils import flatten_labels
+from gamechangerml.src.text_classif.utils.classifier_utils import (
+    flatten_labels,
+)
 
 
 def logit_score(logits):

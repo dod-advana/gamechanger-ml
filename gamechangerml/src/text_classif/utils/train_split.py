@@ -12,7 +12,7 @@ here = os.path.dirname(os.path.realpath(__file__))
 def main(data_file, topn=10000, suffix=""):
     try:
         df = pd.read_csv(data_file)
-        df = df.sample(frac=1.)
+        df = df.sample(frac=1.0)
         train = df.head(topn)
         train.to_csv(
             os.path.join(here, "train_" + suffix),
