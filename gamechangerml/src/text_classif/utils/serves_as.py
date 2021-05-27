@@ -20,7 +20,10 @@ def sa():
             if el.contains_entity(sent, abrv_re, org_re):
                 if "serves as" in sent or "shall serve as" in sent:
                     print("{:>35s} : {}".format(fname, sent))
-                    df = df.append({"file_name": fname, "content": sent}, ignore_index=True)
+                    df = df.append(
+                        {"file_name": fname, "content": sent},
+                        ignore_index=True,
+                    )
     df.to_csv("dodm_serves_as.csv", index=False)
 
 
