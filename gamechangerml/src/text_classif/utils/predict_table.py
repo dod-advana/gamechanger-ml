@@ -58,7 +58,7 @@ def predict_table(
     For each file matching `glob`, the `raw_text` is parsed into sentences
     and run through the classifier. Recognized entities are then associated
     with sentences classified as `1` or `responsibility`. The final output
-    is assembled by usisng sentences classified as `1` with organization
+    is assembled by using sentences classified as `1` with organization
     information, references, document title, etc.
 
     Returns:
