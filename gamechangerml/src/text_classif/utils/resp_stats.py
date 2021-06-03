@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def count_output(
-        df, no_entity_id="Unable to connect Responsibility to Entity"
+    df, no_entity_id="Unable to connect Responsibility to Entity"
 ):
     resp_per_doc = defaultdict(int)
     resp_no_entity = defaultdict(int)
@@ -21,8 +21,8 @@ def count_output(
         else:
             resp_no_entity[row["Source Document"]] += 1
 
-    num_docs = len(df["Organization / Personnel"].unique())
-    num_uniq_entities = len(resp_per_doc)
+    num_docs = len(df["Source Document"].unique())
+    num_uniq_entities = len(ref_entities)
     logger.info("           num docs : {:>6,d}".format(num_docs))
     logger.info("num unique entities : {:>6,d}".format(num_uniq_entities))
     return resp_per_doc, resp_no_entity, num_uniq_entities, num_docs
@@ -46,4 +46,6 @@ if __name__ == "__main__":
     final_df = pd.read_csv(args.csv_path)
 
     # unclear as to what to do with this output
-    resp_doc, resp_no_ent, n_uniq_ents, n_docs = count_output(final_df)
+    resp_doc, resp_no_ent, n_uniq_ents, n_docs = count_output(
+        final_df, no_entity_id="not available"
+    )

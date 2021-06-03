@@ -34,6 +34,9 @@ class EntityCoref(object):
         self.PL = "P.L."
         self.PL_DOT = "P. L."
         self.PL_RE = "\\b" + self.PL_DOT + "\\b"
+        self.EO = "E.O."
+        self.EO_DOT = "E. O."
+        self.EO_RE = "\\b" + self.EO_DOT + "\\b"
 
         self.dotted = [self.USC_DOT, self.PL]
         self.subs = [self.USC, self.PL]
@@ -57,7 +60,7 @@ class EntityCoref(object):
             re.sub(regex, sub, str(x)) for x in df[self.SENTENCE]
         ]
 
-    def _attach_entity(self, output_list, entity_list):
+    def _link_entity(self, output_list, entity_list):
         curr_entity = self.NA
         last_entity = self.NA
 
@@ -95,7 +98,7 @@ class EntityCoref(object):
             e_dict.update(entry)
             if e_dict[self.TC] == 0 and self.RESP in entry[self.SENTENCE]:
                 entity_list.append(e_dict)
-                self._attach_entity(output_list[idx + 1 :], entity_list)
+                self._link_entity(output_list[idx + 1:], entity_list)
                 return entity_list
             else:
                 entity_list.append(e_dict)

@@ -128,7 +128,9 @@ def predict_table(
     )
 
     if resp_per_doc:
-        df_resp_doc = pd.DataFrame(list(resp_per_doc.items()), columns=['doc','count'])
+        df_resp_doc = pd.DataFrame(
+            list(resp_per_doc.items()), columns=["doc", "count"]
+        )
         df_resp_doc.to_csv("resp-in-doc.csv", index=False)
     if resp_no_entity:
         df_resp_no_e = resp_no_entity.to_csv("resp-no-entity.csv", index=False)
