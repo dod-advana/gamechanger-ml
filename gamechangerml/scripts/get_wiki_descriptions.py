@@ -4,7 +4,6 @@ from datetime import date
 import pandas as pd
 import argparse
 
-
 def lookup_wiki_summary(query):
     try:
         return wikipedia.summary(query)
