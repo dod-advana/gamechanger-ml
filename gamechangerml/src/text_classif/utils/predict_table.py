@@ -58,7 +58,7 @@ def predict_table(
     For each file matching `glob`, the `raw_text` is parsed into sentences
     and run through the classifier. Recognized entities are then associated
     with sentences classified as `1` or `responsibility`. The final output
-    is assembled by usisng sentences classified as `1` with organization
+    is assembled by using sentences classified as `1` with organization
     information, references, document title, etc.
 
     Returns:
@@ -128,7 +128,9 @@ def predict_table(
     )
 
     if resp_per_doc:
-        df_resp_doc = pd.DataFrame(list(resp_per_doc.items()), columns=['doc','count'])
+        df_resp_doc = pd.DataFrame(
+            list(resp_per_doc.items()), columns=["doc", "count"]
+        )
         df_resp_doc.to_csv("resp-in-doc.csv", index=False)
     if resp_no_entity:
         df_resp_no_e = resp_no_entity.to_csv("resp-no-entity.csv", index=False)

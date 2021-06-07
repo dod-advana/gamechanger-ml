@@ -11,7 +11,7 @@ import os
 import torch
 import json
 from pathlib import Path
-
+import tarfile
 import typing as t
 import subprocess
 import logging
@@ -24,21 +24,9 @@ def create_tgz_from_dir(
     dst_archive: t.Union[str, Path],
     exclude_junk: bool = False,
 ) -> None:
-    src_dir = Path(src_dir).resolve()
-    dst_archive = Path(dst_archive).resolve()
-    exclude_junk_args = ["--exclude", "*/.git/*", "--exclude", "*/.DS_Store/*"]
-    subprocess.run(
-        args=[
-            "tar",
-            "-czf",
-            str(dst_archive),
-            "-C",
-            str(src_dir),
-            *(exclude_junk_args if exclude_junk else []),
-            ".",
-        ],
-        check=True,
-    )
+    with tarfile.open(dst_archive, "w:gz") as tar:
+        tar.add(src_dir, arcname=os.path.basename(src_dir))
+
 
 
 def main():

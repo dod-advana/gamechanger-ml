@@ -1,6 +1,7 @@
 """
 usage: example_gc_cli.py [-h] -c CONFIG_YAML -d DATA_FILE -m
                          {bert,roberta,distilbert} [-n NUM_SAMPLES]
+                         [-k CHECKPOINT_PATH]
 
 Trains the `bert-based` models on the gamechanger data set
 
@@ -11,9 +12,11 @@ optional arguments:
   -d DATA_FILE, --data-file DATA_FILE
                         path the training data
   -m {bert,roberta,distilbert}, --model-type {bert,roberta,distilbert}
-                        supported model type; default is `roberta'
+                        supported model type
   -n NUM_SAMPLES, --num-samples NUM_SAMPLES
                         if > 0, use this many samples for training
+  -k CHECKPOINT_PATH, --checkpoint-path CHECKPOINT_PATH
+                        directory to write each epoch's checkpoint files
 
 """
 import logging
@@ -63,9 +66,6 @@ def main(config_yaml, data_file, model_type, num_samples, checkpoint_path):
         else:
             raise ValueError("unsupported model; got `{}`".format(model_type))
 
-        # if checkpoint_path is not None and not os.path.isdir(checkpoint_path):
-        #     raise ValueError("no directory named {}".format(checkpoint_path))
-        # else:
         clf.cfg.checkpoint_path = checkpoint_path
 
         initialize_logger(
