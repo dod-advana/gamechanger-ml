@@ -2,46 +2,53 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
+import csv
+import math
 
 from gamechangerml.src.search.sent_transformer.corpus import SentenceCorpus
 
 from sentence_transformers import SentenceTransformer, models, losses, InputExample
+from datetime import datetime
+from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
 
-class GCDataset(TensorDataset):
-    def __init__(self, fpath, iter_len = 1_000):
-        self.corp = SentenceCorpus(fpath, iter_len = iter_len)
-        self.iter_len = iter_len
-
-    def __len__(self):
-        return self.iter_len
-
-    def __getitem__(self, index):
-        print("hi")
-        text_a, text_b, sim_score = self.corp._get_item_sample()
-        return InputExample(texts=[text_a[0], text_b[0]], label=float(sim_score/9))
 
 def train_model(corpus_directory,
                 save_path,
                 pretrained_model = "msmarco-distilbert-base-v2",
-                sample_count = 10,
                 use_gpu = False,
-                batch_size = 4):
+                batch_size = 16):
 
     model = SentenceTransformer(pretrained_model)
-    if use_gpu:
+    #model_save_path = 'output/'+pretrained_model+'-'+datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    '''if use_gpu:
         if torch.cuda.is_available():
             if torch.cuda.device_count() > 1:
                 model = nn.DataParallel(model)
             model = model.cuda()
         else:
             print("Error")
-            use_gpu = False
-    dataset = [InputExample(texts=['My first sentence', 'My second sentence'], label=0.8),
-    InputExample(texts=['Another pair', 'Unrelated sentence'], label=0.3)]
-    #dataset = GCDataset(corpus_directory, iter_len = sample_count)
+            use_gpu = False'''
+    dataset = []
+    with open('dataset.csv', newline='') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            dataset.append(InputExample(texts=[row[0], row[1]], label=float(row[2])))
+    testset = []
+    with open('testset.csv', newline='') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            testset.append(InputExample(texts=[row[0], row[1]], label=float(row[2])))
+
+
+
     dataloader = DataLoader(dataset, shuffle=True, batch_size = batch_size)
     train_loss = losses.CosineSimilarityLoss(model)
-    model.fit(train_objectives=[(dataloader, train_loss)], epochs=1, warmup_steps=1)
+    num_epochs = 4
+    warmup_steps = math.ceil(len(dataloader) * num_epochs * 0.1)
+    model.fit(train_objectives=[(dataloader, train_loss)], epochs=1, warmup_steps=1,output_path=save_path)
+    model = SentenceTransformer(save_path)
+    test_evaluator = EmbeddingSimilarityEvaluator.from_input_examples(testset, name='sts-test')
+    test_evaluator(model, output_path=save_path)
 
 if __name__ == "__main__":
     train_model("../parsed good", "./embeddertrained")

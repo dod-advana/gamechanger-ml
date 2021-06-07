@@ -196,14 +196,18 @@ class SentenceCorpus(object):
         temp = {}
         if headers:
             for key in headers:
-                temp[key] = dic[key]
-                if isinstance(dic, str):
+                if key in dic:
+                    temp[key] = dic[key]
+                else:
+                    continue
+                if isinstance(temp[key], str):
                     header_text.append(temp[key])
                 else:
                     header_text.append(temp[key]["text"])
+            dic = temp
         else:
             headers = []
-        dic = temp
+
 
         # Randomly explore the hierarchy and append section text
         # and generate the header and text data
@@ -219,7 +223,7 @@ class SentenceCorpus(object):
                 headers.append(key)
         header_text = ". ".join(header_text)
         '''if "text" in dic:
-            
+
             if isinstance(dic, str):
                 text = dic
             else:
@@ -282,7 +286,9 @@ class SentenceCorpus(object):
 
             # Get second text
             text = sample_1[0] if len(sample_1[0]) < len(sample_2[0]) else sample_2[0]
-        return sample_1, sample_2, sim_level
+            if sample_1[0] == sample_2[0]:
+                text = ""
+        return sample_1, sample_2, float(sim_level)/len(meta_len)
 
     def __iter__(self):
         """
