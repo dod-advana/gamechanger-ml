@@ -45,10 +45,14 @@ def raw2df(src_path, glob, key="raw_text"):
         List[Dict]
 
     """
-    for raw_text, fname in cu.gen_gc_docs(src_path, glob, key=key):
-        sent_df = cu.make_sentences(raw_text, fname)
-        logger.info("{:>25s} : {:>5,d}".format(fname, len(sent_df)))
-        yield sent_df, fname
+    for fname, doc in cu.gen_gc_docs(src_path, glob, key=key):
+        if key in doc:
+            raw_text = doc[key]
+            sent_df = cu.make_sentences(raw_text, fname)
+            logger.info("{:>25s} : {:>5,d}".format(fname, len(sent_df)))
+            yield sent_df, fname
+        else:
+            logger.warning("no key '{}' in {}".format(key, fname))
 
 
 def main(src_path, glob, output_path):

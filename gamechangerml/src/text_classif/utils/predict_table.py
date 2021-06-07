@@ -42,14 +42,22 @@ from gamechangerml.src.text_classif.utils.resp_stats import count_output
 logger = logging.getLogger(__name__)
 
 
+def _agg_stats(df):
+    resp_per_doc, resp_no_entity, n_uniq_entities, n_docs = count_output(df)
+    if resp_per_doc:
+        df_resp_doc = pd.DataFrame(
+            list(resp_per_doc.items()), columns=["doc", "count"]
+        )
+        df_resp_doc.to_csv("resp-in-doc-stats.csv", index=False)
+    if resp_no_entity:
+        df_resp_no_e = pd.DataFrame(
+            list(resp_per_doc.items()), columns=["doc", "count"]
+        )
+        df_resp_no_e.to_csv("resp-no-entity-stats.csv", index=False)
+
+
 def predict_table(
-    model_path,
-    data_path,
-    glob,
-    max_seq_len,
-    batch_size,
-    output_csv,
-    raw_output,
+    model_path, data_path, glob, max_seq_len, batch_size, output_csv, stats
 ):
     """
     See the preamble (help) for a description of these arguments.
@@ -64,11 +72,9 @@ def predict_table(
         pandas.DataFrame
     """
     if not os.path.isdir(data_path):
-        raise ValueError("no path {}".format(data_path))
+        raise ValueError("no data path {}".format(data_path))
     if not os.path.isdir(model_path):
-        raise ValueError("no path {}".format(model_path))
-
-    raw_output_csv = None
+        raise ValueError("no model path {}".format(model_path))
 
     rename_dict = {
         "entity": "Organization / Personnel",
@@ -89,12 +95,6 @@ def predict_table(
         batch_size,
     )
     df = entity_coref.to_df()
-    if raw_output and raw_output_csv is not None:
-        fn, ext = os.path.splitext(output_csv)
-        raw_output_csv = fn + "_raw" + "." + ext
-        entity_coref.to_csv(raw_output_csv)
-        logger.info("coref output written")
-
     df = df[df.top_class == 1].reset_index()
 
     logger.info("retrieving agencies csv")
@@ -122,18 +122,8 @@ def predict_table(
     if output_csv is not None:
         final_df.to_csv(output_csv, index=False)
         logger.info("final csv written")
-    resp_per_doc, resp_no_entity, n_uniq_entities, n_docs = count_output(
-        final_df
-    )
-
-    if resp_per_doc:
-        df_resp_doc = pd.DataFrame(
-            list(resp_per_doc.items()), columns=["doc", "count"]
-        )
-        df_resp_doc.to_csv("resp-in-doc.csv", index=False)
-    if resp_no_entity:
-        df_resp_no_e = resp_no_entity.to_csv("resp-no-entity.csv", index=False)
-        df_resp_no_e.to_csv("resp-no-entity.csv", index=False)
+    if stats:
+        _agg_stats(final_df)
     elapsed = time.time() - start
 
     logger.info("total time : {:}".format(cu.format_time(elapsed)))
@@ -205,11 +195,11 @@ if __name__ == "__main__":
         help="the .csv for agency abbreviations",
     )
     parser.add_argument(
-        "-r",
-        "--raw-output",
-        dest="raw_output",
+        "-s",
+        "--stats",
         action="store_true",
-        help="write the results of the classifier / entity attachment",
+        dest="stats",
+        help="write aggregate statistics"
     )
 
     initialize_logger(to_file=False, log_name="none")
@@ -223,5 +213,5 @@ if __name__ == "__main__":
         args.max_seq_len,
         args.batch_size,
         args.output_csv,
-        args.raw_output,
+        args.stats,
     )

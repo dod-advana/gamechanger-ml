@@ -130,13 +130,13 @@ def gen_gc_docs(doc_path, glob, key="raw_text"):
         logger.warning(
             "no files in '{}' matching the glob '{}'".format(doc_path, glob)
         )
-    for input_f in sorted(file_list):
-        with open(os.path.join(doc_path, input_f)) as fin:
+    for input_file in sorted(file_list):
+        with open(os.path.join(doc_path, input_file)) as fin:
             jdoc = json.load(fin)
             if key in jdoc:
-                yield jdoc[key], input_f
+                yield input_file, jdoc
             else:
-                logger.warning("`{}` not found in {}".format(key, input_f))
+                logger.warning("`{}` not found in {}".format(key, input_file))
 
 
 def load_data(data_file, n_samples, shuffle=False):
@@ -255,18 +255,6 @@ def make_sentences(text, src):
     return sent_list
 
 
-def get_document_title(doc_directory):
-    with open(doc_directory) as json_data:
-        data = json.load(json_data)
-    return data["title"]
-
-
-def get_source_pdf(doc_directory):
-    with open(doc_directory) as json_data:
-        data = json.load(json_data)
-    return data["filename"]
-
-
 def raw2dict(src_path, glob, key="raw_text"):
     """
     Generator to step through `glob` and extract each file's sentences;
@@ -274,16 +262,25 @@ def raw2dict(src_path, glob, key="raw_text"):
 
     Args:
         src_path (str): location of the .json documents
+
         glob (str): file pattern to match
+
         key (str): text key in the .json
 
     Yields:
         List[Dict]: per the schema in `make_sentences()`
         str: name of the file
     """
-    for raw_text, fname in gen_gc_docs(src_path, glob, key=key):
-        title = get_document_title(os.path.join(src_path, fname))
-        source = get_source_pdf(os.path.join(src_path, fname))
+    for fname, doc in gen_gc_docs(src_path, glob, key=key):
+        title = "none"
+        source = "none"
+        raw_text = "none"
+        if "title" in doc:
+            title = doc["title"]
+        if "filename" in doc:
+            source = doc["filename"]
+        if "raw_text" in doc:
+            raw_text = doc["raw_text"]
         sent_list = make_sentences(raw_text, fname)
         for sent in sent_list:
             sent.update({"title": title, "source": source})

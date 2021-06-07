@@ -43,9 +43,7 @@ class EntityCoref(object):
         self.sub_back = [self.USC_DOT, self.PL_DOT]
         self.unsub_re = [self.USC_RE, self.PL_RE]
 
-        self.abrv_lu, self.ent_lu = el.build_entity_lookup()
         self.pop_entities = None
-
         self.contains_entity = el.ContainsEntity()
 
     def _new_edict(self, value=None):
