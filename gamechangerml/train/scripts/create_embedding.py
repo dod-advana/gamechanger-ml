@@ -28,7 +28,6 @@ def create_tgz_from_dir(
         tar.add(src_dir, arcname=os.path.basename(src_dir))
 
 
-
 def main():
     parser = LocalParser()
     parser.add_argument(
