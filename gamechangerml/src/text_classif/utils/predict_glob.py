@@ -29,7 +29,10 @@ def _predict_docs(input_dicts, predictor, max_seq_len, batch_size):
         out_list.extend(output)
 
     elapsed = time.time() - start
-    rate = elapsed / len(out_list)
+    if len(out_list) > 0:
+        rate = elapsed / len(out_list)
+    else:
+        rate = 0.0
     logger.info("       time : {:}".format(cu.format_time(elapsed)))
     logger.info("time / text : {:>6.3f} secs".format(rate))
     return out_list
@@ -65,7 +68,6 @@ def predict_glob(
 
         batch_size (int): batch size
 
-
     Yields:
         List[Dict]
 
@@ -83,7 +85,7 @@ def predict_glob(
     if not glob.strip():
         raise ValueError("invalid file glob; got '{}'".format(glob))
     if not os.path.isfile(os.path.join(model_path_name, "config.json")):
-        raise FileNotFoundError("model_path_dir has no 'config.json'")
+        raise FileNotFoundError("model_path_name has no 'config.json'")
 
     predictor = Predictor(model_path_name, num_labels=2)
 

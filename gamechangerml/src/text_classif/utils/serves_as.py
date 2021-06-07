@@ -7,11 +7,8 @@ from gamechangerml.src.text_classif.utils.raw_text2csv import raw2df
 
 logger = logging.getLogger(__name__)
 
-corpus_dir = "/Users/chrisskiscim/projects/json_corpus_20210419"
-glob = "DoDM*.json"
 
-
-def sa():
+def find_serves_as(corpus_dir, glob, output_csv):
     df = pd.DataFrame(columns=["file_name", "content"])
     abrv_re, org_re = el.build_entity_lookup()
     for sent_list, fname in raw2df(corpus_dir, glob):
@@ -19,14 +16,16 @@ def sa():
             sent = item["sentence"]
             if el.contains_entity(sent, abrv_re, org_re):
                 if "serves as" in sent or "shall serve as" in sent:
-                    print("{:>35s} : {}".format(fname, sent))
                     df = df.append(
                         {"file_name": fname, "content": sent},
                         ignore_index=True,
                     )
-    df.to_csv("dodm_serves_as.csv", index=False)
+    df.to_csv(output_csv, index=False)
 
 
 if __name__ == "__main__":
     initialize_logger(to_file=False, log_name="none")
-    sa()
+    corpus_dir_ = "/Users/chrisskiscim/projects/json_corpus_20210419"
+    glob_ = "DoDI*.json"
+    output_csv_ = "dodi_serves_as.csv"
+    find_serves_as(corpus_dir_, glob_, output_csv_)
