@@ -87,7 +87,8 @@ def test_array(np_dtype, tmpdir):
 
 
 @pytest.mark.parametrize(
-    "metadata", ["D", "ms"],
+    "metadata",
+    ["D", "ms"],
 )
 def test_single_date(tmpdir, metadata):
     date_in = np.datetime64("2020-04", metadata)

@@ -6,7 +6,7 @@ See: http://www.aleax.it/5ep.html
 """
 import logging
 
-#import en_core_web_lg
+# import en_core_web_lg
 import en_core_web_md
 from gamechangerml.src.utilities.borg import Borg
 

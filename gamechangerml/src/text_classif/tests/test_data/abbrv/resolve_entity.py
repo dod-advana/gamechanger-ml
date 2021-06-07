@@ -1,54 +1,43 @@
 import logging
+import re
+
 import gamechangerml.src.text_classif.utils.log_init as cu
-import json
 
 logger = logging.getLogger(__name__)
 
+abbrv_file = "/Users/chrisskiscim/projects/gamechanger-ml/gamechangerml/src/text_classif/utils/updated_dod_orgs.txt"  # noqa
 
 if __name__ == "__main__":
     import pandas as pd
 
     cu.initialize_logger(to_file=False, log_name="none")
-    abbrv_file = "/Users/chrisskiscim/projects/gamechanger-data/dataScience/src/featurization/data/abbreviations.json"  # noqa
-
-    starting_txt = [
-        "Secretary of",
-        "Deputy Secretary of",
-        "Assistant Secretary of",
-        "Principal Deputy Assistant",
-        "Deputy Assistant Secretary",
-        "Under Secretary of",
-        "Director of",
-        "Directors of",
-        "Director, ",
-        "Directors, ",
-        "Principal Deputy Director",
-        "Chairman of",
-        "Chairmen of",
-        "Heads of the",
-        "Component Heads",
-        "Secretaries of the Military Departments",
-    ]
 
     with open(abbrv_file) as f:
-        abbrv_dict = json.load(f)
+        entity_list = f.readlines()
 
     scrubbed = dict()
-    two_toks = list()
-    two_tokens = list()
+    abbrevs = set()
+    two_tokens = set()
     df = pd.DataFrame(columns=["Abbreviation", "Expansion"])
-    for abbrv, texts in abbrv_dict.items():
-        check = [txt.startswith(st) for st in starting_txt for txt in texts]
-        if True in check:
-            scrubbed[abbrv] = texts
-            row = {"Abbreviation": abbrv, "Expansion": " | ".join(texts)}
-            df = df.append(row, ignore_index=True)
+    for line in entity_list:
+        if line.startswith("#"):
+            continue
+        line = line.strip()
+        if "(" in line:
+            entity, abbrv = line.split("(", maxsplit=1)
+        else:
+            entity = line
+            abbrv = None
+        two = entity.split()
+        two_tokens.add(" ".join(two[:2]))
+        if abbrv and abbrv.endswith(")"):
+            abbrevs.add(abbrv[:-1])
 
-    # scrubbed_enc = json.dumps(scrubbed)
-    df = pd.read_csv("entity.csv")
-    alter = list()
-    for _, row in df.iterrows():
-        alter.append(row["Abbreviation"][:3])
-    regex = "|".join(sorted(list(set(alter))))
-    print(regex)
-    print("|".join(sorted(list(set(starting_txt)))))
+    final_ent = sorted(list(two_tokens))
+    final_abrv = sorted(list(abbrevs))
+    final_abrv = [re.sub("[)(]", "", s) for s in final_abrv]
+    final_abrv = [re.sub("-", " ", s) for s in final_abrv]
+    final_abrv = [re.sub(r"&", "#", s) for s in final_abrv]
+
+    print("|".join(final_abrv))
+    print("|".join(final_ent))

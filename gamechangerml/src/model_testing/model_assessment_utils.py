@@ -88,7 +88,9 @@ def assess_model(
     sample_list = random.sample(para_list, sample_size)
 
     if verbose:
-        logger.info("Sampling {0} paragraphs from the corpus".format(sample_size))
+        logger.info(
+            "Sampling {0} paragraphs from the corpus".format(sample_size)
+        )
 
     for item in sample_list:
         p = " ".join(item[0])
@@ -96,7 +98,10 @@ def assess_model(
 
         # preprocess to get the relevant words
         search_text = preprocess(
-            p, min_len=2, phrase_detector=phrase_detector, remove_stopwords=True
+            p,
+            min_len=2,
+            phrase_detector=phrase_detector,
+            remove_stopwords=True,
         )
 
         # infer
@@ -172,7 +177,9 @@ def print_results(results_list, logger):
             "(PARAGRAPH) Percentage of queries with the paragraph as the first result: "
             + str(model["total_par_first"])
         )
-        logger.info("Total cos_sim above 0.70: " + str(model["total_above_70"]))
+        logger.info(
+            "Total cos_sim above 0.70: " + str(model["total_above_70"])
+        )
         logger.info("Total cos_sim above 0.4: " + str(model["total_above_40"]))
         logger.info("Total cos_sim above 0.1: " + str(model["total_above_10"]))
 
@@ -184,13 +191,18 @@ def print_results(results_list, logger):
 
     if total_passed != len(results_list):
         logger.info(
-            str(total_passed) + " / " + str(len(results_list)) + " tests passed"
+            str(total_passed)
+            + " / "
+            + str(len(results_list))
+            + " tests passed"
         )
 
     return total_passed == len(results_list)
 
 
-def assess_model_gs(model_name, logger, model_dir=".", verbose=False, top_n=50):
+def assess_model_gs(
+    model_name, logger, model_dir=".", verbose=False, top_n=50
+):
     """Assesses a model against a gold standard dataset of queries and expected top match. We pass in a
     query text then check if the expected document is the to match.
         Args:
@@ -225,7 +237,10 @@ def assess_model_gs(model_name, logger, model_dir=".", verbose=False, top_n=50):
     for i, p in enumerate(list(gs_dict.keys())):
         # preprocess to get the relevant words
         search_text = preprocess(
-            p, min_len=1, phrase_detector=phrase_detector, remove_stopwords=True
+            p,
+            min_len=1,
+            phrase_detector=phrase_detector,
+            remove_stopwords=True,
         )
 
         # infer
@@ -255,7 +270,11 @@ def assess_model_gs(model_name, logger, model_dir=".", verbose=False, top_n=50):
             )
 
         logger.info(
-            "Model found " + str(found) + " / " + str(total) + " expected results."
+            "Model found "
+            + str(found)
+            + " / "
+            + str(total)
+            + " expected results."
         )
 
     logger.info(
@@ -292,7 +311,12 @@ def remove_files(corpus_dir, model_list, logger, verbose=False):
 
 
 def assess_all_models(
-    model_path, logger, local=False, verbose=False, gold_standard=False, iterate=False
+    model_path,
+    logger,
+    local=False,
+    verbose=False,
+    gold_standard=False,
+    iterate=False,
 ):
     """
     A wrapper util function that either downloads the latest models or selects models from the current working

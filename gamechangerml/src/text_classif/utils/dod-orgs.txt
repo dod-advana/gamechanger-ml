@@ -115,18 +115,18 @@ Chairman, Joint Chiefs of Staff (CJCS)
 Vice Chairman, Joint Chiefs of Staff
 Director, Joint Staff
 Vice Director, Joint Staff
-J1 - Director, Manpower and Personnel (J1)
-J2 - Director, Intelligence (J2)
-J3 - Director, Operations (J3)
-J4 - Director, Logistics (J4)
-J5 - Director, Strategy, Plans, and Policy (J5)
-J6 - Director, Command, Control, Communications, and Computers / Chief Information Officer (J6)
-J7 - Director, Joint Force Development (J7)
-J8 - Director, Force Structure, Resources, and Assessment (J8)
+Director, Manpower and Personnel
+Director, Intelligence
+Director, Operations
+Director, Logistics
+Director, Strategy, Plans, and Policy
+Director, Command, Control, Communications, and Computers / Chief Information Officer
+Director, Joint Force Development
+Director, Force Structure, Resources, and Assessment
 Director of Management
 Joint History Office
 Assistant to the Chairman
-Defense HUMINT Manager (DHM)
+# Defense HUMINT Manager (DHM)
 Secretary of Defense (SecDef)
 Deputy Secretary of Defense (DepSecDef)
 Executive Secretary of the Department of Defense (ExecSec)
@@ -162,3 +162,4 @@ Director of Small Business Programs
 Defense Prisoner of War/Missing Personnel Office (DPMO)
 Combatant Commanders
 Heads of the DoD Components
+Component heads

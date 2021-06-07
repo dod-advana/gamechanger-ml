@@ -27,7 +27,6 @@ optional arguments:
 import logging
 import os
 import time
-from argparse import ArgumentParser
 import pandas as pd
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
@@ -142,17 +141,20 @@ def predict_table(
 
 
 if __name__ == "__main__":
+    from argparse import ArgumentParser
 
     desc = "Binary classification of each sentence in the files "
     desc += "matching the 'glob' in data_path"
-    parser = ArgumentParser(prog="python predict_table.py", description=desc)
+    fp = os.path.split(__file__)
+    fp = "python " + fp[-1]
+    parser = ArgumentParser(prog=fp, description=desc)
     parser.add_argument(
         "-m",
         "--model-path",
         dest="model_path",
         type=str,
         required=True,
-        help="directory of the torch model",
+        help="directory of the pytorch model",
     )
     parser.add_argument(
         "-d",

@@ -128,7 +128,7 @@ def summary_clean(text: str, min_par_len=15) -> str:
         # get only paragraphs of significant length
         for paragraph in pars:
             if len(paragraph.split()) > min_par_len:
-                #paragraph = filter_sentences(paragraph)
+                # paragraph = filter_sentences(paragraph)
                 good_pars.append(paragraph)
 
         final_text = "\n".join(good_pars)
@@ -138,7 +138,7 @@ def summary_clean(text: str, min_par_len=15) -> str:
 
 
 def utf8_pass(text):
-    return text.encode('utf-8', 'ignore').decode('utf-8')
+    return text.encode("utf-8", "ignore").decode("utf-8")
 
 
 def clean_text(doc_text: str) -> str:

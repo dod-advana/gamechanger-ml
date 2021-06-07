@@ -29,17 +29,28 @@ if __name__ == "__main__":
         "--verbose", help="increase output verbosity", action="store_true"
     )
     parser.add_argument(
-        "--gold_standard", help="runs the gold standard test", action="store_true"
+        "--gold_standard",
+        help="runs the gold standard test",
+        action="store_true",
     )
 
     parser.add_argument(
-        "--iterate", help="iterate from top 5 - 50 documents returned for each assessment", action="store_true"
+        "--iterate",
+        help="iterate from top 5 - 50 documents returned for each assessment",
+        action="store_true",
     )
     args = parser.parse_args()
 
     cwd_path = os.getcwd()
 
-    passed = assess_all_models(cwd_path, logger, args.local, args.verbose, args.gold_standard, args.iterate)
+    passed = assess_all_models(
+        cwd_path,
+        logger,
+        args.local,
+        args.verbose,
+        args.gold_standard,
+        args.iterate,
+    )
 
     # if not passed:
     #   sys.exit(-1) TODO: uncomment when tests are passing/corpus is fixed
