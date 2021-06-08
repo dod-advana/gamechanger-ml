@@ -19,7 +19,7 @@ def train_model(corpus_directory,
                 batch_size = 16):
 
     model = SentenceTransformer(pretrained_model)
-    #model_save_path = 'output/'+pretrained_model+'-'+datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    save_path = 'output/'+pretrained_model+'-'+datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     '''if use_gpu:
         if torch.cuda.is_available():
             if torch.cuda.device_count() > 1:
@@ -45,7 +45,8 @@ def train_model(corpus_directory,
     train_loss = losses.CosineSimilarityLoss(model)
     num_epochs = 4
     warmup_steps = math.ceil(len(dataloader) * num_epochs * 0.1)
-    model.fit(train_objectives=[(dataloader, train_loss)], epochs=1, warmup_steps=1,output_path=save_path)
+    model.fit(train_objectives=[(dataloader, train_loss)], epochs=num_epochs, warmup_steps=warmup_steps,output_path=save_path)
+    model.save(save_path)
     model = SentenceTransformer(save_path)
     test_evaluator = EmbeddingSimilarityEvaluator.from_input_examples(testset, name='sts-test')
     test_evaluator(model, output_path=save_path)
