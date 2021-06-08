@@ -45,6 +45,7 @@ class Table:
             r"(^|\n)(\d+\.\d+\.|\d+\.|\(\s*\d+\s*\)|[a-z]\.|\(\s*[a-z]+\s*\))"
         )
         self.doc_dict = None
+        self.raw_text = None
 
     def extract_all(self):
         for tmp_df, fname in self.extract_section(self.input_dir):

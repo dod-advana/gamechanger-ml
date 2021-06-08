@@ -146,7 +146,7 @@ def get_models_list(s3_models_dir):
     bucket = s3_connect()
     models = []
     for obj in bucket.objects.filter(Prefix=s3_models_dir):
-        models.append((obj.key[len(s3_models_dir):], obj.last_modified))
+        models.append((obj.key[len(s3_models_dir) :], obj.last_modified))
     return models
 
 
@@ -167,7 +167,7 @@ def get_latest_model_name(s3_models_dir):
     bucket = s3_connect()
     model_list = []
     for key in bucket.objects.filter(Prefix=s3_models_dir):
-        model_list.append((key.key[len(s3_models_dir):], key.last_modified))
+        model_list.append((key.key[len(s3_models_dir) :], key.last_modified))
     sorted_models = sorted(model_list, key=lambda x: x[1])
     latest_model_name = sorted_models[-1][0].split("/")[0]
     return latest_model_name
@@ -208,18 +208,21 @@ def download_latest_model_package(s3_models_dir, local_packaged_models_dir):
         bucket = s3_connect()
         package_folder = s3_models_dir + model_name
         logger.debug(
-            "Downloading latest model package from {}".format(package_folder))
+            "Downloading latest model package from {}".format(package_folder)
+        )
 
         for obj in bucket.objects.filter(Prefix=package_folder):
             filename = obj.key.rpartition("/")[2]
             download_path = "{}/{}".format(package_dir, filename)
-            logger.debug("Getting {} to download to {}".format(
-                obj.key, download_path))
+            logger.debug(
+                "Getting {} to download to {}".format(obj.key, download_path)
+            )
             bucket.Object(obj.key).download_file(download_path)
 
     except Exception as e:
         logger.error(
-            "Error downloading all model files, removing any local downloads")
+            "Error downloading all model files, removing any local downloads"
+        )
         logger.error(e)
         shutil.rmtree(package_dir)
         os.rmdir(package_dir)
@@ -241,9 +244,11 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
         bucket = s3_connect()
         package_folder = s3_models_dir
         logger.debug(
-            "Downloading latest model package from {}".format(package_folder))
+            "Downloading latest model package from {}".format(package_folder)
+        )
         curr_local_models = get_local_model_package_names(
-            local_packaged_models_dir)
+            local_packaged_models_dir
+        )
         model_diff_list = []
         if select == "all":
             s3_models = get_models_list(s3_models_dir)
@@ -261,7 +266,8 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
             filename = obj.key.split("/")[3]
             if model_prefix in model_diff_list:
                 package_dir = "{}/{}".format(
-                    local_packaged_models_dir, model_prefix)
+                    local_packaged_models_dir, model_prefix
+                )
                 download_path = "{}/{}".format(package_dir, filename)
                 bucket = s3_connect()
                 logger.debug("Checking  package dir {}".format(package_dir))
@@ -274,17 +280,20 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
                             os.makedirs(package_dir)
                     except Exception as e:
                         logger.error(
-                            "Could not create directory for packaged models")
+                            "Could not create directory for packaged models"
+                        )
                         raise e
                 logger.debug(
                     "Getting {} to download to {}".format(
-                        obj.key, download_path)
+                        obj.key, download_path
+                    )
                 )
                 bucket.Object(obj.key).download_file(download_path)
 
     except Exception as e:
         logger.error(
-            "Error downloading all model files, removing any local downloads")
+            "Error downloading all model files, removing any local downloads"
+        )
         logger.error(e)
         shutil.rmtree(package_dir)
         os.rmdir(package_dir)
@@ -292,7 +301,9 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
     return model_diff_list
 
 
-def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=False):
+def get_transformers(
+    model_path="transformers_v4/transformers.tar", overwrite=False
+):
     bucket = s3_connect()
     models_path = "gamechangerml/models"
     try:
@@ -359,8 +370,9 @@ def get_sentence_index(model_path="sent_index/", overwrite=False):
 def get_local_model_package_names(local_packaged_models_dir):
     return list(
         filter(
-            lambda x: os.path.isdir(os.path.join(
-                local_packaged_models_dir, x)),
+            lambda x: os.path.isdir(
+                os.path.join(local_packaged_models_dir, x)
+            ),
             os.listdir(local_packaged_models_dir),
         )
     )
@@ -430,7 +442,8 @@ def download_eval_data(dataset_name, save_dir, version=None):
             all_datasets.add(dataset)
     except:
         logger.debug(
-            "Failed to query dataset version. Maybe the dataset doesn't exist")
+            "Failed to query dataset version. Maybe the dataset doesn't exist"
+        )
 
     if dataset_name not in all_datasets:
         logger.debug(f"{dataset_name} not in available datasets.")
@@ -446,7 +459,8 @@ def download_eval_data(dataset_name, save_dir, version=None):
             all_versions.add(object_ver)
     except:
         logger.debug(
-            "Failed to query dataset version. Maybe the dataset doesn't exist")
+            "Failed to query dataset version. Maybe the dataset doesn't exist"
+        )
 
     if version is None:
         version = max(all_versions)

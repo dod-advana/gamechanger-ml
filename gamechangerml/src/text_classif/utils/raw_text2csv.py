@@ -1,5 +1,5 @@
 """
-usage: python raw_text2csv.py [-h] [-i INPUT_PATH] [-o OUTPUT_CSV] [-g GLOB]
+usage: python raw_text2csv.py [-h] -i INPUT_PATH -o OUTPUT_CSV -g GLOB
 
 csv of each sentence in the text
 
@@ -30,10 +30,29 @@ def new_df():
 
 
 def raw2df(src_path, glob, key="raw_text"):
-    for raw_text, fname in cu.gen_gc_docs(src_path, glob, key=key):
-        sent_df = cu.make_sentences(raw_text, fname)
-        logger.info("{:>25s} : {:>5,d}".format(fname, len(sent_df)))
-        yield sent_df, fname
+    """
+    Reads a .json corpus document, extracts the `key`, and generates a list
+    of dictionaries. Each dictionary contains one sentence, as follows:
+
+        {'src': "file.csv", 'sentence': "some passage", "label": 0}
+
+    Args:
+        src_path (str): directory containing the corpus `.json` documents
+        glob (str): file glob, e.g., DoDI*.json
+        key (str): defaults to "raw_text". This should not be changed.
+
+    Yields:
+        List[Dict]
+
+    """
+    for fname, doc in cu.gen_gc_docs(src_path, glob, key=key):
+        if key in doc:
+            raw_text = doc[key]
+            sent_df = cu.make_sentences(raw_text, fname)
+            logger.info("{:>25s} : {:>5,d}".format(fname, len(sent_df)))
+            yield sent_df, fname
+        else:
+            logger.warning("no key '{}' in {}".format(key, fname))
 
 
 def main(src_path, glob, output_path):
@@ -70,29 +89,39 @@ def main(src_path, glob, output_path):
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
-    log_fmt = (
-        "[%(asctime)s %(levelname)-8s], [%(filename)s:%(lineno)s - "
-        + "%(funcName)s()], %(message)s"
-    )
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
+    import gamechangerml.src.text_classif.utils.log_init as li
 
+    li.initialize_logger(to_file=False, log_name="none")
+
+    fp = os.path.split(__file__)
+    fp = "python " + fp[-1]
     parser = ArgumentParser(
-        prog="python raw_text2csv.py",
+        prog=fp,
         description="csv of each sentence in the text",
     )
     parser.add_argument(
-        "-i", "--input-path", dest="input_path", type=str, help="corpus path"
+        "-i",
+        "--input-path",
+        dest="input_path",
+        type=str,
+        help="corpus path",
+        required=True,
     )
     parser.add_argument(
         "-o",
         "--output-csv",
         dest="output_csv",
         type=str,
-        default=None,
+        required=True,
         help="output path for .csv files",
     )
     parser.add_argument(
-        "-g", "--glob", dest="glob", help="file pattern to match"
+        "-g",
+        "--glob",
+        dest="glob",
+        type=str,
+        required=True,
+        help="file pattern to match",
     )
     args = parser.parse_args()
 

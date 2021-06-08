@@ -80,7 +80,7 @@ def main(
     initialize_logger(to_file=False, log_name="none")
 
     out_list = list()
-    input_dicts = cu.load_data(data_file, n_samples)
+    input_dicts = cu.load_data(data_file, n_samples, shuffle=False)
     predictor = Predictor(model_path_name, num_labels=2)
 
     _, csv_name = os.path.split(data_file)

@@ -1,7 +1,11 @@
 from transformers import pipeline
 import os
 import json
-from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification
+from transformers import (
+    AutoTokenizer,
+    AutoModel,
+    AutoModelForSequenceClassification,
+)
 
 
 def getTransformer(modelname: str):
@@ -27,7 +31,8 @@ def getTransformer(modelname: str):
         try:
             tokenizer = AutoTokenizer.from_pretrained(modelname)
             model = AutoModelForSequenceClassification.from_pretrained(
-                modelname)
+                modelname
+            )
             success = True
         except Exception as e:
             print("cannot use automodel to get transformer")

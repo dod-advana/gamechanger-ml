@@ -10,7 +10,6 @@ import re
 import numpy as np
 import pandas as pd
 from nltk.tokenize import sent_tokenize
-from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 here = os.path.dirname(os.path.realpath(__file__))
@@ -92,57 +91,6 @@ def _read_gc_df(data_file):
     return df
 
 
-def gc_data_item_labels(data_file, cp=0.50, cm=0.50, shuffle=True, topn=0):
-    out_df = pd.DataFrame(columns=["src", "label", "sentence"])
-    alpha = list("abcdefghijklmnopqrstuvwxyz0123456789")
-    try:
-        df = _read_gc_df(data_file)
-        if shuffle:
-            df = df.sample(frac=1)
-        if topn > 0:
-            df = df.head(topn)
-
-        pos_samples = np.sum(df.label.values)
-        logger.info("positive samples : {:>5,d}".format(pos_samples))
-        neg_samples = len(df.label.values) - pos_samples
-        logger.info("negative samples : {:>5,d}".format(neg_samples))
-
-        # for positive samples that satisfy r'(^\w\. )', remove the item label
-        for _, row in tqdm(df.iterrows()):
-            src = row.src
-            label = row.label
-            sent = row.sentence
-            if row.label == 1:
-                mobj = re.search(r"(^\w\. |\(?\d+\) )", sent)
-                if np.random.uniform() > 1.0 - cp:
-                    if mobj is not None:
-                        sent = re.sub(re.escape(mobj.group(1)), "", sent)
-            else:  # randomly add an item label
-                mobj = re.search(r"(^\w\. )", sent)
-                if np.random.uniform() > 1.0 - cm:
-                    if mobj is None:
-                        idx = np.random.randint(0, len(alpha))
-                        sent = alpha[idx] + ". " + sent
-
-            out_df = out_df.append(
-                {"src": src, "label": label, "sentence": sent},
-                ignore_index=True,
-            )
-        logger.info("writing file...")
-        out_df.to_csv(
-            "dodi_dodd_train_lbl_flipped.csv", index=False, header=False
-        )
-
-        sents = out_df.sentence.values
-        labels = out_df.label.values
-        src = out_df.src.values
-        return sents, labels, src
-    except FileNotFoundError as e:
-        logger.fatal("{} : {}".format(type(e), str(e)))
-        logger.fatal("\n\n\tThat was a fatal error my friend")
-        raise e
-
-
 def gc_data(data_file, neg_data_file, shuffle=True, topn=0):
     try:
         df = _read_gc_df(data_file)
@@ -175,51 +123,6 @@ def gc_data(data_file, neg_data_file, shuffle=True, topn=0):
         raise e
 
 
-def gc_data_tvt(data_file, topn=0, ident="", split=0.90):
-    try:
-        df = _read_gc_df(data_file)
-        if topn > 0:
-            df = df.head(topn)
-        pos_lbl = 0
-        pos = 0
-        for _, row in df.iterrows():
-            if row.label == 1:
-                pos += 1
-                if re.search(r"^\w\. ", row.sentence) is not None:
-                    pos_lbl += 1
-        logger.info("item label positives {:,} / {:,}".format(pos_lbl, pos))
-        # 80, 10, 10 split
-        train, validate, test = np.split(
-            df.sample(frac=1), [int(0.8 * len(df)), int(0.9 * len(df))]
-        )
-        logger.info("train : {:>5,d}".format(len(train)))
-        logger.info("  val : {:>5,d}".format(len(validate)))
-        logger.info(" test : {:>5,d}".format(len(test)))
-        train.to_csv(
-            os.path.join(here, "train_" + ident + ".csv"),
-            sep=",",
-            index=False,
-            header=False,
-        )
-        validate.to_csv(
-            os.path.join(here, "validate_" + ident + ".csv"),
-            sep=",",
-            index=False,
-            header=False,
-        )
-        test.to_csv(
-            os.path.join(here, "test_" + ident + ".csv"),
-            sep=",",
-            index=False,
-            header=False,
-        )
-        return train, validate, test
-    except FileNotFoundError as e:
-        logger.fatal("\n{} : {}".format(type(e), str(e)))
-        logger.fatal("\n\n\tThat was a fatal error my friend")
-        raise e
-
-
 def gen_gc_docs(doc_path, glob, key="raw_text"):
     file_list = [f for f in os.listdir(doc_path) if fnmatch.fnmatch(f, glob)]
     logger.info("num files : {:>3,d}".format(len(file_list)))
@@ -227,13 +130,13 @@ def gen_gc_docs(doc_path, glob, key="raw_text"):
         logger.warning(
             "no files in '{}' matching the glob '{}'".format(doc_path, glob)
         )
-    for input_f in sorted(file_list):
-        with open(os.path.join(doc_path, input_f)) as fin:
+    for input_file in sorted(file_list):
+        with open(os.path.join(doc_path, input_file)) as fin:
             jdoc = json.load(fin)
             if key in jdoc:
-                yield jdoc[key], input_f
+                yield input_file, jdoc
             else:
-                logger.warning("`{}` not found in {}".format(key, input_f))
+                logger.warning("`{}` not found in {}".format(key, input_file))
 
 
 def load_data(data_file, n_samples, shuffle=False):
@@ -352,18 +255,6 @@ def make_sentences(text, src):
     return sent_list
 
 
-def get_document_title(doc_directory):
-    with open(doc_directory) as json_data:
-        data = json.load(json_data)
-    return data["title"]
-
-
-def get_source_pdf(doc_directory):
-    with open(doc_directory) as json_data:
-        data = json.load(json_data)
-    return data["filename"]
-
-
 def raw2dict(src_path, glob, key="raw_text"):
     """
     Generator to step through `glob` and extract each file's sentences;
@@ -371,16 +262,25 @@ def raw2dict(src_path, glob, key="raw_text"):
 
     Args:
         src_path (str): location of the .json documents
+
         glob (str): file pattern to match
+
         key (str): text key in the .json
 
     Yields:
         List[Dict]: per the schema in `make_sentences()`
         str: name of the file
     """
-    for raw_text, fname in gen_gc_docs(src_path, glob, key=key):
-        title = get_document_title(os.path.join(src_path, fname))
-        source = get_source_pdf(os.path.join(src_path, fname))
+    for fname, doc in gen_gc_docs(src_path, glob, key=key):
+        title = "none"
+        source = "none"
+        raw_text = "none"
+        if "title" in doc:
+            title = doc["title"]
+        if "filename" in doc:
+            source = doc["filename"]
+        if "raw_text" in doc:
+            raw_text = doc["raw_text"]
         sent_list = make_sentences(raw_text, fname)
         for sent in sent_list:
             sent.update({"title": title, "source": source})

@@ -16,16 +16,16 @@ class EntityCoref(object):
         the structure of many DoD documents.
 
         When the 'responsibilities' section has been reached, begin looking
-        for the word 'shall'. If found, see if it contains a entity in the
-        lookups. The entity is associated with sentences labeled as '1'
-        (modulo details).
+        for the word 'shall' in each sentence. If found, see if it contains
+        a entity in the lookups. The entity is associated with sentences
+        labeled as '1' (modulo details).
         """
         self.RESP = "RESPONSIBILITIES"
-        self.SENTENCE = "sentence"
+        self.SENT = "sentence"
         self.KW = "shall"
         self.KW_RE = re.compile("\\b" + self.KW + "\\b[:,]?")
         self.NA = "Unable to connect Responsibility to Entity"
-        self.TC = "top_class"
+        self.TOPCLASS = "top_class"
         self.ENT = "entity"
 
         self.USC_DOT = "U.S.C."
@@ -43,8 +43,8 @@ class EntityCoref(object):
         self.sub_back = [self.USC_DOT, self.PL_DOT]
         self.unsub_re = [self.USC_RE, self.PL_RE]
 
-        self.abrv_lu, self.ent_lu = el.build_entity_lookup()
         self.pop_entities = None
+        self.contains_entity = el.ContainsEntity()
 
     def _new_edict(self, value=None):
         value = self.NA or value
@@ -56,9 +56,7 @@ class EntityCoref(object):
         return sentence
 
     def _unsub_df(self, df, regex, sub):
-        df[self.SENTENCE] = [
-            re.sub(regex, sub, str(x)) for x in df[self.SENTENCE]
-        ]
+        df[self.SENT] = [re.sub(regex, sub, str(x)) for x in df[self.SENT]]
 
     def _link_entity(self, output_list, entity_list):
         curr_entity = self.NA
@@ -66,24 +64,22 @@ class EntityCoref(object):
 
         for entry in output_list:
             logger.debug(entry)
-            sentence = entry[self.SENTENCE]
+            sentence = entry[self.SENT]
             sentence = self._re_sub(sentence)
             new_entry = self._new_edict()
             new_entry.update(entry)
 
-            if entry[self.TC] == 0 and self.KW in sentence:
+            if entry[self.TOPCLASS] == 0 and self.KW in sentence:
                 # current entity is the lhs of the split
                 curr_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
                     0
                 ].strip()
                 # if it's not in the list, set curr_entity to NA
-                if not el.contains_entity(
-                    curr_entity, self.abrv_lu, self.ent_lu
-                ):
+                if not self.contains_entity(curr_entity):
                     curr_entity = self.NA
                 else:
                     last_entity = curr_entity
-            elif entry[self.TC] == 1:
+            elif entry[self.TOPCLASS] == 1:
                 if curr_entity == self.NA:
                     curr_entity = last_entity
                     # last_entity = curr_entity
@@ -96,9 +92,9 @@ class EntityCoref(object):
         for idx, entry in enumerate(output_list):
             e_dict = self._new_edict()
             e_dict.update(entry)
-            if e_dict[self.TC] == 0 and self.RESP in entry[self.SENTENCE]:
+            if e_dict[self.TOPCLASS] == 0 and self.RESP in entry[self.SENT]:
                 entity_list.append(e_dict)
-                self._link_entity(output_list[idx + 1:], entity_list)
+                self._link_entity(output_list[idx + 1 :], entity_list)
                 return entity_list
             else:
                 entity_list.append(e_dict)
