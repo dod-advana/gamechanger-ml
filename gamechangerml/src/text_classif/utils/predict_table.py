@@ -199,7 +199,7 @@ if __name__ == "__main__":
         "--stats",
         action="store_true",
         dest="stats",
-        help="write aggregate statistics"
+        help="write aggregate statistics",
     )
 
     initialize_logger(to_file=False, log_name="none")
