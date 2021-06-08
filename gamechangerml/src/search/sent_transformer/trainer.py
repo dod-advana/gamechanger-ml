@@ -31,7 +31,7 @@ class GCDataset(TensorDataset):
     def __getitem__(self, index):
         text_a, text_b, sim_score = self.corp._get_item_sample()
         input_ids = self.preprocess(text_a, text_b)
-        return input_ids, sim_score
+        return input_ids, round(sim_score*10)
 
 def collate_fn(batch):
     tokens = [a[0].view(-1)[:512] for a in batch]
@@ -48,8 +48,8 @@ def train_model(
     corpus_directory,
     save_path,
     pretrained_model = "valhalla/distilbart-mnli-12-3",
-    label_count = 9,
     use_gpu = False,
+    label_count = 9,
     batch_size = 4,
     sample_count = 5_000,
     epochs = 4,
@@ -57,7 +57,6 @@ def train_model(
 
     if pretrained_model:
         model = AutoModelForSequenceClassification.from_pretrained(pretrained_model)
-        model.num_labels = label_count
         num_ftrs = model.classifier.in_features
         model.classifier = nn.Linear(num_ftrs, label_count)
         tokenizer = AutoTokenizer.from_pretrained(pretrained_model, model_max_length = 500)
@@ -123,9 +122,9 @@ def train_model(
     model.save_pretrained(save_path)
 
     plt.plot(train_loss)
-    plt.savefig("./../../../../../test.png")
+    plt.savefig("./test.png")
 
 
 
 if __name__ == "__main__":
-    train_model("./corpus_dir/sentparse", "./gc-bert-sim", use_gpu = True)
+    train_model("../parsed good", "./gc-bert-sim", pretrained_model = "bert-base-uncased", use_gpu = True)
