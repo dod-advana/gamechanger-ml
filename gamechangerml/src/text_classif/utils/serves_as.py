@@ -1,8 +1,8 @@
 import logging
+
 import pandas as pd
 
 import gamechangerml.src.text_classif.utils.entity_lookup as el
-from gamechangerml.src.text_classif.utils.log_init import initialize_logger
 from gamechangerml.src.text_classif.utils.raw_text2csv import raw2df
 
 logger = logging.getLogger(__name__)
@@ -21,11 +21,3 @@ def find_serves_as(corpus_dir, glob, output_csv):
                         ignore_index=True,
                     )
     df.to_csv(output_csv, index=False)
-
-
-if __name__ == "__main__":
-    initialize_logger(to_file=False, log_name="none")
-    corpus_dir_ = "/Users/chrisskiscim/projects/json_corpus_20210419"
-    glob_ = "DoDI*.json"
-    output_csv_ = "dodi_serves_as.csv"
-    find_serves_as(corpus_dir_, glob_, output_csv_)
