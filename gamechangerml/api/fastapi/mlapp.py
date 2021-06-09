@@ -16,6 +16,7 @@ from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.src.featurization.keywords.extract_keywords import get_keywords
+from gamechangerml.api.fastapi.version import __version__
 
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
 from gamechangerml.src.text_handling.process import topic_processing
@@ -153,7 +154,7 @@ async def initQE(qexp_model_path=QEXP_MODEL_NAME):
     Args:
     Returns:
     """
-    logger.info(f"Loading Query Expansion Model from {QEXP_MODEL_NAME}")
+    logger.info(f"Loading Query Expansion Model from {qexp_model_path}")
     global query_expander
     try:
         query_expander = qe.QE(
@@ -283,7 +284,11 @@ async def check_health():
 
 @app.get("/")
 async def home():
-    return {"API": "FOR TRANSFORMERS"}
+    return {
+        "API": "FOR TRANSFORMERS",
+        "API_Name": "GAMECHANGER ML API",
+        "Version": __version__
+    }
 
 
 @app.post("/transformerSearch", status_code=200)
@@ -447,58 +452,86 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-@app.post("/updateModel", status_code=200)
-async def load_latest_models(model_dict: dict, response: Response):
+@app.post("/reloadModels", status_code=200)
+async def reload_models(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
-        model_dict: dict; {"model_name": "bert..."}
+        model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
 
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
-    model_name = model_dict["model_name"]
-    try:
-        # sparse_reader.load(model_name)
-        global sparse_reader
-        logger.info(
-            "Attempting to create new sparse reader object with model {}".format(
-                model_name
-            )
+    model_path_dict = get_model_paths()
+    if "sentence" in model_dict:
+        SENT_INDEX_PATH = os.path.join(
+            Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
         )
-        model_name = os.path.join(LOCAL_TRANSFORMERS_DIR, model_name)
-        sparse_reader = sparse.SparseReader(model_name=model_name)
-        global latest_intel_model
-        latest_intel_model = model_name
-        cache.set("latest_intel_model_trans", latest_intel_model)
-        logger.info(f"Loaded {model_name}")
+        model_path_dict["sentence"] = SENT_INDEX_PATH
+    if "qexp" in model_dict:
+        QEXP_MODEL_NAME = os.path.join(
+            Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
+        )
+        model_path_dict["qexp"] = QEXP_MODEL_NAME
 
-        return {"model_name": model_name}
+    logger.info("Attempting to load QE")
+    await initQE(model_path_dict["qexp"])
+    logger.info("Attempting to load QA")
+    await initQA()
+    logger.info("Attempting to load Sentence Transformer")
+    await initSentence(
+        index_path=model_path_dict["sentence"],
+        transformer_path=model_path_dict["transformers"],
+    )
 
-    except Exception as e:
-        logger.error("Load latest model error {}".format(e))
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return {"error": "Load latest model failed: 404"}
+    logger.info("Reload Complete")
+    return
 
 
-@app.get("/getTransformerList")
-async def get_trans_list():
-    """get_trans_list - gets available transformers from model dir
-    Args:
-    Returns:
-        t_list: list; of transformers
-    """
+@app.get("/getModelsList")
+def get_downloaded_models_list():
+    qexp_list = []
+    sent_index_list = []
+    transformer_list = []
     try:
-        logger.info("Reading transformer list")
-        t_list = [
+        qexp_list = [
+            f
+            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            if ("qexp_" in f) and ("tar" not in f)
+        ]
+        qexp_list.sort(reverse=True)
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get QEXP model path")
+
+    # TRANSFORMER MODEL PATH
+    try:
+        transformer_list = [
             trans
             for trans in os.listdir(LOCAL_TRANSFORMERS_DIR)
-            if trans not in ignore_files
+            if trans not in ignore_files and '.' not in trans
         ]
+    except Exception as e:
+        logger.error(e)
 
-        return t_list
-    except:
-        logger.error(f"Could not read {LOCAL_TRANSFORMERS_DIR}")
-        return []
+        logger.info("Cannot get TRANSFORMER model path")
+    # SENTENCE INDEX
+    # get largest file name with sent_index prefix (by date)
+    try:
+        sent_index_list = [
+            f
+            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            if ("sent_index" in f) and ("tar" not in f)
+        ]
+        sent_index_list.sort(reverse=True)
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get Sentence Index model path")
+    model_list = {
+        "transformers": transformer_list,
+        "sentence": sent_index_list,
+        "qexp": qexp_list,
+    }
+    return model_list
 
 
 @app.get("/getCurrentTransformer")
@@ -515,23 +548,6 @@ async def get_trans_model():
         "sentence_models": sent_model,
         # "model_name": intel_model,
     }
-
-
-@app.get("/reloadModels", status_code=200)
-async def reload_models(response: Response):
-    model_path_dict = get_model_paths()
-    logger.info("Attempting to load QE")
-    await initQE(model_path_dict["qexp"])
-    logger.info("Attempting to load QA")
-    await initQA()
-    logger.info("Attempting to load Sentence Transformer")
-    await initSentence(
-        index_path=model_path_dict["sentence"],
-        transformer_path=model_path_dict["transformers"],
-    )
-
-    logger.info("Reload Complete")
-    return
 
 
 @app.get("/download", status_code=200)
@@ -560,6 +576,7 @@ async def s3_func(function, response: Response):
         model: str
     Returns:
     """
+    models = []
     try:
         logger.info("Attempting to download dependencies from S3")
         s3_path = "gamechanger/models/"
