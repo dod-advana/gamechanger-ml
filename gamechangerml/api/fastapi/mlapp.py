@@ -286,7 +286,7 @@ async def check_health():
 async def home():
     return {
         "API": "FOR TRANSFORMERS",
-        "API_Name":"GAMECHANGER ML API",
+        "API_Name": "GAMECHANGER ML API",
         "Version": __version__
     }
 
@@ -451,6 +451,7 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
         logger.error(f"Error with query expansion on {termsList}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
+
 @app.post("/reloadModels", status_code=200)
 async def reload_models(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
@@ -463,13 +464,13 @@ async def reload_models(model_dict: dict, response: Response):
     model_path_dict = get_model_paths()
     if "sentence" in model_dict:
         SENT_INDEX_PATH = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
-            )
+            Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
+        )
         model_path_dict["sentence"] = SENT_INDEX_PATH
     if "qexp" in model_dict:
         QEXP_MODEL_NAME = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
-            )
+            Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
+        )
         model_path_dict["qexp"] = QEXP_MODEL_NAME
 
     logger.info("Attempting to load QE")
@@ -485,8 +486,9 @@ async def reload_models(model_dict: dict, response: Response):
     logger.info("Reload Complete")
     return
 
+
 @app.get("/getModelsList")
-def get_downloaded_models_list ():
+def get_downloaded_models_list():
     qexp_list = []
     sent_index_list = []
     transformer_list = []
@@ -506,7 +508,7 @@ def get_downloaded_models_list ():
         transformer_list = [
             trans
             for trans in os.listdir(LOCAL_TRANSFORMERS_DIR)
-            if trans not in ignore_files
+            if trans not in ignore_files and '.' not in trans
         ]
     except Exception as e:
         logger.error(e)
@@ -532,7 +534,6 @@ def get_downloaded_models_list ():
     return model_list
 
 
-
 @app.get("/getCurrentTransformer")
 async def get_trans_model():
     """get_trans_model - endpoint for current transformer
@@ -547,6 +548,7 @@ async def get_trans_model():
         "sentence_models": sent_model,
         # "model_name": intel_model,
     }
+
 
 @app.get("/download", status_code=200)
 async def download(response: Response):
