@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
 
-from dataScience.src.search.sent_transformer.corpus import SentenceCorpus
+from gamechangerml.src.search.sent_transformer.corpus import SentenceCorpus
 
 from tqdm import tqdm
 
@@ -49,7 +49,7 @@ def train_model(
     save_path,
     pretrained_model = "valhalla/distilbart-mnli-12-3",
     use_gpu = False,
-    label_count = 9,
+    label_count = 10,
     batch_size = 4,
     sample_count = 5_000,
     epochs = 4,
@@ -58,6 +58,7 @@ def train_model(
     if pretrained_model:
         model = AutoModelForSequenceClassification.from_pretrained(pretrained_model)
         num_ftrs = model.classifier.in_features
+        model.num_labels = label_count
         model.classifier = nn.Linear(num_ftrs, label_count)
         tokenizer = AutoTokenizer.from_pretrained(pretrained_model, model_max_length = 500)
     else:
@@ -127,4 +128,4 @@ def train_model(
 
 
 if __name__ == "__main__":
-    train_model("../parsed good", "./gc-bert-sim", pretrained_model = "bert-base-uncased", use_gpu = True)
+    train_model("../gamechanger-data-old/parsed good", "./gc-bert-sim", pretrained_model = "bert-base-uncased", use_gpu = True)

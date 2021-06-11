@@ -10,7 +10,8 @@ import pandas as pd
 import logging
 import pickle
 
-from gamechangerml.src.text_handling.corpus import LocalCorpus
+from gamechangerml.src.text_handling.corpus import LocalCorpus, SentCorpus
+from tqdm import tqdm
 
 import torch
 
@@ -147,6 +148,36 @@ class SentenceEncoder(object):
             [(para_id, " ".join(tokens), None) for tokens, para_id in corp],
             index_path,
             overwrite=overwrite,
+        )
+
+        self.embedder.save(index_path)
+
+    def new_index_documents(
+        self, new_sent_corpus, old_sent_corpus, index_path, min_token_len=10, overwrite=False, new_parser = False
+    ):
+        """
+        This is a rough approach for index two corpuses with
+        different parsing approaches. new_sent_corpus is for
+        the directory that contains the new sentence parsing approach
+        while old_sent_corpus contains the old approach.
+        """
+        logging.info(f"Indexing documents from {new_sent_corpus}")
+
+        print("Getting Sentence Corpus")
+        new_corp = SentCorpus(new_sent_corpus, return_id = True, min_token_len = min_token_len)
+        new_corp = [(para_id, " ".join(tokens), None) for tokens, para_id, old_id in tqdm(new_corp)]
+
+        print("Getting Old Corpus")
+        old_corp = LocalCorpus(old_sent_corpus, return_id = True, min_token_len = min_token_len)
+        old_corp = [(para_id, " ".join(tokens), None) for tokens, para_id in tqdm(old_corp) if not para_id.lower().startswith("dod")]
+
+        corp = old_corp + new_corp
+
+        print("Indexing")
+        self._index(
+            tqdm(corp),
+            index_path,
+            overwrite = overwrite
         )
 
         self.embedder.save(index_path)

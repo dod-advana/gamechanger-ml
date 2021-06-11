@@ -47,9 +47,72 @@ class LocalCorpus(object):
     def _get_doc(self, file_name):
         with open(file_name, "r") as f:
             line = f.readline()
-            line = json.loads(line)
+            try:
+                line = json.loads(line)
+            except:
+                line = {}
         return line
 
+class SentCorpus(object):
+    def __init__(self, directory, return_id = False, min_token_len = 3, verbose = False):
+        self.directory = directory
+        self.file_list = [
+            os.path.join(directory, file)
+            for file in os.listdir(directory)
+            if (file[-5:] == ".json")
+            and ("metadata" not in file)
+        ]
+        self.return_id = return_id
+        self.min_token_len = min_token_len
+        self.verbose = verbose
+        self.metadata = self._get_doc(os.path.join(directory, "metadata.json"))
+
+    def __iter__(self):
+        if self.verbose:
+            iterator = tqdm(self.file_list)
+        else:
+            iterator = self.file_list
+
+        for file_name in iterator:
+            doc = self._get_doc(file_name)
+            doc_data = self._get_sentences(doc)
+            fname = file_name.split("/")[-1].replace(".json", "")
+            file_full_name = self.metadata[fname.replace("_parsed", "") + ".json"]
+
+            for idx, pair in enumerate(doc_data):
+                sentence, old_id = pair
+                sent_idx = fname + "_" + str(idx)
+                tokens = [file_full_name] + sentence.split()
+                if self.return_id:
+                    yield tokens, sent_idx, old_id
+                else:
+                    yield tokens
+
+    def _get_sentences(self, nested_dict, headers = [], min_token_len = 10):
+        sentences = []
+        text = None
+        old_id = None
+        for key, value in nested_dict.items():
+            if isinstance(value, dict):
+                sub_sentences = self._get_sentences(value, headers + [key])
+                sentences.extend(sub_sentences)
+            else:
+                if (key == "text") and (len(value) >= min_token_len):
+                    text = value
+                else:
+                    old_id = value
+        if (text is not None) and (old_id is not None):
+            sentences.append((" ".join(headers) + " [SEP] " + text, old_id))
+        return sentences
+
+    def _get_doc(self, file_name):
+        with open(file_name, "r") as f:
+            line = f.readline()
+            try:
+                line = json.loads(line)
+            except:
+                line = {}
+        return line
 
 class LocalTaggedCorpus(object):
     def __init__(self, directory, phrase_detector):
@@ -66,7 +129,8 @@ class LocalTaggedCorpus(object):
         for file_name in self.file_list:
             # get the docs and ingest the json
             doc = self._get_doc(file_name)
-
+            if "paragraphs" not in doc.keys():
+                continue
             for p in doc["paragraphs"]:
                 # paragraph tokens for training
                 tokens = preprocess(

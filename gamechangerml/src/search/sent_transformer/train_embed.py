@@ -12,8 +12,7 @@ from datetime import datetime
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
 
 
-def train_model(corpus_directory,
-                save_path,
+def train_model(save_path,
                 pretrained_model = "msmarco-distilbert-base-v2",
                 use_gpu = False,
                 batch_size = 16):
@@ -52,4 +51,4 @@ def train_model(corpus_directory,
     test_evaluator(model, output_path=save_path)
 
 if __name__ == "__main__":
-    train_model("../parsed good", "./embeddertrained")
+    train_model("./embeddertrained")
