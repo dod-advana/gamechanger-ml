@@ -8,7 +8,9 @@ from tqdm import tqdm
 
 
 class LocalCorpus(object):
-    def __init__(self, directory, return_id = False, min_token_len = 3, verbose = False):
+    def __init__(
+        self, directory, return_id=False, min_token_len=3, verbose=False
+    ):
         self.directory = directory
         self.file_list = [
             os.path.join(directory, file)
@@ -28,16 +30,12 @@ class LocalCorpus(object):
 
         for file_name in iterator:
             doc = self._get_doc(file_name)
+
             if "paragraphs" not in doc.keys():
                 continue
-            paragraphs = [
-                p['par_raw_text_t']
-                for p in doc['paragraphs']
-                ]
-            paragraph_ids = [
-                p['id']
-                for p in doc['paragraphs']
-            ]
+            paragraphs = [p["par_raw_text_t"] for p in doc["paragraphs"]]
+            paragraph_ids = [p["id"] for p in doc["paragraphs"]]
+
             for para_text, para_id in zip(paragraphs, paragraph_ids):
                 tokens = preprocess(para_text, min_len=1)
                 if len(tokens) > self.min_token_len:

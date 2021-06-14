@@ -118,7 +118,7 @@ class Topics(object):
         word = []
         doc = doc_tfidf[0]
         for id, value in doc:
-            if(self.dictionary.get(id) not in custom_stopwords):
+            if self.dictionary.get(id) not in custom_stopwords:
                 word.append((value, self.dictionary.get(id)))
         word.sort(reverse=True)
         return word[:topn]

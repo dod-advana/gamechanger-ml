@@ -4,6 +4,7 @@ import pandas as pd
 
 import nltk
 from gamechangerml import NLTK_DATA_PATH
+
 if not NLTK_DATA_PATH in nltk.data.path:
     nltk.data.path.append(NLTK_DATA_PATH)
 
@@ -19,7 +20,7 @@ def download_nltk_data():
         pass
     else:
         ssl._create_default_https_context = _create_unverified_https_context
-    nltk.download('punkt')
+    nltk.download("punkt")
 
 
 # TODO: env dependency setup should be in config scripts

@@ -22,6 +22,9 @@ def ner_models():
 def ner_pipeline():
     tokenizer, model = ner_models()
     hf_ner = pipeline(
-        "ner", model=model, tokenizer=tokenizer, grouped_entities=True,
+        "ner",
+        model=model,
+        tokenizer=tokenizer,
+        grouped_entities=True,
     )
     return hf_ner

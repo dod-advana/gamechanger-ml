@@ -8,8 +8,6 @@ from summarizer.sentence_handler import SentenceHandler
 
 from gamechangerml.src.utilities.text_utils import summary_clean
 
-# from summarizer.coreference_handler import CoreferenceHandler
-
 logger = logging.getLogger(__name__)
 
 
@@ -17,12 +15,12 @@ def chunker(seq: str, size: int) -> Generator[str, None, None]:
     """
     Splits up large text into smaller pieces for processing
     """
-    return (seq[pos: pos + size] for pos in range(0, len(seq), size))
+    return (seq[pos : pos + size] for pos in range(0, len(seq), size))
 
 
 class Summary(object):
     """
-    Base class for summary objects (Gensim & Bert). 
+    Base class for summary objects (Gensim & Bert).
     Text to summarize is cleaned using summary_clean function from text_utils.
 
     TODO: add parsing for long docs
@@ -39,7 +37,7 @@ class GensimSumm(Summary):
     https://radimrehurek.com/gensim_3.8.3/summarization/summariser.html
     https://arxiv.org/abs/1602.03606
 
-    Args: 
+    Args:
     - text (str): body of text to summarize
     - long_doc (bool): True if len(text) > 100000
     - word_count (int): maximum word count for returned summaries
@@ -82,7 +80,7 @@ class GensimSumm(Summary):
 
 class BertExtractiveSumm(Summary):
     """
-    Leverages the Bert Extractive Summarizer to create text summaries. 
+    Leverages the Bert Extractive Summarizer to create text summaries.
     https://pypi.org/project/bert-extractive-summarizer/
     https://arxiv.org/abs/1906.04165
 
@@ -116,7 +114,7 @@ class BertExtractiveSumm(Summary):
 
     def make_summary(self) -> str:
         """
-        Only apply when len(text) < 100000 
+        Only apply when len(text) < 100000
         """
         model = self.model
         if self.long_doc:
