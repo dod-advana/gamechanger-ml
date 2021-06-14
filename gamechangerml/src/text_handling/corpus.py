@@ -28,6 +28,8 @@ class LocalCorpus(object):
 
         for file_name in iterator:
             doc = self._get_doc(file_name)
+            if "paragraphs" not in doc.keys():
+                continue
             paragraphs = [
                 p['par_raw_text_t']
                 for p in doc['paragraphs']
