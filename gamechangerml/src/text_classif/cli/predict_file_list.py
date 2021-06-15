@@ -1,3 +1,28 @@
+"""
+usage: python predict_file_list.py [-h] -m MODEL_PATH -d DOC_LIST -b
+                                   BATCH_SIZE -l MAX_SEQ_LEN [--n N_SAMPLES]
+                                   [-o OUTPUT_CSV] [--metrics]
+
+predicts a list of files containing sentences
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -m MODEL_PATH, --model-path MODEL_PATH
+                        directory of the torch model
+  -d DOC_LIST, --doc-list DOC_LIST
+                        text file with list of files to predict (.json)
+  -b BATCH_SIZE, --batch-size BATCH_SIZE
+                        batch size for the data samples
+  -l MAX_SEQ_LEN, --max-seq-len MAX_SEQ_LEN
+                        maximum sequence length, up to 512
+  --n N_SAMPLES, --num-samples N_SAMPLES
+                        if > 0, number of sequential samples to draw from the
+                        data file
+  -o OUTPUT_CSV, --output-csv OUTPUT_CSV
+                        destination .csv file; optional
+  --metrics             uses the label column in the input csv to compute/log
+                        metrics
+"""
 import logging
 import os
 
@@ -17,8 +42,9 @@ def predict_file_list(
     metrics,
 ):
     for doc_file in file_list:
+        doc_file = doc_file.strip()
         _, fname = os.path.split(doc_file)
-        output_csv = fname.replace(".csv", "predict.csv")
+        output_csv = fname.replace(".csv", "_predict.csv")
         predict(
             predictor,
             doc_file,
@@ -31,7 +57,6 @@ def predict_file_list(
 
 
 if __name__ == "__main__":
-    import sys
     from argparse import ArgumentParser
 
     fp = os.path.split(__file__)
@@ -80,14 +105,6 @@ if __name__ == "__main__":
         help="if > 0, number of sequential samples to draw from the data file",
     )
     parser.add_argument(
-        "-o",
-        "--output-csv",
-        dest="output_csv",
-        type=str,
-        default=None,
-        help="destination .csv file; optional",
-    )
-    parser.add_argument(
         "--metrics",
         dest="metrics",
         action="store_true",
@@ -98,16 +115,6 @@ if __name__ == "__main__":
 
     with open(args.doc_list) as f:
         file_list_ = f.readlines()
-    err = False
-    for f in file_list_:
-        if f.startswith("#"):
-            continue
-        if not os.path.isfile(f):
-            err = True
-            logger.error("no file named {}".format(f))
-    if err:
-        logger.error("exiting")
-        sys.exit(1)
 
     predictor_ = Predictor(args.model_path, num_labels=2)
     predict_file_list(

@@ -153,7 +153,7 @@ def load_data(data_file, n_samples, shuffle=False):
     Returns:
         List[Dict]
     """
-    df = pd.read_csv(data_file)
+    df = pd.read_csv(data_file, columns=["src", "label", "sentence"])
     if "sentence" not in df.keys():
         raise AttributeError("no column labeled 'sentence' in data_file")
     if "label" not in df.keys():
