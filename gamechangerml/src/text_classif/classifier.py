@@ -226,9 +226,7 @@ class Classifier(object):
 
         """
         # TODO roll this into `train`?
-        train_ds, test_ds = self.train_test_ds(
-            train_sentences, train_labels
-        )
+        train_ds, test_ds = self.train_test_ds(train_sentences, train_labels)
         self.train(train_ds, test_ds)
 
     def _dataloader(self, train_dataset, val_dataset):

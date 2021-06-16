@@ -12,6 +12,7 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         name of the output file (.csv)
   -g GLOB, --glob GLOB  file glob to use in extracting from input_dir
+
 """
 import logging
 import re
@@ -65,7 +66,6 @@ class ExtractRespText(Table):
                 ]
                 negs += len(sents)
                 neg_sentences.extend(sents)
-                # logger.info("\tnegative samples : {:>3,d}".format(negs))
         return neg_sentences
 
     def _append_df(self, source, label, texts):
@@ -90,7 +90,11 @@ class ExtractRespText(Table):
                 neg_ex = self.extract_neg_in_doc(raw_text, min_len=min_len)
                 total_neg += len(neg_ex)
                 self._append_df(fname, 0, neg_ex)
-                logger.info("{:>35s} : {:3d} +, {:3d} -".format(fname, len(pos_ex), len(neg_ex)))
+                logger.info(
+                    "{:>35s} : {:3d} +, {:3d} -".format(
+                        fname, len(pos_ex), len(neg_ex)
+                    )
+                )
             except ValueError as e:
                 logger.exception("offending file name : {}".format(fname))
                 logger.exception("{}: {}".format(type(e), str(e)))

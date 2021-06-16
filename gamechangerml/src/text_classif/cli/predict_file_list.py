@@ -52,7 +52,7 @@ def predict_file_list(
             batch_size,
             n_samples,
             output_csv,
-            metrics
+            metrics,
         )
 
 
@@ -123,5 +123,5 @@ if __name__ == "__main__":
         args.max_seq_len,
         args.batch_size,
         args.n_samples,
-        args.metrics
+        args.metrics,
     )
