@@ -10,6 +10,7 @@ from gamechangerml.src.utilities import utils
 from gamechangerml.configs.config import DefaultConfig, D2VConfig
 # from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 import pandas as pd
+from pathlib import Path
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter(
@@ -23,10 +24,19 @@ modelname = datetime.now().strftime("%Y%m%d")
 SEARCH_MAPPINGS_FILE = "gamechangerml/data/SearchPdfMapping.csv"
 TOPICS_FILE = "gamechangerml/data/topics_wiki.csv"
 ORGS_FILE = "gamechangerml/data/agencies/agencies_in_corpus.csv"
-OUT_PATH = "gamechangerml/data"
+data_path = "gamechangerml/data"
 
 
 class Pipeline():
+    def __init__(self):
+        POP_DOCS_PATH = Path(os.path.join(data_path, "popular_documents.csv"))
+        if POP_DOCS_PATH.is_file():
+            self.popular_docs = pd.read_csv(POP_DOCS_PATH)
+        else:
+            print("popular_documents.csv does not exist - generating meta data")
+            self.generate_meta_data()
+            self.popular_docs = pd.read_csv(POP_DOCS_PATH)
+
     def generate_meta_data(self,):
         try:
             mappings = pd.read_csv(SEARCH_MAPPINGS_FILE)
@@ -34,7 +44,7 @@ class Pipeline():
             print(e)
         mappings = self.process_mappings(mappings)
         mappings.to_csv(os.path.join(
-            OUT_PATH, "popular_documents.csv"), index=False)
+            data_path, "popular_documents.csv"), index=False)
         try:
             topics = pd.read_csv(TOPICS_FILE)
             orgs = pd.read_csv(ORGS_FILE)
@@ -47,7 +57,10 @@ class Pipeline():
         orgs["entity_type"] = "org"
         combined_ents = orgs.append(topics)
         combined_ents.to_csv(os.path.join(
-            OUT_PATH, "combined_entities.csv"), index=False)
+            data_path, "combined_entities.csv"), index=False)
+
+    def get_doc_count(self, filename: str):
+        return self.popular_docs[self.popular_docs.doc == filename]['count'][0]
 
     def process_mappings(self, data):
         data = data.document.value_counts().to_frame().reset_index()
