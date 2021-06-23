@@ -23,7 +23,9 @@ modelname = datetime.now().strftime("%Y%m%d")
 SEARCH_MAPPINGS_FILE = "gamechangerml/data/SearchPdfMapping.csv"
 TOPICS_FILE = "gamechangerml/data/topics_wiki.csv"
 ORGS_FILE = "gamechangerml/data/agencies/agencies_in_corpus.csv"
-OUT_PATH =  "gamechangerml/data"
+OUT_PATH = "gamechangerml/data"
+
+
 class Pipeline():
     def generate_meta_data(self,):
         try:
@@ -31,7 +33,8 @@ class Pipeline():
         except Exception as e:
             print(e)
         mappings = self.process_mappings(mappings)
-        mappings.to_csv(os.path.join(OUT_PATH,"popular_documents.csv"), index = False)
+        mappings.to_csv(os.path.join(
+            OUT_PATH, "popular_documents.csv"), index=False)
         try:
             topics = pd.read_csv(TOPICS_FILE)
             orgs = pd.read_csv(ORGS_FILE)
@@ -39,16 +42,19 @@ class Pipeline():
             print(e)
         orgs.drop(columns=["Unnamed: 0"], inplace=True)
         topics.rename(columns={"name": "entity_name",
-                      "type": "entity_type"}, inplace=True)
+                               "type": "entity_type"}, inplace=True)
         orgs.rename(columns={"Agency_Name": "entity_name"}, inplace=True)
         orgs["entity_type"] = "org"
         combined_ents = orgs.append(topics)
-        combined_ents.to_csv(os.path.join(OUT_PATH, "combined_entities.csv"), index=False)
+        combined_ents.to_csv(os.path.join(
+            OUT_PATH, "combined_entities.csv"), index=False)
 
-    def process_mappings(self,data):
+    def process_mappings(self, data):
         data = data.document.value_counts().to_frame().reset_index()
-        data.rename(columns ={'document':'count', 'index':'doc'},inplace=True)
+        data.rename(columns={'document': 'count',
+                             'index': 'doc'}, inplace=True)
         return data
+
     def run_qexp(
         self,
         model_id,
@@ -80,7 +86,8 @@ class Pipeline():
         except:
             try:
                 # if it exists set id
-                mlflow_id = mlflow.get_experiment_by_name(exp_name).experiment_id
+                mlflow_id = mlflow.get_experiment_by_name(
+                    exp_name).experiment_id
             except:
                 # if mlflow does not exist
                 logger.warning("cannot get experiment from MLFlow")
@@ -130,12 +137,14 @@ class Pipeline():
                     logger.info(
                         "-------------- Finished Assessment --------------")
                 else:
-                    logger.info("-------------- No Assessment Ran --------------")
+                    logger.info(
+                        "-------------- No Assessment Ran --------------")
 
             mlflow.end_run()
         except Exception:
             # try only models without mlflow
-            logger.info("-------------- Training without MLFLOW --------------")
+            logger.info(
+                "-------------- Training without MLFLOW --------------")
             index_dir = os.path.join(model_dest, model_id)
             bqe.main(
                 corpus_dir,
@@ -149,5 +158,3 @@ class Pipeline():
             if save_remote:
                 utils.save_all_s3(model_dest, model_id)
         logger.info("-------------- Model Training Complete --------------")
-
-
