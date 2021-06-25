@@ -5,6 +5,7 @@ from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.configs.config import QAConfig
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
+from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import *
 
 router = APIRouter()
