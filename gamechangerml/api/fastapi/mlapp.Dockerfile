@@ -18,7 +18,8 @@ RUN pip3 install awscli
 # add source code paths and use volume
 RUN mkdir gamechanger-ml
 COPY setup.py gamechanger-ml/.
-COPY gc-venv-green.txt gamechanger-ml/.
+COPY requirements.txt gamechanger-ml/.
+COPY dev-requirements.txt gamechanger-ml/.
 COPY README.md gamechanger-ml/.
 # install gamechangerml python module
 RUN pip3 install gamechanger-ml/.
