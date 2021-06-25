@@ -3,7 +3,7 @@ import re
 from typing import Dict, Generator, Union
 
 from gensim.summarization.summarizer import summarize
-#from summarizer import Summarizer
+# from summarizer import Summarizer
 # from summarizer.sentence_handler import SentenceHandler
 
 from gamechangerml.src.utilities.text_utils import summary_clean
