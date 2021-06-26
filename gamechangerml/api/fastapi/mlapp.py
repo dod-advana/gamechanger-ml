@@ -22,6 +22,7 @@ from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.src.text_handling.process import topic_processing
 from gamechangerml.src.featurization.summary import GensimSumm
 from gamechangerml.configs.config import QAConfig
+from gamechangerml import REPO_PATH
 
 import urllib3
 import redis
@@ -48,7 +49,7 @@ ch = logging.StreamHandler(sys.stdout)
 ch.setFormatter(log_formatter)
 logger.addHandler(ch)
 glogger.addHandler(ch)
-log_file_path = "gamechangerml/api/logs/gc_ml_logs.txt"
+log_file_path = os.path.join(REPO_PATH, "gamechangerml/api/logs/gc_ml_logs.txt")
 fh = logging.handlers.RotatingFileHandler(
     log_file_path, maxBytes=2000000, backupCount=1, mode="a"
 )
@@ -560,7 +561,7 @@ async def download(response: Response):
     try:
         logger.info("Attempting to download dependencies from S3")
         output = subprocess.call(
-            ["gamechangerml/scripts/download_dependencies.sh"])
+            [os.path.join(REPO_PATH, "gamechangerml/scripts/download_dependencies.sh")])
         # get_transformers(overwrite=False)
         # get_sentence_index(overwrite=False)
     except:

@@ -1,12 +1,15 @@
 from gamechangerml.src.utilities.utils import *
 from gamechangerml.src.utilities.aws_helper import *
+from gamechangerml import REPO_PATH
 import os
 import sys
 
-os.chdir(
-    os.getcwd()[: os.getcwd().find("gamechanger") + 11]
-    + "/gamechangerml/models/topic_models/models/"
+topic_model_dir=os.path.join(
+    REPO_PATH,
+    "gamechangerml/models/topic_models/models/"
 )
+
+os.chdir(topic_model_dir)
 s3_models_dir = "models/topic_models/"
 
 try:
