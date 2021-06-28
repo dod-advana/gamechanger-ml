@@ -19,7 +19,7 @@ async def initQA():
     try:
         global qa_model
         qa_model_path = os.path.join(
-            LOCAL_TRANSFORMERS_DIR, "bert-base-cased-squad2")
+            LOCAL_TRANSFORMERS_DIR.value, "bert-base-cased-squad2")
         logger.info("Starting QA pipeline")
         qa_model = QAReader(qa_model_path, use_gpu=True, **QAConfig.MODEL_ARGS)
         # set cache variable defined in settings.py
@@ -30,7 +30,7 @@ async def initQA():
 
 
 @router.on_event("startup")
-async def initQE(qexp_model_path=QEXP_MODEL_NAME):
+async def initQE(qexp_model_path=QEXP_MODEL_NAME.value):
     """initQE - loads QE model on start
     Args:
     Returns:
@@ -60,7 +60,7 @@ async def initTrans():
         global sparse_reader
         global latest_intel_model
         model_name = os.path.join(
-            LOCAL_TRANSFORMERS_DIR, "distilbert-base-uncased-distilled-squad"
+            LOCAL_TRANSFORMERS_DIR.value, "distilbert-base-uncased-distilled-squad"
         )
         # not loading due to ram and deprecation
         # logger.info(f"Attempting to load in BERT model default: {model_name}")
@@ -83,7 +83,7 @@ async def initTrans():
 
 @router.on_event("startup")
 async def initSentence(
-    index_path=SENT_INDEX_PATH, transformer_path=LOCAL_TRANSFORMERS_DIR
+    index_path=SENT_INDEX_PATH.value, transformer_path=LOCAL_TRANSFORMERS_DIR.value
 ):
     """
     initQE - loads Sentence Transformers on start
@@ -157,21 +157,21 @@ async def check_health():
 
     # logger.info(f"-- Transformer model name: {new_trans_model_name}")
     logger.info(f"-- Sentence Transformer model name: {new_sent_model_name}")
-    logger.info(f"-- QE model name: {QEXP_MODEL_NAME}")
+    logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")
 
 def check_dep_exist():
     healthy = True
-    if not os.path.isdir(LOCAL_TRANSFORMERS_DIR):
-        logger.warning(f"{LOCAL_TRANSFORMERS_DIR} does NOT exist")
+    if not os.path.isdir(LOCAL_TRANSFORMERS_DIR.value):
+        logger.warning(f"{LOCAL_TRANSFORMERS_DIR.value} does NOT exist")
         healthy = False
 
-    if not os.path.isdir(SENT_INDEX_PATH):
-        logger.warning(f"{SENT_INDEX_PATH} does NOT exist")
+    if not os.path.isdir(SENT_INDEX_PATH.value):
+        logger.warning(f"{SENT_INDEX_PATH.value} does NOT exist")
         healthy = False
 
-    if not os.path.isdir(QEXP_MODEL_NAME):
-        logger.warning(f"{QEXP_MODEL_NAME} does NOT exist")
+    if not os.path.isdir(QEXP_MODEL_NAME.value):
+        logger.warning(f"{QEXP_MODEL_NAME.value} does NOT exist")
         healthy = False
     # topics_dir = os.path.join(QEXP_MODEL_NAME, "topic_models/models")
     # if not os.path.isdir(topics_dir):

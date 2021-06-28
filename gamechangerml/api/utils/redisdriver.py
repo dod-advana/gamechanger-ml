@@ -51,7 +51,7 @@ class RedisPool:
             logger.info("Using redis pool singleton")
         else:
             try:
-                RedisPool.__pool = redis.ConnectionPool(host=REDIS_HOST, port=int(REDIS_PORT), db = 0)
+                RedisPool.__pool = redis.ConnectionPool(host=REDIS_HOST, port=int(REDIS_PORT), db = 0, decode_responses=True)
             except Exception as e:
                 logger.error(
                     " *** Unable to connect to redis {REDIS_HOST} {REDIS_PORT}***")

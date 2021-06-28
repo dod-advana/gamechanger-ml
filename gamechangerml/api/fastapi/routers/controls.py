@@ -39,7 +39,7 @@ def get_downloaded_models_list():
     try:
         transformer_list = [
             trans
-            for trans in os.listdir(LOCAL_TRANSFORMERS_DIR)
+            for trans in os.listdir(LOCAL_TRANSFORMERS_DIR.value)
             if trans not in ignore_files and '.' not in trans
         ]
     except Exception as e:
@@ -73,8 +73,6 @@ async def get_trans_model():
     Returns:
         dict of model name
     """
-    # deprecated
-    # intel_model = cache.get("latest_intel_model_trans").decode("utf-8")
     sent_model = latest_intel_model_sent.value
     return {
         "sentence_models": sent_model,

@@ -3,11 +3,8 @@
 import logging
 import os
 import shutil
-from pathlib import Path
 import glob
-import zipfile
 import tarfile
-import boto3
 from gamechangerml.src.utilities.aws_helper import *
 from gamechangerml.configs.config import S3Config
 
