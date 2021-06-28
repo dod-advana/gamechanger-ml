@@ -1,9 +1,11 @@
 import pandas as pd
+from gamechangerml import DATA_PATH
+import os
 
 # simple script to combine agencies (orgs) and topics for ingestion
-topics_path = "gamechangerml/data/topics_wiki.csv"
-out_path = "gamechangerml/data/combined_entities.csv"
-org_path = "gamechangerml/data/agencies/agencies_in_corpus.csv"
+topics_path = os.path.join(DATA_PATH, "topics_wiki.csv")
+out_path = os.path.join(DATA_PATH, "combined_entities.csv")
+org_path = os.path.join(DATA_PATH, "agencies/agencies_in_corpus.csv")
 topics = pd.read_csv(topics_path)
 orgs = pd.read_csv(org_path)
 orgs.drop(columns=["Unnamed: 0"], inplace=True)

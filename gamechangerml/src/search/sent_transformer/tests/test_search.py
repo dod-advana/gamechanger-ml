@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from gamechangerml.src.search.sent_transformer.model import *
+from gamechangerml import REPO_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ def test_sent_search(sent_dirs, topn):
 
     here = os.path.dirname(os.path.realpath(__file__))
     p = Path(here)
-    gc_path = p.parents[4]
+    gc_path = REPO_PATH
 
     sim_model_path = os.path.join(
         str(gc_path), "gamechangerml/models/transformers/distilbart-mnli-12-3"
