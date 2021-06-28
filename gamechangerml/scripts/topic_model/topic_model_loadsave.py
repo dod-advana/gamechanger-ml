@@ -44,7 +44,6 @@ elif sys.argv[1].lower() == "save":
     for s in os.listdir():
         print(f"Uploading {s} ...")
         upload_file(s, s3_models_dir + s)
-    print(allso)
     print("\nFinished")
 else:
     raise Exception(
