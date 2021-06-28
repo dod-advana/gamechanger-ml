@@ -155,6 +155,7 @@ Assistant Secretary of Defense for Logistics and Materiel Readiness (L&MR)
 Assistant Secretary of Defense for Nuclear, Chemical & Biological Defense Programs (NCB)
 Under Secretary of Defense for Intelligence (I)
 Under Secretary of Defense for Personnel and Readiness (P&R)
+Under Secretary of Defense for Personnel and Readiness (USD(P&R))
 Assistant Secretary of Defense for Health Affairs (HA)
 Assistant Secretary of Defense for Reserve Affairs (RA)
 Under Secretary of Defense for Policy

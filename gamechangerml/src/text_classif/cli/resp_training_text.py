@@ -44,7 +44,7 @@ class ExtractRespText(Table):
         self.resp = "RESPONSIBILITIES"
         self.contains_entity = ContainsEntity()
 
-    def correct_false_negs(self, pos_ex, neg_ex):
+    def correct_false_negs(self, pos_ex, neg_ex):  # experimental
         logger.info("corrections")
         negs_to_pop = list()
         for idx, sent in enumerate(neg_ex):
@@ -118,7 +118,6 @@ class ExtractRespText(Table):
                 logger.exception("offending file name : {}".format(fname))
                 logger.exception("{}: {}".format(type(e), str(e)))
                 pass
-        _ = self.correct_false_negs(pos_ex, neg_ex)
         logger.info("positive samples : {:>6,d}".format(total_pos))
         logger.info("negative samples : {:>6,d}".format(total_neg))
         no_resp_docs = "\n".join(self.no_resp_docs)

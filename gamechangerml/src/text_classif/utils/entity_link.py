@@ -9,7 +9,7 @@ from gamechangerml.src.text_classif.utils.predict_glob import predict_glob
 logger = logging.getLogger(__name__)
 
 
-class EntityCoref(object):
+class EntityLink(object):
     def __init__(self):
         """
         This implements a simplistic entity co-reference mechanism geared to
@@ -95,7 +95,7 @@ class EntityCoref(object):
             e_dict.update(entry)
             if e_dict[self.TOPCLASS] == 0 and self.RESP in entry[self.SENT]:
                 entity_list.append(e_dict)
-                self._link_entity(output_list[idx + 1 :], entity_list)
+                self._link_entity(output_list[idx + 1:], entity_list)
                 return entity_list
             else:
                 entity_list.append(e_dict)
