@@ -29,6 +29,8 @@ import os
 import time
 import pandas as pd
 
+from datetime import date
+
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
 from gamechangerml.src.featurization.abbreviations_utils import (
     get_references,
@@ -42,22 +44,23 @@ from gamechangerml.src.text_classif.utils.resp_stats import count_output
 logger = logging.getLogger(__name__)
 
 
-def _agg_stats(df):
+def _agg_stats(df, model_name='NA', seq_len='NA', batch_size='NA'):
+    run_date = date.today().strftime("%d%m%Y")
     resp_per_doc, resp_no_entity, n_uniq_entities, n_docs = count_output(df)
     if resp_per_doc:
         df_resp_doc = pd.DataFrame(
             list(resp_per_doc.items()), columns=["doc", "count"]
         )
-        df_resp_doc.to_csv("resp-in-doc-stats.csv", index=False)
+        df_resp_doc.to_csv("resp-in-doc-stats_{md}_{sl}_{bs}_{rd}.csv".format(md=model_name, sl=seq_len, bs=batch_size, rd=run_date), index=False)
     if resp_no_entity:
         df_resp_no_e = pd.DataFrame(
             list(resp_per_doc.items()), columns=["doc", "count"]
         )
-        df_resp_no_e.to_csv("resp-no-entity-stats.csv", index=False)
+        df_resp_no_e.to_csv("resp-no-entity-stats_{md}_{sl}_{bs}_{rd}.csv".format(md=model_name, sl=seq_len, bs=batch_size, rd=run_date), index=False)
 
 
 def predict_table(
-    model_path, data_path, glob, max_seq_len, batch_size, output_csv, stats
+    model_path, data_path, glob, max_seq_len, batch_size, output_csv, stats_path
 ):
     """
     See the preamble (help) for a description of these arguments.
@@ -100,15 +103,15 @@ def predict_table(
     logger.info("retrieving agencies csv")
     duplicates, aliases = get_agencies_dict(args.agencies_path)
     df["agencies"] = get_agencies(
-        file_dataframe=df,
+        file_dataframe=df[['Responsibility Text']],
         doc_dups=None,
         duplicates=duplicates,
         agencies_dict=aliases,
     )
 
     df["refs"] = get_references(df, doc_title_col="src")
-
     renamed_df = df.rename(columns=rename_dict)
+
     final_df = renamed_df[
         [
             "Source Document",
@@ -117,13 +120,15 @@ def predict_table(
             "Responsibility Text",
             "Other Organization(s) / Personnel Mentioned",
             "Documents Referenced",
+            "Org Filter"
         ]
     ]
     if output_csv is not None:
         final_df.to_csv(output_csv, index=False)
         logger.info("final csv written")
-    if stats:
-        _agg_stats(final_df)
+    if stats_path is not False:
+        model = model_path.split('/')[-1]
+        _agg_stats(final_df, model, max_seq_len, batch_size)
     elapsed = time.time() - start
 
     logger.info("total time : {:}".format(cu.format_time(elapsed)))
@@ -196,10 +201,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-s",
-        "--stats",
-        action="store_true",
-        dest="stats",
-        help="write aggregate statistics",
+        "--stats-path",
+        action="store_false",
+        dest="stats_path",
+        help="write aggregate statistics output to file",
     )
 
     initialize_logger(to_file=False, log_name="none")
@@ -213,5 +218,5 @@ if __name__ == "__main__":
         args.max_seq_len,
         args.batch_size,
         args.output_csv,
-        args.stats,
+        args.stats_path,
     )
