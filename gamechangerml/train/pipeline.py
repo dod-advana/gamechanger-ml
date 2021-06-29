@@ -1,7 +1,9 @@
 import argparse
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, date
+import wikipedia
+
 
 from gamechangerml.src.search.query_expansion.build_ann_cli import (
     build_qe_model as bqe,
@@ -11,6 +13,13 @@ from gamechangerml.configs.config import DefaultConfig, D2VConfig
 # from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 import pandas as pd
 from pathlib import Path
+import os
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+os.environ['CURL_CA_BUNDLE'] = ""
+os.environ['PYTHONWARNINGS']="ignore:Unverified HTTPS request"
+
+
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter(
@@ -26,6 +35,12 @@ TOPICS_FILE = "gamechangerml/data/topics_wiki.csv"
 ORGS_FILE = "gamechangerml/data/agencies/agencies_in_corpus.csv"
 data_path = "gamechangerml/data"
 
+def lookup_wiki_summary(query):
+    try:
+        return wikipedia.summary(query).replace("\n", "")
+    except:
+        print(f"Could not retrieve description for {query}")
+        return ""
 
 class Pipeline():
     def __init__(self):
@@ -56,6 +71,9 @@ class Pipeline():
         orgs.rename(columns={"Agency_Name": "entity_name"}, inplace=True)
         orgs["entity_type"] = "org"
         combined_ents = orgs.append(topics)
+        combined_ents['information'] = combined_ents['entity_name'].apply(lambda x: lookup_wiki_summary(x))
+        combined_ents['information_source'] = "Wikipedia"
+        combined_ents['information_retrieved'] = date.today().strftime("%Y-%m-%d")
         combined_ents.to_csv(os.path.join(
             data_path, "combined_entities.csv"), index=False)
 
