@@ -57,7 +57,7 @@ english==2020.7.0
 entrypoints==0.3
 etelemetry==0.2.1
 faiss-cpu==1.6.3
-# faiss-gpu==1.6.3
+#faiss-gpu==1.6.3
 farm==0.6.2
 farm-haystack==0.7.0
 fastapi==0.61.1
