@@ -121,10 +121,10 @@ async def check_health():
     logger.info("API Health Check")
     try:
         new_trans_model_name = str(
-            latest_intel_model_trans.value.decode("utf-8")
+            latest_intel_model_trans.value
         )
         new_sent_model_name = str(latest_intel_model_sent.value)
-        new_qa_model_name = str(latest_qa_model.value.decode("utf-8"))
+        new_qa_model_name = str(latest_qa_model.value)
     except Exception as e:
         logger.info("Could not get one of the model names from redis")
         logger.info(e)
@@ -157,6 +157,7 @@ async def check_health():
 
     # logger.info(f"-- Transformer model name: {new_trans_model_name}")
     logger.info(f"-- Sentence Transformer model name: {new_sent_model_name}")
+    logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
     logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")
 

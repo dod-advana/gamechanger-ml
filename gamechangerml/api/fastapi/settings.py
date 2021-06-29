@@ -10,6 +10,8 @@ if GC_ML_HOST == "":
     GC_ML_HOST = "localhost"
 ignore_files = ["._.DS_Store", ".DS_Store", "index"]
 
+CORPUS_DIR = "corpus/gc_corpus/"
+
 # Redis Cache Variables
 latest_intel_model_sent = CacheVariable("latest_intel_model_sent", True)
 latest_qa_model = CacheVariable("latest_qa_model")
@@ -24,7 +26,6 @@ LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]
 SENT_INDEX_PATH.value = model_path_dict["sentence"]
 QEXP_MODEL_NAME.value = model_path_dict["qexp"]
 
-print(LOCAL_TRANSFORMERS_DIR.value)
 t_list = []
 try:
     t_list = [trans for trans in os.listdir(

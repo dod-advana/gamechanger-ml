@@ -7,6 +7,7 @@ from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.routers.startup import *
+from gamechangerml.api.utils.threaddriver import MlThread
 
 router = APIRouter()
 
@@ -128,15 +129,15 @@ async def reload_models(model_dict: dict, response: Response):
     """
     model_path_dict = get_model_paths()
     if "sentence" in model_dict:
-        SENT_INDEX_PATH = os.path.join(
+        SENT_INDEX_PATH.value = os.path.join(
             Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
         )
-        model_path_dict["sentence"] = SENT_INDEX_PATH
+        model_path_dict["sentence"] = SENT_INDEX_PATH.value
     if "qexp" in model_dict:
-        QEXP_MODEL_NAME = os.path.join(
+        QEXP_MODEL_NAME.value = os.path.join(
             Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
         )
-        model_path_dict["qexp"] = QEXP_MODEL_NAME
+        model_path_dict["qexp"] = QEXP_MODEL_NAME.value
 
     logger.info("Attempting to load QE")
     await initQE(model_path_dict["qexp"])
@@ -164,9 +165,12 @@ async def download_corpus(corpus_dict: dict, response: Response):
     """
     try:
         logger.info("Attempting to download corpus from S3")
-        utils.get_s3_corpus(corpus_dict["corpus"])
-        # get_transformers(overwrite=False)
-        # get_sentence_index(overwrite=False)
+        # grabs the s3 path to the corpus from the post in "corpus" 
+        # then passes in where to dowload the corpus locally.
+        args = {"s3_dir":corpus_dict["corpus"], "local_dir": CORPUS_DIR}
+        corpus_thread = MlThread(utils.get_s3_corpus, args)
+        corpus_thread.start()
+        corpus_thread.join()
     except:
         logger.warning(f"Could not get dependencies from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -185,8 +189,7 @@ async def tain_model(model_dict: dict, response: Response):
         logger.info("Attempting to download corpus from S3")
         output = subprocess.call(
             ["gamechangerml/scripts/download_corpus.sh"])
-        # get_transformers(overwrite=False)
-        # get_sentence_index(overwrite=False)
+
     except:
         logger.warning(f"Could not get dependencies from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
