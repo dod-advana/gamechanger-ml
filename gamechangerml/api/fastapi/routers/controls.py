@@ -8,6 +8,7 @@ from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.routers.startup import *
 from gamechangerml.api.utils.threaddriver import MlThread
+from gamechangerml.train.scripts.create_embedding import create_embedding
 
 router = APIRouter()
 
@@ -187,8 +188,18 @@ async def tain_model(model_dict: dict, response: Response):
     """
     try:
         logger.info("Attempting to download corpus from S3")
-        output = subprocess.call(
-            ["gamechangerml/scripts/download_corpus.sh"])
+
+        args = {
+            "corpus":model_dict["corpus"], 
+            "existing_embeds": True, 
+            "encoder_model":"msmarco-distilbert-base-v2",
+            "gpu":True,
+            "upload": True,
+            "version": model_dict["version"]
+        }
+        corpus_thread = MlThread(create_embedding, args)
+        corpus_thread.start()
+        corpus_thread.join()
 
     except:
         logger.warning(f"Could not get dependencies from S3")

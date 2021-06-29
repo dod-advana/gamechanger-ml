@@ -27,6 +27,68 @@ def create_tgz_from_dir(
     with tarfile.open(dst_archive, "w:gz") as tar:
         tar.add(src_dir, arcname=os.path.basename(src_dir))
 
+def create_embedding(corpus, existing_embeds, encoder_model, gpu, upload, version):
+    # Error fix for saving index and model to tgz
+    # https://github.com/huggingface/transformers/issues/5486
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+    # GPU check
+    use_gpu = gpu
+    if use_gpu and not torch.cuda.is_available:
+        print("GPU is not available. Setting `gpu` argument to False")
+        use_gpu = False
+
+    # Define model saving directories
+    # here = os.path.dirname(os.path.realpath(__file__))
+    # p = Path(here)
+    model_dir = os.path.join("gamechangerml", "models")
+    encoder_path = os.path.join(model_dir, "transformers", encoder_model)
+
+    index_name = datetime.now().strftime("%Y%m%d")
+    local_sent_index_dir = os.path.join(model_dir, "sent_index_" + index_name)
+
+    # Define new index directory
+    if not os.path.isdir(local_sent_index_dir):
+        os.mkdir(local_sent_index_dir)
+
+    # If existing index exists, copy content from reference index
+    if existing_embeds is not None:
+        copy_tree(existing_embeds, local_sent_index_dir)
+
+    logger.info("Loading Encoder Model...")
+    encoder = SentenceEncoder(encoder_path, use_gpu)
+    logger.info("Creating Document Embeddings...")
+    encoder.index_documents(corpus, local_sent_index_dir)
+
+    # Generating process metadata
+    metadata = {
+        "user": str(os.getlogin()),
+        "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "doc_id_count": len(encoder.embedder.config["ids"]),
+        "corpus_name": corpus,
+        "encoder_model": encoder_model,
+    }
+
+    # Create metadata file
+    metadata_path = os.path.join(local_sent_index_dir, "metadata.json")
+    with open(metadata_path, "w") as fp:
+        json.dump(metadata, fp)
+
+    # Create .tgz file
+    dst_path = local_sent_index_dir + ".tar.gz"
+    create_tgz_from_dir(src_dir=local_sent_index_dir, dst_archive=dst_path)
+
+    # Upload to S3
+    if upload:
+        # Loop through each file and upload to S3
+        s3_sent_index_dir = f"gamechanger/models/sentence_index/{version}"
+        logger.info(f"Uploading files to {s3_sent_index_dir}")
+        logger.info(f"\tUploading: {local_sent_index_dir}")
+        local_path = os.path.join(dst_path)
+        s3_path = os.path.join(
+            s3_sent_index_dir, "sent_index_" + index_name + ".tar.gz"
+        )
+        utils.upload_file(local_path, s3_path)
 
 def main():
     parser = LocalParser()
@@ -84,68 +146,9 @@ def main():
         help="version string, must start with v, i.e. v1",
     )
     args = parser.parse_args()
+    create_embedding(**args.__dict__)
 
-    # Error fix for saving index and model to tgz
-    # https://github.com/huggingface/transformers/issues/5486
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # GPU check
-    use_gpu = args.gpu
-    if use_gpu and not torch.cuda.is_available:
-        print("GPU is not available. Setting `gpu` argument to False")
-        use_gpu = False
-
-    # Define model saving directories
-    # here = os.path.dirname(os.path.realpath(__file__))
-    # p = Path(here)
-    model_dir = os.path.join("gamechangerml", "models")
-    encoder_path = os.path.join(model_dir, "transformers", args.encoder_model)
-
-    index_name = datetime.now().strftime("%Y%m%d")
-    local_sent_index_dir = os.path.join(model_dir, "sent_index_" + index_name)
-
-    # Define new index directory
-    if not os.path.isdir(local_sent_index_dir):
-        os.mkdir(local_sent_index_dir)
-
-    # If existing index exists, copy content from reference index
-    if args.existing_embeds is not None:
-        copy_tree(args.existing_embeds, local_sent_index_dir)
-
-    logger.info("Loading Encoder Model...")
-    encoder = SentenceEncoder(encoder_path, use_gpu)
-    logger.info("Creating Document Embeddings...")
-    encoder.index_documents(args.corpus, local_sent_index_dir)
-
-    # Generating process metadata
-    metadata = {
-        "user": str(os.getlogin()),
-        "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "doc_id_count": len(encoder.embedder.config["ids"]),
-        "corpus_name": args.corpus,
-        "encoder_model": args.encoder_model,
-    }
-
-    # Create metadata file
-    metadata_path = os.path.join(local_sent_index_dir, "metadata.json")
-    with open(metadata_path, "w") as fp:
-        json.dump(metadata, fp)
-
-    # Create .tgz file
-    dst_path = local_sent_index_dir + ".tar.gz"
-    create_tgz_from_dir(src_dir=local_sent_index_dir, dst_archive=dst_path)
-
-    # Upload to S3
-    if args.upload:
-        # Loop through each file and upload to S3
-        s3_sent_index_dir = f"gamechanger/models/sentence_index/{args.version}"
-        logger.info(f"Uploading files to {s3_sent_index_dir}")
-        logger.info(f"\tUploading: {local_sent_index_dir}")
-        local_path = os.path.join(dst_path)
-        s3_path = os.path.join(
-            s3_sent_index_dir, "sent_index_" + index_name + ".tar.gz"
-        )
-        utils.upload_file(local_path, s3_path)
+    
 
 
 if __name__ == "__main__":
