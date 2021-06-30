@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from gamechangerml.src.search.sent_transformer.model import *
+from gamechangerml import REPO_PATH
 
 log_fmt = (
     "[%(asctime)s %(levelname)-8s], [%(filename)s:%(lineno)s - "
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 try:
     here = os.path.dirname(os.path.realpath(__file__))
     p = Path(here)
-    gc_path = p.parents[4]
+    gc_path = REPO_PATH
     test_data_dir = os.path.join(str(p), "test_data")
     test_data_2_dir = os.path.join(str(p), "test_data_2")
     test_index_dir = os.path.join(str(p), "test_index")

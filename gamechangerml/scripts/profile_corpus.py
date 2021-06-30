@@ -12,6 +12,7 @@ from gensim.parsing.preprocessing import STOPWORDS
 from gensim.utils import simple_preprocess
 from transformers import BertTokenizer
 #from gamechangerml.src.text_handling.process import preprocess, bert_tokenizer
+from gamechangerml import REPO_PATH
 
 columns = [
     "filename",  # filename
@@ -264,9 +265,9 @@ if __name__ == "__main__":
 
     corpus_dir = args.corpus
     save_dir = args.save_dir
-    bert_vocab = "./gamechangerml/src/text_handling/assets/bert_vocab.txt"
-    sources_path = "./gamechangerml/scripts/corpus_doctypes.csv"
-    #save_dir = "./gamechangerml/scripts/stats_output/"
+    bert_vocab = os.path.join(REPO_PATH, "gamechangerml/src/text_handling/assets/bert_vocab.txt")
+    sources_path = os.path.join(REPO_PATH, "gamechangerml/scripts/corpus_doctypes.csv")
+    #save_dir = os.path.join(REPO_PATH, "gamechangerml/scripts/stats_output/")
 
     if not os.path.exists(save_dir):  # make dir to save files
         os.makedirs(save_dir)

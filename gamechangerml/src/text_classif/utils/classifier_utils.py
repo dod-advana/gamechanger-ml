@@ -272,17 +272,13 @@ def raw2dict(src_path, glob, key="raw_text"):
         str: name of the file
     """
     for fname, doc in gen_gc_docs(src_path, glob, key=key):
-        title = "none"
-        source = "none"
-        raw_text = "none"
-        if "title" in doc:
-            title = doc["title"]
-        if "filename" in doc:
-            source = doc["filename"]
-        if "raw_text" in doc:
-            raw_text = doc["raw_text"]
+        title = doc["title"]
+        source = doc["filename"]
+        raw_text = doc["raw_text"]
         sent_list = make_sentences(raw_text, fname)
         for sent in sent_list:
             sent.update({"title": title, "source": source})
-        logger.info("{:>25s} : {:>5,d}".format(fname, len(sent_list)))
+        logger.info(
+            "{:>40s} : {:>5,d} sentences".format(fname, len(sent_list))
+        )
         yield sent_list, fname

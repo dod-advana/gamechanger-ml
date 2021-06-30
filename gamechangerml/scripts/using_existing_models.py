@@ -1,8 +1,13 @@
 from gamechangerml.src.search.semantic.models import D2V
 from gamechangerml.src.text_handling.entity import Phrase_Detector
 from gamechangerml.src.text_handling.process import preprocess
+from gamechangerml import REPO_PATH
+import os
 
-model_dir = "gamechangerml/src/modelzoo/semantic/models"
+model_dir = os.path.join(
+    REPO_PATH,
+    "gamechangerml/src/modelzoo/semantic/models"
+)
 model_name = "2020072720_model.d2v"
 
 

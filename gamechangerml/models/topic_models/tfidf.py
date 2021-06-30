@@ -1,5 +1,5 @@
 from gensim.models.phrases import Phraser
-from dataScience.src.featurization.topic_modeling import Topics
+from gamechangerml.src.featurization.topic_modeling import Topics
 import os
 
 base = os.path.dirname(os.path.realpath(__file__))

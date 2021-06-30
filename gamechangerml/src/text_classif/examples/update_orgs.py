@@ -11,9 +11,9 @@ from gamechangerml.src.text_classif.utils.entity_lookup import (
 from src.text_classif.utils.log_init import initialize_logger
 import src.text_classif.utils.classifier_utils as cu
 
-"""Sample command line: python dataScience/src/text_classif/examples/update_orgs.py 
-                        --dodorg-path dataScience/src/text_classif/utils/dod-orgs.txt 
-                        --agencies-path dataScience/data/agencies/agencies.csv"""
+"""Sample command line: python gamechangerml/src/text_classif/examples/update_orgs.py 
+                        --dodorg-path gamechangerml/src/text_classif/utils/dod-orgs.txt 
+                        --agencies-path gamechangerml/data/agencies/agencies.csv"""
 
 logger = logging.getLogger(__name__)
 

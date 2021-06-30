@@ -9,6 +9,7 @@ from gamechangerml.src.search.query_expansion.build_ann_cli import (
 )
 from gamechangerml.src.utilities import utils
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
+from gamechangerml import REPO_PATH
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
@@ -97,7 +98,10 @@ def run_train(
                 "-------------- Building Sentence Embeddings --------------")
             if sentenceTrans:
                 encoder = SentenceEncoder(
-                    "gamechangerml/models/transformers/msmarco-distilbert-base-v2",
+                    os.path.join(
+                        REPO_PATH,
+                        "gamechangerml/models/transformers/msmarco-distilbert-base-v2"
+                    ),
                     use_gpu=gpu,
                 )
                 encoder.index_documents(
@@ -118,7 +122,7 @@ def run_train(
                     model_name=model_id,
                     logger=logger,
                     s3_corpus="corpus_20200909",
-                    model_dir="gamechangerml/models/",
+                    model_dir=os.path.join(REPO_PATH, "gamechangerml/models/"),
                     verbose=True,
                 )
                 for metric in results:
