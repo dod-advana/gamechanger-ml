@@ -119,6 +119,8 @@ async def s3_func(function, response: Response):
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return models
 
+## Post Methods ##
+
 @router.post("/reloadModels", status_code=200)
 async def reload_models(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
@@ -153,8 +155,6 @@ async def reload_models(model_dict: dict, response: Response):
     logger.info("Reload Complete")
     return
 
-## Post Methods ##
-
 @router.post("/downloadCorpus", status_code=200)
 async def download_corpus(corpus_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
@@ -181,16 +181,18 @@ async def download_corpus(corpus_dict: dict, response: Response):
 async def tain_model(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
-        model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
+        model_dict: dict; {"version": "v5"}
 
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
     try:
         logger.info("Attempting to download corpus from S3")
-
+        if not os.path.exists(CORPUS_DIR):
+            logger.warning(f"Corpus is not in local directory")
+            raise Exception("Corpus is not in local directory")
         args = {
-            "corpus":model_dict["corpus"], 
+            "corpus":CORPUS_DIR, 
             "existing_embeds": True, 
             "encoder_model":"msmarco-distilbert-base-v2",
             "gpu":True,
@@ -202,6 +204,6 @@ async def tain_model(model_dict: dict, response: Response):
         corpus_thread.join()
 
     except:
-        logger.warning(f"Could not get dependencies from S3")
+        logger.warning(f"Could not train the model")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return
