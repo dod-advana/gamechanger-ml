@@ -13,6 +13,7 @@ from gamechangerml.src.search.query_expansion.build_ann_cli import (
 )
 from gamechangerml.src.model_testing import model_assessment_utils as mau
 import os
+from gamechangerml import REPO_PATH
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
@@ -84,7 +85,7 @@ def run_train(
             model_name=model_id,
             logger=logger,
             s3_corpus="corpus_20200909",
-            model_dir="gamechangerml/models/",
+            model_dir=os.path.join(REPO_PATH, "gamechangerml/models/"),
             verbose=True,
         )
     else:

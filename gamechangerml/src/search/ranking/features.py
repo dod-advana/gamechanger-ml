@@ -1,8 +1,12 @@
 import pandas as pd
 import ast
+from gamechangerml.src.search.ranking import GENERATED_FILES_PATH
+import os
 
-df = pd.read_csv(
-    "gamechangerml/src/search/ranking/generated_files/corpus_meta.csv")
+df = pd.read_csv(os.path.join(
+    GENERATED_FILES_PATH,
+    "corpus_meta.csv"
+))
 
 """ retrieve pre-generated features from corpus
     - pr: pagerank

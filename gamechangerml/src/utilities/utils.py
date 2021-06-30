@@ -7,6 +7,7 @@ import glob
 import tarfile
 from gamechangerml.src.utilities.aws_helper import *
 from gamechangerml.configs.config import S3Config
+from gamechangerml import REPO_PATH
 
 logger = logging.getLogger("gamechanger")
 
@@ -299,7 +300,10 @@ def get_transformers(
     model_path="transformers_v4/transformers.tar", overwrite=False
 ):
     bucket = s3_connect()
-    models_path = "gamechangerml/models"
+    models_path = os.path.join(
+        REPO_PATH,
+        "gamechangerml/models"
+    )
     try:
         if glob.glob(os.path.join(models_path, "transformer*")):
             if not overwrite:
@@ -331,7 +335,10 @@ def get_transformers(
 
 def get_sentence_index(model_path="sent_index/", overwrite=False):
     bucket = s3_connect()
-    models_path = "gamechangerml/models"
+    models_path = os.path.join(
+        REPO_PATH,
+        "gamechangerml/models"
+    )
     try:
         if glob.glob(os.path.join(models_path, "sent_index*")):
             if not overwrite:

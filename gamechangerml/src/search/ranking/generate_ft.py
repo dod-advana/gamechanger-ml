@@ -1,6 +1,7 @@
 # from gamechangerml.src.search.ranking import matamo as mt
 from gamechangerml.src.search.ranking import search_data as meta
 from gamechangerml.src.search.ranking import rank
+from gamechangerml import REPO_PATH
 import datetime
 import pandas as pd
 from tqdm import tqdm
@@ -22,7 +23,10 @@ optional arguements:
 logger = logging.getLogger("gamechanger")
 
 corpus_dir = "test/corpus_new"
-prod_data_file = "gamechangerml/src/search/ranking/generated_files/prod_test_data.csv"
+prod_data_file = os.path.join(
+    REPO_PATH,
+    "gamechangerml/src/search/ranking/generated_files/prod_test_data.csv"
+)
 
 
 def generate_pop_docs(pop_kw_df: pd.DataFrame, corpus_df: pd.DataFrame) -> pd.DataFrame:
@@ -59,7 +63,10 @@ def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_
 
     """
     today = datetime.datetime.now()
-    out_dir = "gamechangerml/src/search/ranking/generated_files"
+    out_dir = os.path.join(
+        REPO_PATH,
+        "gamechangerml/src/search/ranking/generated_files"
+    )
     r = rank.Rank()
     day_delta = 80
     d = datetime.timedelta(days=day_delta)
@@ -106,7 +113,10 @@ if __name__ == "__main__":
         "--prod",
         "-p",
         dest="prod_data",
-        default="gamechangerml/src/search/ranking/generated_files/prod_test_data.csv",
+        default=os.path.join(
+            REPO_PATH,
+            "gamechangerml/src/search/ranking/generated_files/prod_test_data.csv"
+        ),
         help="production data historical search logs csv ",
     )
 
