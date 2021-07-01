@@ -67,5 +67,17 @@ then
     echo "Attempting to download transformer cache and sentence index from s3"
     #source ./gamechangerml/scripts/download_dependencies.sh
     gunicorn gamechangerml.api.fastapi.mlapp:app --bind 0.0.0.0:5000 --workers 1 --graceful-timeout 900 --timeout 1600 -k uvicorn.workers.UvicornWorker --log-level debug --reload
- 
+elif [ "$ENV_TYPE" = "k8" ] 
+then
+    source ./gamechangerml/gamechangerml/setup_env.sh DEV
+    source ../../../venv/bin/activate  
+    if [ "$DOWNLOAD_DEP" = true ]
+    then
+      echo "Attempting to download models from s3"
+      echo "$GC_ML_API_MODEL_NAME - if this is blank it will default"
+      echo "Attempting to download transformer cache and sentence index from s3"
+      source ./gamechangerml/gamechangerml/scripts/download_dependencies.sh
+    fi
+    gunicorn gamechangerml.gamechangerml.api.fastapi.mlapp:app --bind 0.0.0.0:5000 --workers 1 --graceful-timeout 1000 --timeout 1200 --keep-alive 30 --reload -k uvicorn.workers.UvicornWorker --log-level debug
+    
 fi 

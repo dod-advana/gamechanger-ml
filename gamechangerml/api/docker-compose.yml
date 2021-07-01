@@ -11,6 +11,7 @@ services:
       - "6380"
   gamechanger-ml-gpu:
     container_name: gc-ml-gpu
+    image: gamechanger-ml-gpu
     build:
       context: ../../.
       dockerfile: gamechangerml/api/fastapi/mlapp.Dockerfile
@@ -44,7 +45,7 @@ services:
       - DOCKER=true
       - LD_LIBRARY_PATH=/usr/local/cuda/lib64/
     volumes:
-      - ../../gamechangerml:/gamechanger-ml/gamechangerml/
+      - ../../gamechangerml:/gamechangerml/gamechangerml/
       - ~/.aws/:/root/.aws
     depends_on:
       - gc-redis
