@@ -10,7 +10,7 @@ if GC_ML_HOST == "":
     GC_ML_HOST = "localhost"
 ignore_files = ["._.DS_Store", ".DS_Store", "index"]
 
-CORPUS_DIR = "corpus/gc_corpus/"
+CORPUS_DIR = "gamechangerml/corpus/"
 
 # Redis Cache Variables
 latest_intel_model_sent = CacheVariable("latest_intel_model_sent", True)
