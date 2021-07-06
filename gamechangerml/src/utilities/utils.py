@@ -129,15 +129,14 @@ def get_s3_corpus(corpus_dir, output_dir = "corpus"):
         print(error)
     for obj in bucket.objects.filter(Prefix=f"{corpus_dir}/"):
         corp.append(obj.key)
-        print("s3 key: "+obj.key)
+        filename = os.path.basename(obj.key)
+        print("s3 key: "+filename)
         print("\n")
         try:
-            local_path = os.path.join(output_dir, obj.key)
-            if not os.path.exists(os.path.dirname(obj.key)):
-                os.makedirs(os.path.dirname(local_path))
-            bucket.download_file(obj.key, local_path)
+            local_path = os.path.join(output_dir, filename)
+            bucket.Object(obj.key).download_file(local_path)
         except RuntimeError:
-            logger.debug(f"Could not retrieve {obj.key}")
+            logger.debug(f"Could not retrieve {filename}")
     return corp
 
 
