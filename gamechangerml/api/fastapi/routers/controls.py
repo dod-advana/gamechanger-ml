@@ -171,7 +171,6 @@ async def download_corpus(corpus_dict: dict, response: Response):
         args = {"corpus_dir":corpus_dict["corpus"], "output_dir": CORPUS_DIR}
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()
-        corpus_thread.join()
     except:
         logger.warning(f"Could not get dependencies from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
