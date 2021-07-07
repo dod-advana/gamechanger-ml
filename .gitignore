@@ -235,7 +235,7 @@ mlruns/
 # Transformer models
 models/transformers
 
-# Transformer models
+# Corpus files
 corpus
 
 # Don't ignore .gitkeep files
