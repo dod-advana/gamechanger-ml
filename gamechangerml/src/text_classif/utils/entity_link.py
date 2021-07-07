@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class EntityLink(object):
-    def __init__(self):
+    def __init__(self, orgs_file):
         """
         This implements a simplistic entity co-reference mechanism geared to
         the structure of many DoD documents.
@@ -46,6 +46,7 @@ class EntityLink(object):
         self.pop_entities = None
         self.contains_entity = el.ContainsEntity()
         self.failed = list()
+
 
     def _new_edict(self, value=None):
         value = self.NA or value
@@ -83,7 +84,6 @@ class EntityLink(object):
             elif entry[self.TOPCLASS] == 1:
                 if curr_entity == self.NA:
                     curr_entity = last_entity
-                    # last_entity = curr_entity
                 new_entry[self.ENT] = curr_entity
                 logger.debug("entity : {}".format(curr_entity))
             entity_list.append(new_entry)
@@ -95,7 +95,7 @@ class EntityLink(object):
             e_dict.update(entry)
             if e_dict[self.TOPCLASS] == 0 and self.RESP in entry[self.SENT]:
                 entity_list.append(e_dict)
-                self._link_entity(output_list[idx + 1:], entity_list)
+                self._link_entity(output_list[idx + 1 :], entity_list)
                 return entity_list
             else:
                 entity_list.append(e_dict)

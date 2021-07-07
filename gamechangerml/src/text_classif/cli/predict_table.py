@@ -35,9 +35,9 @@ from gamechangerml.src.featurization.abbreviations_utils import (
     get_agencies_dict,
     get_agencies,
 )
-from gamechangerml.src.text_classif.utils.entity_coref import EntityCoref
+from gamechangerml.src.text_classif.utils.entity_link import EntityLink
 from gamechangerml.src.text_classif.utils.log_init import initialize_logger
-from gamechangerml.src.text_classif.utils.resp_stats import count_output
+from gamechangerml.src.text_classif.cli.resp_stats import count_output
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def _agg_stats(df):
 
 
 def predict_table(
-    model_path, data_path, glob, max_seq_len, batch_size, output_csv, stats
+    model_path, data_path, glob, max_seq_len, batch_size, output_csv, stats, orgs_file
 ):
     """
     See the preamble (help) for a description of these arguments.
@@ -86,7 +86,7 @@ def predict_table(
     }
 
     start = time.time()
-    entity_coref = EntityCoref()
+    entity_coref = EntityLink()
     entity_coref.make_table(
         model_path,
         data_path,
@@ -188,8 +188,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-a",
-        "--agencies-path",
-        dest="agencies_path",
+        "--orgs-file",
+        dest="orgs_file",
         type=str,
         required=True,
         help="the .csv for agency abbreviations",
@@ -214,4 +214,5 @@ if __name__ == "__main__":
         args.batch_size,
         args.output_csv,
         args.stats,
+        args.orgs_file,
     )

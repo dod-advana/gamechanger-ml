@@ -56,7 +56,9 @@ class ExtractRespText(Table):
                     pos_ex.append(sent)
                     negs_to_pop.append(idx)
                     logger.info("added positive ex : {}".format(sent))
-        new_negs = [neg for idx, neg in enumerate(neg_ex) if idx not in negs_to_pop]
+        new_negs = [
+            neg for idx, neg in enumerate(neg_ex) if idx not in negs_to_pop
+        ]
         return pos_ex, new_negs
 
     def scrubber(self, txt):
