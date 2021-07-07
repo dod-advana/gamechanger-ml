@@ -8,6 +8,7 @@ import tarfile
 from gamechangerml.src.utilities.aws_helper import *
 from gamechangerml.configs.config import S3Config
 from gamechangerml import REPO_PATH
+from gamechangerml.api.utils import processmanager
 
 logger = logging.getLogger("gamechanger")
 
@@ -127,14 +128,22 @@ def get_s3_corpus(corpus_dir, output_dir = "corpus"):
             os.makedirs(output_dir)
     except OSError as error:
         print(error)
-    for obj in bucket.objects.filter(Prefix=f"{corpus_dir}/"):
+    # get the dict of objects that meet the prefix
+    filter = bucket.objects.filter(Prefix=f"{corpus_dir}/")
+    total = len(filter)
+    completed = 0
+    # Initialize Progress
+    processmanager.update_status(processmanager.corpus_download, completed, total)
+    for obj in filter:
         corp.append(obj.key)
         filename = os.path.basename(obj.key)
-        print("s3 key: "+filename)
         try:
             local_path = os.path.join(output_dir, filename)
             if not os.path.exists(local_path):
                 bucket.Object(obj.key).download_file(local_path)
+            completed += 1
+            # Update Progress
+            processmanager.update_status(processmanager.corpus_download, completed, total)
         except RuntimeError:
             logger.debug(f"Could not retrieve {filename}")
     return corp

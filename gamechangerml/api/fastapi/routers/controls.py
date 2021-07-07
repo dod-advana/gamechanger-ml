@@ -9,6 +9,7 @@ from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.routers.startup import *
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.scripts.create_embedding import create_embedding
+from gamechangerml.api.utils import processmanager
 
 router = APIRouter()
 
@@ -20,6 +21,13 @@ async def api_information():
         "API": "FOR TRANSFORMERS",
         "API_Name": "GAMECHANGER ML API",
         "Version": __version__
+    }
+
+@router.get("/getProcessStatus")
+async def get_process_status():
+    return {
+        "process_status": processmanager.PROCESS_STATUS.value,
+        "completed_process": processmanager.COMPLETED_PROCESS.value
     }
 @router.get("/getModelsList")
 def get_downloaded_models_list():
