@@ -1,4 +1,6 @@
 import threading
+import json
+from gamechangerml.api.utils.logger import logger
 # A class that takes in a function and a dictionary of arguments.
 # The keys in args have to match the parameters in the function.
 class MlThread(threading.Thread):
@@ -7,7 +9,12 @@ class MlThread(threading.Thread):
         self.function = function
         self.args = args
     def run(self):
-        self.function(**self.args)
+        try:
+            self.function(**self.args)
+        except Exception as e:
+            logger.error(e)
+            logger.info("Thread errored out attempting " + self.function.__name__ + " with parameters: " + json.dumps(self.args))
+
 
 # Pass in a function and args which is an array of dicts
 # A way to load mulitple jobs and run them on threads.
