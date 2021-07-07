@@ -11,9 +11,6 @@ PROCESS_STATUS = CacheVariable("process_status", True)
 COMPLETED_PROCESS = CacheVariable("completed_process", list = True)
 thread_lock = threading.Lock()
 
-if PROCESS_STATUS.value == None:
-    PROCESS_STATUS.value = {}
-
 def update_status(key, progress, total):
     if progress == total:
         date = datetime.now()
