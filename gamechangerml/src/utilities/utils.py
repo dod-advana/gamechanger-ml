@@ -139,6 +139,7 @@ def get_s3_corpus(corpus_dir, output_dir = "corpus"):
         filename = os.path.basename(obj.key)
         try:
             local_path = os.path.join(output_dir, filename)
+            # Only grab file if it is not already downloaded
             if not os.path.exists(local_path):
                 bucket.Object(obj.key).download_file(local_path)
             completed += 1
