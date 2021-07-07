@@ -1,4 +1,5 @@
 import threading
+import json
 from datetime import datetime
 from gamechangerml.api.utils.redisdriver import CacheVariable
 
@@ -8,8 +9,11 @@ training_progress = "training_progress"
 
 # the dictionary that holds all the progress values
 PROCESS_STATUS = CacheVariable("process_status", True)
-COMPLETED_PROCESS = CacheVariable("completed_process", list = True)
+COMPLETED_PROCESS = CacheVariable("completed_process", True)
 thread_lock = threading.Lock()
+
+PROCESS_STATUS.value = {}
+COMPLETED_PROCESS.value = []
 
 def update_status(key, progress, total):
     if progress == total:
@@ -21,12 +25,19 @@ def update_status(key, progress, total):
             "date": date_string
         }
         with thread_lock:
-            PROCESS_STATUS.value[key] = None
-            COMPLETED_PROCESS.value.push(completed)
+            if key in PROCESS_STATUS.value:
+                temp = PROCESS_STATUS.value
+                temp.pop(key, None)
+                PROCESS_STATUS.value = temp
+            completed_list = COMPLETED_PROCESS.value
+            completed_list.append(completed)
+            COMPLETED_PROCESS.value = completed_list
     else:
         status = {
             "progress":progress,
             "total":total
         }
         with thread_lock:
-            PROCESS_STATUS.value[key] = status
+            status_dict = PROCESS_STATUS.value
+            status_dict[key] = status
+            PROCESS_STATUS.value = status_dict

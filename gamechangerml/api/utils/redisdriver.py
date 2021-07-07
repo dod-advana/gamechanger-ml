@@ -1,5 +1,6 @@
 import os
 import redis
+import json
 
 from gamechangerml.api.utils.logger import logger
 
@@ -16,37 +17,28 @@ if REDIS_PORT == "":
 # Once initialized use get and set .value with and equals sign.
 # Eg: latest_intel_model_sent.value = "foo"
 class CacheVariable:
-    def __init__(self, key, hash = False, list = False):
+    def __init__(self, key, encode = False):
         self._connection = redis.Redis(connection_pool=RedisPool().getPool())
         self._key = key 
-        self._hash = hash
-        self._list = list
+        self._encode = encode
     # Default get method, checks if the key is in redis and gets 
     # the value whether it is a list, dict or standard type
     def get_value(self):
         if(self._connection.exists(self._key)):
-            if(self._hash):
-                return self._connection.hgetall(self._key)
-            if(self._list):
-                return self._connection.lrange(self._key, 0,-1)
-            return self._connection.get(self._key)
+            result = self._connection.get(self._key)
+            if(self._encode):
+                result = json.loads(result)
+            return result
         return None
     # Default set method, sets values for dicts and standard types.
     # Note: Should use push if using a list.
     def set_value(self, value):
-        if(self._hash):
-            return self._connection.hmset(self._key, value)
+        if(self._encode):
+            value = json.dumps(value)
         return self._connection.set(self._key, value)
     # Default delete method, removes key from redis
     def del_value(self):
         return self._connection.delete(self._key)
-    # Only for lists. Pushes a value onto the keys list.
-    # this method is called directly instead of using the "=" operator
-    def push(self, value):
-        if(self._list):
-            self._connection.lpush(self._key, value)
-        else:
-            logger.error("Cannot call push, " + self._key + " is not a list")
     
     value = property(get_value, set_value, del_value)
 
