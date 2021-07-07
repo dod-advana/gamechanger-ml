@@ -1,5 +1,4 @@
 import threading
-import json
 from datetime import datetime
 from gamechangerml.api.utils.redisdriver import CacheVariable
 

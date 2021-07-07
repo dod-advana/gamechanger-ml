@@ -129,7 +129,7 @@ def get_s3_corpus(corpus_dir, output_dir = "corpus"):
     except OSError as error:
         print(error)
     # get the dict of objects that meet the prefix
-    filter = bucket.objects.filter(Prefix=f"{corpus_dir}/")
+    filter = list(bucket.objects.filter(Prefix=f"{corpus_dir}/"))
     total = len(filter)
     completed = 0
     # Initialize Progress
