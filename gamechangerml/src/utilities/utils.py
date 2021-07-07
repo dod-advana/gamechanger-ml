@@ -128,9 +128,9 @@ def get_s3_corpus(corpus_dir, output_dir = "corpus"):
             os.makedirs(output_dir)
     except OSError as error:
         print(error)
-    # get the dict of objects that meet the prefix
-    filter = list(bucket.objects.filter(Prefix=f"{corpus_dir}/"))
-    total = len(filter)
+    # get the s3.Bucket.objectsCollection of objects that meet the prefix
+    filter = bucket.objects.filter(Prefix=f"{corpus_dir}/")
+    total = len(list(filter))
     completed = 0
     # Initialize Progress
     processmanager.update_status(processmanager.corpus_download, completed, total)
