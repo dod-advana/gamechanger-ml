@@ -208,7 +208,6 @@ async def tain_model(model_dict: dict, response: Response):
         }
         corpus_thread = MlThread(create_embedding, args)
         corpus_thread.start()
-        corpus_thread.join()
 
     except:
         logger.warning(f"Could not train the model")
