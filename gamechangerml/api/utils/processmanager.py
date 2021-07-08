@@ -15,6 +15,11 @@ PROCESS_STATUS.value = {}
 COMPLETED_PROCESS.value = []
 
 def update_status(key, progress, total):
+    # log update at most 1000 times
+    update_step = total/1000
+    if update_step < 1:
+        update_step = 1
+        
     if progress == total:
         date = datetime.now()
         date_string = date.strftime("%Y-%m-%d %H:%M:%S")
@@ -31,7 +36,7 @@ def update_status(key, progress, total):
             completed_list = COMPLETED_PROCESS.value
             completed_list.append(completed)
             COMPLETED_PROCESS.value = completed_list
-    else:
+    elif progress%update_step ==0:
         status = {
             "progress":progress,
             "total":total

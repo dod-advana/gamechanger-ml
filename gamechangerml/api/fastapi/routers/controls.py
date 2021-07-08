@@ -182,7 +182,7 @@ async def download_corpus(corpus_dict: dict, response: Response):
     except:
         logger.warning(f"Could not get dependencies from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return
+    return get_process_status()
 
 @router.post("/train_model", status_code=200)
 async def tain_model(model_dict: dict, response: Response):
@@ -194,7 +194,7 @@ async def tain_model(model_dict: dict, response: Response):
     Returns:
     """
     try:
-        logger.info("Attempting to download corpus from S3")
+        logger.info("Attempting to train model")
         if not os.path.exists(CORPUS_DIR):
             logger.warning(f"Corpus is not in local directory")
             raise Exception("Corpus is not in local directory")
