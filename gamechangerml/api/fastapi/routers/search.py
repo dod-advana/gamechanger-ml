@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Response, status
+import time
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.src.featurization.keywords.extract_keywords import get_keywords
