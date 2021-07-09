@@ -125,7 +125,7 @@ def gc_data(data_file, neg_data_file, shuffle=True, topn=0):
 
 def gen_gc_docs(doc_path, glob, key="raw_text"):
     file_list = [f for f in os.listdir(doc_path) if fnmatch.fnmatch(f, glob)]
-    logger.info("num files : {:>3,d}".format(len(file_list)))
+    logger.debug("num files : {:>3,d}".format(len(file_list)))
     if len(file_list) == 0:
         logger.warning(
             "no files in '{}' matching the glob '{}'".format(doc_path, glob)
@@ -137,6 +137,10 @@ def gen_gc_docs(doc_path, glob, key="raw_text"):
                 yield input_file, jdoc
             else:
                 logger.warning("`{}` not found in {}".format(key, input_file))
+
+
+def nfiles_in_glob(src_path, glob):
+    return len([f for f in os.listdir(src_path) if fnmatch.fnmatch(f, glob)])
 
 
 def load_data(data_file, n_samples, shuffle=False):
@@ -153,7 +157,7 @@ def load_data(data_file, n_samples, shuffle=False):
     Returns:
         List[Dict]
     """
-    df = pd.read_csv(data_file)
+    df = pd.read_csv(data_file, columns=["src", "label", "sentence"])
     if "sentence" not in df.keys():
         raise AttributeError("no column labeled 'sentence' in data_file")
     if "label" not in df.keys():
@@ -272,17 +276,13 @@ def raw2dict(src_path, glob, key="raw_text"):
         str: name of the file
     """
     for fname, doc in gen_gc_docs(src_path, glob, key=key):
-        title = "none"
-        source = "none"
-        raw_text = "none"
-        if "title" in doc:
-            title = doc["title"]
-        if "filename" in doc:
-            source = doc["filename"]
-        if "raw_text" in doc:
-            raw_text = doc["raw_text"]
+        title = doc["title"]
+        source = doc["filename"]
+        raw_text = doc["raw_text"]
         sent_list = make_sentences(raw_text, fname)
         for sent in sent_list:
             sent.update({"title": title, "source": source})
-        logger.info("{:>25s} : {:>5,d}".format(fname, len(sent_list)))
+        logger.debug(
+            "{:>40s} : {:>5,d} sentences".format(fname, len(sent_list))
+        )
         yield sent_list, fname

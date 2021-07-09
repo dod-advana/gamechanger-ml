@@ -39,8 +39,8 @@ import gamechangerml.src.text_classif.utils.metrics as m
 logger = logging.getLogger(__name__)
 
 
-def main(
-    model_path_name,
+def predict(
+    predictor,
     data_file,
     max_seq_len,
     batch_size,
@@ -81,10 +81,9 @@ def main(
 
     out_list = list()
     input_dicts = cu.load_data(data_file, n_samples, shuffle=False)
-    predictor = Predictor(model_path_name, num_labels=2)
 
     _, csv_name = os.path.split(data_file)
-    logger.info("{:>25s} : {:,}".format(csv_name, len(input_dicts)))
+    logger.info("{:>35s} : {:,}".format(csv_name, len(input_dicts)))
 
     start = time.time()
     for output in tqdm(
@@ -179,8 +178,9 @@ if __name__ == "__main__":
         help="uses the label column in the input csv to compute/log metrics",
     )
     args = parser.parse_args()
-    main(
-        args.model_path,
+    predictor_ = Predictor(args.model_path, num_labels=2)
+    predict(
+        predictor_,
         args.data_path,
         args.batch_size,
         args.max_seq_len,

@@ -9,8 +9,8 @@ from gamechangerml.src.text_classif.utils.predict_glob import predict_glob
 logger = logging.getLogger(__name__)
 
 
-class EntityCoref(object):
-    def __init__(self):
+class EntityLink(object):
+    def __init__(self, orgs_file=None):
         """
         This implements a simplistic entity co-reference mechanism geared to
         the structure of many DoD documents.
@@ -45,6 +45,7 @@ class EntityCoref(object):
 
         self.pop_entities = None
         self.contains_entity = el.ContainsEntity()
+        self.failed = list()
 
     def _new_edict(self, value=None):
         value = self.NA or value
@@ -82,7 +83,6 @@ class EntityCoref(object):
             elif entry[self.TOPCLASS] == 1:
                 if curr_entity == self.NA:
                     curr_entity = last_entity
-                    # last_entity = curr_entity
                 new_entry[self.ENT] = curr_entity
                 logger.debug("entity : {}".format(curr_entity))
             entity_list.append(new_entry)
@@ -125,13 +125,13 @@ class EntityCoref(object):
         for output_list, file_name in predict_glob(
             model_path, data_path, glob, max_seq_len, batch_size
         ):
-            logger.debug("num input : {:,}".format(len(output_list)))
-            self.pop_entities.extend(self._populate_entity(output_list))
+            logger.debug("num input : {:>4,d}".format(len(output_list)))
             logger.info(
                 "processed : {:>4,d}  {}".format(
                     len(self.pop_entities), file_name
                 )
             )
+            self.pop_entities.extend(self._populate_entity(output_list))
 
     def to_df(self):
         df = pd.DataFrame(self.pop_entities)

@@ -133,7 +133,7 @@ class Classifier(object):
             self.config_yaml,
         )
 
-    def train_test_split(self, texts, labels):
+    def train_test_ds(self, texts, labels):
         """
         Split into training and validation subsets; create `TensorDataset`s
 
@@ -226,9 +226,7 @@ class Classifier(object):
 
         """
         # TODO roll this into `train`?
-        train_ds, test_ds = self.train_test_split(
-            train_sentences, train_labels
-        )
+        train_ds, test_ds = self.train_test_ds(train_sentences, train_labels)
         self.train(train_ds, test_ds)
 
     def _dataloader(self, train_dataset, val_dataset):
@@ -290,11 +288,10 @@ class Classifier(object):
 
     def train(self, train_ds, val_ds):
         avg_loss_items = list()
+        train_dataloader, val_dataloader = self._dataloader(train_ds, val_ds)
 
         self.load_model_tokenizer()
         self.model.to(self.device)
-
-        train_dataloader, val_dataloader = self._dataloader(train_ds, val_ds)
         self.load_optimizer()
         self.load_scheduler(train_dataloader)
 

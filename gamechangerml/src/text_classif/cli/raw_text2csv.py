@@ -22,7 +22,6 @@ import pandas as pd
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
 
 logger = logging.getLogger(__name__)
-here = os.path.dirname(os.path.realpath(__file__))
 
 
 def new_df():
@@ -49,24 +48,24 @@ def raw2df(src_path, glob, key="raw_text"):
         if key in doc:
             raw_text = doc[key]
             sent_df = cu.make_sentences(raw_text, fname)
-            logger.info("{:>25s} : {:>5,d}".format(fname, len(sent_df)))
+            logger.info("{:>35s} : {:>5,d}".format(fname, len(sent_df)))
             yield sent_df, fname
         else:
             logger.warning("no key '{}' in {}".format(key, fname))
 
 
-def main(src_path, glob, output_path):
+def raw_text2csv(src_path, glob, output_path):
     """
     See the docstring for an explanation of the arguments.
 
     For the target document(s), sentences are extracted from the `raw_text`
-    and passed through spaCy's `sentencizer`. Each sentence is a dictionary
+    and passed through a sentence tokenizer. Each sentence is a dictionary
     of the document's source name, `src`, `sentence`, and `label`. Each
     `label` is `0`.
 
     The resulting list of dictionaries is written to a `.csv` file, one file
     per document. The `.csv` file name consists of the original filename with
-    `_sentences` appended. For example, `DoDM_1145.02.sentences.csv`.
+    `_sentences` appended. For example, `DoDM_1145.02_sentences.csv`.
 
     Returns:
         None
@@ -79,7 +78,7 @@ def main(src_path, glob, output_path):
             base, ext = os.path.splitext(os.path.basename(fname))
             output_csv = base.replace(" ", "_") + "_sentences" + ".csv"
             output_csv = os.path.join(output_path, output_csv)
-            output_df.to_csv(output_csv, header=True, index=False)
+            output_df.to_csv(output_csv, header=False, index=False)
             output_df = new_df()
     except (FileNotFoundError, IOError) as e:
         logger.exception("offending file : {}".format(fname))
@@ -125,4 +124,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(args.input_path, args.glob, args.output_csv)
+    raw_text2csv(args.input_path, args.glob, args.output_csv)
