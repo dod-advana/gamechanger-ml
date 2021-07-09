@@ -1,7 +1,7 @@
 """
 usage: python predict_table.py [-h] -m MODEL_PATH -d DATA_PATH [-b BATCH_SIZE]
-                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV] -a
-                               AGENCIES_PATH [-r]
+                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV]
+                               [-r ORGS_FILE] -a AGENCIES_FILE
 
 Binary classification of each sentence in the files matching the 'glob' in
 data_path
@@ -9,7 +9,7 @@ data_path
 optional arguments:
   -h, --help            show this help message and exit
   -m MODEL_PATH, --model-path MODEL_PATH
-                        directory of the torch model
+                        directory of the pytorch model
   -d DATA_PATH, --data-path DATA_PATH
                         path holding the .json corpus files
   -b BATCH_SIZE, --batch-size BATCH_SIZE
@@ -19,10 +19,10 @@ optional arguments:
   -g GLOB, --glob GLOB  file glob pattern
   -o OUTPUT_CSV, --output-csv OUTPUT_CSV
                         the .csv for output
-  -a AGENCIES_PATH, --agencies-path AGENCIES_PATH
+  -r ORGS_FILE, --orgs-file ORGS_FILE
+                        Unused
+  -a AGENCIES_FILE, --agencies_file AGENCIES_FILE
                         the .csv for agency abbreviations
-  -r, --raw-output      write the results of the classifier / entity
-                        attachment
 """
 import logging
 import os
@@ -57,7 +57,15 @@ def _agg_stats(df):
 
 
 def predict_table(
-    model_path, data_path, glob, max_seq_len, batch_size, output_csv, stats, orgs_file
+    model_path,
+    data_path,
+    glob,
+    max_seq_len,
+    batch_size,
+    output_csv,
+    stats,
+    orgs_file,
+    agencies_file,
 ):
     """
     See the preamble (help) for a description of these arguments.
@@ -86,19 +94,19 @@ def predict_table(
     }
 
     start = time.time()
-    entity_coref = EntityLink()
-    entity_coref.make_table(
+    entity_linker = EntityLink()
+    entity_linker.make_table(
         model_path,
         data_path,
         glob,
         max_seq_len,
         batch_size,
     )
-    df = entity_coref.to_df()
+    df = entity_linker.to_df()
     df = df[df.top_class == 1].reset_index()
 
     logger.info("retrieving agencies csv")
-    duplicates, aliases = get_agencies_dict(args.agencies_path)
+    duplicates, aliases = get_agencies_dict(agencies_file)
     df["agencies"] = get_agencies(
         file_dataframe=df,
         doc_dups=None,
@@ -187,19 +195,20 @@ if __name__ == "__main__":
         help="the .csv for output",
     )
     parser.add_argument(
-        "-a",
+        "-r",
         "--orgs-file",
         dest="orgs_file",
         type=str,
-        required=True,
-        help="the .csv for agency abbreviations",
+        required=False,
+        help="Unused",
     )
     parser.add_argument(
-        "-s",
-        "--stats",
-        action="store_true",
-        dest="stats",
-        help="write aggregate statistics",
+        "-a",
+        "--agencies_file",
+        dest="agencies_file",
+        type=str,
+        required=True,
+        help="the .csv for agency abbreviations",
     )
 
     initialize_logger(to_file=False, log_name="none")
@@ -215,4 +224,5 @@ if __name__ == "__main__":
         args.output_csv,
         args.stats,
         args.orgs_file,
+        args.agencies_file,
     )
