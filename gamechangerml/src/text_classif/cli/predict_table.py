@@ -1,7 +1,7 @@
 """
 usage: python predict_table.py [-h] -m MODEL_PATH -d DATA_PATH [-b BATCH_SIZE]
-                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV] -r
-                               ORGS_FILE [-a AGENCIES_FILE]
+                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV]
+                               [-r ORGS_FILE] -a AGENCIES_FILE
 
 Binary classification of each sentence in the files matching the 'glob' in
 data_path
@@ -199,7 +199,7 @@ if __name__ == "__main__":
         "--orgs-file",
         dest="orgs_file",
         type=str,
-        required=True,
+        required=False,
         help="Unused",
     )
     parser.add_argument(
@@ -207,6 +207,7 @@ if __name__ == "__main__":
         "--agencies_file",
         dest="agencies_file",
         type=str,
+        required=True,
         help="the .csv for agency abbreviations",
     )
 
