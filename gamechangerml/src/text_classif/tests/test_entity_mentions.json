@@ -1,0 +1,484 @@
+{
+  "DoDD 5105.21.json": [
+    [
+      "DIA",
+      103
+    ],
+    [
+      "Secretary of Defense",
+      44
+    ],
+    [
+      "Director, DIA",
+      30
+    ],
+    [
+      "Joint Chiefs of Staff",
+      29
+    ],
+    [
+      "DNI",
+      27
+    ],
+    [
+      "Department of Defense",
+      19
+    ],
+    [
+      "USD(I)",
+      18
+    ],
+    [
+      "DoD Components",
+      13
+    ],
+    [
+      "Combatant Commanders",
+      12
+    ],
+    [
+      "NSA",
+      9
+    ],
+    [
+      "NGA",
+      8
+    ],
+    [
+      "NRO",
+      7
+    ],
+    [
+      "Deputy Secretary of Defense",
+      6
+    ],
+    [
+      "USSTRATCOM",
+      6
+    ],
+    [
+      "Defense Intelligence Agency",
+      4
+    ],
+    [
+      "DA&M",
+      4
+    ],
+    [
+      "Under Secretary of Defense for Intelligence",
+      4
+    ],
+    [
+      "DHM",
+      4
+    ],
+    [
+      "National Security Agency",
+      4
+    ],
+    [
+      "Director of National Intelligence",
+      3
+    ],
+    [
+      "MDA",
+      3
+    ],
+    [
+      "Office of the Director of National Intelligence",
+      2
+    ],
+    [
+      "National Geospatial-Intelligence Agency",
+      2
+    ],
+    [
+      "National Reconnaissance Office",
+      2
+    ],
+    [
+      "Director of Administration and Management",
+      2
+    ],
+    [
+      "General Counsel of the Department of Defense",
+      2
+    ],
+    [
+      "Under Secretary of Defense",
+      2
+    ],
+    [
+      "CIA",
+      2
+    ],
+    [
+      "Defense Technology Security Administration",
+      2
+    ],
+    [
+      "DTSA",
+      2
+    ],
+    [
+      "Central Security Service",
+      2
+    ],
+    [
+      "Combatant Commands",
+      1
+    ],
+    [
+      "Marine Corps",
+      1
+    ],
+    [
+      "Navy",
+      1
+    ],
+    [
+      "NAG",
+      1
+    ],
+    [
+      "U.S. Strategic Command",
+      1
+    ],
+    [
+      "Defense HUMINT Manager",
+      1
+    ],
+    [
+      "Assistant to the Secretary of Defense for Intelligence Oversight",
+      1
+    ],
+    [
+      "Component Heads",
+      1
+    ],
+    [
+      "Assistant Secretary of Defense for Legislative Affairs",
+      1
+    ],
+    [
+      "AF",
+      1
+    ],
+    [
+      "Central Intelligence Agency",
+      1
+    ],
+    [
+      "United States Strategic Command",
+      1
+    ],
+    [
+      "CSS",
+      1
+    ],
+    [
+      "U.S. Special Operations Command",
+      1
+    ],
+    [
+      "General Services Administration",
+      1
+    ]
+  ],
+  "DoDI 4140.01.json": [
+    [
+      "DoD Components",
+      15
+    ],
+    [
+      "DLA",
+      13
+    ],
+    [
+      "USD(A&S)",
+      8
+    ],
+    [
+      "ASD(S)",
+      6
+    ],
+    [
+      "Department of Defense",
+      6
+    ],
+    [
+      "Under Secretary of Defense for Acquisition and Sustainment",
+      5
+    ],
+    [
+      "DOD",
+      5
+    ],
+    [
+      "NAG",
+      5
+    ],
+    [
+      "USD(R&E)",
+      5
+    ],
+    [
+      "Under Secretary of Defense",
+      5
+    ],
+    [
+      "Defense Logistics Agency",
+      3
+    ],
+    [
+      "Secretary of Defense",
+      3
+    ],
+    [
+      "Deputy Secretary of Defense",
+      2
+    ],
+    [
+      "Assistant Secretary of Defense for Sustainment",
+      2
+    ],
+    [
+      "Under Secretary of Defense for Research and Engineering",
+      2
+    ],
+    [
+      "CIA",
+      2
+    ],
+    [
+      "Component heads",
+      2
+    ],
+    [
+      "NSA",
+      2
+    ],
+    [
+      "Component Heads",
+      1
+    ],
+    [
+      "Joint Chiefs of Staff",
+      1
+    ],
+    [
+      "Combatant Commands",
+      1
+    ],
+    [
+      "UNDER SECRETARY OF DEFENSE FOR ACQUISITION AND SUSTAINMENT",
+      1
+    ],
+    [
+      "ASSISTANT SECRETARY OF DEFENSE FOR SUSTAINMENT",
+      1
+    ],
+    [
+      "DEFENSE LOGISTICS AGENCY",
+      1
+    ],
+    [
+      "Chief Information Officer",
+      1
+    ],
+    [
+      "UNDER SECRETARY OF DEFENSE",
+      1
+    ],
+    [
+      "DEPARTMENT OF DEFENSE",
+      1
+    ],
+    [
+      "COMPONENT HEADS",
+      1
+    ],
+    [
+      "ANG",
+      1
+    ],
+    [
+      "ACC",
+      1
+    ],
+    [
+      "United States Transportation Command",
+      1
+    ],
+    [
+      "ASD(L&MR",
+      1
+    ],
+    [
+      "USTRANSCOM",
+      1
+    ]
+  ],
+  "DoDM 5105.21 Volume 1 CH 1.json": [
+    [
+      "DIA",
+      43
+    ],
+    [
+      "CSS",
+      25
+    ],
+    [
+      "DNI",
+      23
+    ],
+    [
+      "CIA",
+      12
+    ],
+    [
+      "USD(I)",
+      11
+    ],
+    [
+      "DoD Components",
+      11
+    ],
+    [
+      "NSA",
+      11
+    ],
+    [
+      "DSS",
+      8
+    ],
+    [
+      "ACC",
+      6
+    ],
+    [
+      "Department of Defense",
+      5
+    ],
+    [
+      "Combatant Commands",
+      4
+    ],
+    [
+      "National Security Agency",
+      4
+    ],
+    [
+      "Director, DIA",
+      4
+    ],
+    [
+      "Defense Intelligence Agency",
+      3
+    ],
+    [
+      "NGA",
+      3
+    ],
+    [
+      "NRO",
+      3
+    ],
+    [
+      "Under Secretary of Defense for Intelligence",
+      3
+    ],
+    [
+      "USA",
+      3
+    ],
+    [
+      "Director of National Intelligence",
+      2
+    ],
+    [
+      "Joint Chiefs of Staff",
+      2
+    ],
+    [
+      "Central Security Service",
+      2
+    ],
+    [
+      "National Geospatial-Intelligence Agency",
+      2
+    ],
+    [
+      "UNDER SECRETARY OF DEFENSE FOR INTELLIGENCE",
+      2
+    ],
+    [
+      "DIRECTOR, DIA",
+      2
+    ],
+    [
+      "DoD COMPONENTS",
+      2
+    ],
+    [
+      "NAG",
+      2
+    ],
+    [
+      "CERT",
+      2
+    ],
+    [
+      "ONI",
+      2
+    ],
+    [
+      "AF",
+      2
+    ],
+    [
+      "U.S. Transportation Command",
+      2
+    ],
+    [
+      "Navy",
+      2
+    ],
+    [
+      "National Reconnaissance Office",
+      1
+    ],
+    [
+      "Secretary of Defense",
+      1
+    ],
+    [
+      "Air Mobility Command",
+      1
+    ],
+    [
+      "GSA",
+      1
+    ],
+    [
+      "CIC",
+      1
+    ],
+    [
+      "National Reconnaissance office",
+      1
+    ],
+    [
+      "Marine Corps",
+      1
+    ],
+    [
+      "USAF",
+      1
+    ],
+    [
+      "USMC",
+      1
+    ]
+  ]
+}

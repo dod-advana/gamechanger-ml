@@ -9,8 +9,12 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     li.initialize_logger(to_file=False, log_name="none")
-    failed_data_path = "/Users/chrisskiscim/projects/failed_docs"
-    train_data_path = "/Users/chrisskiscim/projects/classifier_data/dod_dim/dod_dim_all_20210526.csv"
+    failed_data_path = ""
+    train_data_path = ""
+    if not failed_data_path or not train_data_path:
+        msg = "Please update `failed_data_path` or `train_data_path` "
+        msg += "with appropriate file names."
+        raise NotImplementedError(msg)
 
     file_list = [
         f for f in os.listdir(failed_data_path) if fnmatch.fnmatch(f, "*.csv")
@@ -29,4 +33,5 @@ if __name__ == "__main__":
     combined = df.append(new_df, ignore_index=True)
     logger.info(" new training size : {:>6,d}".format(len(combined)))
 
+    # update this name as required!
     df.to_csv("dod_dim_all_20210615.csv", header=False)
