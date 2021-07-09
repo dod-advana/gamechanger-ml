@@ -1,8 +1,10 @@
 import logging
+import os
 import re
 
 import pandas as pd
 
+import gamechangerml.src.text_classif.cli.entity_mentions as em
 import gamechangerml.src.text_classif.utils.entity_lookup as el
 from gamechangerml.src.text_classif.utils.predict_glob import predict_glob
 
@@ -17,9 +19,13 @@ class EntityLink(object):
 
         When the 'responsibilities' section has been reached, begin looking
         for the word 'shall' in each sentence. If found, see if it contains
-        a entity in the lookups. The entity is associated with sentences
+        an entity in the lookups. The entity is associated with sentences
         labeled as '1' (modulo details).
         """
+        if not os.path.isfile(orgs_file):
+            raise FileExistsError("no file {}".format(orgs_file))
+        self.abbrv_re, self.entity_re = em.make_entity_re(orgs_file)
+
         self.RESP = "RESPONSIBILITIES"
         self.SENT = "sentence"
         self.KW = "shall"
@@ -46,7 +52,6 @@ class EntityLink(object):
         self.pop_entities = None
         self.contains_entity = el.ContainsEntity()
         self.failed = list()
-
 
     def _new_edict(self, value=None):
         value = self.NA or value
@@ -77,7 +82,10 @@ class EntityLink(object):
                     0
                 ].strip()
                 # if it's not in the list, set curr_entity to NA
-                if not self.contains_entity(curr_entity):
+                ent_list = em.contains_entity(
+                    curr_entity, self.entity_re, self.abbrv_re
+                )
+                if not ent_list:
                     curr_entity = self.NA
                 else:
                     last_entity = curr_entity
