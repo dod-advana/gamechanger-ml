@@ -6,14 +6,15 @@ import gamechangerml.src.text_classif.utils.log_init as li
 
 logger = logging.getLogger(__name__)
 
-
+# TODO Turn this into a proper CLI if it's still useful
 if __name__ == "__main__":
     li.initialize_logger(to_file=False, log_name="none")
     failed_data_path = ""
     train_data_path = ""
-    if not failed_data_path or not train_data_path:
-        msg = "Please update `failed_data_path` or `train_data_path` "
-        msg += "with appropriate file names."
+    output_csv = ""
+    if not failed_data_path or not train_data_path or output_csv:
+        msg = "Please update `failed_data_path`, `train_data_path` "
+        msg += "or `output_csv` with appropriate file names."
         raise NotImplementedError(msg)
 
     file_list = [
@@ -34,4 +35,4 @@ if __name__ == "__main__":
     logger.info(" new training size : {:>6,d}".format(len(combined)))
 
     # update this name as required!
-    df.to_csv("dod_dim_all_20210615.csv", header=False)
+    df.to_csv(output_csv, header=False)
