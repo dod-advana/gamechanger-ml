@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class EntityLink(object):
-    def __init__(self, orgs_file):
+    def __init__(self, orgs_file=None):
         """
         This implements a simplistic entity co-reference mechanism geared to
         the structure of many DoD documents.
@@ -46,7 +46,6 @@ class EntityLink(object):
         self.pop_entities = None
         self.contains_entity = el.ContainsEntity()
         self.failed = list()
-
 
     def _new_edict(self, value=None):
         value = self.NA or value
