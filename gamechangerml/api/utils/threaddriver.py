@@ -19,10 +19,13 @@ class MlThread(threading.Thread):
 # Pass in a function and args which is an array of dicts
 # A way to load mulitple jobs and run them on threads.
 # join is set to false unless we need to collect the results immediately.
-def run_threads(function, args, join = False):
+def run_threads(function_list, args_list = [], join = False):
     threads = []
-    for arg in args:
-        thread = MlThread(function, arg)  
+    for i, function in enumerate(function_list):
+        args = {}
+        if i < len(args_list):
+            args = args_list[i]
+        thread = MlThread(function, args)  
         threads.append(thread)
         thread.start()
     # If we join the threads the function will wait until they have all completed.
