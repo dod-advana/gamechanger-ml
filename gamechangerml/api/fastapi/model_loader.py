@@ -19,28 +19,26 @@ class ModelLoader:
     # Get methods for the models. If they don't exist try initializing them.
     @staticmethod 
     def getQA():
-        """ Static access method. """
         if ModelLoader.__qa_model == None:
             ModelLoader.initQA()
         return ModelLoader.__qa_model
     
     @staticmethod 
     def getQE():
-        """ Static access method. """
         if ModelLoader.__query_expander == None:
             ModelLoader.initQE()
         return ModelLoader.__query_expander
 
     @staticmethod 
     def getSentence_trans():
-        """ Static access method. """
         if ModelLoader.__sentence_trans == None:
             ModelLoader.initSentence()
         return ModelLoader.__sentence_trans
 
     @staticmethod 
     def getSparse():
-        """ Static access method. """
+        if ModelLoader.__sparse_reader == None:
+            logger.info("The Sparse reader is not set.")
         return ModelLoader.__sparse_reader
 
     def set_error():
@@ -86,37 +84,6 @@ class ModelLoader:
             logger.warning("** Could not load QE model")
             logger.warning(e)
 
-    
-
-    # Currently deprecated
-    @staticmethod
-    def initTrans():
-        """initTrans - loads transformer model on start
-        Args:
-        Returns:
-        """
-        try:
-            model_name = os.path.join(
-                LOCAL_TRANSFORMERS_DIR.value, "distilbert-base-uncased-distilled-squad"
-            )
-            # not loading due to ram and deprecation
-            # logger.info(f"Attempting to load in BERT model default: {model_name}")
-            logger.info(
-                f"SKIPPING LOADING OF TRANSFORMER MODEL FOR INTELLIGENT SEARCH: {model_name}"
-            )
-            # ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
-            # logger.info(
-            #    f" ** Successfully loaded BERT model default: {model_name}")
-            logger.info(f" ** Setting Redis model to {model_name}")
-            # set cache variable defined in settings.py
-            latest_intel_model_trans.value = model_name
-        except OSError:
-            logger.error(f"Could not load BERT Model {model_name}")
-            logger.error(
-                "Check if BERT cache is in correct location: tranformer_cache/ above root directory."
-            )
-
-
     @staticmethod
     def initSentence(
         index_path=SENT_INDEX_PATH.value, transformer_path=LOCAL_TRANSFORMERS_DIR.value
@@ -155,4 +122,30 @@ class ModelLoader:
             logger.warning("** Could not load Sparse Reader")
             logger.warning(e)
             
-    
+    # Currently deprecated
+    @staticmethod
+    def initTrans():
+        """initTrans - loads transformer model on start
+        Args:
+        Returns:
+        """
+        try:
+            model_name = os.path.join(
+                LOCAL_TRANSFORMERS_DIR.value, "distilbert-base-uncased-distilled-squad"
+            )
+            # not loading due to ram and deprecation
+            # logger.info(f"Attempting to load in BERT model default: {model_name}")
+            logger.info(
+                f"SKIPPING LOADING OF TRANSFORMER MODEL FOR INTELLIGENT SEARCH: {model_name}"
+            )
+            # ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
+            # logger.info(
+            #    f" ** Successfully loaded BERT model default: {model_name}")
+            logger.info(f" ** Setting Redis model to {model_name}")
+            # set cache variable defined in settings.py
+            latest_intel_model_trans.value = model_name
+        except OSError:
+            logger.error(f"Could not load BERT Model {model_name}")
+            logger.error(
+                "Check if BERT cache is in correct location: tranformer_cache/ above root directory."
+            )

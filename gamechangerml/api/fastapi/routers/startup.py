@@ -35,7 +35,7 @@ async def check_health():
         good_health = True
 
         # this never triggers because the sparse_reader is never set.
-        if (ModelLoader.sparse_reader is not None) and (
+        if (ModelLoader.sparse_reader != None) and (
             ModelLoader.sparse_reader.model_name != new_trans_model_name
         ):
             ModelLoader.initSparse(new_trans_model_name)   
