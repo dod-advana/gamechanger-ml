@@ -13,6 +13,7 @@ from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 router = APIRouter()
+MODELS = ModelLoader()
 
 ## Get Methods ##
 
@@ -152,11 +153,11 @@ async def reload_models(model_dict: dict, response: Response):
         model_path_dict["qexp"] = QEXP_MODEL_NAME.value
 
     logger.info("Attempting to load QE")
-    ModelLoader.initQE(model_path_dict["qexp"])
+    MODELS.initQE(model_path_dict["qexp"])
     logger.info("Attempting to load QA")
-    ModelLoader.initQA()
+    MODELS.initQA()
     logger.info("Attempting to load Sentence Transformer")
-    ModelLoader.initSentence(
+    MODELS.initSentence(
         index_path=model_path_dict["sentence"],
         transformer_path=model_path_dict["transformers"],
     )

@@ -8,7 +8,7 @@ from gamechangerml.api.fastapi.settings import *
 
 # A singleton class that loads all of the models.
 # All variables and methods are static so you 
-# reference them by ModelLoader.example_method()
+# reference them by ModelLoader().example_method()
 class ModelLoader:
     # private model variables 
     __qa_model = None
@@ -17,35 +17,32 @@ class ModelLoader:
     __sparse_reader = None
 
     # Get methods for the models. If they don't exist try initializing them.
-    @staticmethod 
-    def getQA():
+    def getQA(self):
         if ModelLoader.__qa_model == None:
+            logger.warning("qa_model was not set and was attempted to be used. Running init")
             ModelLoader.initQA()
         return ModelLoader.__qa_model
     
-    @staticmethod 
-    def getQE():
+    def getQE(self):
         if ModelLoader.__query_expander == None:
+            logger.warning("query_expander was not set and was attempted to be used. Running init")
             ModelLoader.initQE()
         return ModelLoader.__query_expander
 
-    @staticmethod 
-    def getSentence_trans():
+    def getSentence_trans(self):
         if ModelLoader.__sentence_trans == None:
+            logger.warning("sentence_trans was not set and was attempted to be used. Running init")
             ModelLoader.initSentence()
         return ModelLoader.__sentence_trans
 
-    @staticmethod 
-    def getSparse():
-        if ModelLoader.__sparse_reader == None:
-            logger.info("The Sparse reader is not set.")
+    def getSparse(self):
         return ModelLoader.__sparse_reader
 
-    def set_error():
+    def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
 
     # Static variables that use these custom getters defined above.
-    # So when ModelLoader.qa_model is referenced getQA is called.
+    # So when ModelLoader().qa_model is referenced getQA is called.
     qa_model = property(getQA,set_error)
     query_expander = property(getQE,set_error)
     sparse_reader = property(getSparse,set_error)

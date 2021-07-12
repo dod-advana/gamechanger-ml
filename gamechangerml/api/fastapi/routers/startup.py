@@ -5,13 +5,14 @@ from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 router = APIRouter()
+MODELS = ModelLoader()
 
 @router.on_event("startup")
 async def load_models():
-    ModelLoader.initQA()
-    ModelLoader.initQE()
-    ModelLoader.initSentence()
-    ModelLoader.initTrans()
+    MODELS.initQA()
+    MODELS.initQE()
+    MODELS.initSentence()
+    MODELS.initTrans()
 
 
 @router.on_event("startup")
@@ -35,10 +36,10 @@ async def check_health():
         good_health = True
 
         # this never triggers because the sparse_reader is never set.
-        if (ModelLoader.sparse_reader != None) and (
-            ModelLoader.sparse_reader.model_name != new_trans_model_name
+        if (MODELS.sparse_reader != None) and (
+            MODELS.sparse_reader.model_name != new_trans_model_name
         ):
-            ModelLoader.initSparse(new_trans_model_name)   
+            MODELS.initSparse(new_trans_model_name)   
             good_health = False
     except Exception as e:
         logger.info("Model Health: POOR")
