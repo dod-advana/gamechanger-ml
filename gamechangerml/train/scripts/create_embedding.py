@@ -3,6 +3,7 @@ from gamechangerml.src.utilities.arg_parser import LocalParser
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
+from gamechangerml.api.utils.logger import logger
 
 from datetime import datetime
 from distutils.dir_util import copy_tree
@@ -14,10 +15,6 @@ from pathlib import Path
 import tarfile
 import typing as t
 import subprocess
-import logging
-
-logger = logging.getLogger()
-
 
 def create_tgz_from_dir(
     src_dir: t.Union[str, Path],
@@ -30,7 +27,11 @@ def create_tgz_from_dir(
 def create_embedding(corpus, existing_embeds, encoder_model, gpu, upload, version):
     # Error fix for saving index and model to tgz
     # https://github.com/huggingface/transformers/issues/5486
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    try:
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    except Exception as e:
+        logger.warning(e)
+    logger.info("Entered create embedding")
 
     # GPU check
     use_gpu = gpu

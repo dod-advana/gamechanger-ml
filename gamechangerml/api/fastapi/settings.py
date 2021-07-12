@@ -41,11 +41,3 @@ logger.info(f"API TRANSFORMERS DIRECTORY is: {LOCAL_TRANSFORMERS_DIR.value}")
 logger.info(f"API INDEX PATH is: {SENT_INDEX_PATH.value}")
 logger.info(f"API REDIS HOST is: {REDIS_HOST}")
 logger.info(f"API REDIS PORT is: {REDIS_PORT}")
-
-# init globals
-query_expander = None
-sparse_reader = None
-latest_intel_model = None
-sentence_trans = None
-latest_sentence_models = None
-qa_model = None

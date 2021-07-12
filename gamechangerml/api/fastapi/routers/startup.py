@@ -1,114 +1,17 @@
 from fastapi import APIRouter
 from fastapi_utils.tasks import repeat_every
 import os
-from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs.config import QAConfig
-from gamechangerml.src.search.query_expansion import qe
-from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
-from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import *
+from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 router = APIRouter()
 
 @router.on_event("startup")
-async def initQA():
-    """initQA - loads transformer model on start
-    Args:
-    Returns:
-    """
-    try:
-        global qa_model
-        qa_model_path = os.path.join(
-            LOCAL_TRANSFORMERS_DIR.value, "bert-base-cased-squad2")
-        logger.info("Starting QA pipeline")
-        qa_model = QAReader(qa_model_path, use_gpu=True, **QAConfig.MODEL_ARGS)
-        # set cache variable defined in settings.py
-        latest_qa_model.value = qa_model_path
-        logger.info("Finished loading QA Reader")
-    except OSError:
-        logger.error(f"Could not load Question Answer Model")
-
-
-@router.on_event("startup")
-async def initQE(qexp_model_path=QEXP_MODEL_NAME.value):
-    """initQE - loads QE model on start
-    Args:
-    Returns:
-    """
-    logger.info(f"Loading Query Expansion Model from {qexp_model_path}")
-    global query_expander
-    try:
-        query_expander = qe.QE(
-            qexp_model_path, method="emb", vocab_file="word-freq-corpus-20201101.txt"
-        )
-        logger.info("** Loaded Query Expansion Model")
-    except Exception as e:
-        logger.warning("** Could not load QE model")
-        logger.warning(e)
-
-
-# Currently deprecated
-
-
-@router.on_event("startup")
-async def initTrans():
-    """initTrans - loads transformer model on start
-    Args:
-    Returns:
-    """
-    try:
-        global sparse_reader
-        global latest_intel_model
-        model_name = os.path.join(
-            LOCAL_TRANSFORMERS_DIR.value, "distilbert-base-uncased-distilled-squad"
-        )
-        # not loading due to ram and deprecation
-        # logger.info(f"Attempting to load in BERT model default: {model_name}")
-        logger.info(
-            f"SKIPPING LOADING OF TRANSFORMER MODEL FOR INTELLIGENT SEARCH: {model_name}"
-        )
-        # sparse_reader = sparse.SparseReader(model_name=model_name)
-        latest_intel_model = model_name
-        # logger.info(
-        #    f" ** Successfully loaded BERT model default: {model_name}")
-        logger.info(f" ** Setting Redis model to {model_name}")
-        # set cache variable defined in settings.py
-        latest_intel_model_trans.value = latest_intel_model
-    except OSError:
-        logger.error(f"Could not load BERT Model {model_name}")
-        logger.error(
-            "Check if BERT cache is in correct location: tranformer_cache/ above root directory."
-        )
-
-
-@router.on_event("startup")
-async def initSentence(
-    index_path=SENT_INDEX_PATH.value, transformer_path=LOCAL_TRANSFORMERS_DIR.value
-):
-    """
-    initQE - loads Sentence Transformers on start
-    Args:
-    Returns:
-    """
-    global sentence_trans
-    # load defaults
-    encoder_model = os.path.join(
-        transformer_path, "msmarco-distilbert-base-v2")
-    logger.info(f"Using {encoder_model} for sentence transformer")
-    sim_model = os.path.join(transformer_path, "distilbart-mnli-12-3")
-    logger.info(f"Loading Sentence Transformer from {sim_model}")
-    logger.info(f"Loading Sentence Index from {index_path}")
-    try:
-        sentence_trans = SentenceSearcher(
-            index_path=index_path,
-            sim_model=sim_model,
-        )
-        # set cache variable defined in settings.py
-        latest_intel_model_sent.value  = {"encoder": encoder_model, "sim": sim_model}
-        logger.info("** Loaded Sentence Transformers")
-    except Exception as e:
-        logger.warning("** Could not load Sentence Transformer model")
-        logger.warning(e)
+async def load_models():
+    ModelLoader.initQA()
+    ModelLoader.initQE()
+    ModelLoader.initSentence()
+    ModelLoader.initTrans()
 
 
 @router.on_event("startup")
@@ -129,17 +32,13 @@ async def check_health():
         logger.info("Could not get one of the model names from redis")
         logger.info(e)
     try:
-        global sparse_reader
         good_health = True
-        if (sparse_reader is not None) and (
-            sparse_reader.model_name != new_trans_model_name
+
+        # this never triggers because the sparse_reader is never set.
+        if (ModelLoader.sparse_reader is not None) and (
+            ModelLoader.sparse_reader.model_name != new_trans_model_name
         ):
-            logger.info(
-                f"Process does not have {new_trans_model_name} loaded - has {sparse_reader.model_name}"
-            )
-            sparse_reader = sparse.SparseReader(
-                model_name=new_trans_model_name)
-            logger.info(f"{new_trans_model_name} loaded")
+            ModelLoader.initSparse(new_trans_model_name)   
             good_health = False
     except Exception as e:
         logger.info("Model Health: POOR")

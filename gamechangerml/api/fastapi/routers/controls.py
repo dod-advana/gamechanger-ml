@@ -10,6 +10,7 @@ from gamechangerml.api.fastapi.routers.startup import *
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.scripts.create_embedding import create_embedding
 from gamechangerml.api.utils import processmanager
+from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 router = APIRouter()
 
@@ -151,11 +152,11 @@ async def reload_models(model_dict: dict, response: Response):
         model_path_dict["qexp"] = QEXP_MODEL_NAME.value
 
     logger.info("Attempting to load QE")
-    await initQE(model_path_dict["qexp"])
+    ModelLoader.initQE(model_path_dict["qexp"])
     logger.info("Attempting to load QA")
-    await initQA()
+    ModelLoader.initQA()
     logger.info("Attempting to load Sentence Transformer")
-    await initSentence(
+    ModelLoader.initSentence(
         index_path=model_path_dict["sentence"],
         transformer_path=model_path_dict["transformers"],
     )

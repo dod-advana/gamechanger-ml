@@ -8,6 +8,7 @@ from gamechangerml.api.fastapi.version import __version__
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
 from gamechangerml.src.featurization.summary import GensimSumm
 from gamechangerml.api.fastapi.settings import *
+from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 router = APIRouter()
 
@@ -24,7 +25,7 @@ async def transformer_infer(query: dict, response: Response) -> dict:
     logger.debug("TRANSFORMER - predicting query: " + str(query))
     results = {}
     try:
-        results = sparse_reader.predict(query)
+        results = ModelLoader.sparse_reader.predict(query)
         logger.info(results)
     except Exception:
         logger.error(f"Unable to get results from transformer for {query}")
@@ -87,7 +88,7 @@ async def trans_sentence_infer(
     results = {}
     try:
         query_text = query["text"]
-        results = sentence_trans.search(query_text, n_returns=num_results)
+        results = ModelLoader.sentence_trans.search(query_text, n_returns=num_results)
         logger.info(results)
     except Exception:
         logger.error(
@@ -115,7 +116,7 @@ async def qa_infer(query: dict, response: Response) -> dict:
         query_text = query["query"]
         query_context = query["search_context"]
         start = time.perf_counter()
-        answers = qa_model.answer(query_text, query_context)
+        answers = ModelLoader.qa_model.answer(query_text, query_context)
         end = time.perf_counter()
         logger.info(answers)
         logger.info(f"time: {end - start:0.4f} seconds")
@@ -145,7 +146,7 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
     try:
         for term in termsList:
             term = unquoted(term)
-            expansion_list = query_expander.expand(term)
+            expansion_list = ModelLoader.query_expander.expand(term)
             # turn word pairs into search phrases since otherwise it will just search for pages with both words on them
             # removing original word from the return terms unless it is combined with another word
             logger.info(f"original expanded terms: {expansion_list}")
