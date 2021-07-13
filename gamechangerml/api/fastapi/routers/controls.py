@@ -202,10 +202,9 @@ async def tain_model(model_dict: dict, response: Response):
             raise Exception("Corpus is not in local directory")
         args = {
             "corpus":CORPUS_DIR, 
-            "existing_embeds": True, 
-            "encoder_model":"msmarco-distilbert-base-v2",
-            "gpu":True,
-            "upload": True,
+            "encoder_model":model_dict["encoder_model"],
+            "gpu": bool(model_dict["gpu"]),
+            "upload": bool(model_dict["upload"]),
             "version": model_dict["version"]
         }
         corpus_thread = MlThread(create_embedding, args)
