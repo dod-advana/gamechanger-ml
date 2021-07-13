@@ -190,7 +190,7 @@ async def download_corpus(corpus_dict: dict, response: Response):
 async def tain_model(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
-        model_dict: dict; {"version": "v5"}
+        model_dict: dict; {"encoder_model":"msmarco-distilbert-base-v2", "gpu":true, "upload":false,"version": "v5"}
 
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:

@@ -36,7 +36,7 @@ def create_embedding(corpus, existing_embeds = None, encoder_model = "msmarco-di
     # GPU check
     use_gpu = gpu
     if use_gpu and not torch.cuda.is_available:
-        print("GPU is not available. Setting `gpu` argument to False")
+        logger.info("GPU is not available. Setting `gpu` argument to False")
         use_gpu = False
 
     # Define model saving directories
