@@ -24,7 +24,7 @@ def create_tgz_from_dir(
     with tarfile.open(dst_archive, "w:gz") as tar:
         tar.add(src_dir, arcname=os.path.basename(src_dir))
 
-def create_embedding(corpus, existing_embeds, encoder_model, gpu, upload, version):
+def create_embedding(corpus, existing_embeds = None, encoder_model = "msmarco-distilbert-base-v2", gpu = True, upload = False, version ="v4"):
     # Error fix for saving index and model to tgz
     # https://github.com/huggingface/transformers/issues/5486
     try:
