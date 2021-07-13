@@ -29,35 +29,18 @@ import os
 import time
 import pandas as pd
 
-from datetime import date
-
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
-from gamechangerml.src.featurization.abbreviations_utils import (
+from gamechangerml.src.featurization.classifier_post_utils import (
     get_references,
     get_agencies_dict,
     get_agencies,
+    filter_primary_org,
+    _agg_stats
 )
 from gamechangerml.src.text_classif.utils.entity_coref import EntityCoref
 from gamechangerml.src.text_classif.utils.log_init import initialize_logger
-from gamechangerml.src.text_classif.utils.resp_stats import count_output
 
 logger = logging.getLogger(__name__)
-
-
-def _agg_stats(df, model_name='NA', seq_len='NA', batch_size='NA'):
-    run_date = date.today().strftime("%d%m%Y")
-    resp_per_doc, resp_no_entity, n_uniq_entities, n_docs = count_output(df)
-    if resp_per_doc:
-        df_resp_doc = pd.DataFrame(
-            list(resp_per_doc.items()), columns=["doc", "count"]
-        )
-        df_resp_doc.to_csv("resp-in-doc-stats_{md}_{sl}_{bs}_{rd}.csv".format(md=model_name, sl=seq_len, bs=batch_size, rd=run_date), index=False)
-    if resp_no_entity:
-        df_resp_no_e = pd.DataFrame(
-            list(resp_per_doc.items()), columns=["doc", "count"]
-        )
-        df_resp_no_e.to_csv("resp-no-entity-stats_{md}_{sl}_{bs}_{rd}.csv".format(md=model_name, sl=seq_len, bs=batch_size, rd=run_date), index=False)
-
 
 def predict_table(
     model_path, data_path, glob, max_seq_len, batch_size, output_csv, stats_path
@@ -84,6 +67,7 @@ def predict_table(
         "sentence": "Responsibility Text",
         "agencies": "Other Organization(s) / Personnel Mentioned",
         "refs": "Documents Referenced",
+        "org_filter": "Org Filter"
         "title": "Document Title",
         "source": "Source Document",
     }
@@ -100,18 +84,23 @@ def predict_table(
     df = entity_coref.to_df()
     df = df[df.top_class == 1].reset_index()
 
-    logger.info("retrieving agencies csv")
-    duplicates, aliases = get_agencies_dict(args.agencies_path)
+    logger.info("retrieving additional organizations")
+    aliases = get_agencies_dict(args.agencies_path)
     df["agencies"] = get_agencies(
-        file_dataframe=df[['Responsibility Text']],
-        doc_dups=None,
-        duplicates=duplicates,
+        file_dataframe=df['sentence'],
         agencies_dict=aliases,
     )
 
-    df["refs"] = get_references(df, doc_title_col="src")
-    renamed_df = df.rename(columns=rename_dict)
+    logger.info("retrieving document references")
+    df["refs"] = get_references(df['sentence'])
 
+    logger.info("processing primary org filter")
+    df['org_filter'] = filter_primary_org(
+        df['sentence'], 
+        args.orgs_file
+    )
+    
+    renamed_df = df.rename(columns=rename_dict)
     final_df = renamed_df[
         [
             "Source Document",

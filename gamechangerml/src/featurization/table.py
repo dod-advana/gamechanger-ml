@@ -379,7 +379,6 @@ class Table:
             columns=["text"],
         )
         combined_cols_list = combined_cols["text"].tolist()
-        per_doc_list = []
         all_docs = []
 
         for i in range(len(combined_cols_list)):
