@@ -4,28 +4,35 @@ import re
 
 import pandas as pd
 
-import gamechangerml.src.text_classif.cli.entity_mentions as em
-import gamechangerml.src.text_classif.utils.entity_lookup as el
+import gamechangerml.src.text_classif.utils.entity_mentions as em
 from gamechangerml.src.text_classif.utils.predict_glob import predict_glob
 
 logger = logging.getLogger(__name__)
 
 
 class EntityLink(object):
-    def __init__(self, orgs_file=None):
+    def __init__(self, orgs_file=None, mentions_dir=None, use_na=False, *args_mentions):
         """
-        This implements a simplistic entity co-reference mechanism geared to
-        the structure of many DoD documents.
+        Links a statement to an entity using a type of 'nearest entity' method.
+        If such linking is not possible, the top k most frequently occuring
+        entities is used.
 
-        When the 'responsibilities' section has been reached, begin looking
-        for the word 'shall' in each sentence. If found, see if it contains
-        an entity in the lookups. The entity is associated with sentences
-        labeled as '1' (modulo details).
+        Args:
+            orgs_file (str): csv containing entity,abbreviation  if
+                an abbreviation exists
+            use_na (bool): if True, do not use the top k when entity linking
+                fails
+            *args_mentions (tuple): json files to use finding the top_k
+                entities
         """
         if not os.path.isfile(orgs_file):
             raise FileExistsError("no file {}".format(orgs_file))
+        if not os.path.isdir(mentions_dir):
+            raise FileExistsError("no directory {}".format(mentions_dir))
+
         self.abbrv_re, self.entity_re = em.make_entity_re(orgs_file)
 
+        self.use_na = use_na
         self.RESP = "RESPONSIBILITIES"
         self.SENT = "sentence"
         self.KW = "shall"
@@ -50,7 +57,6 @@ class EntityLink(object):
         self.unsub_re = [self.USC_RE, self.PL_RE]
 
         self.pop_entities = None
-        self.contains_entity = el.ContainsEntity()
         self.failed = list()
 
     def _new_edict(self, value=None):

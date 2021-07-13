@@ -21,63 +21,51 @@ import os
 import re
 import time
 from collections import defaultdict
+import numpy as np
 
 from tqdm import tqdm
+import pandas as pd
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
 
 logger = logging.getLogger(__name__)
 
 
-def make_entity_re(orgs_file):
+def make_entity_re(entity_csv):
     """
     Creates regular expressions for long form entities and their abbreviations,
     if they exist. These are large alternations. No magic.
 
     Args:
-        orgs_file (str): organizations file
+        entity_csv (str): organizations file
 
     Returns:
         SRE_Pattern, SRE_Pattern
     """
-    abbrvs = set()
-    entities = set()
+    df = pd.read_csv(entity_csv, names=["long_form", "short_form", "etype"])
+    df = df.replace(np.nan, "")
+    logger.debug(df.head(15))
 
-    with open(orgs_file) as f_in:
-        entity_list = f_in.readlines()
-    for line in entity_list:
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "(" in line:
-            entity, abbrv = line.split("(", maxsplit=1)
-        else:
-            entity = line
-            abbrv = None
-        entities.add(entity)
-        if abbrv and abbrv.endswith(")"):
-            abbrvs.add(abbrv[:-1])
+    entities = list(set(df["long_form"]))
+    abbrvs = list(set(df["short_form"]))
 
-    entities = list(entities)
-    abbrvs = list(abbrvs)
     logger.info("num entities : {}".format(len(entities)))
     logger.info(" num abbrevs : {}".format(len(abbrvs)))
 
     entities.sort(key=lambda s: len(s), reverse=True)
     abbrvs.sort(key=lambda s: len(s), reverse=True)
 
-    entity_re = "|".join([e.strip() for e in entities])
+    entity_re = "|".join([re.escape(e.strip()) for e in entities])
     entity_re = re.compile("(\\b" + entity_re + "\\b)", re.I)
 
-    abbrv_re = "|".join(([re.escape(a.strip()) for a in abbrvs]))
+    abbrv_re = "|".join(([re.escape(a.strip()) for a in abbrvs if a.strip()]))
     abbrv_re = re.compile("(\\b" + abbrv_re + "\\b)")
     return abbrv_re, entity_re
 
 
-def top_k_in_doc(mention_dict, k):
+def top_k_in_doc(mention_dict, top_k):
     top_k_ents = dict()
     for doc_id, ent_list in mention_dict.items():
-        top_k = min(k, len(ent_list))
         ent_list = [ent for ent, _ in ent_list[:top_k]]
         top_k_ents[doc_id] = ent_list
     return top_k_ents
@@ -88,12 +76,15 @@ def top_k_in_docs(src_dir, glob, k):
     file_list = [f_ for f_ in os.listdir(src_dir) if fnmatch.fnmatch(f_, glob)]
     if not file_list:
         raise AttributeError("no files to process in {}".format(src_dir))
-    for file_in in file_list:
-        with open(os.path.join(src_dir, file_in)) as f_in:
-            j_doc = json.load(f_in)
-        top_k_ents = top_k_in_doc(j_doc, k)
-        top_k_dict.update(top_k_ents)
-    return top_k_dict
+    try:
+        for file_in in file_list:
+            with open(os.path.join(src_dir, file_in)) as f_in:
+                j_doc = json.load(f_in)
+            top_k_ents = top_k_in_doc(j_doc, k)
+            top_k_dict.update(top_k_ents)
+        return top_k_dict
+    except(FileNotFoundError, IOError) as e:
+        raise e
 
 
 def contains_entity(text, entity_re, abbrv_re):
@@ -161,13 +152,14 @@ def count_glob(corpus_dir, glob, entity_re, abbrv_re):
         Dict[List[tuple]] : key is the document name, each tuple is
             (entity, frequency)
     """
+    SENT = "sentence"
     nfiles = cu.nfiles_in_glob(corpus_dir, glob)
     entity_count = defaultdict(int)
     doc_entity = dict()
     r2d = cu.raw2dict(corpus_dir, glob)
     for sent_dict, fname in tqdm(r2d, total=nfiles, desc="docs"):
         for sd in sent_dict:
-            sent = sd["sentence"]
+            sent = sd[SENT]
             ent_list = contains_entity(sent, entity_re, abbrv_re)
             for ent in ent_list:
                 entity_count[ent.strip()] += 1
@@ -295,7 +287,6 @@ if __name__ == "__main__":
         output = entity_mentions_glob(
             args.entity_file, args.input_path, args.glob
         )
-
     if output:
         output = json.dumps(output)
         with open(args.output_json, "w") as f:
