@@ -186,7 +186,7 @@ async def download_corpus(corpus_dict: dict, response: Response):
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return get_process_status()
 
-@router.post("/train_model", status_code=200)
+@router.post("/trainModel", status_code=200)
 async def tain_model(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
