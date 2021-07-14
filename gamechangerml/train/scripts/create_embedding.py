@@ -66,7 +66,7 @@ def create_embedding(corpus, existing_embeds = None, encoder_model = "msmarco-di
         if (user =="root"):
             user = str(os.getlogin())
     except Exception as e:
-        user = "unkown"
+        user = "unknown"
         logger.info("Could not get system user")
         logger.info(e)
 
