@@ -6,15 +6,12 @@ import os
 import json
 import numpy as np
 import pandas as pd
-
-import logging
 import pickle
 
 from gamechangerml.src.text_handling.corpus import LocalCorpus
+from gamechangerml.api.utils.logger import logger
 
 import torch
-
-logger = logging.getLogger(__name__)
 
 
 class SentenceEncoder(object):
@@ -79,6 +76,7 @@ class SentenceEncoder(object):
 
         # Load new data
         if os.path.isfile(embedding_path) and (overwrite is False):
+            logger.info(f"Loading new data from {embedding_path}")
             old_embed_path = os.path.join(index_path, "embeddings.npy")
             old_dataframe_path = os.path.join(index_path, "data.csv")
             old_ids_path = os.path.join(index_path, "doc_ids.txt")
@@ -120,10 +118,12 @@ class SentenceEncoder(object):
         self.embedder.config["dimensions"] = dimensions
 
         # Create embeddings index
+        logger.info(f"Creating embeddings index")
         self.embedder.embeddings = ANN.create(self.embedder.config)
 
         # Build the index
         self.embedder.embeddings.index(embeddings)
+        logger.info(f"Built the embeddings index")
 
     def index_documents(
         self, corpus_path, index_path, min_token_len=10, overwrite=False
@@ -137,7 +137,7 @@ class SentenceEncoder(object):
             index_path (str): Folder path to where the index of the document
                 would be storred
         """
-        logging.info(f"Indexing documents from {corpus_path}")
+        logger.info(f"Indexing documents from {corpus_path}")
 
         corp = LocalCorpus(
             corpus_path, return_id=True, min_token_len=min_token_len, verbose=True
@@ -150,6 +150,7 @@ class SentenceEncoder(object):
         )
 
         self.embedder.save(index_path)
+        logger.info(f"Saved embedder to {index_path}")
 
 
 class SentenceSearcher(object):

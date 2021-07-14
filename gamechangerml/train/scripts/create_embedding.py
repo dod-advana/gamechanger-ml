@@ -61,6 +61,8 @@ def create_embedding(corpus, existing_embeds = None, encoder_model = "msmarco-di
     logger.info("Creating Document Embeddings...")
     encoder.index_documents(corpus, local_sent_index_dir)
 
+    logger.info("Created Document Embedding")
+
     # Generating process metadata
     metadata = {
         "user": str(os.getlogin()),
@@ -75,10 +77,12 @@ def create_embedding(corpus, existing_embeds = None, encoder_model = "msmarco-di
     with open(metadata_path, "w") as fp:
         json.dump(metadata, fp)
 
+    logger.info(f"Saved metadata.json to {local_sent_index_dir}")
     # Create .tgz file
     dst_path = local_sent_index_dir + ".tar.gz"
     create_tgz_from_dir(src_dir=local_sent_index_dir, dst_archive=dst_path)
 
+    logger.info(f"Created tgz file and saved to {local_sent_index_dir}")
     # Upload to S3
     if upload:
         # Loop through each file and upload to S3
@@ -90,6 +94,7 @@ def create_embedding(corpus, existing_embeds = None, encoder_model = "msmarco-di
             s3_sent_index_dir, "sent_index_" + index_name + ".tar.gz"
         )
         utils.upload_file(local_path, s3_path)
+        logger.info(f"Successfully uploaded files to {s3_sent_index_dir}")
 
 def main():
     parser = LocalParser()
