@@ -6,31 +6,39 @@ import pandas as pd
 
 import gamechangerml.src.text_classif.utils.entity_mentions as em
 from gamechangerml.src.text_classif.utils.predict_glob import predict_glob
+from gamechangerml.src.text_classif.utils.top_k_entities import top_k_entities
 
 logger = logging.getLogger(__name__)
 
 
 class EntityLink(object):
-    def __init__(self, orgs_file=None, mentions_dir=None, use_na=False, *args_mentions):
+    def __init__(
+        self, entity_csv=None, mentions_json=None, use_na=True, topk=3
+    ):
         """
         Links a statement to an entity using a type of 'nearest entity' method.
-        If such linking is not possible, the top k most frequently occuring
+        If such linking is not possible, the top k most frequently occurring
         entities is used.
 
         Args:
-            orgs_file (str): csv containing entity,abbreviation  if
+            entity_csv (str): csv containing entity,abbreviation  if
                 an abbreviation exists
-            use_na (bool): if True, do not use the top k when entity linking
-                fails
-            *args_mentions (tuple): json files to use finding the top_k
-                entities
-        """
-        if not os.path.isfile(orgs_file):
-            raise FileExistsError("no file {}".format(orgs_file))
-        if not os.path.isdir(mentions_dir):
-            raise FileExistsError("no directory {}".format(mentions_dir))
 
-        self.abbrv_re, self.entity_re = em.make_entity_re(orgs_file)
+            mentions_json (str): name of the entity mentions json produced by
+                `entity_mentions.py`
+
+            use_na (bool): if True, use self.NA instead of the top k mentions
+                when entity linking fails
+
+            topk (int): top k mentions to use when an entity has failed
+        """
+        if not os.path.isfile(entity_csv):
+            raise FileExistsError("no entity file {}".format(entity_csv))
+        if not os.path.isfile(mentions_json):
+            raise FileExistsError("no mentions file {}".format(mentions_json))
+
+        self.top_k_in_doc = top_k_entities(mentions_json, top_k=topk)
+        self.abbrv_re, self.entity_re = em.make_entity_re(entity_csv)
 
         self.use_na = use_na
         self.RESP = "RESPONSIBILITIES"
@@ -40,6 +48,7 @@ class EntityLink(object):
         self.NA = "Unable to connect Responsibility to Entity"
         self.TOPCLASS = "top_class"
         self.ENT = "entity"
+        self.SRC = "src"
 
         self.USC_DOT = "U.S.C."
         self.USC = "USC"
@@ -60,7 +69,8 @@ class EntityLink(object):
         self.failed = list()
 
     def _new_edict(self, value=None):
-        value = self.NA or value
+        if value is None:
+            value = self.NA
         return {self.ENT: value}
 
     def _re_sub(self, sentence):
@@ -71,41 +81,60 @@ class EntityLink(object):
     def _unsub_df(self, df, regex, sub):
         df[self.SENT] = [re.sub(regex, sub, str(x)) for x in df[self.SENT]]
 
+    def _resolve_na(self, doc_name):
+        if self.use_na:
+            return self.NA
+        if doc_name in self.top_k_in_doc:
+            ent = ";".join(self.top_k_in_doc[doc_name])
+            logger.debug("entity : {}".format(ent))
+            return ent
+        else:
+            logger.warning("can't find {}".format(doc_name))
+            return self.NA
+
+    # TODO simplify
     def _link_entity(self, output_list, entity_list):
-        curr_entity = self.NA
-        last_entity = self.NA
+        curr_entity = None
+        last_entity = None
 
-        for entry in output_list:
-            logger.debug(entry)
-            sentence = entry[self.SENT]
+        for prediction in output_list:
+            logger.debug(prediction)
+            sentence = prediction[self.SENT]
+            doc_name = prediction[self.SRC]
             sentence = self._re_sub(sentence)
-            new_entry = self._new_edict()
-            new_entry.update(entry)
+            if curr_entity is None:
+                curr_entity = self._resolve_na(doc_name)
+                last_entity = curr_entity
+            new_entry = self._new_edict(value=curr_entity)
+            new_entry.update(prediction)
 
-            if entry[self.TOPCLASS] == 0 and self.KW in sentence:
+            if prediction[self.TOPCLASS] == 0 and self.KW in sentence:
                 # current entity is the lhs of the split
                 curr_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
                     0
                 ].strip()
-                # if it's not in the list, set curr_entity to NA
+                last_entity = curr_entity
+                # if it's not in the list, set curr_entity
                 ent_list = em.contains_entity(
                     curr_entity, self.entity_re, self.abbrv_re
                 )
+                logger.info("{}".format(ent_list))
                 if not ent_list:
-                    curr_entity = self.NA
+                    curr_entity = self._resolve_na(doc_name)
                 else:
                     last_entity = curr_entity
-            elif entry[self.TOPCLASS] == 1:
-                if curr_entity == self.NA:
+            elif prediction[self.TOPCLASS] == 1:
+                if curr_entity == self._resolve_na(doc_name):
                     curr_entity = last_entity
+                logger.debug("curr_entity (1) : {}".format(curr_entity))
                 new_entry[self.ENT] = curr_entity
-                logger.debug("entity : {}".format(curr_entity))
             entity_list.append(new_entry)
 
     def _populate_entity(self, output_list):
         entity_list = list()
         for idx, entry in enumerate(output_list):
-            e_dict = self._new_edict()
+            doc_name = entry[self.SRC]
+            e_dict = self._new_edict(value=self._resolve_na(doc_name))
             e_dict.update(entry)
             if e_dict[self.TOPCLASS] == 0 and self.RESP in entry[self.SENT]:
                 entity_list.append(e_dict)

@@ -44,7 +44,7 @@ def make_entity_re(entity_csv):
     """
     df = pd.read_csv(entity_csv, names=["long_form", "short_form", "etype"])
     df = df.replace(np.nan, "")
-    logger.debug(df.head(15))
+    logger.info(df.head(15))
 
     entities = list(set(df["long_form"]))
     abbrvs = list(set(df["short_form"]))
@@ -83,7 +83,7 @@ def top_k_in_docs(src_dir, glob, k):
             top_k_ents = top_k_in_doc(j_doc, k)
             top_k_dict.update(top_k_ents)
         return top_k_dict
-    except(FileNotFoundError, IOError) as e:
+    except (FileNotFoundError, IOError) as e:
         raise e
 
 
