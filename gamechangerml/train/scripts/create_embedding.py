@@ -61,11 +61,18 @@ def create_embedding(corpus, existing_embeds = None, encoder_model = "msmarco-di
     logger.info("Creating Document Embeddings...")
     encoder.index_documents(corpus, local_sent_index_dir)
 
-    logger.info("Created Document Embedding")
+    try:
+        user = os.environ.get("GC_USER", default="root")
+        if (user =="root"):
+            user = str(os.getlogin())
+    except Exception as e:
+        user = "unkown"
+        logger.info("Could not get system user")
+        logger.info(e)
 
     # Generating process metadata
     metadata = {
-        "user": str(os.getlogin()),
+        "user": user,
         "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "doc_id_count": len(encoder.embedder.config["ids"]),
         "corpus_name": corpus,
@@ -77,12 +84,12 @@ def create_embedding(corpus, existing_embeds = None, encoder_model = "msmarco-di
     with open(metadata_path, "w") as fp:
         json.dump(metadata, fp)
 
-    logger.info(f"Saved metadata.json to {local_sent_index_dir}")
+    logger.info(f"Saved metadata.json to {metadata_path}")
     # Create .tgz file
     dst_path = local_sent_index_dir + ".tar.gz"
     create_tgz_from_dir(src_dir=local_sent_index_dir, dst_archive=dst_path)
 
-    logger.info(f"Created tgz file and saved to {local_sent_index_dir}")
+    logger.info(f"Created tgz file and saved to {dst_path}")
     # Upload to S3
     if upload:
         # Loop through each file and upload to S3
