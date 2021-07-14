@@ -22,7 +22,11 @@ COPY requirements.txt gamechangerml/.
 COPY dev-requirements.txt gamechangerml/.
 COPY README.md gamechangerml/.
 # install gamechangerml python module
-RUN pip3 install gamechangerml/.
+ENV BASE_APP_VENV_PATH="/opt/gc-venv-current"
+RUN python3 -m venv "${BASE_APP_VENV_PATH}" --copies
+RUN "${BASE_APP_VENV_PATH}/bin/pip" install --no-cache-dir --upgrade pip setuptools wheel
+RUN "${BASE_APP_VENV_PATH}/bin/pip" install --no-cache-dir --no-deps -r "gamechangerml/requirements.txt"
+# RUN pip3 install gamechangerml/.
 COPY . gamechangerml/.
 # RUN mkdir gamechanger-ml/gamechangerml
 WORKDIR gamechangerml
