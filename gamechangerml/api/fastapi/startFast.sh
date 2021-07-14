@@ -47,7 +47,7 @@ if [ "$ENV_TYPE" = "PROD" ]
 elif [ "$ENV_TYPE" = "DEV" ] 
 then
     source ./gamechangerml/setup_env.sh DEV
-    source ../../venv/bin/activate  
+    source /opt/gc-venv-current/bin/activate  
     if [ "$DOWNLOAD_DEP" = true ]
     then
       echo "Attempting to download models from s3"
