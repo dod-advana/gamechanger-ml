@@ -30,7 +30,7 @@ import time
 import pandas as pd
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
-from gamechangerml.src.featurization.classifier_post_utils import (
+from gamechangerml.src.text_classif.utils.classifier_post_utils import (
     get_references,
     get_agencies_dict,
     get_agencies,
@@ -67,7 +67,7 @@ def predict_table(
         "sentence": "Responsibility Text",
         "agencies": "Other Organization(s) / Personnel Mentioned",
         "refs": "Documents Referenced",
-        "org_filter": "Org Filter"
+        "org_filter": "Org Filter",
         "title": "Document Title",
         "source": "Source Document",
     }

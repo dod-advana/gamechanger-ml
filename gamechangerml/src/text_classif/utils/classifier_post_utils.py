@@ -54,7 +54,7 @@ def get_agencies(file_dataframe, agencies_dict):
     for row in df:
         agencies = []
         for x in aliases.keys():
-            if " " + x in row["text"]:
+            if " " + x in row:
                 agencies.append(aliases[x])
         flat_a = [item for sublist in agencies for item in sublist]
         flat_a = ["".join(x) for x in flat_a]
