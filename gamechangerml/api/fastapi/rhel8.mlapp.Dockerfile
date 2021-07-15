@@ -6,8 +6,23 @@ SHELL ["/bin/bash", "-c"]
 # tmp switch to root for sys pkg setup
 USER root
 
+# LOCALE Prereqs
+RUN yum install -y \
+        glibc-langpack-en \
+    && yum clean all \
+    && rm -rf /var/cache/yum
+
+
+# SET LOCALE TO UTF-8
+ENV LANG="en_US.UTF-8"
+ENV LANGUAGE="en_US.UTF-8"
+ENV LC_ALL="en_US.UTF-8"
+
 # App & Dep Preqrequisites
 RUN yum install -y \
+        gcc \
+        gcc-c++ \
+        python36-devel \
         git \
         zip \
         unzip \
@@ -40,6 +55,7 @@ RUN python3 -m venv "$APP_DIR/venv" \
 
 COPY --chown=1001:0 . "${APP_DIR}"
 
+ENV MLAPP_VENV_DIR="${APP_DIR}/venv"
 EXPOSE 5000
 ENTRYPOINT ["/bin/bash", "./gamechangerml/api/fastapi/startFast.sh"]
 CMD ["DEV"]
