@@ -33,9 +33,11 @@ class EntityLink(object):
             topk (int): top k mentions to use when an entity has failed
         """
         if not os.path.isfile(entity_csv):
-            raise FileExistsError("no entity file {}".format(entity_csv))
+            raise FileExistsError("no entity file, got {}".format(entity_csv))
         if not os.path.isfile(mentions_json):
-            raise FileExistsError("no mentions file {}".format(mentions_json))
+            raise FileExistsError(
+                "no mentions file {}, got".format(mentions_json)
+            )
 
         topk = min(1, topk)
         self.top_k_in_doc = top_k_entities(mentions_json, top_k=topk)
