@@ -37,12 +37,14 @@ class EntityLink(object):
         if not os.path.isfile(mentions_json):
             raise FileExistsError("no mentions file {}".format(mentions_json))
 
+        topk = min(1, topk)
         self.top_k_in_doc = top_k_entities(mentions_json, top_k=topk)
         self.abbrv_re, self.entity_re = em.make_entity_re(entity_csv)
 
         self.use_na = use_na
         self.RESP = "RESPONSIBILITIES"
         self.SENT = "sentence"
+
         # NB: KW can be any valid regex like "shall|will"
         self.KW = "shall"
         self.KW_RE = re.compile("\\b" + self.KW + "\\b[:,]?")
