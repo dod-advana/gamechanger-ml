@@ -51,7 +51,7 @@ USER 1001
 COPY --chown=1001:0 ./requirements.txt "$APP_DIR/requirements.txt"
 RUN python3 -m venv "$APP_DIR/venv" \
     && "$APP_DIR/venv/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
-    && "$APP_DIR/venv/bin/python" -m pip install --no-deps --no-cache-dir -r "$APP_DIR/requirements.txt"
+    && "$APP_DIR/venv/bin/python" -m pip install --no-deps --no-cache-dir -r "$APP_DIR/requirements.txt" || true
 
 COPY --chown=1001:0 . "${APP_DIR}"
 
