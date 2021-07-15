@@ -6,7 +6,7 @@ SHELL ["/bin/bash", "-c"]
 # tmp switch to root for sys pkg setup
 USER root
 
-# PYTHON Package Preqrequisites
+# App & Dep Preqrequisites
 RUN yum install -y \
         git \
         zip \
