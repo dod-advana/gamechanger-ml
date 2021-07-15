@@ -35,10 +35,10 @@ function setup_dev() {
     export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-raw-zone/gamechanger/models/qexp_model/v3/qexp_20201217.tar.gz}"
     export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-raw-zone/gamechanger/models/topic_model/v1/20210208.tar.gz}"
 
-  export DEV_ENV="DEV"
-  export PULL_MODELS="${PULL_MODELS:-latest}"
-  export MLFLOW_HOST="${MLFLOW_HOST:-localhost}"
-  export MLFLOW_TRACKING_URI="http://${MLFLOW_HOST}:5050/"
+    export DEV_ENV="DEV"
+    export PULL_MODELS="${PULL_MODELS:-latest}"
+    export MLFLOW_HOST="${MLFLOW_HOST:-localhost}"
+    export MLFLOW_TRACKING_URI="http://${MLFLOW_HOST}:5050/"
 }
 
 
