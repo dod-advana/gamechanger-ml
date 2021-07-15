@@ -58,4 +58,4 @@ COPY --chown=1001:0 . "${APP_DIR}"
 ENV MLAPP_VENV_DIR="${APP_DIR}/venv"
 EXPOSE 5000
 ENTRYPOINT ["/bin/bash", "./gamechangerml/api/fastapi/startFast.sh"]
-CMD ["DEV"]
+CMD ["K8S_DEV"]
