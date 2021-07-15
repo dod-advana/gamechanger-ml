@@ -40,5 +40,6 @@ RUN python3 -m venv "$APP_DIR/venv" \
 
 COPY --chown=1001:0 . "${APP_DIR}"
 
+EXPOSE 5000
 ENTRYPOINT ["/bin/bash", "./gamechangerml/api/fastapi/startFast.sh"]
 CMD ["DEV"]
