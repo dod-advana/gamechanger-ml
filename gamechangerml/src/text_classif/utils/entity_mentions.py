@@ -37,14 +37,14 @@ def make_entity_re(entity_csv):
     if they exist. These are large alternations. No magic.
 
     Args:
-        entity_csv (str): organizations file
+        entity_csv (str): csv with entries consiting of
+            *entity name*, *entity abbreviation*, *entity type*
 
     Returns:
         SRE_Pattern, SRE_Pattern
     """
     df = pd.read_csv(entity_csv, names=["long_form", "short_form", "etype"])
     df = df.replace(np.nan, "")
-    logger.info(df.head(15))
 
     entities = list(set(df["long_form"]))
     abbrvs = list(set(df["short_form"]))
@@ -177,7 +177,7 @@ def entity_mentions_glob(entity_file, corpus_dir, glob):
     Args:
         entity_file (str): entity / abbreviation files
         corpus_dir (str): corpus directory
-        glob (str): file matching
+        glob (str): file matching expression
 
     Returns:
         Dict[List[tuple]] : key is the document name, each tuple is

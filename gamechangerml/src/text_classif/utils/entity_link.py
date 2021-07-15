@@ -43,9 +43,12 @@ class EntityLink(object):
         self.use_na = use_na
         self.RESP = "RESPONSIBILITIES"
         self.SENT = "sentence"
+        # NB: KW can be any valid regex like "shall|will"
         self.KW = "shall"
         self.KW_RE = re.compile("\\b" + self.KW + "\\b[:,]?")
+
         self.NA = "Unable to connect Responsibility to Entity"
+
         self.TOPCLASS = "top_class"
         self.ENT = "entity"
         self.SRC = "src"
@@ -60,10 +63,10 @@ class EntityLink(object):
         self.EO_DOT = "E. O."
         self.EO_RE = "\\b" + self.EO_DOT + "\\b"
 
-        self.dotted = [self.USC_DOT, self.PL]
-        self.subs = [self.USC, self.PL]
-        self.sub_back = [self.USC_DOT, self.PL_DOT]
-        self.unsub_re = [self.USC_RE, self.PL_RE]
+        self.dotted = [self.USC_DOT, self.PL, self.EO]
+        self.subs = [self.USC, self.PL, self.EO]
+        self.sub_back = [self.USC_DOT, self.PL_DOT, self.EO_DOT]
+        self.unsub_re = [self.USC_RE, self.PL_RE, self.EO_RE]
 
         self.pop_entities = None
         self.failed = list()
@@ -89,56 +92,50 @@ class EntityLink(object):
             logger.debug("entity : {}".format(ent))
             return ent
         else:
-            logger.warning("can't find {}".format(doc_name))
+            logger.warning("can't find {} for lookup".format(doc_name))
             return self.NA
 
-    # TODO simplify
-    def _link_entity(self, output_list, entity_list):
-        curr_entity = None
-        last_entity = None
-
+    def _link_entity(self, output_list, entity_list, default_ent):
+        curr_entity = default_ent
         for prediction in output_list:
-            logger.debug(prediction)
             sentence = prediction[self.SENT]
-            doc_name = prediction[self.SRC]
             sentence = self._re_sub(sentence)
-            if curr_entity is None:
-                curr_entity = self._resolve_na(doc_name)
-                last_entity = curr_entity
+
             new_entry = self._new_edict(value=curr_entity)
             new_entry.update(prediction)
 
-            if prediction[self.TOPCLASS] == 0 and self.KW in sentence:
-                # current entity is the lhs of the split
-                curr_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
-                    0
-                ].strip()
-                last_entity = curr_entity
-                # if it's not in the list, set curr_entity
-                ent_list = em.contains_entity(
-                    curr_entity, self.entity_re, self.abbrv_re
-                )
-                logger.info("{}".format(ent_list))
-                if not ent_list:
-                    curr_entity = self._resolve_na(doc_name)
-                else:
-                    last_entity = curr_entity
+            if prediction[self.TOPCLASS] == 0:
+                new_entry[self.ENT] = default_ent
+                match_obj = re.search(self.KW, sentence)
+                if match_obj is not None:
+                    cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
+                        0
+                    ].strip()
+                    ent_list = em.contains_entity(
+                        cand_entity, self.entity_re, self.abbrv_re
+                    )
+                    if ent_list:
+                        curr_entity = cand_entity
             elif prediction[self.TOPCLASS] == 1:
-                if curr_entity == self._resolve_na(doc_name):
-                    curr_entity = last_entity
-                logger.debug("curr_entity (1) : {}".format(curr_entity))
                 new_entry[self.ENT] = curr_entity
+            else:
+                msg = "unknown prediction for '{}', ".format(sentence)
+                msg += "got {}".format(prediction[self.TOPCLASS])
+                logger.warning(msg)
             entity_list.append(new_entry)
 
     def _populate_entity(self, output_list):
         entity_list = list()
         for idx, entry in enumerate(output_list):
             doc_name = entry[self.SRC]
+            default_ent = self._resolve_na(doc_name)
             e_dict = self._new_edict(value=self._resolve_na(doc_name))
             e_dict.update(entry)
             if e_dict[self.TOPCLASS] == 0 and self.RESP in entry[self.SENT]:
                 entity_list.append(e_dict)
-                self._link_entity(output_list[idx + 1 :], entity_list)
+                self._link_entity(
+                    output_list[idx + 1 :], entity_list, default_ent
+                )
                 return entity_list
             else:
                 entity_list.append(e_dict)
