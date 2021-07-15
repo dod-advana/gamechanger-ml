@@ -22,16 +22,6 @@ DOWNLOAD_DEP="${2:-}"
   DOWNLOAD_DEP="true"
 }
 
-case "$ENV_TYPE" in
-  DEV|PROD|DEVLOCAL|K8S)
-    export ENV_TYPE
-    ;;
-  *)
-    >&2 echo "[ERROR] Invalid ENV_TYPE specified: '$ENV_TYPE'"
-    exit 1
-    ;;
-esac
-
 case "$DOWNLOAD_DEP" in
   true|false)
     export DOWNLOAD_DEP
@@ -112,7 +102,7 @@ function start_env_devlocal() {
 }
 
 function start_env_k8s_dev() {
-  source "${DS_SETUP_PATH}" DEV
+  source "${DS_SETUP_PATH}" "${ENV_TYPE}"
   activate_venv
   download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
@@ -126,8 +116,21 @@ function start_env_k8s_dev() {
       --log-level debug
 }
 
+function start_env_k8s_test() {
+  source "${DS_SETUP_PATH}" "${ENV_TYPE}"
+  activate_venv
+  download_dependencies
+  start_gunicorn gamechangerml.api.fastapi.mlapp:app \
+      --bind 0.0.0.0:5000 \
+      --workers 1 \
+      --graceful-timeout 900 \
+      --timeout 1200 \
+      -k uvicorn.workers.UvicornWorker \
+      --log-level debug
+}
+
 function start_env_k8s_prod() {
-  source "${DS_SETUP_PATH}" PROD
+  source "${DS_SETUP_PATH}" "${ENV_TYPE}"
   activate_venv
   download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
@@ -152,6 +155,9 @@ case "${ENV_TYPE}" in
     ;;
   K8S_DEV)
     start_env_k8s_dev
+    ;;
+  K8S_TEST)
+    start_env_k8s_test
     ;;
   K8S_PROD)
     start_env_k8s_prod
