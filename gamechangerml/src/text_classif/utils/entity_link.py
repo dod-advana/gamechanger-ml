@@ -39,7 +39,7 @@ class EntityLink(object):
                 "no mentions file {}, got".format(mentions_json)
             )
 
-        topk = min(1, topk)
+        topk = max(1, topk)
         self.top_k_in_doc = top_k_entities(mentions_json, top_k=topk)
         self.abbrv_re, self.entity_re = em.make_entity_re(entity_csv)
 
@@ -93,7 +93,7 @@ class EntityLink(object):
             return self.NA
         if doc_name in self.top_k_in_doc:
             ent = ";".join(self.top_k_in_doc[doc_name])
-            logger.debug("entity : {}".format(ent))
+            logger.debug("entity : {}".format(self.top_k_in_doc[doc_name]))
             return ent
         else:
             logger.warning("can't find {} for lookup".format(doc_name))
@@ -164,19 +164,17 @@ class EntityLink(object):
 
         Returns:
             None
-
         """
         self.pop_entities = list()
         for output_list, file_name in predict_glob(
             model_path, data_path, glob, max_seq_len, batch_size
         ):
-            logger.debug("num input : {:>4,d}".format(len(output_list)))
+            logger.info("num input : {:>4,d}".format(len(output_list)))
+            pop_list = self._populate_entity(output_list)
             logger.info(
-                "processed : {:>4,d}  {}".format(
-                    len(self.pop_entities), file_name
-                )
+                "processed : {:>4,d}  {}".format(len(pop_list), file_name)
             )
-            self.pop_entities.extend(self._populate_entity(output_list))
+            self.pop_entities.extend(pop_list)
 
     def to_df(self):
         df = pd.DataFrame(self.pop_entities)

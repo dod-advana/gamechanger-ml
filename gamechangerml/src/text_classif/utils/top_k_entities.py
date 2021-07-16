@@ -29,7 +29,7 @@ def top_k_entities(mentions_json, output_json=None, top_k=3):
         mentions_json (str): input .json mentions file
 
         output_json (str): Optional. If present, the results will be dumped to
-            this file.
+           this file.
 
         top_k (int): top occurring entities, excluding those in the
             `excluded_entities` list.
@@ -45,7 +45,6 @@ def top_k_entities(mentions_json, output_json=None, top_k=3):
                 entity for entity, _ in val if entity not in excluded_entities
             ]
             top_k_out[key] = mentions[:top_k]
-            logger.debug("{} : {}".format(key, top_k_out[key]))
     if output_json is not None:
         top_k_enc = json.dumps(output_json)
         with open(output_json, "w") as fp:
