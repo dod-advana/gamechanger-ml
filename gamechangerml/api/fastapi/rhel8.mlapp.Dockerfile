@@ -12,7 +12,6 @@ RUN yum install -y \
     && yum clean all \
     && rm -rf /var/cache/yum
 
-
 # SET LOCALE TO UTF-8
 ENV LANG="en_US.UTF-8"
 ENV LANGUAGE="en_US.UTF-8"
@@ -41,21 +40,25 @@ RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-
 # per convention in red hat python images
 ENV APP_ROOT="${APP_ROOT:-/opt/app-root}"
 ENV APP_DIR="${APP_ROOT}/src"
-RUN mkdir -p "${APP_DIR}" \
-    && chown -R 1001:0 "${APP_ROOT}"
-WORKDIR "$APP_DIR"
+RUN mkdir -p "${APP_ROOT}" "{APP_DIR}"
 
-USER 1001
+ARG APP_REQUIREMENTS_FILE="./k8s.requirements.txt"
+ENV MLAPP_VENV_DIR="${APP_DIR}/venv"
+COPY "${APP_REQUIREMENTS_FILE}" "$APP_DIR/requirements.txt"
+RUN python3 -m venv "${MLAPP_VENV_DIR}" \
+    && "${MLAPP_VENV_DIR}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
+    && "${MLAPP_VENV_DIR}/bin/python" -m pip install --no-deps --no-cache-dir -r "$APP_DIR/requirements.txt"
+
+ARG APP_UID=1001
+ARG APP_GID=1001
+
+COPY . "${APP_DIR}"
+RUN chown -R $APP_UID:$APP_GID "${APP_ROOT}"
+
+USER $APP_UID
 # thou shall not root
 
-COPY --chown=1001:0 ./requirements.txt "$APP_DIR/requirements.txt"
-RUN python3 -m venv "$APP_DIR/venv" \
-    && "$APP_DIR/venv/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel #\
-    #&& "$APP_DIR/venv/bin/python" -m pip install --no-deps --no-cache-dir -r "$APP_DIR/requirements.txt"
-
-COPY --chown=1001:0 . "${APP_DIR}"
-
-ENV MLAPP_VENV_DIR="${APP_DIR}/venv"
+WORKDIR "$APP_DIR"
 EXPOSE 5000
 ENTRYPOINT ["/bin/bash", "./gamechangerml/api/fastapi/startFast.sh"]
 CMD ["K8S_DEV"]
