@@ -32,9 +32,8 @@ case "$DOWNLOAD_DEP" in
     ;;
 esac
 
-
 function download_dependencies() {
-    [[ "${DOWNLOAD_DEP}" = "true" ]] && {
+    [[ "${DOWNLOAD_DEP}" == "true" ]] && {
       echo "[INFO] Attempting to download models from S3 ..."
       echo "[INFO] GC_ML_API_MODEL_NAME=${GC_ML_API_MODEL_NAME:-[DEFAULT]}"
       echo "[INFO] Attempting to download transformer cache and sentence index from S3 ..."
@@ -45,13 +44,16 @@ function download_dependencies() {
 }
 
 function activate_venv() {
+  set +o xtrace
   echo "[INFO] Activating venv"
   source ${MLAPP_VENV_DIR}/bin/activate
 
   # if gamechangerml wasn't installed as module in the venv, just alter pythonpath
   if ! (pip freeze | grep -q gamechangerml); then
+    >&2 echo "[WARNING] gamechangerml package not found, setting PYTHONPATH to repo root"
     export PYTHONPATH="${PYTHONPATH:-}${PYTHONPATH:+:}${REPO_DIR}"
   fi
+  set -o xtrace
 }
 
 function start_gunicorn() {
