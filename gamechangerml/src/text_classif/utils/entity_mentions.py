@@ -14,17 +14,16 @@ optional arguments:
                         output path for .csv files
   -g GLOB, --glob GLOB  file pattern to match
 """
-import fnmatch
 import json
 import logging
 import os
 import re
 import time
 from collections import defaultdict
-import numpy as np
 
-from tqdm import tqdm
+import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
 
@@ -43,6 +42,8 @@ def make_entity_re(entity_csv):
     Returns:
         SRE_Pattern, SRE_Pattern
     """
+    if not os.path.isfile(entity_csv):
+        raise FileNotFoundError("can't find {}".format(entity_csv))
     df = pd.read_csv(entity_csv, names=["long_form", "short_form", "etype"])
     df = df.replace(np.nan, "")
 
@@ -61,30 +62,6 @@ def make_entity_re(entity_csv):
     abbrv_re = "|".join(([re.escape(a.strip()) for a in abbrvs if a.strip()]))
     abbrv_re = re.compile("(\\b" + abbrv_re + "\\b)")
     return abbrv_re, entity_re
-
-
-def top_k_in_doc(mention_dict, top_k):
-    top_k_ents = dict()
-    for doc_id, ent_list in mention_dict.items():
-        ent_list = [ent for ent, _ in ent_list[:top_k]]
-        top_k_ents[doc_id] = ent_list
-    return top_k_ents
-
-
-def top_k_in_docs(src_dir, glob, k):
-    top_k_dict = dict()
-    file_list = [f_ for f_ in os.listdir(src_dir) if fnmatch.fnmatch(f_, glob)]
-    if not file_list:
-        raise AttributeError("no files to process in {}".format(src_dir))
-    try:
-        for file_in in file_list:
-            with open(os.path.join(src_dir, file_in)) as f_in:
-                j_doc = json.load(f_in)
-            top_k_ents = top_k_in_doc(j_doc, k)
-            top_k_dict.update(top_k_ents)
-        return top_k_dict
-    except (FileNotFoundError, IOError) as e:
-        raise e
 
 
 def contains_entity(text, entity_re, abbrv_re):

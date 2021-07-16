@@ -40,6 +40,7 @@ class EntityLink(object):
             )
 
         topk = max(1, topk)
+        logger.info("top k : {}".format(topk))
         self.top_k_in_doc = top_k_entities(mentions_json, top_k=topk)
         self.abbrv_re, self.entity_re = em.make_entity_re(entity_csv)
 
@@ -176,12 +177,25 @@ class EntityLink(object):
             )
             self.pop_entities.extend(pop_list)
 
+    def _to_df(self):
+        if not self.pop_entities:
+            raise ValueError("no data to convert; please run `make_table()`?")
+        else:
+            return pd.DataFrame(self.pop_entities)
+
     def to_df(self):
-        df = pd.DataFrame(self.pop_entities)
+        """
+        Creates a pandas data frame from the populated entities list
+
+        Returns:
+            pd.DataFrame
+
+        """
+        df = self._to_df()
         for regex, sub in zip(self.unsub_re, self.sub_back):
             self._unsub_df(df, regex, sub)
         return df
 
     def to_csv(self, output_csv):
-        df = self.to_df()
+        df = self._to_df()
         df.to_csv(output_csv, index=False)
