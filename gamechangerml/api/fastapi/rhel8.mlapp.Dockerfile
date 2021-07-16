@@ -53,7 +53,7 @@ COPY "${APP_REQUIREMENTS_FILE}" "/tmp/requirements.txt"
 RUN python3 -m venv "${MLAPP_VENV_DIR}" \
     && "${MLAPP_VENV_DIR}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
     && "${MLAPP_VENV_DIR}/bin/python" -m pip install --no-deps --no-cache-dir -r "/tmp/requirements.txt" \
-    && chown -R $APP_UID:$APP_GID "${ML_APP_VENV_DIR}"
+    && chown -R $APP_UID:$APP_GID "${MLAPP_VENV_DIR}"
 
 COPY . "${APP_DIR}"
 RUN chown -R $APP_UID:$APP_GID "${APP_DIR}"
