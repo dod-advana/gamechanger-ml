@@ -40,7 +40,7 @@ RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-
 # per convention in red hat python images
 ENV APP_ROOT="${APP_ROOT:-/opt/app-root}"
 ENV APP_DIR="${APP_ROOT}/src"
-RUN mkdir -p "${APP_ROOT}" "{APP_DIR}"
+RUN mkdir -p "${APP_ROOT}" "${APP_DIR}"
 
 ARG APP_REQUIREMENTS_FILE="./k8s.requirements.txt"
 ENV MLAPP_VENV_DIR="${APP_DIR}/venv"
