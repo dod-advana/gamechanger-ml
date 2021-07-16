@@ -37,25 +37,28 @@ RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-
     && /opt/aws/install \
     && rm -f /tmp/awscliv2.zip
 
-# per convention in red hat python images
-ENV APP_ROOT="${APP_ROOT:-/opt/app-root}"
-ENV APP_DIR="${APP_ROOT}/src"
-RUN mkdir -p "${APP_ROOT}" "${APP_DIR}"
-
-ARG APP_REQUIREMENTS_FILE="./k8s.requirements.txt"
-ENV MLAPP_VENV_DIR="${APP_DIR}/venv"
-COPY "${APP_REQUIREMENTS_FILE}" "$APP_DIR/requirements.txt"
-RUN python3 -m venv "${MLAPP_VENV_DIR}" \
-    && "${MLAPP_VENV_DIR}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
-    && "${MLAPP_VENV_DIR}/bin/python" -m pip install --no-deps --no-cache-dir -r "$APP_DIR/requirements.txt"
-
+# non-root app USER/GROUP
 ARG APP_UID=1001
 ARG APP_GID=1001
 
-COPY . "${APP_DIR}"
-RUN chown -R $APP_UID:$APP_GID "${APP_ROOT}"
+# per convention in red hat python images
+ENV APP_ROOT="${APP_ROOT:-/opt/app-root}"
+ENV APP_DIR="${APP_ROOT}/src"
+RUN mkdir -p "${APP_ROOT}"
 
-USER $APP_UID
+# install python venv w all the packages
+ARG APP_REQUIREMENTS_FILE="./k8s.requirements.txt"
+ENV MLAPP_VENV_DIR="${APP_DIR}/venv"
+COPY "${APP_REQUIREMENTS_FILE}" "/tmp/requirements.txt"
+RUN python3 -m venv "${MLAPP_VENV_DIR}" \
+    && "${MLAPP_VENV_DIR}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
+    && "${MLAPP_VENV_DIR}/bin/python" -m pip install --no-deps --no-cache-dir -r "/tmp/requirements.txt" \
+    && chown -R $APP_UID:$APP_GID "${ML_APP_VENV_DIR}"
+
+COPY . "${APP_DIR}"
+RUN chown -R $APP_UID:$APP_GID "${APP_DIR}"
+
+USER $APP_UID:$APP_GID
 # thou shall not root
 
 WORKDIR "$APP_DIR"
