@@ -3,8 +3,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-ENV_TYPE="${1:-}"
-DOWNLOAD_DEP="${2:-}"
+ENV_TYPE="${1:-${ENV_TYPE:-}}"
+DOWNLOAD_DEP="${2:-${DOWNLOAD_DEP:-}}"
 
 [[ -z "${ENV_TYPE}" ]] && {
   >&2 echo "[WARNING] [SETUP_ENV SCRIPT] No ENV_TYPE - 1st arg - specified, setting to 'PROD' ..."
