@@ -13,18 +13,17 @@ ENV_TYPE="${1:-${ENV_TYPE:-}}"
 DOWNLOAD_DEP="${2:-${DOWNLOAD_DEP:-}}"
 
 [[ -z "${ENV_TYPE}" ]] && {
-  >&2 echo "[WARNING] No ENV_TYPE - 1st arg - specified, setting to 'PROD' ..."
+  >&2 echo "[WARNING] No ENV_TYPE specified, setting to 'PROD' ..."
   ENV_TYPE="PROD"
 }
 
-[[ -z "${DOWNLOAD_DEP}" ]] && {
-  >&2 echo "[WARNING] No DOWNLOAD_DEP - 2nd arg - specified, setting to 'true' ..."
-  DOWNLOAD_DEP="true"
-}
-
-case "$DOWNLOAD_DEP" in
+case "${DOWNLOAD_DEP:-}" in
   true|false)
     export DOWNLOAD_DEP
+    ;;
+  "")
+    >&2 echo "[WARNING] No DOWNLOAD_DEP specified, setting to 'true' ..."
+    export DOWNLOAD_DEP="true"
     ;;
   *)
     >&2 echo "[ERROR] Invalid DOWNLOAD_DEP specified: '$DOWNLOAD_DEP'"
@@ -64,7 +63,7 @@ function start_gunicorn() {
 function start_env_prod() {
   source "${DS_SETUP_PATH}" "${ENV_TYPE}"
   activate_venv
-  [[ "${DOWNLOAD_DEP}" = "true" ]] && download_dependencies
+  download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
     --bind 0.0.0.0:5000 \
     --workers 1 \
