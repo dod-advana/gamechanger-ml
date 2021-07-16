@@ -9,8 +9,8 @@ readonly REPO_DIR="$( cd "$SCRIPT_PARENT_DIR/../../../"  >/dev/null 2>&1 && pwd 
 readonly MLAPP_VENV_DIR="${MLAPP_VENV_DIR:-/opt/gc-venv-current}"
 readonly DS_SETUP_PATH="${REPO_DIR}/gamechangerml/setup_env.sh"
 
-ENV_TYPE="${1:-}"
-DOWNLOAD_DEP="${2:-}"
+ENV_TYPE="${1:-${ENV_TYPE:-}}"
+DOWNLOAD_DEP="${2:-${DOWNLOAD_DEP:-}}"
 
 [[ -z "${ENV_TYPE}" ]] && {
   >&2 echo "[WARNING] No ENV_TYPE - 1st arg - specified, setting to 'PROD' ..."
