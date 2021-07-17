@@ -21,8 +21,13 @@ from nltk.tokenize import sent_tokenize
 
 import gamechangerml.src.utilities.spacy_model as spacy_m
 from gamechangerml.src.featurization.table import Table
+from gamechangerml.src.text_classif.utils.entity_lookup import ContainsEntity
 
 logger = logging.getLogger(__name__)
+
+
+def wc(text):
+    return text.count(" ") + 1
 
 
 class ExtractRespText(Table):
@@ -35,6 +40,26 @@ class ExtractRespText(Table):
 
         # matches 1.2.3., etc. at the start of the text
         self.dd_re = re.compile("(^\\d\\..*?\\d+\\. )")
+        self.kw = "shall"
+        self.resp = "RESPONSIBILITIES"
+        self.contains_entity = ContainsEntity()
+
+    def correct_false_negs(self, pos_ex, neg_ex):  # experimental
+        logger.info("corrections")
+        negs_to_pop = list()
+        for idx, sent in enumerate(neg_ex):
+            if self.kw in sent:
+                l, r = sent.split(self.kw)
+                logger.info("left  : {}".format(l))
+                logger.info("right : {}".format(r))
+                if self.contains_entity(l) and wc(r) > 3:  # magic number 3
+                    pos_ex.append(sent)
+                    negs_to_pop.append(idx)
+                    logger.info("added positive ex : {}".format(sent))
+        new_negs = [
+            neg for idx, neg in enumerate(neg_ex) if idx not in negs_to_pop
+        ]
+        return pos_ex, new_negs
 
     def scrubber(self, txt):
         txt = re.sub("[\\n\\t\\r]+", " ", txt)
@@ -55,8 +80,8 @@ class ExtractRespText(Table):
     def extract_neg_in_doc(self, raw_text, min_len):
         neg_sentences = list()
         negs = 0
-        if "RESPONSIBILITIES" in raw_text:
-            prev_text = raw_text.split("RESPONSIBILITIES")[0]
+        if self.resp in raw_text:
+            prev_text = raw_text.split(self.resp)[0]
             if prev_text is not None:
                 sents = [
                     self.scrubber(sent)
@@ -65,7 +90,6 @@ class ExtractRespText(Table):
                 ]
                 negs += len(sents)
                 neg_sentences.extend(sents)
-                logger.info("\tnegative samples : {:>3,d}".format(negs))
         return neg_sentences
 
     def _append_df(self, source, label, texts):
@@ -79,23 +103,27 @@ class ExtractRespText(Table):
             }
             self.train_df = self.train_df.append(new_row, ignore_index=True)
 
-    def extract_pos_neg(self, min_len, neg_only=False):
+    def extract_pos_neg(self, min_len):
         total_pos = 0
         total_neg = 0
         for pos_ex, fname, raw_text in self.extract_positive():
             try:
-                if not neg_only:
-                    total_pos += len(pos_ex)
-                    self._append_df(fname, 1, pos_ex)
                 neg_ex = self.extract_neg_in_doc(raw_text, min_len=min_len)
                 total_neg += len(neg_ex)
                 self._append_df(fname, 0, neg_ex)
+                logger.info(
+                    "{:>35s} : {:3d} +, {:3d} -".format(
+                        fname, len(pos_ex), len(neg_ex)
+                    )
+                )
             except ValueError as e:
                 logger.exception("offending file name : {}".format(fname))
                 logger.exception("{}: {}".format(type(e), str(e)))
                 pass
         logger.info("positive samples : {:>6,d}".format(total_pos))
         logger.info("negative samples : {:>6,d}".format(total_neg))
+        no_resp_docs = "\n".join(self.no_resp_docs)
+        logger.info("no responsibilities : \n{}".format(no_resp_docs))
 
 
 if __name__ == "__main__":
@@ -157,7 +185,7 @@ if __name__ == "__main__":
         args.glob,
     )
 
-    extract_obj.extract_pos_neg(min_len=1, neg_only=False)
+    extract_obj.extract_pos_neg(min_len=1)
     logger.info(extract_obj.train_df.head())
     extract_obj.train_df.to_csv(
         args.output, index=False, header=False, doublequote=True
