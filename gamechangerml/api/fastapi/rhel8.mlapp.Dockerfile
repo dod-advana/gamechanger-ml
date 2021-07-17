@@ -44,7 +44,7 @@ ARG APP_GID=1001
 # per convention in red hat python images
 ENV APP_ROOT="${APP_ROOT:-/opt/app-root}"
 ENV APP_DIR="${APP_ROOT}/src"
-RUN mkdir -p "${APP_ROOT}"
+RUN mkdir -p "${APP_DIR}"
 
 # install python venv w all the packages
 ARG APP_REQUIREMENTS_FILE="./k8s.requirements.txt"
@@ -53,7 +53,7 @@ COPY "${APP_REQUIREMENTS_FILE}" "/tmp/requirements.txt"
 RUN python3 -m venv "${MLAPP_VENV_DIR}" \
     && "${MLAPP_VENV_DIR}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
     && "${MLAPP_VENV_DIR}/bin/python" -m pip install --no-deps --no-cache-dir -r "/tmp/requirements.txt" \
-    && chown -R $APP_UID:$APP_GID "${MLAPP_VENV_DIR}"
+    && chown -R $APP_UID:$APP_GID "${APP_ROOT}"
 
 COPY . "${APP_DIR}"
 RUN chown -R $APP_UID:$APP_GID "${APP_DIR}"
