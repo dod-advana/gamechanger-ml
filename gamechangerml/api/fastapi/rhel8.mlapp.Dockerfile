@@ -49,7 +49,7 @@ ARG APP_GID=1001
 RUN ((getent group $APP_GID &> /dev/null) \
         || groupadd --system --gid $APP_GID app_default \
     ) && ((getent passwd $APP_UID &> /dev/null) \
-        || useradd --system --gid $APP_GID --uid $APP_UID app_default \
+        || useradd --system --shell /sbin/nologin --gid $APP_GID --uid $APP_UID app_default \
     )
 
 # key directories
