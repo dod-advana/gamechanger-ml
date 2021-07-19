@@ -45,6 +45,13 @@ RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-
 ARG APP_UID=1001
 ARG APP_GID=1001
 
+# ensure user/group exists, formally
+RUN ((getent group $APP_GID &> /dev/null) \
+        || groupadd --system --gid $APP_GID app_default \
+    ) && ((getent passwd $APP_UID &> /dev/null) \
+        || useradd --system --gid $APP_GID --uid $APP_UID app_default \
+    )
+
 # key directories
 ENV APP_ROOT="${APP_ROOT:-/opt/app-root}"
 ENV APP_VENV="${APP_VENV:-/opt/app-root/venv}"
