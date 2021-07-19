@@ -78,15 +78,17 @@ def contains_entity(text, entity_re, abbrv_re):
     Returns:
         List[str]
     """
-    ent_list = list()
-    ents = entity_re.findall(text)
-    if ents:
-        ent_list.extend(ents)
+    entity_list = list()
+
+    entities = entity_re.findall(text)
+    if entities:
+        entity_list.extend(entities)
+
     abbrvs = abbrv_re.findall(text)
     if abbrvs:
         for a in abbrvs:
-            ent_list.append(a)
-    return ent_list
+            entity_list.append(a)
+    return entity_list
 
 
 def entities_spans(text, entity_re, abbrv_re):
@@ -133,6 +135,7 @@ def count_glob(corpus_dir, glob, entity_re, abbrv_re):
     nfiles = cu.nfiles_in_glob(corpus_dir, glob)
     entity_count = defaultdict(int)
     doc_entity = dict()
+
     r2d = cu.raw2dict(corpus_dir, glob)
     for sent_dict, fname in tqdm(r2d, total=nfiles, desc="docs"):
         for sd in sent_dict:
