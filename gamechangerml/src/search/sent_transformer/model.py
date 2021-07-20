@@ -3,17 +3,15 @@ from txtai.pipeline import Similarity
 from txtai.ann import ANN
 
 import os
-import json
 import numpy as np
 import pandas as pd
 import pickle
+import torch
 
 from gamechangerml.src.text_handling.corpus import LocalCorpus
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.configs.config import EmbedderConfig, SimilarityConfig
 from gamechangerml.src.utilities.model_helper import *
-
-import torch
 
 
 class SentenceEncoder(object):
@@ -30,7 +28,7 @@ class SentenceEncoder(object):
     def __init__(self, model_args=EmbedderConfig.MODEL_ARGS, use_gpu=False):
         # encoder_model = None
 
-        self.encoder_model = model_args['model_path']
+        self.encoder_model = model_args['model_name']
         self.index_path = model_args['index_path']
         self.embed_paths = model_args['embeddings']
         self.encoder_args = model_args['encoder']
@@ -156,7 +154,7 @@ class SimilarityRanker(object):
 
     def __init__(self, model_args):
 
-        self.sim_model = model_args['model_path']
+        self.sim_model = model_args['model_name']
         self.similarity = Similarity(self.sim_model)
 
     def re_rank(self, query, texts, ids):
