@@ -247,3 +247,5 @@ models/sent_index*
 models/qexp_model*
 models/transformers
 
+# Ignore override for non local deployment
+docker-compose.override.yml
