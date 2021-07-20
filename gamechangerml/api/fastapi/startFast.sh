@@ -10,15 +10,16 @@ readonly MLAPP_VENV_DIR="${MLAPP_VENV_DIR:-/opt/gc-venv-current}"
 readonly DS_SETUP_PATH="${REPO_DIR}/gamechangerml/setup_env.sh"
 
 ENV_TYPE="${1:-${ENV_TYPE:-}}"
-DOWNLOAD_DEP="${2:-${DOWNLOAD_DEP:-}}"
+#DOWNLOAD_DEP="${2:-${DOWNLOAD_DEP:-"false"}}"
 
 [[ -z "${ENV_TYPE}" ]] && {
   >&2 echo "[WARNING] No ENV_TYPE specified, setting to 'PROD' ..."
   ENV_TYPE="PROD"
 }
 
+
 case "${DOWNLOAD_DEP:-}" in
-  true|false)
+  "true"|"false")
     export DOWNLOAD_DEP
     ;;
   "")
