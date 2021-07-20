@@ -1,8 +1,9 @@
 """
 usage: python entity_mentions.py [-h] -i INPUT_PATH -e ENTITY_FILE -o
-                                 OUTPUT_JSON -g GLOB
+                                 OUTPUT_JSON -g GLOB -t {mentions,spans,ner}
+                                 [-s ENT_SPANS]
 
-outputs counts of entity mentions in each document; brute force is used
+brute force counting of entity mentions in each document
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -13,6 +14,10 @@ optional arguments:
   -o OUTPUT_JSON, --output-json OUTPUT_JSON
                         output path for .csv files
   -g GLOB, --glob GLOB  file pattern to match
+  -t {mentions,spans,ner}, --run_type {mentions,spans,ner}
+                        what do you want to run?
+  -s ENT_SPANS, --entity_spans ENT_SPANS
+                        json file resulting from '--run_type mentions'
 """
 import json
 import logging
@@ -26,8 +31,17 @@ import pandas as pd
 from tqdm import tqdm
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
+from gamechangerml.src.utilities.spacy_model import get_lg_nlp
 
 logger = logging.getLogger(__name__)
+
+
+def entity_csv_to_df(entity_csv):
+    if not os.path.isfile(entity_csv):
+        raise FileNotFoundError("can't find {}".format(entity_csv))
+    df = pd.read_csv(entity_csv, names=["long_form", "short_form", "etype"])
+    df = df.replace(np.nan, "")
+    return df
 
 
 def make_entity_re(entity_csv):
@@ -37,15 +51,20 @@ def make_entity_re(entity_csv):
 
     Args:
         entity_csv (str): csv with entries consiting of
-            *entity name*, *entity abbreviation*, *entity type*
+            *long_form*, *short_form*, *etype*
 
     Returns:
-        SRE_Pattern, SRE_Pattern
+        SRE_Pattern, SRE_Pattern, Dict
     """
-    if not os.path.isfile(entity_csv):
-        raise FileNotFoundError("can't find {}".format(entity_csv))
-    df = pd.read_csv(entity_csv, names=["long_form", "short_form", "etype"])
-    df = df.replace(np.nan, "")
+    df = entity_csv_to_df(entity_csv)
+    entity2type = dict()
+    for _, row in df.iterrows():
+        ent_lf = row["long_form"]
+        ent_sf = row["short_form"]
+        etype = row["etype"]
+        entity2type[ent_lf.lower()] = etype
+        if ent_sf:
+            entity2type[ent_sf.lower()] = etype
 
     entities = list(set(df["long_form"]))
     abbrvs = list(set(df["short_form"]))
@@ -61,7 +80,7 @@ def make_entity_re(entity_csv):
 
     abbrv_re = "|".join(([re.escape(a.strip()) for a in abbrvs if a.strip()]))
     abbrv_re = re.compile("(\\b" + abbrv_re + "\\b)")
-    return abbrv_re, entity_re
+    return abbrv_re, entity_re, entity2type
 
 
 def contains_entity(text, entity_re, abbrv_re):
@@ -163,11 +182,11 @@ def entity_mentions_glob(entity_file, corpus_dir, glob):
         Dict[List[tuple]] : key is the document name, each tuple is
             (entity, frequency)
     """
-    abbvs, ents = make_entity_re(entity_file)
+    abbvs, ents, _ = make_entity_re(entity_file)
     return count_glob(corpus_dir, glob, ents, abbvs)
 
 
-def entities_from_raw(entity_file, corpus_dir, glob):
+def entities_in_raw(entity_file, corpus_dir, glob):
     """
     Finds each occurrence of an entity with its span.
 
@@ -179,9 +198,9 @@ def entities_from_raw(entity_file, corpus_dir, glob):
     Returns:
        str, List[tuple, tuple]
     """
-    abbrv_re, entity_re = make_entity_re(entity_file)
+    abbrv_re, entity_re, _ = make_entity_re(entity_file)
     for fname, json_doc in cu.gen_gc_docs(corpus_dir, glob):
-        text = json_doc["raw_text"]
+        text = cu.scrubber(json_doc["raw_text"])
         entity_spans = entities_spans(text, entity_re, abbrv_re)
         yield fname, entity_spans
 
@@ -199,7 +218,7 @@ def entities_and_spans(entity_file, corpus_dir, glob):
     """
     nfiles = cu.nfiles_in_glob(corpus_dir, glob)
     entity_span_d = dict()
-    efr = entities_from_raw(entity_file, corpus_dir, glob)
+    efr = entities_in_raw(entity_file, corpus_dir, glob)
     for fname, entity_spans in tqdm(efr, total=nfiles):
         entity_span_d[fname] = entity_spans
     return entity_span_d
@@ -207,12 +226,12 @@ def entities_and_spans(entity_file, corpus_dir, glob):
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
+
     import gamechangerml.src.text_classif.utils.log_init as li
 
     li.initialize_logger(to_file=False, log_name="none")
 
-    fp = os.path.split(__file__)
-    fp = "python " + fp[-1]
+    fp = "python " + os.path.split(__file__)[-1]
     parser = ArgumentParser(
         prog=fp,
         description="brute force counting of entity mentions in each document",
@@ -250,23 +269,35 @@ if __name__ == "__main__":
         help="file pattern to match",
     )
     parser.add_argument(
+        "-t",
+        "--run-type",
+        dest="run_type",
+        choices=["mentions", "spans"],
+        required=True,
+        help="what do you want to run?",
+    )
+    parser.add_argument(
         "-s",
-        "--spans",
-        dest="spans",
-        action="store_true",
-        help="find spans for each entity occurrence",
+        "--entity-spans",
+        dest="ent_spans",
+        required=False,
+        help="json file resulting from '--run_type mentions'",
     )
     args = parser.parse_args()
 
+    output = None
     start = time.time()
-    if args.spans:
+    if args.run_type == "spans":
         output = entities_and_spans(
             args.entity_file, args.input_path, args.glob
         )
-    else:
+    elif args.run_type == "mentions":
         output = entity_mentions_glob(
             args.entity_file, args.input_path, args.glob
         )
+    else:
+        nlp_ = get_lg_nlp()
+
     if output:
         output = json.dumps(output)
         with open(args.output_json, "w") as f:

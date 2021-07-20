@@ -4,7 +4,7 @@ import re
 
 import pandas as pd
 
-import gamechangerml.src.text_classif.utils.entity_mentions as em
+import gamechangerml.src.entity.entity_mentions as em
 from gamechangerml.src.text_classif.utils.predict_glob import predict_glob
 from gamechangerml.src.text_classif.utils.top_k_entities import top_k_entities
 
@@ -42,7 +42,7 @@ class EntityLink(object):
         topk = max(1, topk)
         logger.info("top k : {}".format(topk))
         self.top_k_in_doc = top_k_entities(mentions_json, top_k=topk)
-        self.abbrv_re, self.entity_re = em.make_entity_re(entity_csv)
+        self.abbrv_re, self.entity_re, _ = em.make_entity_re(entity_csv)
 
         self.use_na = use_na
         self.RESP = "RESPONSIBILITIES"

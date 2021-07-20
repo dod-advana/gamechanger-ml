@@ -143,33 +143,30 @@ def nfiles_in_glob(src_path, glob):
     return len([f for f in os.listdir(src_path) if fnmatch.fnmatch(f, glob)])
 
 
-def load_data(data_file, n_samples, shuffle=False):
+def load_data(sentence_csv, n_samples, shuffle=False):
     """
-    Loads the `data_file` (`.csv`) of sentence, labels and tacks on the
+    Loads the `.csv` of sentence, labels and tacks on the
     source of the data. `n_samples` > 0 are returned as a list of
     dictionaries with keys 'src', 'label', 'sentence'.
 
     Args:
-        data_file (str):
+        sentence_csv (str):
         n_samples (int):
         shuffle (bool):
 
     Returns:
         List[Dict]
     """
-    df = pd.read_csv(data_file, columns=["src", "label", "sentence"])
-    if "sentence" not in df.keys():
-        raise AttributeError("no column labeled 'sentence' in data_file")
-    if "label" not in df.keys():
-        raise AttributeError("no column labeled 'label' in data_file")
-    else:
-        df["label"] = df["label"].astype(int)
+    df = pd.read_csv(
+        sentence_csv, names=["src", "label", "sentence"], header=None
+    )
+    df["label"] = df["label"].astype(int)
     if shuffle:
         df = df.sample(frac=1)
     if n_samples > 0:
         df = df.head(n_samples)
 
-    _, csv_name = os.path.split(data_file)
+    _, csv_name = os.path.split(sentence_csv)
 
     examples = [
         {
