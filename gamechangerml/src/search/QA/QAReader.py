@@ -31,7 +31,10 @@ def clean_query(query: str, question_words=question_words) -> str:
     for key in question_words.keys():
         query = query.replace(key, question_words[key])
 
-    return query.lower().strip('?')
+    if query.upper() == query:
+        query = query.lower()
+
+    return query.strip('?')
 
 def prediction_probabilities(predictions: NamedTuple) -> float:
     """ Calculates probabilities of answers (optional, not used) """
