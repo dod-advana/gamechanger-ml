@@ -69,7 +69,33 @@ class BertSummConfig:
 
 class QAConfig:
     MODEL_ARGS = {
+        "model_path": "bert-base-cased-squad2",
         "qa_type": 'scored_answer', # options are: ['scored_answer', 'simple_answer']
         "nbest": 1, # number of answers to retrieve from each context for comparison
         "null_threshold": -3 # if diff between the answer score and null answer score is greater than this threshold, don't return answer
+    }
+
+class EmbedderConfig: 
+    MODEL_ARGS = {
+        "model_path": "msmarco-distilbert-base-v2",
+        "index_path": "./", ## change this
+        "embeddings": {
+            "embeddings": "embeddings.npy",
+            "dataframe": "data.csv",
+            "ids": "doc_ids.txt",
+        },
+        "encoder": { ## args for making the embeddings index
+            "min_token_len": 10,
+            "overwrite": False,
+            "verbose": True, # for creating LocalCorpus
+            "return_id": True # for creating LocalCorpus
+        },
+        "retriever": { ## args for retrieving the vectors
+            "n_returns": 10
+        }
+    }
+
+class SimilarityConfig:
+    MODEL_ARGS = {
+        "model_path": "valhalla/distilbart-mnli-12-3"
     }
