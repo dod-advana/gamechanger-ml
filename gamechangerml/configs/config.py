@@ -69,7 +69,7 @@ class BertSummConfig:
 
 class QAConfig:
     MODEL_ARGS = {
-        "model_path": "bert-base-cased-squad2",
+        "model_name": "bert-base-cased-squad2", # SOURCE:
         "qa_type": 'scored_answer', # options are: ['scored_answer', 'simple_answer']
         "nbest": 1, # number of answers to retrieve from each context for comparison
         "null_threshold": -3 # if diff between the answer score and null answer score is greater than this threshold, don't return answer
@@ -77,8 +77,8 @@ class QAConfig:
 
 class EmbedderConfig: 
     MODEL_ARGS = {
-        "model_path": "msmarco-distilbert-base-v2",
-        "index_path": "./", ## change this
+        "model_name": "msmarco-distilbert-base-v2", # SOURCE
+        "index_path": "./", ## change this, HOW DO WE GET INDEX PATH??
         "embeddings": {
             "embeddings": "embeddings.npy",
             "dataframe": "data.csv",
@@ -97,5 +97,25 @@ class EmbedderConfig:
 
 class SimilarityConfig:
     MODEL_ARGS = {
-        "model_path": "valhalla/distilbart-mnli-12-3"
+        "model_name": "distilbart-mnli-12-3" # SOURCE
+    }
+
+class ValidationConfig:
+    DATA_ARGS = {
+        "validation_dir": "gamechangerml/data/validation",
+        "squad": {
+            "dev": "squad2.0/dev-v2.0.json",
+            "train": "squad2.0/train-v2.0.json"
+        },
+        "nli": {
+            "matched": "multinli_1.0/multinli_1.0_dev_matched.jsonl",
+            "mismatched": "multinli_1.0/multinli_1.0_dev_mismatched.jsonl",
+            "train": "multinli_1.0/multinli_1.0_train.jsonl",
+        },
+        "msmarco": {
+            "collection": "msmarco_1k/collection.json",
+            "queries": "msmarco_1k/queries.json",
+            "relations": "msmarco_1k/relations.json",
+            "metadata": "msmarco_1k/metadata.json",
+        }
     }
