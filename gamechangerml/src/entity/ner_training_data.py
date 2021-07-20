@@ -19,76 +19,102 @@ optional arguments:
 """
 import logging
 
+from tqdm import tqdm
+
 import gamechangerml.src.entity.entity_mentions as em
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
 
 logger = logging.getLogger(__name__)
 
 
-def gen_ner_training_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
-    """
+def _wc(txt):
+    return txt.count(" ") + 1
 
-    Args:
-        abrv_re:
-        ent_re:
-        entity2type:
-        sent_dict:
-        nlp:
 
-    Returns:
-
-    """
+def _gen_ner_training_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
     SENT = "sentence"
-    PRFX = "I-"
+    I_PRFX = "I-"
+    B_PRFX = "B-"
     for row in sent_dict:
         sentence_text = row[SENT]
         if not sentence_text.strip():
             continue
-        # find the spans of each token
+
         doc = nlp(sentence_text)
         starts_ends = [(t.idx, t.idx + len(t.orth_) - 1) for t in doc]
         ner_labels = ["O"] * len(starts_ends)
-        ner_tokens = [t.orth_ for t in doc]
+        tokens = [t.orth_ for t in doc]
         ent_spans = em.entities_spans(sentence_text, ent_re, abrv_re)
 
-        # find token indices of an extracted entity
+        # find token indices of an extracted entity using the spans
         for ent, ent_st_end in ent_spans:
+            ent_ntoks = _wc(ent)
             token_idxs = [
                 idx
                 for idx, tkn_st_end in enumerate(starts_ends)
                 if tkn_st_end[0] >= ent_st_end[0]
                 and tkn_st_end[1] <= ent_st_end[1] - 1
             ]
-            for idx in token_idxs:
+            # make CoNLL tags
+            if ent_ntoks == 1:
+                ner_labels[token_idxs[0]] = I_PRFX + entity2type[ent.lower()]
+                continue
+
+            ner_labels[token_idxs[0]] = B_PRFX + entity2type[ent.lower()]
+            for idx in token_idxs[1:]:
                 if ent.lower() in entity2type:
-                    ner_labels[idx] = PRFX + entity2type[ent.lower()]
+                    ner_labels[idx] = I_PRFX + entity2type[ent.lower()]
                 else:
                     logger.error("KeyError: {}".format(ent.lower()))
-        yield ner_tokens, ner_labels
+        yield zip(tokens, ner_labels)
 
 
-def ner_training_data(entity_csv, sentence_csv, n_samples, nlp, shuffle=False):
+def ner_training_data(
+    entity_csv, sentence_csv, n_samples, nlp, out_fp, shuffle=False
+):
     """
 
     Args:
         entity_csv (str): name of the .csv file holding entities & types
+
         sentence_csv (str): name of the sentence .csv
+
         n_samples (int): if > 0, use everything; else up to this value
+
         nlp (spacy.lang.en.English): spaCy language model
+
+        out_fp (str): where to write the resulting `.tsv` file
+
         shuffle (bool): if True, randomize the order of the sentences
 
-    Returns:
-
     """
+    TAB = "\t"
+    NL = "\n"
+    print_str = ""
+    refresh = 1024
     abrv_re, ent_re, entity2type = em.make_entity_re(entity_csv)
     sent_dict = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
-    training_generator = gen_ner_training_data(
+    training_generator = _gen_ner_training_data(
         abrv_re, ent_re, entity2type, sent_dict, nlp
     )
-    for tokens, ner_labels in training_generator:
-        logger.info(tokens)
-        logger.info(ner_labels)
-        logger.info("---")
+    count = 0
+    with open(out_fp, "w") as fp:
+        for zipped in tqdm(
+            training_generator, total=len(sent_dict), desc="sentences"
+        ):
+            count += 1
+            print_str += (
+                NL.join([str(e[0]) + TAB + str(e[1]) for e in zipped])
+                + NL
+                + NL
+            )
+            if count > 0 and count % refresh == 0:
+                fp.write(print_str)
+                count = 0
+                print_str = ""
+        if print_str:
+            fp.write(print_str[:-1])
+    logger.info("output written to : {}".format(out_fp))
 
 
 if __name__ == "__main__":
@@ -101,9 +127,9 @@ if __name__ == "__main__":
 
     li.initialize_logger(to_file=False, log_name="none")
 
-    fp = "python " + os.path.split(__file__)[-1]
+    fp_ = "python " + os.path.split(__file__)[-1]
     parser = ArgumentParser(
-        prog=fp,
+        prog=fp_,
         description="create NER training data in CoNLL format",
     )
     parser.add_argument(
@@ -124,8 +150,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-o",
-        "--output-txt",
-        dest="output_txt",
+        "--output-tsv",
+        dest="output_tsv",
         type=str,
         required=True,
         help="output file in CoNLL format",
@@ -154,5 +180,10 @@ if __name__ == "__main__":
     logger.info("spaCy model loaded")
 
     ner_training_data(
-        args.entity_csv, args.sent_csv, args.n_samples, nlp_, args.shuffle
+        args.entity_csv,
+        args.sent_csv,
+        args.n_samples,
+        nlp_,
+        args.output_tsv,
+        args.shuffle,
     )
