@@ -12,7 +12,6 @@ class DefaultConfig:
     # MODEL_DIR = "gamechangerml/src/modelzoo/semantic/packaged_models/20200728"
     # LOCAL_PACKAGED_MODELS_DIR = os.path.join(REPO_PATH, "gamechangerml/src/modelzoo/semantic/packaged_models")
 
-
 class S3Config:
     STORE_S3 = True
     S3_MODELS_DIR = "models/v3/"
@@ -36,7 +35,6 @@ class D2VConfig:
         "min_alpha": 0.005,
         # 'workers': multiprocessing.cpu_count() // 2 # to allow some portion of the cores to perform generator tasks
     }
-
 
 # for Bert Extractive Summarizer (https://pypi.org/project/bert-extractive-summarizer/)
 class BertSummConfig:
@@ -78,7 +76,6 @@ class QAConfig:
 class EmbedderConfig: 
     MODEL_ARGS = {
         "model_name": "msmarco-distilbert-base-v2", # SOURCE
-        "index_path": "./", ## change this, HOW DO WE GET INDEX PATH??
         "embeddings": {
             "embeddings": "embeddings.npy",
             "dataframe": "data.csv",
@@ -103,6 +100,7 @@ class SimilarityConfig:
 class ValidationConfig:
     DATA_ARGS = {
         "validation_dir": "gamechangerml/data/validation",
+        "evaluation_dir": "gamechangerml/data/evaluation",
         "squad": {
             "dev": "squad2.0/dev-v2.0.json",
             "train": "squad2.0/train-v2.0.json"
