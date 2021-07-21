@@ -35,6 +35,7 @@ def _gen_ner_training_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
     SENT = "sentence"
     I_PRFX = "I-"
     B_PRFX = "B-"
+    OH = "O"
     for row in sent_dict:
         sentence_text = row[SENT]
         if not sentence_text.strip():
@@ -42,7 +43,7 @@ def _gen_ner_training_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
 
         doc = nlp(sentence_text)
         starts_ends = [(t.idx, t.idx + len(t.orth_) - 1) for t in doc]
-        ner_labels = ["O"] * len(starts_ends)
+        ner_labels = [OH] * len(starts_ends)
         tokens = [t.orth_ for t in doc]
         ent_spans = em.entities_spans(sentence_text, ent_re, abrv_re)
 
@@ -65,7 +66,9 @@ def _gen_ner_training_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
                     ner_labels[idx] = I_PRFX + entity2type[ent.lower()]
                 else:
                     logger.error("KeyError: {}".format(ent.lower()))
-        yield zip(tokens, ner_labels)
+        uniq_labels = set(ner_labels)
+        # logger.info(uniq_labels)
+        yield zip(tokens, ner_labels), uniq_labels
 
 
 def ner_training_data(
@@ -91,7 +94,8 @@ def ner_training_data(
     """
     TAB = "\t"
     NL = "\n"
-    print_str = ""
+    EMPTYSTR = ""
+    print_str = EMPTYSTR
     write_interval = 1024 * 4
     abrv_re, ent_re, entity2type = em.make_entity_re(entity_csv)
     sent_dict = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
@@ -99,11 +103,13 @@ def ner_training_data(
     training_generator = _gen_ner_training_data(
         abrv_re, ent_re, entity2type, sent_dict, nlp
     )
+    labels = set()
     count = 0
     with open(out_fp, "w") as fp:
-        for zipped in tqdm(
+        for zipped, uniq_labels in tqdm(
             training_generator, total=len(sent_dict), desc="sentence"
         ):
+            labels = labels.union(uniq_labels)
             count += 1
             print_str += (
                 NL.join([str(e[0]) + TAB + str(e[1]) for e in zipped])
@@ -113,10 +119,16 @@ def ner_training_data(
             if count > 0 and count % write_interval == 0:
                 fp.write(print_str)
                 count = 0
-                print_str = ""
+                print_str = EMPTYSTR
         if print_str:
             fp.write(print_str[:-1])
-    logger.info("output written to : {}".format(out_fp))
+    label_str = NL.join(sorted(list(labels)))
+    label_fp, ltype = os.path.splitext(out_fp)
+    label_fp = label_fp + "_labels." + ltype
+    with open(label_fp, "w") as fp:
+        fp.write(label_str)
+    logger.info("training output written to : {}".format(out_fp))
+    logger.info("         labels written to : {}".format(label_fp))
 
 
 if __name__ == "__main__":
