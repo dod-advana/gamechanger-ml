@@ -10,6 +10,6 @@ def get_keywords(text: str, amount: int = 2) -> List[str]:
     """
     try:
         key_w = kw_alg.rank(text, ngram=(1, 2), topn=amount, clean=True)
+        return key_w
     except ValueError:
         raise
-    return key_w

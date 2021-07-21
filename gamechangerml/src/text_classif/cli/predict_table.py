@@ -1,7 +1,7 @@
 """
 usage: python predict_table.py [-h] -m MODEL_PATH -d DATA_PATH [-b BATCH_SIZE]
-                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV] -a
-                               AGENCIES_PATH [-r]
+                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV]
+                               [-r ORGS_FILE] -a AGENCIES_FILE
 
 Binary classification of each sentence in the files matching the 'glob' in
 data_path
@@ -9,7 +9,7 @@ data_path
 optional arguments:
   -h, --help            show this help message and exit
   -m MODEL_PATH, --model-path MODEL_PATH
-                        directory of the torch model
+                        directory of the pytorch model
   -d DATA_PATH, --data-path DATA_PATH
                         path holding the .json corpus files
   -b BATCH_SIZE, --batch-size BATCH_SIZE
@@ -19,10 +19,10 @@ optional arguments:
   -g GLOB, --glob GLOB  file glob pattern
   -o OUTPUT_CSV, --output-csv OUTPUT_CSV
                         the .csv for output
-  -a AGENCIES_PATH, --agencies-path AGENCIES_PATH
+  -r ORGS_FILE, --orgs-file ORGS_FILE
+                        Unused
+  -a AGENCIES_FILE, --agencies_file AGENCIES_FILE
                         the .csv for agency abbreviations
-  -r, --raw-output      write the results of the classifier / entity
-                        attachment
 """
 import logging
 import os
@@ -37,13 +37,21 @@ from gamechangerml.src.text_classif.utils.classifier_post_utils import (
     filter_primary_org,
     _agg_stats
 )
-from gamechangerml.src.text_classif.utils.entity_coref import EntityCoref
+from gamechangerml.src.text_classif.utils.entity_link import EntityLink
 from gamechangerml.src.text_classif.utils.log_init import initialize_logger
 
 logger = logging.getLogger(__name__)
 
 def predict_table(
-    model_path, data_path, glob, max_seq_len, batch_size, output_csv, stats_path
+    model_path,
+    data_path,
+    glob,
+    max_seq_len,
+    batch_size,
+    output_csv,
+    stats,
+    orgs_file,
+    agencies_file,
 ):
     """
     See the preamble (help) for a description of these arguments.
@@ -73,19 +81,19 @@ def predict_table(
     }
 
     start = time.time()
-    entity_coref = EntityCoref()
-    entity_coref.make_table(
+    entity_linker = EntityLink()
+    entity_linker.make_table(
         model_path,
         data_path,
         glob,
         max_seq_len,
         batch_size,
     )
-    df = entity_coref.to_df()
+    df = entity_linker.to_df()
     df = df[df.top_class == 1].reset_index()
 
     logger.info("retrieving additional organizations")
-    aliases = get_agencies_dict(args.agencies_path)
+    aliases = get_agencies_dict(agencies_file)
     df["agencies"] = get_agencies(
         file_dataframe=df['sentence'],
         agencies_dict=aliases,
@@ -97,7 +105,7 @@ def predict_table(
     logger.info("processing primary org filter")
     df['org_filter'] = filter_primary_org(
         df['sentence'], 
-        args.orgs_file
+        orgs_file
     )
     
     renamed_df = df.rename(columns=rename_dict)
@@ -115,7 +123,7 @@ def predict_table(
     if output_csv is not None:
         final_df.to_csv(output_csv, index=False)
         logger.info("final csv written")
-    if stats_path is not None:
+    if stats is not None:
         model = os.path.split(model_path)[-1]
         _agg_stats(final_df, model, max_seq_len, batch_size)
     elapsed = time.time() - start
@@ -181,9 +189,17 @@ if __name__ == "__main__":
         help="the .csv for output",
     )
     parser.add_argument(
+        "-r",
+        "--orgs-file",
+        dest="orgs_file",
+        type=str,
+        required=False,
+        help="Unused",
+    )
+    parser.add_argument(
         "-a",
-        "--agencies-path",
-        dest="agencies_path",
+        "--agencies_file",
+        dest="agencies_file",
         type=str,
         required=True,
         help="the .csv for agency abbreviations",
@@ -194,6 +210,7 @@ if __name__ == "__main__":
         dest="stats_path",
         type=str,
         default=None,
+        required=False,
         help="write aggregate statistics output to file",
     )
 
@@ -209,4 +226,6 @@ if __name__ == "__main__":
         args.batch_size,
         args.output_csv,
         args.stats_path,
+        args.orgs_file,
+        args.agencies_file,
     )

@@ -55,8 +55,12 @@ then
       echo "Attempting to download transformer cache and sentence index from s3"
       source ./gamechangerml/scripts/download_dependencies.sh
     fi
-    gunicorn gamechangerml.api.fastapi.mlapp:app --bind 0.0.0.0:5000 --workers 1 --graceful-timeout 1000 --timeout 1200 --keep-alive 30 --reload -k uvicorn.workers.UvicornWorker --log-level debug
-    #uvicorn gamechangerml.api.fastapi.mlapp:app --host 0.0.0.0 --port 5000 --workers 1 --log-level debug --timeout-keep-alive 240
+    if [ "$CONTAINER_RELOAD" = true ]
+      then
+        uvicorn gamechangerml.api.fastapi.mlapp:app --host 0.0.0.0 --port 5000 --workers 1 --log-level debug --timeout-keep-alive 240 --reload
+      else
+        gunicorn gamechangerml.api.fastapi.mlapp:app --bind 0.0.0.0:5000 --workers 1 --graceful-timeout 1000 --timeout 1200 --keep-alive 30 --reload -k uvicorn.workers.UvicornWorker --log-level debug
+    fi
 elif [ "$ENV_TYPE" = "DEVLOCAL" ] 
 then
     source ./gamechangerml/setup_env.sh DEVLOCAL
