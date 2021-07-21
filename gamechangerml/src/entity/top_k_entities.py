@@ -71,7 +71,7 @@ if __name__ == "__main__":
         "--input-file",
         dest="input_file",
         type=str,
-        help="json 'mentions'",
+        help="json 'mentions' file",
         required=True,
     )
     parser.add_argument(

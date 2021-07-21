@@ -5,8 +5,8 @@ import re
 import pandas as pd
 
 import gamechangerml.src.entity.entity_mentions as em
+from gamechangerml.src.entity.top_k_entities import top_k_entities
 from gamechangerml.src.text_classif.utils.predict_glob import predict_glob
-from gamechangerml.src.text_classif.utils.top_k_entities import top_k_entities
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,9 @@ class EntityLink(object):
                 when entity linking fails
 
             topk (int): top k mentions to use when an entity has failed
+
+        Raises:
+            FileExistsError if the required input files don't exist
         """
         if not os.path.isfile(entity_csv):
             raise FileExistsError("no entity file, got {}".format(entity_csv))

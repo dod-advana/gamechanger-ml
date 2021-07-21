@@ -11,7 +11,7 @@ optional arguments:
   -e ENTITY_CSV, --entity-csv ENTITY_CSV
                         csv of entities & types
   -o OUTPUT_TXT, --output-txt OUTPUT_TXT
-                        output file in CoNLL format
+                        output file in CoNLL-2003 format
   -n N_SAMPLES, --n-samples N_SAMPLES
                         how many samples to extract and tag (0 means get
                         everything)
@@ -46,17 +46,16 @@ def _gen_ner_training_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
         tokens = [t.orth_ for t in doc]
         ent_spans = em.entities_spans(sentence_text, ent_re, abrv_re)
 
-        # find token indices of an extracted entity using the spans
+        # find token indices of an extracted entity using their spans,
+        # create CoNLL tags
         for ent, ent_st_end in ent_spans:
-            ent_ntoks = _wc(ent)
             token_idxs = [
                 idx
                 for idx, tkn_st_end in enumerate(starts_ends)
                 if tkn_st_end[0] >= ent_st_end[0]
                 and tkn_st_end[1] <= ent_st_end[1] - 1
             ]
-            # make CoNLL tags
-            if ent_ntoks == 1:
+            if _wc(ent) == 1:
                 ner_labels[token_idxs[0]] = I_PRFX + entity2type[ent.lower()]
                 continue
 
@@ -73,6 +72,8 @@ def ner_training_data(
     entity_csv, sentence_csv, n_samples, nlp, out_fp, shuffle=False
 ):
     """
+    Create NER training data in CoNLL-2003 format. For more information on
+    the tagging conventions, see https://huggingface.co/datasets/conll2003
 
     Args:
         entity_csv (str): name of the .csv file holding entities & types
@@ -91,16 +92,17 @@ def ner_training_data(
     TAB = "\t"
     NL = "\n"
     print_str = ""
-    refresh = 1024
+    write_interval = 1024 * 4
     abrv_re, ent_re, entity2type = em.make_entity_re(entity_csv)
     sent_dict = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
+
     training_generator = _gen_ner_training_data(
         abrv_re, ent_re, entity2type, sent_dict, nlp
     )
     count = 0
     with open(out_fp, "w") as fp:
         for zipped in tqdm(
-            training_generator, total=len(sent_dict), desc="sentences"
+            training_generator, total=len(sent_dict), desc="sentence"
         ):
             count += 1
             print_str += (
@@ -108,7 +110,7 @@ def ner_training_data(
                 + NL
                 + NL
             )
-            if count > 0 and count % refresh == 0:
+            if count > 0 and count % write_interval == 0:
                 fp.write(print_str)
                 count = 0
                 print_str = ""
@@ -150,11 +152,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-o",
-        "--output-tsv",
-        dest="output_tsv",
+        "--output-txt",
+        dest="output_txt",
         type=str,
         required=True,
-        help="output file in CoNLL format",
+        help="output file in CoNLL-2003 format",
     )
     parser.add_argument(
         "-n",
@@ -184,6 +186,6 @@ if __name__ == "__main__":
         args.sent_csv,
         args.n_samples,
         nlp_,
-        args.output_tsv,
+        args.output_txt,
         args.shuffle,
     )
