@@ -115,8 +115,8 @@ def predict_table(
     if output_csv is not None:
         final_df.to_csv(output_csv, index=False)
         logger.info("final csv written")
-    if stats_path is not False:
-        model = model_path.split('/')[-1]
+    if stats_path is not None:
+        model = os.path.split(model_path)[-1]
         _agg_stats(final_df, model, max_seq_len, batch_size)
     elapsed = time.time() - start
 
@@ -191,8 +191,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s",
         "--stats-path",
-        action="store_false",
         dest="stats_path",
+        type=str,
+        default=None,
         help="write aggregate statistics output to file",
     )
 

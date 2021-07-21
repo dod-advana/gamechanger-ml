@@ -104,9 +104,9 @@ def filter_primary_org(file_dataframe, orgs_file):
 
     for row in df:
         for j in orgs:
+            temp = []
             if "(" in j:
                 check_org = j.split('(')[0].strip()
-                temp = []
                 if check_org in row:
                     temp.append(check_org)
             primary_orgs.append(temp)
@@ -114,7 +114,7 @@ def filter_primary_org(file_dataframe, orgs_file):
     return primary_orgs
 
 
-def _agg_stats(df, model_name='NA', seq_len='NA', batch_size='NA'):
+def _agg_stats(df, model_name, seq_len, batch_size):
     run_date = date.today().strftime("%d%m%Y")
     resp_per_doc, resp_no_entity, n_uniq_entities, n_docs = count_output(df)
     if resp_per_doc:
