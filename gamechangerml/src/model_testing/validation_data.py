@@ -10,35 +10,43 @@ class ValidationData():
 
 class SQuADData(ValidationData):
 
-    def __init__(self, validation_config, limit=1000):
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
 
         super().__init__(validation_config)
         self.dev = open_json(validation_config['squad']['dev'], self.validation_dir)
+        self.sample_limit = validation_config['squad']['sample_limit']
         #self.train = open_json(validation_config['squad']['train'], self.validation_dir)
-        self.queries = self.get_squad_sample(limit)
+        self.queries = self.get_squad_sample()
     
-    def get_squad_sample(self, limit):
+    def get_squad_sample(self):
 
         queries = []
-        for entry in self.dev['data'][:limit]:
+        count = 0
+        for entry in self.dev['data']:
             for para in entry['paragraphs']:
                 context = para['context']
                 if type(context) == str:
                     context = [context]
                 for test in para['qas']:
-                    mydict = {
-                        "search_context": context,
-                        "question": test['question'],
-                        "id": test['id'],
-                        "null_expected": test['is_impossible']
-                    }
-                    queries.append(mydict)
-            
+                    if count < self.sample_limit:
+                        count += 1
+                        mydict = {
+                            "search_context": context,
+                            "question": test['question'],
+                            "id": test['id'],
+                            "null_expected": test['is_impossible'],
+                            "expected": test['answers']
+                        }
+                        queries.append(mydict)
+                    break
+        
+        print("Generated {} SQuAD queries".format(len(queries)))
+
         return queries
 
 class MSMarcoData(ValidationData):
 
-    def __init__(self, validation_config):
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
 
         super().__init__(validation_config)
         self.queries = open_json(validation_config['msmarco']['queries'], self.validation_dir)
@@ -56,7 +64,7 @@ class NLIData(ValidationData):
     '''
     Formats the raw NLI data into evaluation format for similarity model.
     '''
-    def __init__(self, validation_config):
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
 
         super().__init__(validation_config)
         self.matched = open_jsonl(validation_config['nli']['matched'], self.validation_dir)

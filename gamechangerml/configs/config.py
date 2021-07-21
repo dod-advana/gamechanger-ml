@@ -103,7 +103,8 @@ class ValidationConfig:
         "evaluation_dir": "gamechangerml/data/evaluation",
         "squad": {
             "dev": "squad2.0/dev-v2.0.json",
-            "train": "squad2.0/train-v2.0.json"
+            "train": "squad2.0/train-v2.0.json",
+            "sample_limit": 10
         },
         "nli": {
             "matched": "multinli_1.0/multinli_1.0_dev_matched.jsonl",

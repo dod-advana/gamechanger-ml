@@ -2,14 +2,15 @@ import os
 import string
 import re
 import json
+from datetime import date
 
 def open_json(filename, path):
-    with open(os.path.join(filename, path)) as f:
+    with open(os.path.join(path, filename)) as f:
         return json.load(f)
 
 def open_jsonl(filename, path):
 
-    with open(os.path.join(filename, path), 'r') as json_file:
+    with open(os.path.join(path, filename), 'r') as json_file:
         json_list = list(json_file)
 
     data = []
@@ -24,8 +25,17 @@ def open_txt(filepath):
         return fp.readlines()
 
 def timestamp_filename(filename, extension):
-## TODO add timestamp
-    return filename + extension
+    today = date.today()
+    formatted = '_'.join([filename, today.strftime("%Y-%m-%d")])
+    return formatted + extension
+
+def check_directory(directory):
+
+    if not os.path.exists(directory):
+        print("Creating new directory {}".format(directory))
+        os.makedirs(directory)
+
+    return directory
 
 # Source: https://rajpurkar.github.io/SQuAD-explorer/
 def normalize_answer(s):

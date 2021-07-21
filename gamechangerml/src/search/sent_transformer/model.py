@@ -31,7 +31,12 @@ class SentenceEncoder(object):
         use_gpu (bool): Boolean to check if a GPU would be used
     """
 
-    def __init__(self, model_args=EmbedderConfig.MODEL_ARGS, sent_index=SENT_INDEX_PATH, use_gpu=False):
+    def __init__(
+            self, 
+            model_args=EmbedderConfig.MODEL_ARGS, 
+            sent_index=SENT_INDEX_PATH, 
+            use_gpu=False
+        ):
         
         self.encoder_model = os.path.join(LOCAL_TRANSFORMERS_DIR, model_args['model_name'])
         self.index_path = sent_index
@@ -162,9 +167,13 @@ class SentenceEncoder(object):
 
 class SimilarityRanker(object):
 
-    def __init__(self, model_args):
+    def __init__(
+            self, 
+            model_args=SimilarityConfig.MODEL_ARGS, 
+            transformers_path=LOCAL_TRANSFORMERS_DIR
+        ):
 
-        self.sim_model = os.path.join(LOCAL_TRANSFORMERS_DIR, model_args['model_name'])
+        self.sim_model = os.path.join(transformers_path, model_args['model_name'])
         self.similarity = Similarity(self.sim_model)
 
     def re_rank(self, query, texts, ids):
@@ -193,14 +202,20 @@ class SentenceSearcher(object):
             and txtai to calculate similarity between query and document
     """
 
-    def __init__(self, retriever_args=EmbedderConfig.MODEL_ARGS, similarity_args=SimilarityConfig.MODEL_ARGS):
+    def __init__(
+            self, 
+            index_path=SENT_INDEX_PATH, 
+            transformers_path=LOCAL_TRANSFORMERS_DIR,
+            retriever_args=EmbedderConfig.MODEL_ARGS, 
+            similarity_args=SimilarityConfig.MODEL_ARGS,
+        ):
 
         self.embedder = Embeddings()
-        self.embedder.load(retriever_args['index_path'])
-         ## replace this with looking up ES
-        self.data = pd.read_csv(os.path.join(retriever_args['index_path'], retriever_args['embeddings']['dataframe']))
+        self.embedder.load(index_path)
+        ## replace this with looking up ES
+        self.data = pd.read_csv(os.path.join(index_path, retriever_args['embeddings']['dataframe']))
         self.n_returns = retriever_args['retriever']['n_returns']
-        self.similarity = SimilarityRanker(similarity_args)
+        self.similarity = SimilarityRanker(similarity_args, transformers_path)
         
     def retrieve_topn(self, query):
 
