@@ -3,20 +3,18 @@ import os
 from transformers import AutoTokenizer
 
 
-def preprocess(dataset, model_name_or_path, max_len, output_file):
-    NL = "\n"
+def preprocess(dataset, model_name_or_path, max_len):
     subword_len_counter = 0
 
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
     max_len -= tokenizer.num_special_tokens_to_add()
 
-    out_fp = open(output_file)
     with open(dataset, "rt") as f_p:
         for line in f_p:
             line = line.rstrip()
 
             if not line:
-                out_fp.write(line + NL)
+                print(line)
                 subword_len_counter = 0
                 continue
 
@@ -30,15 +28,14 @@ def preprocess(dataset, model_name_or_path, max_len, output_file):
                 continue
 
             if (subword_len_counter + current_subwords_len) > max_len:
-                out_fp.write("" + NL)
-                out_fp.write(line + NL)
+                print("")
+                print(line)
                 subword_len_counter = current_subwords_len
                 continue
 
             subword_len_counter += current_subwords_len
 
-            out_fp.write(line + NL)
-    out_fp.close()
+            print(line)
 
 
 if __name__ == "__main__":
@@ -50,7 +47,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser(
         prog="python " + os.path.split(__file__)[-1],
-        description="Create NER training data in CoNLL format",
+        description="Preprocess NER datasets; output to STDOUT",
     )
     parser.add_argument(
         "-d",
@@ -71,11 +68,5 @@ if __name__ == "__main__":
     parser.add_argument(
         "-l", "max-length", dest="max_len", type=int, help="max token length"
     )
-    parser.add_argument(
-        "-o",
-        "--output-txt",
-        dest="output_txt",
-        type=str,
-        required=True,
-        help="output file in CoNLL-2003 format with len(token) <= max_len",
-    )
+    args = parser.parse_args()
+    preprocess(args.dataset, args.model_name_or_path, args.max_len)

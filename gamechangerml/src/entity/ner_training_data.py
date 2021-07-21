@@ -171,7 +171,7 @@ def main(
         os.path.join(in_path, "dev_sent.csv"),
         os.path.join(in_path, "val_sent.csv"),
     )
-    output_names = [p.replace("_sent.csv", ".txt") for p in sent_names]
+    output_names = [p.replace("_sent.csv", ".txt.tmp") for p in sent_names]
 
     dev_frac = t_split + (1.0 - t_split) / 2
     df = pd.read_csv(sentence_csv, delimiter=",", header=None)
