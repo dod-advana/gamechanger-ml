@@ -18,7 +18,8 @@ from gamechangerml.src.model_testing.validation_data import MSMarcoData
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SENT_INDEX_PATH = model_path_dict["sentence"]
-
+print("LOCAL TRANSFORMER DIR: ", LOCAL_TRANSFORMERS_DIR)
+print("SENT INDEX PATH: ", SENT_INDEX_PATH)
 
 class SentenceEncoder(object):
     """
@@ -42,7 +43,6 @@ class SentenceEncoder(object):
         self.index_path = sent_index
         self.embed_paths = model_args['embeddings']
         self.encoder_args = model_args['encoder']
-        ## if corpus is new, re-build index
 
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = use_gpu
@@ -82,9 +82,9 @@ class SentenceEncoder(object):
 
         df = pd.DataFrame(all_text, columns=["text", "paragraph_id"])
 
-        embedding_path = os.path.join(self.index_path, self.embed_paths['embed_filename'])
-        dataframe_path = os.path.join(self.index_path, self.embed_paths['dataframe_filename'])
-        ids_path = os.path.join(self.index_path, self.embed_paths['ids_filename'])
+        embedding_path = os.path.join(self.index_path, self.embed_paths['embeddings'])
+        dataframe_path = os.path.join(self.index_path, self.embed_paths['dataframe'])
+        ids_path = os.path.join(self.index_path, self.embed_paths['ids'])
 
         # Load new data
         if os.path.isfile(embedding_path) and (self.encoder_args['overwrite'] is False):
@@ -154,12 +154,11 @@ class SentenceEncoder(object):
             corpus = [(para_id, " ".join(tokens), None) for tokens, para_id in corp]
         else:
             logger.info("Did not include path to corpus, making test index with msmarco data")
-            corpus = MSMarcoData.msmarco_corpus
+            data = MSMarcoData()
+            corpus = data.msmarco_corpus
 
         self._index(
-            corpus,
-            self.index_path,
-            overwrite=self.encoder_args['overwrite'],
+            corpus
         )
 
         self.embedder.save(self.index_path)
@@ -211,6 +210,7 @@ class SentenceSearcher(object):
         ):
 
         self.embedder = Embeddings()
+        self.encoder_model = os.path.join(LOCAL_TRANSFORMERS_DIR, retriever_args['model_name'])
         self.embedder.load(index_path)
         ## replace this with looking up ES
         self.data = pd.read_csv(os.path.join(index_path, retriever_args['embeddings']['dataframe']))
@@ -227,7 +227,7 @@ class SentenceSearcher(object):
             doc_ids.append(doc_id)
             doc_scores.append(score)
             text = self.data[self.data["paragraph_id"]
-                             == doc_id].iloc[0]["text"]
+                             == doc_id]["text"]
             doc_texts.append(text)
         
         return doc_texts, doc_ids, doc_scores

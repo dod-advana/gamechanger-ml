@@ -57,7 +57,7 @@ class MSMarcoData(ValidationData):
 
     def get_msmarco_corpus(self):
 
-        return [(x, y) for x, y in self.collection.items()]
+        return [(x, y, '') for x, y in self.collection.items()]
     
 
 class NLIData(ValidationData):

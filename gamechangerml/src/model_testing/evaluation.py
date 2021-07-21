@@ -86,7 +86,7 @@ class QAEvaluator(TransformerEvaluator):
             queries = self.squad.queries
             for query in queries:
                 try:
-                    logger.info(query_count, query)
+                    print(query_count, query['question'])
                     actual_null = query['null_expected']
                     actual = query['expected']
                     prediction = self.model.answer(query['question'], query['search_context'])[0]
@@ -141,6 +141,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             self, 
             model_name=EmbedderConfig.MODEL_ARGS['model_name'],
             transformer_path=LOCAL_TRANSFORMERS_DIR,
+            sent_index_path=None,
             save_path=SAVE_PATH, 
             encoder_args=EmbedderConfig.MODEL_ARGS, 
             similarity_args=SimilarityConfig.MODEL_ARGS,
@@ -151,10 +152,15 @@ class RetrieverEvaluator(TransformerEvaluator):
         super().__init__(transformer_path, save_path)
 
         self.model_path = os.path.join(transformer_path, model_name)
-        self.index_path = os.path.join(save_path, 'test_index')
-        self.encoder = SentenceEncoder(encoder_args, self.index_path, use_gpu)
-        self.retriever = SentenceSearcher(encoder_args, similarity_args)
+        #self.sent_index_path = sent_index_path
         self.msmarco = MSMarcoData()
+        self.index_path = os.path.join(save_path, 'msmarco_index')
+        if not os.path.exists(self.index_path):  
+            os.makedirs(self.index_path)
+            self.encoder = SentenceEncoder(encoder_args, self.index_path, use_gpu)
+            self.make_msmarco_index()
+        self.retriever = SentenceSearcher(self.index_path, transformer_path, encoder_args, similarity_args)
+        
         if new_model == True:
             self.agg_results = self.eval_msmarco()
 
@@ -167,43 +173,48 @@ class RetrieverEvaluator(TransformerEvaluator):
         columns = [
             'index',
             'queries',
+            'top_predicted_id',
+            'top_expected_ids',
             'predicted_rank',
             'predicted_text',
-            'expected_top_match',
             'top_result_match',
             'in_top_10',
             'score'
         ]
         query_count = 0
+        predicted_rank = 'NA'
+        matching_text = 'NA'
+        score = 'NA'
+        idx = 'NA'
+        top_result_match = False
+        in_top_10 = False
         csv_filename = os.path.join(self.save_path, timestamp_filename('msmarco_eval', '.csv'))
-        with open(csv_filename, 'w') as csvfile: 
-            # creating a csv writer object 
+        with open(csv_filename, 'w') as csvfile:
             csvwriter = csv.writer(csvfile)  
-            # writing the fields 
             csvwriter.writerow(columns) 
 
-        for idx, query in self.msmarco.queries.items():
-            logger.info(query_count, query)
-            expected_text = self.msmarco.relations[idx]
-            doc_texts, doc_ids, doc_scores = self.encoder.retrieve_topn(query)
-            for _id in expected_text:
-                idx = doc_ids.index(_id)
-                predicted_rank = idx
-                predicted_text = self.msmarco.collection[_id]
-                score = doc_scores[idx]
-                if _id == doc_ids[0]:
-                    top_result_match = True
-                elif _id in doc_ids:
-                    top_result_match = False
-                    in_top_10 = True
-                else:
-                    in_top_10 = False
+            for idx, query in self.msmarco.queries.items():
+                print(query_count, query)
+                expected_ids = self.msmarco.relations[idx]
+                doc_texts, doc_ids, doc_scores = self.retriever.retrieve_topn(query)
+                for _id in expected_ids:
+                    if _id in doc_ids:
+                        in_top_10 = True
+                        ix = doc_ids.index(_id)
+                        predicted_rank = ix
+                        matching_text = self.msmarco.collection[_id]
+                        score = doc_scores[ix]
+                        if ix == 0:
+                            top_result_match = True
+                            break
+
                 row = [[
                     str(query_count),
                     str(query),
+                    str(ix),
+                    str(expected_ids),
                     str(predicted_rank),
-                    str(predicted_text),
-                    str(expected_text),
+                    str(matching_text),
                     str(top_result_match),
                     str(in_top_10),
                     str(score)
