@@ -75,6 +75,8 @@ def raw_text2csv(src_path, glob, output_path):
     try:
         for sent_df, fname in raw2df(src_path, glob):
             output_df = output_df.append(sent_df, ignore_index=True)
+            if output_path is None:
+                return output_df
             base, ext = os.path.splitext(os.path.basename(fname))
             output_csv = base.replace(" ", "_") + "_sentences" + ".csv"
             output_csv = os.path.join(output_path, output_csv)

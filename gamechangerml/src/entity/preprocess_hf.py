@@ -1,13 +1,18 @@
 import os
+import logging
 
 from transformers import AutoTokenizer
 
+logger = logging.getLogger(__name__)
 
-def preprocess(dataset, model_name_or_path, max_len):
+
+def preprocess(dataset, model_name_or_path, max_len, sep=" "):
     subword_len_counter = 0
 
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
     max_len -= tokenizer.num_special_tokens_to_add()
+    logger.info("  dataset : {}".format(dataset))
+    logger.info("tokenizer : {}".format(model_name_or_path))
 
     with open(dataset, "rt") as f_p:
         for line in f_p:
@@ -18,15 +23,14 @@ def preprocess(dataset, model_name_or_path, max_len):
                 subword_len_counter = 0
                 continue
 
-            token = line.split()[0]
+            token = line.split(sep)[0]
 
             current_subwords_len = len(tokenizer.tokenize(token))
 
             # Token contains strange control characters like \x96 or \x95
-            # Just filter out the complete line
+            # just filter out the complete line
             if current_subwords_len == 0:
                 continue
-
             if (subword_len_counter + current_subwords_len) > max_len:
                 print("")
                 print(line)
@@ -34,7 +38,6 @@ def preprocess(dataset, model_name_or_path, max_len):
                 continue
 
             subword_len_counter += current_subwords_len
-
             print(line)
 
 
@@ -47,14 +50,14 @@ if __name__ == "__main__":
 
     parser = ArgumentParser(
         prog="python " + os.path.split(__file__)[-1],
-        description="Preprocess NER datasets; output to STDOUT",
+        description="Preprocess NER dataset; output goes to STDOUT",
     )
     parser.add_argument(
         "-d",
         "--dataset",
         dest="dataset",
         type=str,
-        help="formatted training data",
+        help="CoNLL formatted training data",
         required=True,
     )
     parser.add_argument(
@@ -66,7 +69,12 @@ if __name__ == "__main__":
         required=True,
     )
     parser.add_argument(
-        "-l", "max-length", dest="max_len", type=int, help="max token length"
+        "-l",
+        "max-length",
+        dest="max_len",
+        type=int,
+        help="max token length",
+        required=True,
     )
     args = parser.parse_args()
     preprocess(args.dataset, args.model_name_or_path, args.max_len)

@@ -1,9 +1,9 @@
 """
 usage: python ner_training_data.py [-h] -s SENT_CSV -e ENTITY_CSV -o
                                    OUTPUT_TXT [-n N_SAMPLES] [-r]
-                                   [-p {tab,space}]
+                                   [-p {tab,space}] [-x T_SPLIT]
 
-Create NER training data in CoNLL format
+Create NER training data in CoNLL-2003 format
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -19,13 +19,15 @@ optional arguments:
   -r, --shuffle         randomly shuffle the sentence data
   -p {tab,space}, --separator {tab,space}
                         token <-> label separator, default is 'space'
+  -x T_SPLIT, --train-split T_SPLIT
+                        training split; dev, val are (1 - t_split) / 2
 """
 import logging
 import os
 
-from tqdm import tqdm
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 import gamechangerml.src.entity.entity_mentions as em
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
@@ -37,7 +39,7 @@ def _wc(txt):
     return txt.count(" ") + 1
 
 
-def _gen_ner_training_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
+def _gen_ner_conll_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
     SENT = "sentence"
     I_PRFX = "I-"
     B_PRFX = "B-"
@@ -62,6 +64,8 @@ def _gen_ner_training_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
                 if tkn_st_end[0] >= ent_st_end[0]
                 and tkn_st_end[1] <= ent_st_end[1] - 1
             ]
+            if not token_idxs:
+                continue
             if _wc(ent) == 1:
                 ner_labels[token_idxs[0]] = I_PRFX + entity2type[ent.lower()]
                 continue
@@ -84,6 +88,9 @@ def ner_training_data(
     sep,
     out_fp,
     shuffle,
+    abbrv_re=None,
+    entity_re=None,
+    entity2type=None
 ):
     """
     Create NER training data in CoNLL-2003 format. For more information on
@@ -104,6 +111,12 @@ def ner_training_data(
 
         shuffle (bool): if True, randomize the order of the sentences
 
+        abbrv_re (SRE_Pattern): compiled regular expression
+
+        entity_re (SRE_Pattern): compiled regular expression
+
+        entity2type (dict): map of an entity to its type, e.g.,
+            GCORG, GCPER
     """
     if sep == "space":
         SEP = " "
@@ -114,16 +127,17 @@ def ner_training_data(
         msg += "using space separator"
         logger.warning("unrecognized value for `sep`, got {}".format(sep))
         SEP = " "
+
     NL = "\n"
     EMPTYSTR = ""
     print_str = EMPTYSTR
-    write_interval = 1024 * 10
 
-    abrv_re, ent_re, entity2type = em.make_entity_re(entity_csv)
+    if None in (abbrv_re, entity_re, entity2type):
+        abbrv_re, entity_re, entity2type = em.make_entity_re(entity_csv)
     sent_dict = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
 
-    training_generator = _gen_ner_training_data(
-        abrv_re, ent_re, entity2type, sent_dict, nlp
+    training_generator = _gen_ner_conll_data(
+        abbrv_re, entity_re, entity2type, sent_dict, nlp
     )
     labels = set()
     count = 0
@@ -138,22 +152,11 @@ def ner_training_data(
                 + NL
                 + NL
             )
-            if count > 0 and count % write_interval == 0:
-                fp.write(print_str)
-                count = 0
-                print_str = EMPTYSTR
+            fp.write(print_str)
         if print_str:
             fp.write(print_str[:-1])
 
-    # unique labels to a separate file
-    label_str = NL.join(sorted(list(labels)))
-    label_fp, ltype = os.path.splitext(out_fp)
-    label_fp = label_fp + "_labels" + ltype
-
-    with open(label_fp, "w") as fp:
-        fp.write(label_str)
-    logger.info("training output written to : {}".format(out_fp))
-    logger.info("         labels written to : {}".format(label_fp))
+    logger.info("output written to : {}".format(out_fp))
 
 
 def main(
@@ -172,9 +175,12 @@ def main(
         os.path.join(in_path, "val_sent.csv"),
     )
     output_names = [p.replace("_sent.csv", ".txt.tmp") for p in sent_names]
-
     dev_frac = t_split + (1.0 - t_split) / 2
+
     df = pd.read_csv(sentence_csv, delimiter=",", header=None)
+    if n_samples > 0:
+        df = df.head(n_samples)
+
     train, dev, val = np.split(
         df.sample(frac=1),
         [int(t_split * len(df)), int(dev_frac * len(df))],
@@ -203,9 +209,8 @@ if __name__ == "__main__":
 
     li.initialize_logger(to_file=False, log_name="none")
 
-    fp_ = "python " + os.path.split(__file__)[-1]
     parser = ArgumentParser(
-        prog=fp_,
+        prog="python " + os.path.split(__file__)[-1],
         description="Create NER training data in CoNLL format",
     )
     parser.add_argument(
@@ -213,7 +218,7 @@ if __name__ == "__main__":
         "--sentence-csv",
         dest="sent_csv",
         type=str,
-        help="csv of sentences and labels",
+        help="csv of input sentences and labels",
         required=True,
     )
     parser.add_argument(
@@ -223,14 +228,6 @@ if __name__ == "__main__":
         type=str,
         help="csv of entities & types",
         required=True,
-    )
-    parser.add_argument(
-        "-o",
-        "--output-txt",
-        dest="output_txt",
-        type=str,
-        required=True,
-        help="output file in CoNLL-2003 format",
     )
     parser.add_argument(
         "-n",
@@ -264,7 +261,7 @@ if __name__ == "__main__":
         dest="t_split",
         type=float,
         default=0.80,
-        help="training split",
+        help="training split; dev, val are (1 - t_split) / 2",
     )
     args = parser.parse_args()
 
