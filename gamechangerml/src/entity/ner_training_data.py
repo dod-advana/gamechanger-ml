@@ -3,7 +3,7 @@ usage: python ner_training_data.py [-h] -s SENT_CSV -e ENTITY_CSV -o
                                    OUTPUT_TXT [-n N_SAMPLES] [-r]
                                    [-p {tab,space}]
 
-create NER training data in CoNLL format
+Create NER training data in CoNLL format
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -24,6 +24,8 @@ import logging
 import os
 
 from tqdm import tqdm
+import numpy as np
+import pandas as pd
 
 import gamechangerml.src.entity.entity_mentions as em
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
@@ -154,6 +156,45 @@ def ner_training_data(
     logger.info("         labels written to : {}".format(label_fp))
 
 
+def main(
+    entity_csv,
+    sentence_csv,
+    n_samples,
+    nlp,
+    sep,
+    shuffle,
+    t_split,
+):
+    in_path, _ = os.path.split(sentence_csv)
+    sent_names = (
+        os.path.join(in_path, "train_sent.csv"),
+        os.path.join(in_path, "dev_sent.csv"),
+        os.path.join(in_path, "val_sent.csv"),
+    )
+    output_names = [p.replace("_sent.csv", ".txt") for p in sent_names]
+
+    dev_frac = t_split + (1.0 - t_split) / 2
+    df = pd.read_csv(sentence_csv, delimiter=",", header=None)
+    train, dev, val = np.split(
+        df.sample(frac=1),
+        [int(t_split * len(df)), int(dev_frac * len(df))],
+    )
+    for idx, df in enumerate((train, dev, val)):
+        df.to_csv(sent_names[idx], header=False, index=False, sep=",")
+        logger.info("samples : {:>4,d}".format(len(df)))
+
+    for idx, sent_csv in enumerate(sent_names):
+        ner_training_data(
+            entity_csv,
+            sent_csv,
+            n_samples,
+            nlp,
+            sep,
+            output_names[idx],
+            shuffle,
+        )
+
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
@@ -165,7 +206,7 @@ if __name__ == "__main__":
     fp_ = "python " + os.path.split(__file__)[-1]
     parser = ArgumentParser(
         prog=fp_,
-        description="create NER training data in CoNLL format",
+        description="Create NER training data in CoNLL format",
     )
     parser.add_argument(
         "-s",
@@ -217,18 +258,26 @@ if __name__ == "__main__":
         default="space",
         help="token <-> label separator, default is 'space'",
     )
+    parser.add_argument(
+        "-x",
+        "--train-split",
+        dest="t_split",
+        type=float,
+        default=0.80,
+        help="training split",
+    )
     args = parser.parse_args()
 
     logger.info("retrieving spaCy model")
     nlp_ = get_lg_nlp()
     logger.info("spaCy model loaded")
 
-    ner_training_data(
+    main(
         args.entity_csv,
         args.sent_csv,
         args.n_samples,
         nlp_,
         args.sep,
-        args.output_txt,
         args.shuffle,
+        args.t_split,
     )

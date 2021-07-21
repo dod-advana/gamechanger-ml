@@ -69,8 +69,8 @@ def make_entity_re(entity_csv):
     entities = list(set(df["long_form"]))
     abbrvs = list(set(df["short_form"]))
 
-    logger.info("num entities : {}".format(len(entities)))
-    logger.info(" num abbrevs : {}".format(len(abbrvs)))
+    logger.debug("num entities : {}".format(len(entities)))
+    logger.debug(" num abbrevs : {}".format(len(abbrvs)))
 
     entities.sort(key=lambda s: len(s), reverse=True)
     abbrvs.sort(key=lambda s: len(s), reverse=True)
