@@ -7,9 +7,25 @@ def open_json(filename, path):
     with open(os.path.join(filename, path)) as f:
         return json.load(f)
 
+def open_jsonl(filename, path):
+
+    with open(os.path.join(filename, path), 'r') as json_file:
+        json_list = list(json_file)
+
+    data = []
+    for json_str in json_list:
+        result = json.loads(json_str)
+        data.append(result)
+    
+    return data
+
 def open_txt(filepath):
     with open(filepath, "r") as fp:
         return fp.readlines()
+
+def timestamp_filename(filename, extension):
+## TODO add timestamp
+    return filename + extension
 
 # Source: https://rajpurkar.github.io/SQuAD-explorer/
 def normalize_answer(s):
