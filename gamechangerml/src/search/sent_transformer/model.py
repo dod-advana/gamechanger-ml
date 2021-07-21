@@ -12,6 +12,12 @@ from gamechangerml.src.text_handling.corpus import LocalCorpus
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.configs.config import EmbedderConfig, SimilarityConfig
 from gamechangerml.src.utilities.model_helper import *
+from gamechangerml.api.utils.pathselect import get_model_paths
+from gamechangerml.src.model_testing.validation_data import MSMarcoData
+
+model_path_dict = get_model_paths()
+LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
+SENT_INDEX_PATH = model_path_dict["sentence"]
 
 
 class SentenceEncoder(object):
@@ -25,11 +31,10 @@ class SentenceEncoder(object):
         use_gpu (bool): Boolean to check if a GPU would be used
     """
 
-    def __init__(self, model_args=EmbedderConfig.MODEL_ARGS, use_gpu=False):
-        # encoder_model = None
-
-        self.encoder_model = model_args['model_name']
-        self.index_path = model_args['index_path']
+    def __init__(self, model_args=EmbedderConfig.MODEL_ARGS, sent_index=SENT_INDEX_PATH, use_gpu=False):
+        
+        self.encoder_model = os.path.join(LOCAL_TRANSFORMERS_DIR, model_args['model_name'])
+        self.index_path = sent_index
         self.embed_paths = model_args['embeddings']
         self.encoder_args = model_args['encoder']
         ## if corpus is new, re-build index
@@ -134,15 +139,20 @@ class SentenceEncoder(object):
         """
         logger.info(f"Indexing documents from {corpus_path}")
 
-        corp = LocalCorpus(
-            corpus_path, 
-            return_id=self.encoder_args['return_id'],
-            min_token_len=self.encoder_args['min_token_len'], 
-            verbose=self.encoder_args['verbose']
-        )
+        if corpus_path:
+            corp = LocalCorpus(
+                corpus_path, 
+                return_id=self.encoder_args['return_id'],
+                min_token_len=self.encoder_args['min_token_len'], 
+                verbose=self.encoder_args['verbose']
+            )
+            corpus = [(para_id, " ".join(tokens), None) for tokens, para_id in corp]
+        else:
+            logger.info("Did not include path to corpus, making test index with msmarco data")
+            corpus = MSMarcoData.msmarco_corpus
 
         self._index(
-            [(para_id, " ".join(tokens), None) for tokens, para_id in corp],
+            corpus,
             self.index_path,
             overwrite=self.encoder_args['overwrite'],
         )
@@ -154,7 +164,7 @@ class SimilarityRanker(object):
 
     def __init__(self, model_args):
 
-        self.sim_model = model_args['model_name']
+        self.sim_model = os.path.join(LOCAL_TRANSFORMERS_DIR, model_args['model_name'])
         self.similarity = Similarity(self.sim_model)
 
     def re_rank(self, query, texts, ids):
@@ -213,8 +223,6 @@ class SentenceSearcher(object):
         the topn returned documents
         Args:
             query (str): Query text to search in documents
-            n_returns (int): Number of documents to return
-
         Returns:
             rerank (list): List of tuples following a (score, paragraph_id,
                 paragraph_text) format ranked based on similarity with query
