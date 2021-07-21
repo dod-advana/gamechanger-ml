@@ -1,6 +1,7 @@
 """
 usage: python ner_training_data.py [-h] -s SENT_CSV -e ENTITY_CSV -o
                                    OUTPUT_TXT [-n N_SAMPLES] [-r]
+                                   [-p {tab,space}]
 
 create NER training data in CoNLL format
 
@@ -15,9 +16,12 @@ optional arguments:
   -n N_SAMPLES, --n-samples N_SAMPLES
                         how many samples to extract and tag (0 means get
                         everything)
-  -r, --random-shuffle  randomly shuffle the sentence data
+  -r, --shuffle         randomly shuffle the sentence data
+  -p {tab,space}, --separator {tab,space}
+                        token <-> label separator, default is 'space'
 """
 import logging
+import os
 
 from tqdm import tqdm
 
@@ -67,12 +71,17 @@ def _gen_ner_training_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
                 else:
                     logger.error("KeyError: {}".format(ent.lower()))
         uniq_labels = set(ner_labels)
-        # logger.info(uniq_labels)
         yield zip(tokens, ner_labels), uniq_labels
 
 
 def ner_training_data(
-    entity_csv, sentence_csv, n_samples, nlp, out_fp, shuffle=False
+    entity_csv,
+    sentence_csv,
+    n_samples,
+    nlp,
+    sep,
+    out_fp,
+    shuffle,
 ):
     """
     Create NER training data in CoNLL-2003 format. For more information on
@@ -87,16 +96,27 @@ def ner_training_data(
 
         nlp (spacy.lang.en.English): spaCy language model
 
+        sep (str): separator between entity & label
+
         out_fp (str): where to write the resulting `.tsv` file
 
         shuffle (bool): if True, randomize the order of the sentences
 
     """
-    TAB = "\t"
+    if sep == "space":
+        SEP = " "
+    elif sep == "tab":
+        SEP = "\t"
+    else:
+        msg = "unrecognized value for `sep`, got {} ".format(sep)
+        msg += "using space separator"
+        logger.warning("unrecognized value for `sep`, got {}".format(sep))
+        SEP = " "
     NL = "\n"
     EMPTYSTR = ""
     print_str = EMPTYSTR
-    write_interval = 1024 * 4
+    write_interval = 1024 * 10
+
     abrv_re, ent_re, entity2type = em.make_entity_re(entity_csv)
     sent_dict = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
 
@@ -112,7 +132,7 @@ def ner_training_data(
             labels = labels.union(uniq_labels)
             count += 1
             print_str += (
-                NL.join([str(e[0]) + TAB + str(e[1]) for e in zipped])
+                NL.join([str(e[0]) + SEP + str(e[1]) for e in zipped])
                 + NL
                 + NL
             )
@@ -122,9 +142,12 @@ def ner_training_data(
                 print_str = EMPTYSTR
         if print_str:
             fp.write(print_str[:-1])
+
+    # unique labels to a separate file
     label_str = NL.join(sorted(list(labels)))
     label_fp, ltype = os.path.splitext(out_fp)
-    label_fp = label_fp + "_labels." + ltype
+    label_fp = label_fp + "_labels" + ltype
+
     with open(label_fp, "w") as fp:
         fp.write(label_str)
     logger.info("training output written to : {}".format(out_fp))
@@ -132,8 +155,6 @@ def ner_training_data(
 
 
 if __name__ == "__main__":
-    import os
-
     from argparse import ArgumentParser
 
     import gamechangerml.src.text_classif.utils.log_init as li
@@ -181,11 +202,20 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-r",
-        "--random-shuffle",
+        "--shuffle",
         dest="shuffle",
         action="store_true",
         default=False,
         help="randomly shuffle the sentence data",
+    )
+    parser.add_argument(
+        "-p",
+        "--separator",
+        dest="sep",
+        type=str,
+        choices=["tab", "space"],
+        default="space",
+        help="token <-> label separator, default is 'space'",
     )
     args = parser.parse_args()
 
@@ -198,6 +228,7 @@ if __name__ == "__main__":
         args.sent_csv,
         args.n_samples,
         nlp_,
+        args.sep,
         args.output_txt,
         args.shuffle,
     )
