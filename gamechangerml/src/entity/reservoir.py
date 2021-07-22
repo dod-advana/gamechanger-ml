@@ -24,13 +24,14 @@ Author: Jason Liu
 Date: May 24th, 2014
 
 """
-from __future__ import print_function
-from random import randint
-from argparse import ArgumentParser
-import sys
-
-
 # from https://github.com/jxnl/python-reservoir
+from __future__ import print_function
+
+import sys
+from argparse import ArgumentParser
+from random import randint
+
+
 class UniformSampler(object):
 
     """Uniformly sample k elements from an iterable.
@@ -95,7 +96,8 @@ def gen_parser():
     """Generate the CLI argparse object"""
     desc = """Random sampling is often applied to very large datasets and
               in particular to data streams. In this case, the random sample
-              has to be generated in one pass over an potentially unknown population.
+              has to be generated in one pass over an potentially unknown 
+              population.
               """
     parser = ArgumentParser(description=desc)
     group = parser.add_mutually_exclusive_group()
