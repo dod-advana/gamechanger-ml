@@ -64,11 +64,18 @@ ENV APP_DIR="${APP_ROOT}/src"
 RUN mkdir -p "${APP_DIR}" "${APP_VENV}"
 
 # install python venv w all the packages
-ARG APP_REQUIREMENTS_FILE="./k8s.requirements.txt"
+ARG APP_REQUIREMENTS_FILE="./k8s.lock.requirements.txt"
+ARG VENV_INSTALL_NO_DEPS="yes"
 COPY "${APP_REQUIREMENTS_FILE}" "/tmp/requirements.txt"
 RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
-    && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" \
+    && ( \
+        if [[ "${VENV_INSTALL_NO_DEPS,,}" == "yes" ]]; then; \
+            "${APP_VENV}/bin/python" -m pip install --no-deps --no-cache-dir -r "/tmp/requirements.txt" ; \
+        else ; \
+            "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" ; \
+        fi ; \
+    ) \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}"
 
 COPY . "${APP_DIR}"
