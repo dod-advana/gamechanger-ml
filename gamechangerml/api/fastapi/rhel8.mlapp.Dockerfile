@@ -33,6 +33,9 @@ RUN dnf install -y \
         libffi-devel \
         libpq \
         libpq-devel \
+        libomp \
+        libomp-devel \
+        openblas \
         cairo \
     && dnf clean all \
     && rm -rf /var/cache/yum
