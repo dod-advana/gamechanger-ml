@@ -63,7 +63,7 @@ ARG APP_REQUIREMENTS_FILE="./k8s.requirements.txt"
 COPY "${APP_REQUIREMENTS_FILE}" "/tmp/requirements.txt"
 RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
-    && "${APP_VENV}/bin/python" -m pip install --no-deps --no-cache-dir -r "/tmp/requirements.txt" \
+    && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}"
 
 COPY . "${APP_DIR}"
