@@ -30,31 +30,17 @@ import time
 import pandas as pd
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
-from gamechangerml.src.featurization.abbreviations_utils import (
+from gamechangerml.src.text_classif.utils.classifier_post_utils import (
     get_references,
     get_agencies_dict,
     get_agencies,
+    filter_primary_org,
+    _agg_stats
 )
 from gamechangerml.src.text_classif.utils.entity_link import EntityLink
 from gamechangerml.src.text_classif.utils.log_init import initialize_logger
-from gamechangerml.src.text_classif.cli.resp_stats import count_output
 
 logger = logging.getLogger(__name__)
-
-
-def _agg_stats(df):
-    resp_per_doc, resp_no_entity, n_uniq_entities, n_docs = count_output(df)
-    if resp_per_doc:
-        df_resp_doc = pd.DataFrame(
-            list(resp_per_doc.items()), columns=["doc", "count"]
-        )
-        df_resp_doc.to_csv("resp-in-doc-stats.csv", index=False)
-    if resp_no_entity:
-        df_resp_no_e = pd.DataFrame(
-            list(resp_per_doc.items()), columns=["doc", "count"]
-        )
-        df_resp_no_e.to_csv("resp-no-entity-stats.csv", index=False)
-
 
 def predict_table(
     model_path,
@@ -89,6 +75,7 @@ def predict_table(
         "sentence": "Responsibility Text",
         "agencies": "Other Organization(s) / Personnel Mentioned",
         "refs": "Documents Referenced",
+        "org_filter": "Org Filter",
         "title": "Document Title",
         "source": "Source Document",
     }
@@ -105,17 +92,22 @@ def predict_table(
     df = entity_linker.to_df()
     df = df[df.top_class == 1].reset_index()
 
-    logger.info("retrieving agencies csv")
-    duplicates, aliases = get_agencies_dict(agencies_file)
+    logger.info("retrieving additional organizations")
+    aliases = get_agencies_dict(agencies_file)
     df["agencies"] = get_agencies(
-        file_dataframe=df,
-        doc_dups=None,
-        duplicates=duplicates,
+        file_dataframe=df['sentence'],
         agencies_dict=aliases,
     )
 
-    df["refs"] = get_references(df, doc_title_col="src")
+    logger.info("retrieving document references")
+    df["refs"] = get_references(df['sentence'])
 
+    logger.info("processing primary org filter")
+    df['org_filter'] = filter_primary_org(
+        df['sentence'], 
+        orgs_file
+    )
+    
     renamed_df = df.rename(columns=rename_dict)
     final_df = renamed_df[
         [
@@ -125,13 +117,15 @@ def predict_table(
             "Responsibility Text",
             "Other Organization(s) / Personnel Mentioned",
             "Documents Referenced",
+            "Org Filter"
         ]
     ]
     if output_csv is not None:
         final_df.to_csv(output_csv, index=False)
         logger.info("final csv written")
-    if stats:
-        _agg_stats(final_df)
+    if stats is not None:
+        model = os.path.split(model_path)[-1]
+        _agg_stats(final_df, model, max_seq_len, batch_size)
     elapsed = time.time() - start
 
     logger.info("total time : {:}".format(cu.format_time(elapsed)))
@@ -210,6 +204,15 @@ if __name__ == "__main__":
         required=True,
         help="the .csv for agency abbreviations",
     )
+    parser.add_argument(
+        "-s",
+        "--stats-path",
+        dest="stats_path",
+        type=str,
+        default=None,
+        required=False,
+        help="write aggregate statistics output to file",
+    )
 
     initialize_logger(to_file=False, log_name="none")
 
@@ -222,7 +225,7 @@ if __name__ == "__main__":
         args.max_seq_len,
         args.batch_size,
         args.output_csv,
-        args.stats,
+        args.stats_path,
         args.orgs_file,
         args.agencies_file,
     )
