@@ -69,13 +69,13 @@ ARG VENV_INSTALL_NO_DEPS="yes"
 COPY "${APP_REQUIREMENTS_FILE}" "/tmp/requirements.txt"
 RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
-    && ( \
-        if [[ "${VENV_INSTALL_NO_DEPS,,}" == "yes" ]]; then; \
+    && { \
+        if [[ "${VENV_INSTALL_NO_DEPS,,}" == "yes" ]]; then \
             "${APP_VENV}/bin/python" -m pip install --no-deps --no-cache-dir -r "/tmp/requirements.txt" ; \
-        else ; \
+        else \
             "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" ; \
         fi ; \
-    ) \
+    } \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}"
 
 COPY . "${APP_DIR}"
