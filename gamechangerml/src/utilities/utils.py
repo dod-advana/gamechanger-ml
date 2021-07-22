@@ -3,14 +3,12 @@
 import logging
 import os
 import shutil
-from pathlib import Path
 import glob
-import zipfile
 import tarfile
-import boto3
 from gamechangerml.src.utilities.aws_helper import *
 from gamechangerml.configs.config import S3Config
 from gamechangerml import REPO_PATH
+from gamechangerml.api.utils import processmanager
 
 logger = logging.getLogger("gamechanger")
 
@@ -122,24 +120,33 @@ def get_s3_corpus_list():
     return corp
 
 
-def get_s3_corpus(corpus_dir):
-    """
-    not  recommended
-    """
+def get_s3_corpus(corpus_dir, output_dir = "corpus"):
     bucket = s3_connect()
     corp = []
-    path = corpus_dir
     try:
-        os.mkdir(path)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
     except OSError as error:
         print(error)
-    for obj in bucket.objects.filter(Prefix=f"{corpus_dir}/"):
+    # get the s3.Bucket.objectsCollection of objects that meet the prefix
+    filter = bucket.objects.filter(Prefix=f"{corpus_dir}/")
+    total = len(list(filter))
+    completed = 0
+    # Initialize Progress
+    processmanager.update_status(processmanager.corpus_download, completed, total)
+    for obj in filter:
         corp.append(obj.key)
-        print(obj.key)
+        filename = os.path.basename(obj.key)
         try:
-            bucket.Object(obj.key).download_file(obj.key)
+            local_path = os.path.join(output_dir, filename)
+            # Only grab file if it is not already downloaded
+            if not os.path.exists(local_path):
+                bucket.Object(obj.key).download_file(local_path)
+            completed += 1
+            # Update Progress
+            processmanager.update_status(processmanager.corpus_download, completed, total)
         except RuntimeError:
-            logger.debug(f"Could not retrieve {obj.key}")
+            logger.debug(f"Could not retrieve {filename}")
     return corp
 
 

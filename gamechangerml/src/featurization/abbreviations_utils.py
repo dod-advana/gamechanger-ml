@@ -6,7 +6,7 @@ from gamechangerml.src.featurization.ref_list import collect_ref_list
 # FUNCTIONS
 def get_agencies_dict(agencies_file):
     """
-    Pulls agencies list into a dictionary for use in abbreviations pipeline.a
+    Pulls agencies list into a dictionary for use in abbreviations pipeline.
 
     Args:
     agencies: file of the agency documents. currently set to agencies.csv
