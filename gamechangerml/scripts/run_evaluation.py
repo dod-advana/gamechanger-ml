@@ -4,10 +4,10 @@ from gamechangerml.configs.config import QAConfig
 
 if __name__ == '__main__':
 
-    #print("\nLoading QA Evaluation...")
-    #QAEval = QAEvaluator(**QAConfig.MODEL_ARGS, new_model=True)
-    #print("Evaluating QA with SQuAD Data...")
-    #print(QAEval.agg_results)
+    print("\nLoading QA Evaluation...")
+    QAEval = QAEvaluator(**QAConfig.MODEL_ARGS, new_model=True)
+    print("Evaluating QA with SQuAD Data...")
+    print(QAEval.agg_results)
     #print("Evaluating QA with in-domain data...")
 
     print("\nLoading Retriever Evaluation...")
@@ -17,7 +17,7 @@ if __name__ == '__main__':
     #print("Evaluating Retriever with in-domain data...")
 
     print("\nLoading Similarity Evaluation...")
-    SimilarityEval = SimilarityEvaluator(new_model=True)
+    SimilarityEval = SimilarityEvaluator(new_model=True, sample_limit=10)
     print("Evaluating Similarity Model with NLI Data...")
     print(SimilarityEval.agg_results)
     #print("Evaluating Similarity Model with in-domain data...")

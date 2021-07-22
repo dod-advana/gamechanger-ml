@@ -210,7 +210,7 @@ class SentenceSearcher(object):
         ):
 
         self.embedder = Embeddings()
-        self.encoder_model = os.path.join(LOCAL_TRANSFORMERS_DIR, retriever_args['model_name'])
+        self.encoder_model = os.path.join(transformers_path, retriever_args['model_name'])
         self.embedder.load(index_path)
         ## replace this with looking up ES
         self.data = pd.read_csv(os.path.join(index_path, retriever_args['embeddings']['dataframe']))

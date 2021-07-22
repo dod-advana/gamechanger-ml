@@ -226,7 +226,6 @@ class RetrieverEvaluator(TransformerEvaluator):
         num_queries = df['queries'].nunique()
         proportion_expected_in_top_10 = np.round(df['in_top_10'].value_counts(normalize = True)[True], 2)
         proportion_expected_is_top = np.round(df['top_result_match'].value_counts(normalize = True)[True], 2)
-
         agg_results = {
             "num_queries": num_queries,
             "proportion_expected_in_top_10": proportion_expected_in_top_10,
@@ -241,15 +240,16 @@ class SimilarityEvaluator(TransformerEvaluator):
             self, 
             transformer_path=LOCAL_TRANSFORMERS_DIR, 
             save_path=SAVE_PATH, 
-            model_name=SimilarityConfig.MODEL_ARGS['model_name'], 
-            new_model = False
+            model_args=SimilarityConfig.MODEL_ARGS, 
+            new_model = False,
+            sample_limit=1000
         ):
 
         super().__init__(transformer_path, save_path)
 
-        self.model_path = os.path.join(transformer_path, model_name)
-        self.model = SimilarityRanker(self.model_path)
+        self.model = SimilarityRanker(model_args, transformer_path)
         self.nli = NLIData()
+        self.sample_limit = sample_limit
         if new_model == True:
             self.agg_results = self.eval_nli()
 
@@ -257,19 +257,30 @@ class SimilarityEvaluator(TransformerEvaluator):
 
         df = self.nli.sample_csv
         ranks = {}
+        count = 0
+        cutoff = np.min([df['promptID'].nunique(), self.sample_limit])
         for i in df['promptID'].unique():
-            subset = df[df['promptID']==i]
-            iddict = dict(zip(subset['sentence2'], subset['pairID']))
-            texts = [iddict.keys()]
-            ids = [iddict.values()]
-            query = [subset['sentence1']][0]
-            rank = 0
-            for idx, score in self.model.re_rank(query, texts, ids):
-                match = texts[idx]
-                matchID = iddict[match]
-                ranks[matchID] = rank
-                rank +=1
+            if count <= cutoff:
+                print(count, i)
+                subset = df[df['promptID']==i]
+                iddict = dict(zip(subset['sentence2'], subset['pairID']))
+                texts = [i for i in iddict.keys()]
+                ids = [i for i in iddict.values()]
+                query = self.nli.query_lookup[i]
+                rank = 0
+                for result in self.model.re_rank(query, texts, ids):
+                    match_id = result['id']
+                    match = result['text']
+                    ranks[match_id] = rank
+                    rank +=1
+
+                count += 1
+            else:
+                break
+        
         df['predicted_rank'] = df['pairID'].map(ranks)
+        df.dropna(subset = ['predicted_rank'], inplace = True)
+        df['predicted_rank'] = df['predicted_rank'].map(int)
         df['match'] = np.where(df['predicted_rank']==df['expected_rank'], True, False)
 
         return df

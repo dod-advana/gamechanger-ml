@@ -64,7 +64,7 @@ class MSMarcoData(ValidationData):
 
         include = [i for i, x in self.relations.items() if len(x)==1]
         print("Number MSMarco test queries: ", len(include))
-        
+
         return {x: self.queries[x] for x in include}
     
 
@@ -78,6 +78,7 @@ class NLIData(ValidationData):
         self.matched = open_jsonl(validation_config['nli']['matched'], self.validation_dir)
         self.mismatched = open_jsonl(validation_config['nli']['mismatched'], self.validation_dir)
         self.sample_csv = self.get_sample_csv()
+        self.query_lookup = dict(zip(self.sample_csv['promptID'], self.sample_csv['sentence1']))
 
     def get_sample_csv(self):
         '''
@@ -91,7 +92,7 @@ class NLIData(ValidationData):
         mismatched_df = pd.DataFrame(self.mismatched)
         match_df['set'] = 'matched'
         mismatched_df['set'] = 'mismatched'
-        both = pd.concat[match_df, mismatched_df]
+        both = pd.concat([match_df, mismatched_df])
         # assign int ranks based on gold label
         gold_labels_map = {
             'entailment': 2,
@@ -118,5 +119,8 @@ class NLIData(ValidationData):
         for i in both['genre'].unique():
             subset = both[both['genre']==i].sort_values(by='promptID').head(300)
             sample = pd.concat([sample, subset])
+
+        print("Created {} sample sentence pairs:".format(sample.shape[0]))
+        print(sample.head())
 
         return sample[['genre', 'gold_label', 'pairID', 'promptID', 'sentence1', 'sentence2', 'expected_rank']]
