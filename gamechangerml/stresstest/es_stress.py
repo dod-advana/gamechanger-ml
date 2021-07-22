@@ -58,7 +58,7 @@ class StressTest():
         print(f"Max CPU: %s" % max_cpu)
         print("Num of results complete: %s" % num_complete)
         print("--- Full Cycle: %s seconds ---" % (time.time() - cycle_start_time))
-    def write_stats():
+    def write_stats(self):
         with open(f"stats_{round(time.time())}.json", 'w') as f:
             json.dump(self.es.nodes.stats(),f)
 
