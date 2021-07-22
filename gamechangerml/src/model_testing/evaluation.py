@@ -173,47 +173,42 @@ class RetrieverEvaluator(TransformerEvaluator):
         columns = [
             'index',
             'queries',
-            'top_predicted_id',
             'top_expected_ids',
             'predicted_rank',
-            'predicted_text',
+            'text',
             'top_result_match',
             'in_top_10',
             'score'
         ]
-        query_count = 0
-        predicted_rank = 'NA'
-        matching_text = 'NA'
-        score = 'NA'
-        idx = 'NA'
-        top_result_match = False
-        in_top_10 = False
+
         csv_filename = os.path.join(self.save_path, timestamp_filename('msmarco_eval', '.csv'))
         with open(csv_filename, 'w') as csvfile:
             csvwriter = csv.writer(csvfile)  
             csvwriter.writerow(columns) 
 
-            for idx, query in self.msmarco.queries.items():
+            query_count = 0
+            for idx, query in self.msmarco.queries.items(): 
+                rank = 'NA'
+                matching_text = 'NA'
+                score = 'NA'
+                top_result_match = False
+                in_top_10 = False
                 print(query_count, query)
-                expected_ids = self.msmarco.relations[idx]
+                expected_id = self.msmarco.relations[idx][0]
                 doc_texts, doc_ids, doc_scores = self.retriever.retrieve_topn(query)
-                for _id in expected_ids:
-                    if _id in doc_ids:
-                        in_top_10 = True
-                        ix = doc_ids.index(_id)
-                        predicted_rank = ix
-                        matching_text = self.msmarco.collection[_id]
-                        score = doc_scores[ix]
-                        if ix == 0:
-                            top_result_match = True
-                            break
+                if expected_id in doc_ids:
+                    in_top_10 = True
+                    rank = doc_ids.index(expected_id)
+                    matching_text = self.msmarco.collection[expected_id]
+                    score = doc_scores[rank]
+                    if rank == 0:
+                        top_result_match = True
 
                 row = [[
                     str(query_count),
                     str(query),
-                    str(ix),
-                    str(expected_ids),
-                    str(predicted_rank),
+                    str(expected_id),
+                    str(rank),
                     str(matching_text),
                     str(top_result_match),
                     str(in_top_10),

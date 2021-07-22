@@ -53,11 +53,19 @@ class MSMarcoData(ValidationData):
         self.collection = open_json(validation_config['msmarco']['collection'], self.validation_dir)
         self.relations = open_json(validation_config['msmarco']['relations'], self.validation_dir)
         self.metadata = open_json(validation_config['msmarco']['metadata'], self.validation_dir)
+        self.single_queries = self.filter_queries()
         self.msmarco_corpus = self.get_msmarco_corpus()
 
     def get_msmarco_corpus(self):
 
         return [(x, y, '') for x, y in self.collection.items()]
+
+    def filter_queries(self):
+
+        include = [i for i, x in self.relations.items() if len(x)==1]
+        print("Number MSMarco test queries: ", len(include))
+        
+        return {x: self.queries[x] for x in include}
     
 
 class NLIData(ValidationData):
