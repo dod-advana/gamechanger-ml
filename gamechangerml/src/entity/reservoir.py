@@ -23,8 +23,8 @@ Attributes:
 Author: Jason Liu
 Date: May 24th, 2014
 
+from https://github.com/jxnl/python-reservoir
 """
-# from https://github.com/jxnl/python-reservoir
 from __future__ import print_function
 
 import sys

@@ -7,6 +7,21 @@ logger = logging.getLogger(__name__)
 
 
 def preprocess(dataset, model_name_or_path, max_len, sep=" "):
+    """
+    Ensures that the sequence of tokens representing a sentence is
+    less than or equal to `max_len` after tokenizing by model's tokenizer.
+    Output is to STDOUT.
+
+    Args:
+        dataset (str): CoNLL formatted data
+
+        model_name_or_path (str): Hugging Face name or local model directory
+
+        max_len (int): maximum sequence length
+
+        sep (str): separator between a token and its entity tag
+
+    """
     subword_len_counter = 0
 
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
