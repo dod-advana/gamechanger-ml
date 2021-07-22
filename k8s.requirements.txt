@@ -1,11 +1,14 @@
 requests
 urllib3
 annoy
+bert-extractive-summarizer==0.5.*
 boto3
 elasticsearch
 en-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.0.0/en_core_web_lg-3.0.0.tar.gz
 en-core-web-md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.0.0/en_core_web_md-3.0.0.tar.gz
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0.tar.gz
+faiss-cpu==1.*
+faiss-gpu==1.*
 fastapi==0.61.*
 fastapi_utils==0.2.*
 fuzzywuzzy
