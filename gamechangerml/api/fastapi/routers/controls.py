@@ -129,6 +129,23 @@ async def s3_func(function, response: Response):
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return models
 
+@router.get("/files_in_corpus", status_code=200)
+async def files_in_corpus(response: Response):
+    """s3_func - s3 functionality for model managment
+    Args:
+        model: str
+    Returns:
+    """
+    number_files = 0
+    try:
+        logger.info("Attempting to download dependencies from S3")
+        number_files = len([name for name in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, name))])
+    except:
+        logger.warning(f"Could not get dependencies from S3")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    return number_files
+
+
 ## Post Methods ##
 
 @router.post("/reloadModels", status_code=200)
@@ -179,12 +196,13 @@ async def download_corpus(corpus_dict: dict, response: Response):
         # grabs the s3 path to the corpus from the post in "corpus" 
         # then passes in where to dowload the corpus locally.
         args = {"corpus_dir":corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+        processmanager.update_status(processmanager.corpus_download)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()
     except:
-        logger.warning(f"Could not get dependencies from S3")
+        logger.warning(f"Could not get corpus from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return get_process_status()
+    return await get_process_status()
 
 @router.post("/trainModel", status_code=200)
 async def tain_model(model_dict: dict, response: Response):
@@ -207,6 +225,7 @@ async def tain_model(model_dict: dict, response: Response):
             "upload": bool(model_dict["upload"]),
             "version": model_dict["version"]
         }
+        processmanager.update_status(processmanager.training)
         corpus_thread = MlThread(create_embedding, args)
         corpus_thread.start()
 
