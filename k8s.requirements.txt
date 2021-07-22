@@ -12,13 +12,13 @@ faiss-gpu==1.*
 fastapi==0.61.*
 fastapi_utils==0.2.*
 fuzzywuzzy
-gensim
+gensim==3.*
 gunicorn==20.*
 uvicorn==0.13.*
 uvloop==0.14.*
 matplotlib
 networkx
-nltk
+nltk==3.*
 numpy
 packaging
 pandas
