@@ -31,6 +31,8 @@ RUN dnf install -y \
         unzip \
         python3-cffi \
         libffi-devel \
+        libpq \
+        libpq-devel \
         cairo \
     && dnf clean all \
     && rm -rf /var/cache/yum

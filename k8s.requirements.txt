@@ -6,9 +6,13 @@ elasticsearch
 en-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.0.0/en_core_web_lg-3.0.0.tar.gz
 en-core-web-md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.0.0/en_core_web_md-3.0.0.tar.gz
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0.tar.gz
-fastapi_utils
+fastapi==0.61.*
+fastapi_utils==0.2.*
 fuzzywuzzy
 gensim
+gunicorn==20.*
+uvicorn==0.13.*
+uvloop==0.14.*
 matplotlib
 networkx
 nltk
@@ -20,9 +24,9 @@ pytest
 PyYAML
 redis
 scikit_learn
-spacy==3.0.6
-tensorflow==2.5.0
-torch
+spacy==3.0.*
+tensorflow==2.5.*
+torch==1.7.*
 tqdm
 transformers
 txtai
