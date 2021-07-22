@@ -99,16 +99,17 @@ def gen_parser():
               """
     parser = ArgumentParser(description=desc)
     group = parser.add_mutually_exclusive_group()
-    parser.add_argument('size',
-                        help="The number of elements you wish you sample",
-                        type=int)
-    group.add_argument('-f', '--file',
-                      default=False,
-                       type=str)
-    group.add_argument('-s', '--stream',
-                       default=False,
-                       action='store_true',
-                       help='For use with pipes and redirects')
+    parser.add_argument(
+        "size", help="The number of elements you wish you sample", type=int
+    )
+    group.add_argument("-f", "--file", default=False, type=str)
+    group.add_argument(
+        "-s",
+        "--stream",
+        default=False,
+        action="store_true",
+        help="For use with pipes and redirects",
+    )
     return parser
 
 
@@ -126,6 +127,7 @@ def main():
         for line in sys.stdin:
             sampler.feed(line.strip())
         print(sampler)
+
 
 if __name__ == "__main__":
     sys.exit(main())

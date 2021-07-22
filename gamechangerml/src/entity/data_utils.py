@@ -51,6 +51,4 @@ if __name__ == "__main__":
         required=True,
     )
     args = parser.parse_args()
-    mv_rand_sent_csv(
-        args.src_dir, args.output_dir, args.num_files
-    )
+    mv_rand_sent_csv(args.src_dir, args.output_dir, args.num_files)

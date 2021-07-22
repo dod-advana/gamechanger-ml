@@ -90,7 +90,7 @@ def ner_training_data(
     shuffle,
     abbrv_re=None,
     entity_re=None,
-    entity2type=None
+    entity2type=None,
 ):
     """
     Create NER training data in CoNLL-2003 format. For more information on
