@@ -57,8 +57,10 @@ function activate_venv() {
 }
 
 function start_gunicorn() {
+  # no return from this function. Don't set traps, dont add logic after calling it..
+  #  ... gunicorn will replace shell process
   echo "[INFO] Starting gunicorn workers for the API ..."
-  gunicorn "$@"
+  exec gunicorn "$@"
 }
 
 function start_env_prod() {
