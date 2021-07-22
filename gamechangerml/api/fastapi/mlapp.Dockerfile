@@ -30,5 +30,11 @@ RUN "${BASE_APP_VENV_PATH}/bin/pip" install --no-cache-dir --no-deps -r "gamecha
 COPY . gamechangerml/.
 # RUN mkdir gamechanger-ml/gamechangerml
 WORKDIR gamechangerml
-# ENTRYPOINT sleep 60 
-ENTRYPOINT  ["/bin/bash",  "gamechangerml/api/fastapi/startFast.sh", "DEV"]
+
+EXPOSE 5000
+
+ENV ENV_TYPE="DEV" \
+    DOWNLOAD_DEP="false" \
+    CONTAINER_RELOAD="false"
+
+ENTRYPOINT ["/bin/bash", "./gamechangerml/api/fastapi/startFast.sh"]

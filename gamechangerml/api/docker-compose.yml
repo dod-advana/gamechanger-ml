@@ -25,6 +25,9 @@ services:
     ports:
       - "5000:5000"
     environment:
+      - ENV_TYPE=${ENV_TYPE:-DEV}
+      - DOWNLOAD_DEP=${DOWNLOAD_DEP:-false}
+      - CONTAINER_RELOAD=${CONTAINER_RELOAD:-false}
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
       - GC_ML_HOST=${GC_ML_HOST}
       - REDIS_HOST=${REDIS_HOST}

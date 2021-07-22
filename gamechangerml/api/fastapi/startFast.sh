@@ -9,28 +9,36 @@ readonly REPO_DIR="$( cd "$SCRIPT_PARENT_DIR/../../../"  >/dev/null 2>&1 && pwd 
 readonly MLAPP_VENV_DIR="${MLAPP_VENV_DIR:-/opt/gc-venv-current}"
 readonly DS_SETUP_PATH="${REPO_DIR}/gamechangerml/setup_env.sh"
 
-ENV_TYPE="${1:-${ENV_TYPE:-}}"
-#DOWNLOAD_DEP="${2:-${DOWNLOAD_DEP:-"false"}}"
+ENV_TYPE="${ENV_TYPE:+${ENV_TYPE^^}}"
+DOWNLOAD_DEP="${DOWNLOAD_DEP:+${DOWNLOAD_DEP,,}}"
+CONTAINER_RELOAD="${CONTAINER_RELOAD:+${CONTAINER_RELOAD,,}}"
 
-[[ -z "${ENV_TYPE}" ]] && {
-  >&2 echo "[WARNING] No ENV_TYPE specified, setting to 'PROD' ..."
-  ENV_TYPE="PROD"
+[[ -z "${DOWNLOAD_DEP:-}" ]] && {
+  >&2 echo "[WARNING] No DOWNLOAD_DEP specified, setting to 'false' ..."
+  DOWNLOAD_DEP="false"
 }
 
-
-case "${DOWNLOAD_DEP:-}" in
-  "true"|"false")
+case "${DOWNLOAD_DEP}" in
+  true|false)
     export DOWNLOAD_DEP
-    ;;
-  "")
-    >&2 echo "[WARNING] No DOWNLOAD_DEP specified, setting to 'true' ..."
-    export DOWNLOAD_DEP="true"
     ;;
   *)
     >&2 echo "[ERROR] Invalid DOWNLOAD_DEP specified: '$DOWNLOAD_DEP'"
     exit 1
     ;;
 esac
+
+[[ -z "${ENV_TYPE:-}" ]] && {
+  >&2 echo "[WARNING] No ENV_TYPE specified, setting to 'PROD' ..."
+  ENV_TYPE="PROD"
+}
+export ENV_TYPE
+
+[[ -z "${CONTAINER_RELOAD:-}" ]] && {
+  >&2 echo "[WARNING] No CONTAINER_RELOAD specified, setting to 'false' ..."
+  CONTAINER_RELOAD="false"
+}
+export CONTAINER_RELOAD
 
 function download_dependencies() {
     [[ "${DOWNLOAD_DEP}" == "true" ]] && {
@@ -63,8 +71,15 @@ function start_gunicorn() {
   exec gunicorn "$@"
 }
 
+function start_uvicorn() {
+  # no return from this function. Don't set traps, dont add logic after calling it..
+  #  ... uvicorn will replace shell process
+  echo "[INFO] Starting uvicorn workers for the API ..."
+  exec uvicorn "$@"
+}
+
 function start_env_prod() {
-  source "${DS_SETUP_PATH}" "${ENV_TYPE}"
+  source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
@@ -77,22 +92,32 @@ function start_env_prod() {
 }
 
 function start_env_dev() {
-  source "${DS_SETUP_PATH}" "${ENV_TYPE}"
+  source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
-  start_gunicorn gamechangerml.api.fastapi.mlapp:app \
-      --bind 0.0.0.0:5000 \
+  if [[ "${CONTAINER_RELOAD}" == "true" ]]; then
+    start_uvicorn gamechangerml.api.fastapi.mlapp:app \
+      --host 0.0.0.0 \
+      --port 5000 \
       --workers 1 \
-      --graceful-timeout 1000 \
-      --timeout 1200 \
-      --keep-alive 30 \
-      --reload \
-      -k uvicorn.workers.UvicornWorker \
-      --log-level debug
+      --log-level debug \
+      --timeout-keep-alive 240 \
+      --reload
+  else
+    start_gunicorn gamechangerml.api.fastapi.mlapp:app \
+        --bind 0.0.0.0:5000 \
+        --workers 1 \
+        --graceful-timeout 1000 \
+        --timeout 1200 \
+        --keep-alive 30 \
+        --reload \
+        -k uvicorn.workers.UvicornWorker \
+        --log-level debug
+  fi
 }
 
 function start_env_devlocal() {
-  source "${DS_SETUP_PATH}" "${ENV_TYPE}"
+  source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
@@ -106,22 +131,11 @@ function start_env_devlocal() {
 }
 
 function start_env_k8s_dev() {
-  source "${DS_SETUP_PATH}" "${ENV_TYPE}"
-  activate_venv
-  download_dependencies
-  start_gunicorn gamechangerml.api.fastapi.mlapp:app \
-      --bind 0.0.0.0:5000 \
-      --workers 1 \
-      --graceful-timeout 1000 \
-      --timeout 1200 \
-      --keep-alive 30 \
-      --reload \
-      -k uvicorn.workers.UvicornWorker \
-      --log-level debug
+  start_env_dev
 }
 
 function start_env_k8s_test() {
-  source "${DS_SETUP_PATH}" "${ENV_TYPE}"
+  source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
@@ -134,7 +148,7 @@ function start_env_k8s_test() {
 }
 
 function start_env_k8s_prod() {
-  source "${DS_SETUP_PATH}" "${ENV_TYPE}"
+  source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
@@ -145,7 +159,6 @@ function start_env_k8s_prod() {
       -k uvicorn.workers.UvicornWorker \
       --log-level debug
 }
-
 
 case "${ENV_TYPE}" in
   PROD)

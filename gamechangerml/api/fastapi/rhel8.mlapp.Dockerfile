@@ -88,5 +88,8 @@ ENV MLAPP_VENV_DIR="${APP_VENV}"
 WORKDIR "$APP_DIR"
 EXPOSE 5000
 
+ENV ENV_TYPE="DEV" \
+    DOWNLOAD_DEP="false" \
+    CONTAINER_RELOAD="false"
+
 ENTRYPOINT ["/bin/bash", "./gamechangerml/api/fastapi/startFast.sh"]
-CMD ["K8S_DEV"]
