@@ -307,7 +307,7 @@ if __name__ == "__main__":
         help="training split; dev, val are (1 - t_split) / 2",
     )
     args = parser.parse_args()
-    if not 0. < args.t_split <= 1.0:
+    if not 0.0 < args.t_split <= 1.0:
         raise ValueError("invalid training split; got {}".format(args.t_split))
 
     logger.info("retrieving spaCy model")

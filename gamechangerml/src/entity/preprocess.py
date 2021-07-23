@@ -82,8 +82,10 @@ if __name__ == "__main__":
 
     li.initialize_logger(to_file=False, log_name="none")
 
-    desc_ = "Preprocess NER dataset to split sequences > max_seq_len to " \
-            "separate sequences; output to STDOUT"
+    desc_ = (
+        "Preprocess NER dataset to split sequences > max_seq_len to "
+        "separate sequences; output to STDOUT"
+    )
     parser = ArgumentParser(
         prog="python " + os.path.split(__file__)[-1],
         description=desc_,
