@@ -172,7 +172,7 @@ def ner_training_data(
     count = 0
     with open(out_fp, "w") as fp:
         for zipped, uniq_labels in tqdm(
-            training_generator, total=len(sent_dict), desc="sentence"
+            training_generator, total=len(ent_sents), desc="sentence"
         ):
             labels = labels.union(uniq_labels)
             count += 1
@@ -240,19 +240,19 @@ def main(
     output_names = [p.replace("_sent.csv", ".txt.tmp") for p in sent_fnames]
 
     df = pd.read_csv(sentence_csv, delimiter=",", header=None)
+    logger.info("examples : {:>4,d}".format(len(df)))
     if n_samples > 0:
         df = df.head(n_samples)
 
     if save_tdv:
         train, dev_val = train_test_split(df, train_size=t_split)
-        logger.info("train {:,}".format(len(train)))
         dev, val = train_test_split(dev_val, train_size=0.50)
 
         # save intermediate output for now
         for idx, df in enumerate((train, dev, val)):
             df.to_csv(sent_fnames[idx], header=False, index=False, sep=",")
             fn_ = os.path.split(sent_fnames[idx])[-1]
-            logger.info("samples {:>4,d} : {:>14s}".format(len(df), fn_))
+            logger.info("samples {:>5,d} : {:>14s}".format(len(df), fn_))
 
     for idx in range(3):
         ner_training_data(

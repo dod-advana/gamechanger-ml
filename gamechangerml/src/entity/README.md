@@ -34,7 +34,7 @@ _e.g._,
    
 3. Next, shuffle and select *n* samples, _e.g._, 2,500 sentences:
     ```
-    sort -R big_sentence_file.csv | head -2500 > rnd_2500_my_big_sentences.csv
+    sort -R big_sentence_file.csv | head -3000 > rnd_3K_my_big_sentences.csv
     ```
    For the DoD[DIM] collection, this might take a few tens of seconds. If the file is very large,
    consider using `reservoir.py`.
@@ -42,7 +42,7 @@ _e.g._,
 4. `ner_training_data.py` uses the output of Step 3 to create `train`, `dev`, and `val` datasets
     ```
     python ner_training_data.py \
-        --sentence-csv rnd_2500_big_sentence_file.csv \
+        --sentence-csv rnd_3K_big_sentence_file.csv \
         --entity-csv you_path_to/gamechanger-ml/gamechangerml/src/entity/aux_data/entities.csv \
         --separator space \
         --n-samples 0 \
@@ -52,7 +52,7 @@ _e.g._,
    Just prior to training the NER model, these files will pass through `preprocess.py` creating the required
    input files `train.txt`, `dev.txt`, and `val.txt`.
    
-   **NB** Due to the tagging, etc., the resulting files get very large, very quickly. For 2,500 sentences (371K),
-   the `train.txt.tmp` clocks in at 5.2M.
+   **NB** Due to the tagging, etc., the resulting files get very large, very quickly. For 3,000 sentences (430KB `.csv`),
+   the `train.txt.tmp` clocks in at 93MB.
    
-   
+ 
