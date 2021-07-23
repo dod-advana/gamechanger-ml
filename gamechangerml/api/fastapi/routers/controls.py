@@ -33,40 +33,46 @@ async def get_process_status():
     }
 @router.get("/getModelsList")
 def get_downloaded_models_list():
-    qexp_list = []
-    sent_index_list = []
-    transformer_list = []
+    qexp_list = {}
+    sent_index_list = {}
+    transformer_list = {}
     try:
-        qexp_list = [
-            f
-            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if ("qexp_" in f) and ("tar" not in f)
-        ]
-        qexp_list.sort(reverse=True)
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("qexp_" in f) and ("tar" not in f):
+                qexp_list[f] = {}
+                meta_path = os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json")
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    qexp_list[f] = json.load(meta_file)
+                    meta_file.close()
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get QEXP model path")
 
     # TRANSFORMER MODEL PATH
     try:
-        transformer_list = [
-            trans
-            for trans in os.listdir(LOCAL_TRANSFORMERS_DIR.value)
-            if trans not in ignore_files and '.' not in trans
-        ]
+        for trans in os.listdir(LOCAL_TRANSFORMERS_DIR.value):
+            if trans not in ignore_files and '.' not in trans:
+                transformer_list[trans] = {}
+                config_path = os.path.join(LOCAL_TRANSFORMERS_DIR.value, trans, "config.json")
+                if os.path.isfile(config_path):
+                    config_file = open(config_path)
+                    transformer_list[trans] = json.load(config_file)
+                    config_file.close()
     except Exception as e:
         logger.error(e)
-
         logger.info("Cannot get TRANSFORMER model path")
     # SENTENCE INDEX
     # get largest file name with sent_index prefix (by date)
     try:
-        sent_index_list = [
-            f
-            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if ("sent_index" in f) and ("tar" not in f)
-        ]
-        sent_index_list.sort(reverse=True)
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("sent_index" in f) and ("tar" not in f):
+                sent_index_list[f] = {}
+                meta_path = os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json")
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    sent_index_list[f] = json.load(meta_file)
+                    meta_file.close()
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get Sentence Index model path")
@@ -77,6 +83,20 @@ def get_downloaded_models_list():
     }
     return model_list
 
+@router.get("/files_in_corpus", status_code=200)
+async def files_in_corpus(response: Response):
+    """files_in_corpus - checks how many files are in the corpus directory
+    Args:
+    Returns: integer
+    """
+    number_files = 0
+    try:
+        logger.info("Attempting to download dependencies from S3")
+        number_files = len([name for name in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, name))])
+    except:
+        logger.warning(f"Could not get dependencies from S3")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    return number_files
 
 @router.get("/getCurrentTransformer")
 async def get_trans_model():
@@ -88,7 +108,9 @@ async def get_trans_model():
     sent_model = latest_intel_model_sent.value
     return {
         "sentence_models": sent_model,
-        # "model_name": intel_model,
+        "sentence_index":SENT_INDEX_PATH.value,
+        "qexp_model":QEXP_MODEL_NAME.value,
+        "qa_model": latest_qa_model.value
     }
 
 
@@ -96,7 +118,6 @@ async def get_trans_model():
 async def download(response: Response):
     """download - downloads dependencies from s3
     Args:
-        model: str
     Returns:
     """
     try:
@@ -115,7 +136,7 @@ async def download(response: Response):
 async def s3_func(function, response: Response):
     """s3_func - s3 functionality for model managment
     Args:
-        model: str
+        function: str
     Returns:
     """
     models = []
@@ -128,22 +149,6 @@ async def s3_func(function, response: Response):
         logger.warning(f"Could not get dependencies from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return models
-
-@router.get("/files_in_corpus", status_code=200)
-async def files_in_corpus(response: Response):
-    """s3_func - s3 functionality for model managment
-    Args:
-        model: str
-    Returns:
-    """
-    number_files = 0
-    try:
-        logger.info("Attempting to download dependencies from S3")
-        number_files = len([name for name in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, name))])
-    except:
-        logger.warning(f"Could not get dependencies from S3")
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return number_files
 
 
 ## Post Methods ##
@@ -180,7 +185,7 @@ async def reload_models(model_dict: dict, response: Response):
     )
 
     logger.info("Reload Complete")
-    return
+    return await get_process_status()
 
 @router.post("/downloadCorpus", status_code=200)
 async def download_corpus(corpus_dict: dict, response: Response):
@@ -232,4 +237,4 @@ async def tain_model(model_dict: dict, response: Response):
     except:
         logger.warning(f"Could not train the model")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return
+    return await get_process_status()
