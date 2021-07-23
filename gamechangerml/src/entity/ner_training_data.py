@@ -14,8 +14,8 @@ optional arguments:
   -o OUTPUT_TXT, --output-txt OUTPUT_TXT
                         output file in CoNLL-2003 format
   -n N_SAMPLES, --n-samples N_SAMPLES
-                        how many samples to extract and tag (0 means get
-                        everything)
+                        how many samples to extract and tag (0 means use
+                        all rows)
   -r, --shuffle         randomly shuffle the sentence data
   -p {tab,space}, --separator {tab,space}
                         token <-> label separator, default is 'space'

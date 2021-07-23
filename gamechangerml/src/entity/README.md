@@ -11,7 +11,7 @@ Director B-GCPER
 , I-GCPER
 DLA I-GCPER
 shall O
-. O
+: O
 ```
 Sequences are separated by a single new line.
 
@@ -19,17 +19,18 @@ Sequences are separated by a single new line.
 This is a multi-step process at the moment. We'll use DoDD, DoDI, and DoDM documents from the corpus
 
 1. Create sentence `.csv` files. Run the CLI `src/text_classif/cli/raw_text2csv.py` with glob "DoD[DIM]*.json".
-This will a `docID_sentences.csv`, _e.g._, `DoDD_1000.20_sentences.csv` in the output directory of your choice.
+This will write a `<doc-id>_sentences.csv`, _e.g._, `DoDD_1000.20_sentences.csv` for each
+matching document to a specified output directory.
 
 2. We'll need to randomly sample a subset of the sentences, so first `cat` these files into one file, 
 _i.e._, 
     ```
-    cat *sentences.csv > your/output_path/my_big_sentences.csv
+    cat *sentences.csv > your/output_path/big_sentence_file.csv
     ```
    
 3. Shuffle, and select *n* samples, _e.g._, for 2,500 sentences:
     ```
-    sort -R my_big_sentence.csv | head -2500 > rnd_2500_my_big_sentences.csv
+    sort -R big_sentence_file.csv | head -2500 > rnd_2500_my_big_sentences.csv
     ```
    For the DoD[DIM] collection, this might take a few tens of seconds. If the file is very large,
    consider using `reservoir.py`.
@@ -37,7 +38,7 @@ _i.e._,
 4. `ner_training_data.py` uses the output of Step 3 to create `train`, `dev`, and `val` datasets
     ```
     python ner_training_data.py \
-        --sentence-csv rnd_2500_my_big_sentences.csv \
+        --sentence-csv rnd_2500_big_sentence_file.csv \
         --entity-csv you_path_to/gamechanger-ml/gamechangerml/src/entity/aux_data/entities.csv \
         --separator space \
         --n-samples 0 \
