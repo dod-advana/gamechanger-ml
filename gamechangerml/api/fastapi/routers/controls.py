@@ -162,28 +162,34 @@ async def reload_models(model_dict: dict, response: Response):
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
-    model_path_dict = get_model_paths()
-    if "sentence" in model_dict:
-        SENT_INDEX_PATH.value = os.path.join(
-            Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
-        )
-        model_path_dict["sentence"] = SENT_INDEX_PATH.value
-    if "qexp" in model_dict:
-        QEXP_MODEL_NAME.value = os.path.join(
-            Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
-        )
-        model_path_dict["qexp"] = QEXP_MODEL_NAME.value
-
-    logger.info("Attempting to load QE")
-    MODELS.initQE(model_path_dict["qexp"])
-    logger.info("Attempting to load QA")
-    MODELS.initQA()
-    logger.info("Attempting to load Sentence Transformer")
-    MODELS.initSentence(
-        index_path=model_path_dict["sentence"],
-        transformer_path=model_path_dict["transformers"],
-    )
-
+    try:
+        total = len(model_dict)
+        progress = 0
+        processmanager.update_status(processmanager.reloading, progress, total)
+        if "sentence" in model_dict:
+            SENT_INDEX_PATH.value = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
+            )
+            # uses SENT_INDEX_PATH by default
+            logger.info("Attempting to load Sentence Transformer")
+            MODELS.initSentence()
+            progress +=1
+            processmanager.update_status(processmanager.reloading, progress, total)
+        if "qexp" in model_dict:
+            QEXP_MODEL_NAME.value = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
+            )
+            # uses QEXP_MODEL_NAME by default
+            logger.info("Attempting to load QE")
+            MODELS.initQE()
+            progress +=1
+            processmanager.update_status(processmanager.reloading, progress, total)
+    except Exception as e:
+        logger.warning(e)
+        processmanager.update_status(processmanager.reloading, failed = True)
+    
+    #logger.info("Attempting to load QA")
+    #MODELS.initQA()
     logger.info("Reload Complete")
     return await get_process_status()
 
