@@ -105,6 +105,8 @@ def create_embedding(corpus, existing_embeds = None, encoder_model = "msmarco-di
             )
             utils.upload_file(local_path, s3_path)
             logger.info(f"Successfully uploaded files to {s3_sent_index_dir}")
+
+        processmanager.update_status(processmanager.training, 1, 1)
     except Exception as e:
         processmanager.update_status(processmanager.loading_corpus, failed=True)
         processmanager.update_status(processmanager.training, failed=True)

@@ -121,32 +121,44 @@ def get_s3_corpus_list():
 
 
 def get_s3_corpus(corpus_dir, output_dir = "corpus"):
-    bucket = s3_connect()
     corp = []
     try:
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-    except OSError as error:
-        print(error)
-    # get the s3.Bucket.objectsCollection of objects that meet the prefix
-    filter = bucket.objects.filter(Prefix=f"{corpus_dir}/")
-    total = len(list(filter))
-    completed = 0
-    # Initialize Progress
-    processmanager.update_status(processmanager.corpus_download, completed, total)
-    for obj in filter:
-        corp.append(obj.key)
-        filename = os.path.basename(obj.key)
+        bucket = s3_connect()
+        
         try:
-            local_path = os.path.join(output_dir, filename)
-            # Only grab file if it is not already downloaded
-            if not os.path.exists(local_path):
-                bucket.Object(obj.key).download_file(local_path)
-            completed += 1
-            # Update Progress
-            processmanager.update_status(processmanager.corpus_download, completed, total)
-        except RuntimeError:
-            logger.debug(f"Could not retrieve {filename}")
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+            else:
+                files = os.listdir(output_dir)
+                total = len(files)
+                logger.info("Removing existing corpus files.")
+                for f in files:
+                    os.remove(os.path.join(output_dir, f))
+        except OSError as error:
+            logger.warning(error)
+        # get the s3.Bucket.objectsCollection of objects that meet the prefix
+        filter = bucket.objects.filter(Prefix=f"{corpus_dir}/")
+        total = len(list(filter))
+        completed = 0
+        # Initialize Progress
+        processmanager.update_status(processmanager.corpus_download, completed, total)
+        logger.info("Downloading corpus from " + corpus_dir)
+        for obj in filter:
+            corp.append(obj.key)
+            filename = os.path.basename(obj.key)
+            try:
+                local_path = os.path.join(output_dir, filename)
+                # Only grab file if it is not already downloaded
+                if not os.path.exists(local_path):
+                    bucket.Object(obj.key).download_file(local_path)
+                completed += 1
+                # Update Progress
+                processmanager.update_status(processmanager.corpus_download, completed, total)
+            except RuntimeError:
+                logger.debug(f"Could not retrieve {filename}")
+    except Exception as error:
+        logger.warning(error)
+        processmanager.update_status(processmanager.corpus_download, failed=True)
     return corp
 
 
