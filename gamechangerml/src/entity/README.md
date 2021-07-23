@@ -20,15 +20,15 @@ This is a multi-step process at the moment. We'll use DoDD, DoDI, and DoDM docum
 
 1. Create sentence `.csv` files. Run the CLI `src/text_classif/cli/raw_text2csv.py` with glob "DoD[DIM]*.json".
 This will write a `<doc-id>_sentences.csv`, _e.g._, `DoDD_1000.20_sentences.csv` for each
-matching document to a specified output directory.
+matching document, to a specified output directory.
 
-2. We'll need to randomly sample a subset of the sentences, so first `cat` these files into one file, 
-_i.e._, 
+2. We'll need to UAR sample a subset of the sentences, so first `cat` these files into one file, 
+_e.g._, 
     ```
     cat *sentences.csv > your/output_path/big_sentence_file.csv
     ```
    
-3. Shuffle, and select *n* samples, _e.g._, for 2,500 sentences:
+3. Next, shuffle and select *n* samples, _e.g._, for 2,500 sentences:
     ```
     sort -R big_sentence_file.csv | head -2500 > rnd_2500_my_big_sentences.csv
     ```
@@ -45,7 +45,7 @@ _i.e._,
         --train-split 0.80
     ```
    This will create three files, `train.txt.tmp`, `dev.txt.tmp`, and `val.txt.tmp` (.80, .10, .10). 
-   Just prior to training the NER model, these files will pass through `preprocess.py` to creating the required
+   Just prior to training the NER model, these files will pass through `preprocess.py` creating the required
    input files `train.txt`, `dev.txt`, and `val.txt`.  Note: `--n-samples 0` means to use all sentences.
    
    
