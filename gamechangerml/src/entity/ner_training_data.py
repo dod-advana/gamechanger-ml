@@ -24,6 +24,7 @@ optional arguments:
 """
 import logging
 import os
+import random
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -34,16 +35,19 @@ import gamechangerml.src.text_classif.utils.classifier_utils as cu
 
 logger = logging.getLogger(__name__)
 
+SENT = "sentence"
+
 
 def _wc(txt):
     return txt.count(" ") + 1
 
 
-def _gen_ner_conll_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
-    SENT = "sentence"
+# TODO label negative examples as 1.5 x num entity sentences
+def _gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_dict, nlp):
     I_PRFX = "I-"
     B_PRFX = "B-"
     OH = "O"
+
     for row in sent_dict:
         sentence_text = row[SENT]
         if not sentence_text.strip():
@@ -53,7 +57,7 @@ def _gen_ner_conll_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
         starts_ends = [(t.idx, t.idx + len(t.orth_) - 1) for t in doc]
         ner_labels = [OH] * len(starts_ends)
         tokens = [t.orth_ for t in doc]
-        ent_spans = em.entities_spans(sentence_text, ent_re, abrv_re)
+        ent_spans = em.entities_spans(sentence_text, ent_re, abbrv_re)
 
         # find token indices of an extracted entity using their spans;
         # create CoNLL tags
@@ -128,6 +132,7 @@ def ner_training_data(
         logger.warning("unrecognized value for `sep`, got {}".format(sep))
         SEP = " "
 
+    multiplier = 1.5
     NL = "\n"
     EMPTYSTR = ""
     print_str = EMPTYSTR
@@ -136,8 +141,32 @@ def ner_training_data(
         abbrv_re, entity_re, entity2type = em.make_entity_re(entity_csv)
     sent_dict = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
 
-    training_generator = _gen_ner_conll_data(
-        abbrv_re, entity_re, entity2type, sent_dict, nlp
+    ent_sents = [
+        row
+        for row in sent_dict
+        if em.contains_entity(row[SENT], entity_re, abbrv_re)
+    ]
+    if not ent_sents:
+        logger.warning("no entities discovered in the input...")
+        return
+
+    n_ents = len(ent_sents)
+    logger.info("    entity sentences : {:>5,d}".format(n_ents))
+
+    sz = int(n_ents * multiplier)
+    non_ent_sents = [
+        row
+        for row in sent_dict
+        if len(row[SENT]) > 1
+        if not em.contains_entity(row[SENT], entity_re, abbrv_re)
+    ][:sz]
+    logger.info("non-entity sentences : {:>5,d}".format(len(non_ent_sents)))
+
+    ent_sents.extend(non_ent_sents)
+    random.shuffle(ent_sents)
+
+    training_generator = _gen_ner_conll_tags(
+        abbrv_re, entity_re, entity2type, ent_sents, nlp
     )
     labels = set()
     count = 0
@@ -216,6 +245,7 @@ def main(
 
     if save_tdv:
         train, dev_val = train_test_split(df, train_size=t_split)
+        logger.info("train {:,}".format(len(train)))
         dev, val = train_test_split(dev_val, train_size=0.50)
 
         # save intermediate output for now
