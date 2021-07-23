@@ -14,7 +14,7 @@ services:
     image: gamechanger-ml-gpu
     build:
       context: ../../.
-      dockerfile: gamechangerml/api/fastapi/mlapp.Dockerfile
+      dockerfile: gamechangerml/api/fastapi/rhel8.mlapp.Dockerfile
     deploy:
       resources:
         reservations:
@@ -48,7 +48,7 @@ services:
       - DOCKER=true
       - LD_LIBRARY_PATH=/usr/local/cuda/lib64/
     volumes:
-      - ../../gamechangerml:/gamechangerml/gamechangerml/
+      - "../../gamechangerml/models:/opt/app-root/src/gamechangerml/models"
       - ~/.aws/:/root/.aws
     depends_on:
       - gc-redis
