@@ -6,6 +6,7 @@ from gamechangerml.api.utils.redisdriver import CacheVariable
 corpus_download = "corpus_download"
 loading_corpus = "loading_corpus"
 training = "model_training"
+reloading = "reloading"
 
 # the dictionary that holds all the progress values
 PROCESS_STATUS = CacheVariable("process_status", True)
@@ -15,7 +16,8 @@ thread_lock = threading.Lock()
 default_flags = {
     corpus_download: False,
     training: False,
-    loading_corpus:False
+    loading_corpus:False,
+    reloading:False
 }
 
 PROCESS_STATUS.value = {
