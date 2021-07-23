@@ -71,7 +71,7 @@ def make_entity_re(entity_csv):
         if ent_sf:
             entity2type[ent_sf.lower()] = etype
 
-    entities = list(set(df["LF"]))
+    entities = list(set(df[LF]))
     abbrvs = list(set(df[SF]))
     unique_etypes = set(df[ETYPE])
 

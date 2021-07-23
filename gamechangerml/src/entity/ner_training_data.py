@@ -25,8 +25,8 @@ optional arguments:
 import logging
 import os
 
-import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 import gamechangerml.src.entity.entity_mentions as em
@@ -167,6 +167,7 @@ def main(
     sep,
     shuffle,
     t_split,
+    save_tdv=True,
 ):
     """
     This creates CoNLL-formatted data for use in the NER model. Three files
@@ -181,21 +182,8 @@ def main(
         entity_csv (str): csv of entities & types;
             see `entity/aux_data/entities.csv`
 
-        sentence_csv (str): all sentences from a subset of corpus documents.
-            This is constructed as follow:
-                (1) Randomly select a set of corpus documents and store
-                    in a separate directory.
-                (2) Run `text_classif/cli/raw_text2csv.py` on the files of (1)
-                    - this creates a `csv` of sentences for each document;
-                (3) On the commandline, `cat` these files into one `sentence`
-                    csv.
-                (4) Randomly select a subset of sentences and store in a
-                    separate `.csv`. For example, in the file in (3) is
-                    `dod_dim_ner_sents.csv` and 50K sentences are desired,
-                    the easiest way is to use
-
-                    `sort -R dod_dim_ner_sents.csv | head -50000 /
-                        > rnd_50k_dod_dim_ner_sents.csv`
+        sentence_csv (str): randomly chosen sentences in format
+            src,label,sentence
 
         n_samples (int): total number of samples desired
 
@@ -207,40 +195,47 @@ def main(
 
         t_split (float): fraction used for training data, e.g., 0.80; dev
             and val data are split as (1 - t_split) / 2
+
+        save_tdv (bool); save train, dev, val datasets to their own .csv
     """
     if not os.path.isfile(sentence_csv):
         raise FileExistsError("no sentence_csv; got {}".format(sentence_csv))
+    abbrv_re, entity_re, entity2type = em.make_entity_re(entity_csv)
 
     in_path, _ = os.path.split(sentence_csv)
     sent_fnames = (
         os.path.join(in_path, "train_sent.csv"),
-        os.path.join(in_path, "dev.txt.tmp"),
-        os.path.join(in_path, "val.txt.tmp"),
+        os.path.join(in_path, "dev_sent.csv"),
+        os.path.join(in_path, "val_sent.csv"),
     )
     output_names = [p.replace("_sent.csv", ".txt.tmp") for p in sent_fnames]
-    dev_frac = t_split + (1.0 - t_split) / 2
 
     df = pd.read_csv(sentence_csv, delimiter=",", header=None)
     if n_samples > 0:
         df = df.head(n_samples)
 
-    train, dev, val = np.split(
-        df.sample(frac=1),
-        [int(t_split * len(df)), int(dev_frac * len(df))],
-    )
-    for idx, df in enumerate((train, dev, val)):
-        df.to_csv(sent_fnames[idx], header=False, index=False, sep=",")
-        logger.info("samples : {:>4,d}".format(len(df)))
+    if save_tdv:
+        train, dev_val = train_test_split(df, train_size=t_split)
+        dev, val = train_test_split(dev_val, train_size=0.50)
 
-    for idx, sent_csv in enumerate(sent_fnames):
+        # save intermediate output for now
+        for idx, df in enumerate((train, dev, val)):
+            df.to_csv(sent_fnames[idx], header=False, index=False, sep=",")
+            fn_ = os.path.split(sent_fnames[idx])[-1]
+            logger.info("samples {:>4,d} : {:>14s}".format(len(df), fn_))
+
+    for idx in range(3):
         ner_training_data(
             entity_csv,
-            sent_csv,
+            sent_fnames[idx],
             n_samples,
             nlp,
             sep,
             output_names[idx],
             shuffle,
+            abbrv_re=abbrv_re,
+            entity_re=entity_re,
+            entity2type=entity2type,
         )
 
 
@@ -307,6 +302,7 @@ if __name__ == "__main__":
         help="training split; dev, val are (1 - t_split) / 2",
     )
     args = parser.parse_args()
+
     if not 0.0 < args.t_split <= 1.0:
         raise ValueError("invalid training split; got {}".format(args.t_split))
 

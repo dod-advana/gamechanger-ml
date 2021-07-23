@@ -35,6 +35,7 @@ Assistant Secretary of Defense for Logistics and Materiel Readiness,ASD(L&MR),GC
 "Assistant Secretary of Defense for Nuclear, Chemical and Biological Defense Programs",ASD(NCB),GCPER
 Assistant Secretary of Defense for Operational Energy Plans and Programs,ASD(OEPP),GCPER
 Assistant Secretary of Defense for Reserve Affairs,ASD(RA),GCPER
+Assistant Secretary of Defense for Reserve Integration,ASD(RI),GCPER
 Assistant Secretary of Defense for Special Operations and Low-Intensity Conflict and Interdependent Capabilities,ASD(SO/LIC&IC),GCPER
 Assistant Secretary of Defense for Special Operations/Low Intensity Conflict & Interdependent Capabilities,ASD(SO/LIC&IC),GCPER
 Assistant Secretary of Defense for Special Operations/Low-Intensity Conflict,ASD(SO/LIC),GCPER
@@ -206,6 +207,7 @@ Secretary of the Army,"",GCPER
 Secretary of Defense,SecDef,GCPER
 Secretary of the Navy,"",GCPER
 Secretary of the Department of Veterans Affairs,"",GCPER
+Secretary of State,"",GCPER
 Selective Service System,SSS,GCORG
 Sergeant Major of the Army,SMA,GCPER
 Sergeant Major of the Marine Corps,SMMC,GCPER
