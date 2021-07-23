@@ -10,7 +10,7 @@ from gamechangerml.src.text_classif.predictor import Predictor
 logger = logging.getLogger(__name__)
 
 
-def _predict_docs(input_dicts, predictor, max_seq_len, batch_size):
+def predict_doc(input_dicts, predictor, max_seq_len, batch_size):
     adder = 0
     if len(input_dicts) % batch_size != 0:
         adder = 1
@@ -90,7 +90,7 @@ def predict_glob(
     predictor = Predictor(model_path_name, num_labels=2)
 
     for input_dicts, fname in cu.raw2dict(data_path, glob, key="raw_text"):
-        out_list = _predict_docs(
+        out_list = predict_doc(
             input_dicts, predictor, max_seq_len, batch_size
         )
         yield out_list, fname

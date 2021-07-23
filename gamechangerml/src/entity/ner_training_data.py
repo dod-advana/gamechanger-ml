@@ -55,7 +55,7 @@ def _gen_ner_conll_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
         tokens = [t.orth_ for t in doc]
         ent_spans = em.entities_spans(sentence_text, ent_re, abrv_re)
 
-        # find token indices of an extracted entity using their spans,
+        # find token indices of an extracted entity using their spans;
         # create CoNLL tags
         for ent, ent_st_end in ent_spans:
             token_idxs = [
@@ -76,8 +76,8 @@ def _gen_ner_conll_data(abrv_re, ent_re, entity2type, sent_dict, nlp):
                     ner_labels[idx] = I_PRFX + entity2type[ent.lower()]
                 else:
                     logger.error("KeyError: {}".format(ent.lower()))
-        uniq_labels = set(ner_labels)
-        yield zip(tokens, ner_labels), uniq_labels
+        unique_labels = set(ner_labels)
+        yield zip(tokens, ner_labels), unique_labels
 
 
 def ner_training_data(
@@ -111,12 +111,12 @@ def ner_training_data(
 
         shuffle (bool): if True, randomize the order of the sentences
 
-        abbrv_re (SRE_Pattern): compiled regular expression
+        abbrv_re (SRE_Pattern): compiled regular expression; optional
 
-        entity_re (SRE_Pattern): compiled regular expression
+        entity_re (SRE_Pattern): compiled regular expression; optional
 
         entity2type (dict): map of an entity to its type, e.g.,
-            GCORG, GCPER
+            GCORG, GCPER, etc; optional.
     """
     if sep == "space":
         SEP = " "
@@ -168,13 +168,56 @@ def main(
     shuffle,
     t_split,
 ):
+    """
+    This creates CoNLL-formatted data for use in the NER model. Three files
+    are created `train.txt.tmp`, `dev.txt.tmp`, and `val.txt.tmp` in the
+    same director as `sentence_csv`.
+
+    Prior to loading these for training, these files will be run through
+    `preprocess` to insure the max sequence length is respected by the
+    model's tokenizer.
+
+    Args:
+        entity_csv (str): csv of entities & types;
+            see `entity/aux_data/entities.csv`
+
+        sentence_csv (str): all sentences from a subset of corpus documents.
+            This is constructed as follow:
+                (1) Randomly select a set of corpus documents and store
+                    in a separate directory.
+                (2) Run `text_classif/cli/raw_text2csv.py` on the files of (1)
+                    - this creates a `csv` of sentences for each document;
+                (3) On the commandline, `cat` these files into one `sentence`
+                    csv.
+                (4) Randomly select a subset of sentences and store in a
+                    separate `.csv`. For example, in the file in (3) is
+                    `dod_dim_ner_sents.csv` and 50K sentences are desired,
+                    the easiest way is to use
+
+                    `sort -R dod_dim_ner_sents.csv | head -50000 /
+                        > rnd_50k_dod_dim_ner_sents.csv`
+
+        n_samples (int): total number of samples desired
+
+        nlp (spacy.lang.en.English): spaCy language model
+
+        sep (str): separate between a token and its type
+
+        shuffle (bool): If True, randomize the sentence data
+
+        t_split (float): fraction used for training data, e.g., 0.80; dev
+            and val data are split as (1 - t_split) / 2
+    """
+    if not os.path.isfile(sentence_csv):
+        raise FileExistsError("no sentence_csv; got {}".format(sentence_csv))
+
     in_path, _ = os.path.split(sentence_csv)
-    sent_names = (
+    sent_fnames = (
         os.path.join(in_path, "train_sent.csv"),
-        os.path.join(in_path, "dev_sent.csv"),
-        os.path.join(in_path, "val_sent.csv"),
+        os.path.join(in_path, "dev.txt.tmp"),
+        os.path.join(in_path, "val.txt.tmp"),
     )
-    output_names = [p.replace("_sent.csv", ".txt.tmp") for p in sent_names]
+    output_names = [p.replace("_sent.csv", ".txt.tmp") for p in sent_fnames]
     dev_frac = t_split + (1.0 - t_split) / 2
 
     df = pd.read_csv(sentence_csv, delimiter=",", header=None)
@@ -186,10 +229,10 @@ def main(
         [int(t_split * len(df)), int(dev_frac * len(df))],
     )
     for idx, df in enumerate((train, dev, val)):
-        df.to_csv(sent_names[idx], header=False, index=False, sep=",")
+        df.to_csv(sent_fnames[idx], header=False, index=False, sep=",")
         logger.info("samples : {:>4,d}".format(len(df)))
 
-    for idx, sent_csv in enumerate(sent_names):
+    for idx, sent_csv in enumerate(sent_fnames):
         ner_training_data(
             entity_csv,
             sent_csv,
@@ -264,6 +307,8 @@ if __name__ == "__main__":
         help="training split; dev, val are (1 - t_split) / 2",
     )
     args = parser.parse_args()
+    if not 0. < args.t_split <= 1.0:
+        raise ValueError("invalid training split; got {}".format(args.t_split))
 
     logger.info("retrieving spaCy model")
     nlp_ = get_lg_nlp()

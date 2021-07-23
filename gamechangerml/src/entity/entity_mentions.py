@@ -31,15 +31,20 @@ import pandas as pd
 from tqdm import tqdm
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
-from gamechangerml.src.utilities.spacy_model import get_lg_nlp
 
 logger = logging.getLogger(__name__)
+
+LF = "long_form"
+SF = "short_form"
+ETYPE = "etype"
+SENT = "sentence"
+TEXTTYPE = "raw_text"
 
 
 def entity_csv_to_df(entity_csv):
     if not os.path.isfile(entity_csv):
         raise FileNotFoundError("can't find {}".format(entity_csv))
-    df = pd.read_csv(entity_csv, names=["long_form", "short_form", "etype"])
+    df = pd.read_csv(entity_csv, names=[LF, SF, ETYPE])
     df = df.replace(np.nan, "")
     return df
 
@@ -47,11 +52,13 @@ def entity_csv_to_df(entity_csv):
 def make_entity_re(entity_csv):
     """
     Creates regular expressions for long form entities and their abbreviations,
-    if they exist. These are large alternations. No magic.
+    if they exist. These are large alternations. No magic. A mapping of
+    entity to entity type is created for subsequent lookup in creating
+    NER training data.
 
     Args:
-        entity_csv (str): csv with entries consiting of
-            *long_form*, *short_form*, *etype*
+        entity_csv (str): csv with entries consisting of
+            *LF*, *SF*, *ETYPE*
 
     Returns:
         SRE_Pattern, SRE_Pattern, Dict
@@ -59,18 +66,18 @@ def make_entity_re(entity_csv):
     df = entity_csv_to_df(entity_csv)
     entity2type = dict()
     for _, row in df.iterrows():
-        ent_lf = row["long_form"]
-        ent_sf = row["short_form"]
-        etype = row["etype"]
+        ent_lf, ent_sf, etype = row[LF], row[SF], row[ETYPE]
         entity2type[ent_lf.lower()] = etype
         if ent_sf:
             entity2type[ent_sf.lower()] = etype
 
-    entities = list(set(df["long_form"]))
-    abbrvs = list(set(df["short_form"]))
+    entities = list(set(df["LF"]))
+    abbrvs = list(set(df[SF]))
+    unique_etypes = set(df[ETYPE])
 
-    logger.debug("num entities : {}".format(len(entities)))
-    logger.debug(" num abbrevs : {}".format(len(abbrvs)))
+    logger.debug("      num entities : {}".format(len(entities)))
+    logger.debug("unique entity tags : {}".format(unique_etypes))
+    logger.debug("       num abbrevs : {}".format(len(abbrvs)))
 
     entities.sort(key=lambda s: len(s), reverse=True)
     abbrvs.sort(key=lambda s: len(s), reverse=True)
@@ -200,7 +207,7 @@ def entities_in_raw(entity_file, corpus_dir, glob):
     """
     abbrv_re, entity_re, _ = make_entity_re(entity_file)
     for fname, json_doc in cu.gen_gc_docs(corpus_dir, glob):
-        text = cu.scrubber(json_doc["raw_text"])
+        text = cu.scrubber(json_doc[TEXTTYPE])
         entity_spans = entities_spans(text, entity_re, abbrv_re)
         yield fname, entity_spans
 
@@ -270,7 +277,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-t",
-        "--run-type",
+        "--task",
         dest="run_type",
         choices=["mentions", "spans"],
         required=True,
@@ -295,8 +302,6 @@ if __name__ == "__main__":
         output = entity_mentions_glob(
             args.entity_file, args.input_path, args.glob
         )
-    else:
-        nlp_ = get_lg_nlp()
 
     if output:
         output = json.dumps(output)

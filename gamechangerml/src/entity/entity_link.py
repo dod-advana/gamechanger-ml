@@ -5,6 +5,7 @@ import re
 import pandas as pd
 
 import gamechangerml.src.entity.entity_mentions as em
+import gamechangerml.src.text_classif.version as v
 from gamechangerml.src.entity.top_k_entities import top_k_entities
 from gamechangerml.src.text_classif.utils.predict_glob import predict_glob
 
@@ -12,13 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 class EntityLink(object):
+    __version__ = v.__version__
+
     def __init__(
-        self, entity_csv=None, mentions_json=None, use_na=True, topk=3
+        self, entity_csv=None, mentions_json=None, use_na=False, topk=3
     ):
         """
-        Links a statement to an entity using a type of 'nearest entity' method.
-        If such linking is not possible, the top k most frequently occurring
-        entities is used.
+        Links a statement to an entity using a proximity method. If
+        linking is not possible, the top k most frequently occurring
+        from `mentions_json` is used as the entity.
 
         Args:
             entity_csv (str): csv containing entity,abbreviation  if
@@ -33,13 +36,17 @@ class EntityLink(object):
             topk (int): top k mentions to use when an entity has failed
 
         Raises:
-            FileExistsError if the required input files don't exist
+            FileExistsError if the required input files cannot be found
         """
+        logger.info(
+            "{} version {}".format(self.__class__.__name__, self.__version__)
+        )
+
         if not os.path.isfile(entity_csv):
-            raise FileExistsError("no entity file, got {}".format(entity_csv))
+            raise FileExistsError("no entity CSV, got {}".format(entity_csv))
         if not os.path.isfile(mentions_json):
             raise FileExistsError(
-                "no mentions file {}, got".format(mentions_json)
+                "no mentions JSON {}, got".format(mentions_json)
             )
 
         topk = max(1, topk)

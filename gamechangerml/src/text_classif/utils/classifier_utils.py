@@ -99,6 +99,7 @@ def gc_data(data_file, neg_data_file, shuffle=True, topn=0):
         neg_samples = len(df.label.values) - pos_samples
         logger.info("negative samples : {:>5,d}".format(neg_samples))
 
+        # TODO kill this?
         # balance positive / negative samples
         if neg_data_file is not None and pos_samples > neg_samples:
             df_neg = _read_gc_df(neg_data_file)
