@@ -1,4 +1,4 @@
-from gamechangerml.src.model_testing.evaluation import QAEvaluator, MSMarcoEvaluator, SimilarityEvaluator
+from gamechangerml.src.model_testing.evaluation import QAEvaluator, RetrieverEvaluator, SimilarityEvaluator
 from gamechangerml.configs.config import QAConfig
 #from gamechangerml.api.utils.logger import logger
 
@@ -13,14 +13,14 @@ if __name__ == '__main__':
     
 
     print("\nLoading Retriever Evaluation...")
-    MSMarcoEval = MSMarcoEvaluator(new_model=True)
+    MSMarcoEval = RetrieverEvaluator(new_model=True)
     print("Evaluating Retriever with MSMarco Data...")
     print(MSMarcoEval.results)
     #print("Evaluating Retriever with in-domain data...")
     #print(GoldStandardRetrieverEval.results)
 
     print("\nLoading Similarity Evaluation...")
-    SimilarityEval = SimilarityEvaluator(new_model=True, new_data=True, sample_limit=10)
+    SimilarityEval = SimilarityEvaluator(new_model=True, sample_limit=10)
     print("Evaluating Similarity Model with NLI Data...")
     print(SimilarityEval.agg_results)
     #print("Evaluating Similarity Model with in-domain data...")
