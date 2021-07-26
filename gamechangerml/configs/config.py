@@ -116,5 +116,11 @@ class ValidationConfig:
             "queries": "msmarco_1k/queries.json",
             "relations": "msmarco_1k/relations.json",
             "metadata": "msmarco_1k/metadata.json",
+        },
+        "question_gc": {
+            "queries": "QA_domain_data.json"
+        },
+        "retriever_gc": {
+            "gold_standard": ""
         }
     }

@@ -44,17 +44,40 @@ class SQuADData(ValidationData):
 
         return queries
 
+class QADomainData(ValidationData):
+
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+
+        self.queries = open_json(validation_config['question_gc']['queries'], self.validation_dir)
+        self.checked_queries = self.check_queries()
+
+    def check_queries(self):
+
+        checked = []
+        for test in self.queries:
+            alltext = normalize_answer(' '.join(test['search_context']))
+            checked_answers = [i for i in test['answers'] if normalize_answer(i['text']) in alltext]
+            test['answers'] = checked_answers
+            if test['answers'] != []:
+                checked.append(test)
+            else:
+                print("Could not add {} to test queries: answer not in context".format(test['question']))
+        
+        print("Number of in-domain question/answer examples: {}".format(len(checked)))
+
+        return checked
+
 class MSMarcoData(ValidationData):
 
     def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
 
         super().__init__(validation_config)
-        self.queries = open_json(validation_config['msmarco']['queries'], self.validation_dir)
+        self.orig_queries = open_json(validation_config['msmarco']['queries'], self.validation_dir)
         self.collection = open_json(validation_config['msmarco']['collection'], self.validation_dir)
         self.relations = open_json(validation_config['msmarco']['relations'], self.validation_dir)
         self.metadata = open_json(validation_config['msmarco']['metadata'], self.validation_dir)
-        self.single_queries = self.filter_queries()
-        self.msmarco_corpus = self.get_msmarco_corpus()
+        self.queries = self.filter_queries()
+        self.corpus = self.get_msmarco_corpus()
 
     def get_msmarco_corpus(self):
 
@@ -65,8 +88,28 @@ class MSMarcoData(ValidationData):
         include = [i for i, x in self.relations.items() if len(x)==1]
         print("Number MSMarco test queries: ", len(include))
 
-        return {x: self.queries[x] for x in include}
+        return {x: self.orig_queries[x] for x in include}
+
+class RetrieverDomainData(ValidationData):
+
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+
+        self.samples = pd.read_csv(os.path.join(self.validation_dir, validation_config['retriever_gc']['gold_standard']), names=['query', 'document'])
+        self.queries, self.collection, self.relations = self.dictify_data()
     
+    def dictify_data(self):
+
+        self.samples['document'] = self.samples['document'].apply(lambda x: x.split(';'))
+        self.samples = self.samples.explode('document')
+        query_list = self.samples['query'].to_list()
+        doc_list = self.samples['document'].to_list()
+        q_idx = ["query_" + str(i) for i in range(len(query_list))]
+        d_idx = ["doc_" + str(i) for i in range(len(doc_list))]
+        queries = dict(zip(q_idx, query_list))
+        collection = dict(zip(d_idx, doc_list))
+        relations = dict(zip(q_idx, d_idx))
+
+        return queries, collection, relations
 
 class NLIData(ValidationData):
     '''
