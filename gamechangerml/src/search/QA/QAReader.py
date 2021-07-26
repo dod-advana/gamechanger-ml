@@ -283,7 +283,7 @@ class DocumentReader:
             - answers (List[Dict]): each answer is a dictionary including text, context index, and score (if scored)
         """
         question = clean_query(question)
-        print(f"Question: {question}")
+        #print(f"Question: {question}")
 
         inputs, tracker = self.tokenize(question, context)
         all_answers = []
