@@ -99,6 +99,7 @@ class EntityLink(object):
     def _unsub_df(self, df, regex, sub):
         df[self.SENT] = [re.sub(regex, sub, str(x)) for x in df[self.SENT]]
 
+    # TODO get rid the NA option
     def _resolve_na(self, doc_name):
         if self.use_na:
             return self.NA

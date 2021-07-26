@@ -42,7 +42,6 @@ def _wc(txt):
     return txt.count(" ") + 1
 
 
-# TODO label negative examples as 1.5 x num entity sentences
 def _gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_dict, nlp):
     I_PRFX = "I-"
     B_PRFX = "B-"
@@ -98,7 +97,7 @@ def ner_training_data(
 ):
     """
     Create NER training data in CoNLL-2003 format. For more information on
-    the tagging conventions, see https://huggingface.co/datasets/conll2003
+    the tagging conventions, see https://huggingface.co/datasets/conll2003.
 
     Args:
         entity_csv (str): name of the .csv file holding entities & types
@@ -133,13 +132,19 @@ def ner_training_data(
         SEP = " "
 
     multiplier = 1.5
+    min_tokens = 4
+    max_tokens = 100
     NL = "\n"
     EMPTYSTR = ""
     print_str = EMPTYSTR
 
     if None in (abbrv_re, entity_re, entity2type):
         abbrv_re, entity_re, entity2type = em.make_entity_re(entity_csv)
+
     sent_dict = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
+    sent_dict = [
+        row for row in sent_dict if min_tokens < _wc(row[SENT]) <= max_tokens
+    ]
 
     ent_sents = [
         row
@@ -151,7 +156,7 @@ def ner_training_data(
         return
 
     n_ents = len(ent_sents)
-    logger.info("    entity sentences : {:>5,d}".format(n_ents))
+    logger.info("     entity sentences : {:>5,d}".format(n_ents))
 
     sz = int(n_ents * multiplier)
     non_ent_sents = [
@@ -160,7 +165,13 @@ def ner_training_data(
         if len(row[SENT]) > 1
         if not em.contains_entity(row[SENT], entity_re, abbrv_re)
     ][:sz]
-    logger.info("non-entity sentences : {:>5,d}".format(len(non_ent_sents)))
+
+    logger.info(" non-entity sentences : {:>5,d}".format(len(non_ent_sents)))
+    t_sum = [_wc(row[SENT]) for row in sent_dict]
+    avg_tokens = sum(t_sum) / len(sent_dict)
+    logger.info("min tokens / sentence : {:>5d}".format(min(t_sum)))
+    logger.info("max tokens / sentence : {:>5d}".format(max(t_sum)))
+    logger.info("avg tokens / sentence : {:3.2f}".format(avg_tokens))
 
     ent_sents.extend(non_ent_sents)
     random.shuffle(ent_sents)
@@ -171,10 +182,10 @@ def ner_training_data(
     labels = set()
     count = 0
     with open(out_fp, "w") as fp:
-        for zipped, uniq_labels in tqdm(
+        for zipped, unique_labels in tqdm(
             training_generator, total=len(ent_sents), desc="sentence"
         ):
-            labels = labels.union(uniq_labels)
+            labels = labels.union(unique_labels)
             count += 1
             print_str += (
                 NL.join([str(e[0]) + SEP + str(e[1]) for e in zipped])
@@ -235,14 +246,14 @@ def main(
     sent_fnames = (
         os.path.join(in_path, "train_sent.csv"),
         os.path.join(in_path, "dev_sent.csv"),
-        os.path.join(in_path, "val_sent.csv"),
+        os.path.join(in_path, "test_sent.csv"),
     )
     output_names = [p.replace("_sent.csv", ".txt.tmp") for p in sent_fnames]
 
     df = pd.read_csv(sentence_csv, delimiter=",", header=None)
-    logger.info("examples : {:>4,d}".format(len(df)))
     if n_samples > 0:
         df = df.head(n_samples)
+    logger.info("examples : {:>4,d}".format(len(df)))
 
     if save_tdv:
         train, dev_val = train_test_split(df, train_size=t_split)
@@ -329,7 +340,7 @@ if __name__ == "__main__":
         dest="t_split",
         type=float,
         default=0.80,
-        help="training split; dev, val are (1 - t_split) / 2",
+        help="training split; dev, val are evenly split from 1 - t_split",
     )
     args = parser.parse_args()
 

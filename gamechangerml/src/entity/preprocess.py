@@ -78,10 +78,6 @@ def preprocess(dataset, model_name_or_path, max_seq_len, sep=" "):
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
-    import gamechangerml.src.text_classif.utils.log_init as li
-
-    li.initialize_logger(to_file=False, log_name="none")
-
     desc_ = (
         "Preprocess NER dataset to split sequences > max_seq_len to "
         "separate sequences; output to STDOUT"
@@ -101,7 +97,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m",
         "--model-name-or-path",
-        dest="model",
+        dest="model_name_or_path",
         type=str,
         help="pytorch model",
         required=True,
