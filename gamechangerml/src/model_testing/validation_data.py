@@ -15,10 +15,10 @@ class SQuADData(ValidationData):
         super().__init__(validation_config)
         self.dev = open_json(validation_config['squad']['dev'], self.validation_dir)
         self.sample_limit = validation_config['squad']['sample_limit']
-        #self.train = open_json(validation_config['squad']['train'], self.validation_dir)
         self.queries = self.get_squad_sample()
     
     def get_squad_sample(self):
+        '''Format SQuAD data into list of dictionaries (length = sample size)'''
 
         queries = []
         count = 0
@@ -48,17 +48,19 @@ class QADomainData(ValidationData):
 
     def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
 
+        super().__init__(validation_config)
         self.queries = open_json(validation_config['question_gc']['queries'], self.validation_dir)
         self.checked_queries = self.check_queries()
 
     def check_queries(self):
+        '''Check that in-domain examples contain expected answers in their context'''
 
         checked = []
-        for test in self.queries:
+        for test in self.queries['test_queries']:
             alltext = normalize_answer(' '.join(test['search_context']))
-            checked_answers = [i for i in test['answers'] if normalize_answer(i['text']) in alltext]
-            test['answers'] = checked_answers
-            if test['answers'] != []:
+            checked_answers = [i for i in test['expected'] if normalize_answer(i['text']) in alltext]
+            test['expected'] = checked_answers
+            if test['expected'] != []:
                 checked.append(test)
             else:
                 print("Could not add {} to test queries: answer not in context".format(test['question']))
@@ -80,10 +82,12 @@ class MSMarcoData(ValidationData):
         self.corpus = self.get_msmarco_corpus()
 
     def get_msmarco_corpus(self):
+        '''Format MSMarco so it can be indexed like the GC corpus'''
 
         return [(x, y, '') for x, y in self.collection.items()]
 
     def filter_queries(self):
+        '''Filter out MSMarco examples with more than one top expected doc'''
 
         include = [i for i, x in self.relations.items() if len(x)==1]
         print("Number MSMarco test queries: ", len(include))
@@ -98,6 +102,7 @@ class RetrieverDomainData(ValidationData):
         self.queries, self.collection, self.relations = self.dictify_data()
     
     def dictify_data(self):
+        '''Format gold standard csv examples into MSMarco format'''
 
         self.samples['document'] = self.samples['document'].apply(lambda x: x.split(';'))
         self.samples = self.samples.explode('document')
@@ -112,9 +117,7 @@ class RetrieverDomainData(ValidationData):
         return queries, collection, relations
 
 class NLIData(ValidationData):
-    '''
-    Formats the raw NLI data into evaluation format for similarity model.
-    '''
+
     def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
 
         super().__init__(validation_config)
@@ -124,12 +127,7 @@ class NLIData(ValidationData):
         self.query_lookup = dict(zip(self.sample_csv['promptID'], self.sample_csv['sentence1']))
 
     def get_sample_csv(self):
-        '''
-        From the paper: 'All of the genres appear in the test and development sets, but only five are included 
-        in the training set. Models thus can be evaluated on both the matched test examples, which are derived 
-        from the same sources as those in the training set, and on the mismatched examples, which do not 
-        closely resemble any of those seen at training time.'
-        '''
+        '''Format NLI data into smaller sample for evaluation'''
 
         match_df = pd.DataFrame(self.matched)
         mismatched_df = pd.DataFrame(self.mismatched)

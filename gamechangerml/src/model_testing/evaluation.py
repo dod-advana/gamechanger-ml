@@ -22,6 +22,7 @@ class TransformerEvaluator():
 
         self.transformer_path = transformer_path
         self.save_path = check_directory(save_path)
+        ## TODO
         ## check if model was last changed?
         ## check ig validation data has changed?
         ## if model or validation data is new, run eval again
@@ -56,6 +57,7 @@ class QAEvaluator(TransformerEvaluator):
             self.domain_results = self.eval(test_data='domain')
 
     def compare(self, predicted, actual):
+        '''Compare predicted to expected answers'''
 
         clean_pred = normalize_answer(predicted)
         clean_answers = set([normalize_answer(i['text']) for i in actual])
@@ -65,6 +67,7 @@ class QAEvaluator(TransformerEvaluator):
             return False
 
     def predict(self, test_data=['squad', 'domain']):
+        '''Get answer predictions'''
 
         columns = [
             'index',
@@ -119,23 +122,18 @@ class QAEvaluator(TransformerEvaluator):
         return pd.read_csv(csv_filename)
 
     def eval(self, test_data):
+        '''Get evaluation stats across predicted/expected answer comparisons'''
 
         df = self.predict(test_data)
-
-        ## change to squad metrics with tokens
-        #df['true_neg'] = np.where(df['actual_null']==True and df['predicted_null'] == True, True, False)
-        #df['true_pos'] = np.where(df['actual_null']==False and df['answers_match'] == True, True, False)
-        #df['false_neg'] = np.where(df['predicted_null']==True and df['answers_match'] == False, True, False)
-        #df['false_pos'] = np.where(df['predicted_null']==False and df['answers_match'] == False, True, False)
-
+        
         num_queries = df['queries'].nunique()
         proportion_answers_match = np.round(df['answers_match'].value_counts(normalize = True)[True], 2)
-        proportion_nulls_match = np.round(df['nulls_match'].value_counts(normalize = True)[True], 2)
+        #proportion_nulls_match = np.round(df['nulls_match'].value_counts(normalize = True)[True], 2)
 
         agg_results = {
             "num_queries": num_queries,
-            "proportion_answer_match": proportion_answers_match,
-            "proportion_null_match": proportion_nulls_match,
+            "proportion_exact_match": proportion_answers_match,
+            #"proportion_null_match": proportion_nulls_match,
         }
         return agg_results
 
@@ -162,15 +160,18 @@ class RetrieverEvaluator(TransformerEvaluator):
         if self.index_path:
             if not os.path.exists(self.index_path):  
                 os.makedirs(self.index_path)
+                self.csv_filename = timestamp_filename(index_path, '.csv')
                 self.encoder = SentenceEncoder(encoder_args, self.index_path, use_gpu)
                 self.make_index()
             self.retriever = SentenceSearcher(self.index_path, transformer_path, encoder_args, similarity_args)
         
     def make_index(self):
+        '''Make embeddings index'''
 
         return self.encoder.index_documents(corpus_path = self.corpus_path)
 
     def predict(self):
+        '''Retrieve docs from embeddings index'''
 
         columns = [
             'index',
@@ -183,7 +184,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             'score'
         ]
 
-        csv_filename = os.path.join(self.save_path, timestamp_filename('msmarco_eval', '.csv'))
+        csv_filename = os.path.join(self.save_path, self.csv_filename)
         with open(csv_filename, 'w') as csvfile:
             csvwriter = csv.writer(csvfile)  
             csvwriter.writerow(columns) 
@@ -222,6 +223,7 @@ class RetrieverEvaluator(TransformerEvaluator):
         return pd.read_csv(csv_filename)
         
     def eval(self):
+        '''Generate summary stats for expected vs. predicted retrieval'''
         
         df = self.predict()
 
@@ -303,6 +305,7 @@ class SimilarityEvaluator(TransformerEvaluator):
             self.agg_results = self.eval_nli()
 
     def predict_nli(self):
+        '''Get rank predictions from similarity model'''
 
         df = self.nli.sample_csv
         ranks = {}
@@ -335,6 +338,7 @@ class SimilarityEvaluator(TransformerEvaluator):
         return df
 
     def eval_nli(self):
+        '''Get summary stats of predicted vs. expected ranking for NLI'''
 
         # create csv of predictions
         df = self.predict_nli()

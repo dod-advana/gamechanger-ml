@@ -13,7 +13,7 @@ if __name__ == '__main__':
     
 
     print("\nLoading Retriever Evaluation...")
-    MSMarcoEval = MSMarcoEvaluator(new_model=True, new_data=True)
+    MSMarcoEval = MSMarcoEvaluator(new_model=True)
     print("Evaluating Retriever with MSMarco Data...")
     print(MSMarcoEval.results)
     #print("Evaluating Retriever with in-domain data...")
