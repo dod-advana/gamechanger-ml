@@ -13,7 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Named entity recognition fine-tuning: utilities to work with CoNLL-2003 task. """
+"""
+Named entity recognition fine-tuning: utilities to work with CoNLL-2003 task.
+"""
 
 
 import logging
@@ -97,11 +99,13 @@ class TokenClassificationTask:
         sequence_a_segment_id=0,
         mask_padding_with_zero=True,
     ) -> List[InputFeatures]:
-        """Loads a data file into a list of `InputFeatures`
+        """
+        Loads a data file into a list of `InputFeatures`
         `cls_token_at_end` define the location of the CLS token:
             - False (Default, BERT/XLM pattern): [CLS] + A + [SEP] + B + [SEP]
             - True (XLNet/GPT pattern): A + [SEP] + B + [SEP] + [CLS]
-        `cls_token_segment_id` define the segment id associated to the CLS token (0 for BERT, 2 for XLNet)
+        `cls_token_segment_id` define the segment id associated to the CLS
+            token (0 for BERT, 2 for XLNet)
         """
         # TODO clean up all this to leverage built-in features of tokenizers
 
@@ -130,7 +134,7 @@ class TokenClassificationTask:
                         + [pad_token_label_id] * (len(word_tokens) - 1)
                     )
 
-            # Account for [CLS] and [SEP] with "- 2" and with "- 3" for RoBERTa.  # noqa
+            # Account for [CLS] and [SEP] with "- 2" and with "- 3" for RoBERTa
             special_tokens_count = tokenizer.num_special_tokens_to_add()
             if len(tokens) > max_seq_length - special_tokens_count:
                 tokens = tokens[: (max_seq_length - special_tokens_count)]
@@ -271,8 +275,8 @@ if is_torch_available():
                 ),
             )
 
-            # Make sure only the first process in distributed training processes the dataset,
-            # and the others will use the cache.
+            # Make sure only the first process in distributed training
+            # processes the dataset, and the others will use the cache.
             lock_path = cached_features_file + ".lock"
             with FileLock(lock_path):
 
@@ -435,7 +439,6 @@ if is_tf_available():
             self.dataset = self.dataset.apply(
                 tf.data.experimental.assert_cardinality(len(self.features))
             )
-
             return self.dataset
 
         def __len__(self):
