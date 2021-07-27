@@ -5,6 +5,7 @@ from gamechangerml.api.utils.redisdriver import CacheVariable
 # Process Keys
 clear_corpus = "corpus: corpus_download"
 corpus_download = "corpus: corpus_download"
+delete_corpus = "corpus: delete_corpus"
 loading_corpus = "training: load_corpus"
 training = "training: train_model"
 reloading = "models: reloading_models"
