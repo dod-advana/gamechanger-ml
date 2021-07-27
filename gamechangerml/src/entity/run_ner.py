@@ -15,7 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Fine-tuning the library models for named entity recognition on CoNLL-2003.
+Fine-tuning the library models for named entity recognition on CoNLL-2003
+formatted data
 """
 import logging
 import os

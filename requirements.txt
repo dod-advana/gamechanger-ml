@@ -29,6 +29,7 @@ colorama==0.4.3
 coloredlogs==14.0
 configobj==5.0.6
 configparser==5.0.0
+conllu==4.4
 constantly==15.1.0
 contextvars==2.4
 corenlp==0.0.14

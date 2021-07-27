@@ -1,26 +1,30 @@
 """
-usage: python ner_training_data.py [-h] -s SENT_CSV -e ENTITY_CSV -o
-                                   OUTPUT_TXT [-n N_SAMPLES] [-r]
-                                   [-p {tab,space}] [-x T_SPLIT]
+usage: python ner_training_data.py [-h] -s SENT_CSV -e ENTITY_CSV
+                                   [-n N_SAMPLES] [-r] [-p {tab,space}]
+                                   [-x T_SPLIT] [--min-tokens MIN_TOKENS]
+                                   [--max-tokens MAX_TOKENS]
 
-Create NER training data in CoNLL-2003 format
+Create NER training data in CoNLL format
 
 optional arguments:
   -h, --help            show this help message and exit
   -s SENT_CSV, --sentence-csv SENT_CSV
-                        csv of sentences and labels
+                        csv of input sentences and labels
   -e ENTITY_CSV, --entity-csv ENTITY_CSV
                         csv of entities & types
-  -o OUTPUT_TXT, --output-txt OUTPUT_TXT
-                        output file in CoNLL-2003 format
   -n N_SAMPLES, --n-samples N_SAMPLES
-                        how many samples to extract and tag (0 means use
-                        all rows)
+                        how many samples to extract and tag (0 means get
+                        everything)
   -r, --shuffle         randomly shuffle the sentence data
   -p {tab,space}, --separator {tab,space}
                         token <-> label separator, default is 'space'
   -x T_SPLIT, --train-split T_SPLIT
-                        training split; dev, val are (1 - t_split) / 2
+                        training split; dev, val are evenly split from 1 -
+                        t_split
+  --min-tokens MIN_TOKENS
+                        minimum number of tokens in a sentence
+  --max-tokens MAX_TOKENS
+                        maximum number of tokens in a sentence
 """
 import logging
 import os
@@ -94,6 +98,8 @@ def ner_training_data(
     abbrv_re=None,
     entity_re=None,
     entity2type=None,
+    min_tokens=4,
+    max_tokens=100,
 ):
     """
     Create NER training data in CoNLL-2003 format. For more information on
@@ -120,6 +126,10 @@ def ner_training_data(
 
         entity2type (dict): map of an entity to its type, e.g.,
             GCORG, GCPER, etc; optional.
+
+        min_tokens (int): minimum number of tokens in a sentence
+
+        max_tokens (int): maximum number of tokens in a sentence
     """
     if sep == "space":
         SEP = " "
@@ -132,8 +142,6 @@ def ner_training_data(
         SEP = " "
 
     multiplier = 1.5
-    min_tokens = 4
-    max_tokens = 100
     NL = "\n"
     EMPTYSTR = ""
     print_str = EMPTYSTR
@@ -208,10 +216,12 @@ def main(
     shuffle,
     t_split,
     save_tdv=True,
+    min_tokens=4,
+    max_tokens=100,
 ):
     """
     This creates CoNLL-formatted data for use in the NER model. Three files
-    are created `train.txt.tmp`, `dev.txt.tmp`, and `val.txt.tmp` in the
+    are created `train.txt.tmp`, `dev.txt.tmp`, and `test.txt.tmp` in the
     same director as `sentence_csv`.
 
     Prior to loading these for training, these files will be run through
@@ -236,7 +246,11 @@ def main(
         t_split (float): fraction used for training data, e.g., 0.80; dev
             and val data are split as (1 - t_split) / 2
 
-        save_tdv (bool); save train, dev, val datasets to their own .csv
+        save_tdv (bool): save train, dev, val datasets to their own .csv
+
+        min_tokens (int): minimum number of tokens in a sentence
+
+        max_tokens (int): maximum number of tokens in a sentence
     """
     if not os.path.isfile(sentence_csv):
         raise FileExistsError("no sentence_csv; got {}".format(sentence_csv))
@@ -277,6 +291,8 @@ def main(
             abbrv_re=abbrv_re,
             entity_re=entity_re,
             entity2type=entity2type,
+            min_tokens=min_tokens,
+            max_tokens=max_tokens,
         )
 
 
@@ -342,10 +358,21 @@ if __name__ == "__main__":
         default=0.80,
         help="training split; dev, val are evenly split from 1 - t_split",
     )
+    parser.add_argument(
+        "--min-tokens",
+        dest="min_tokens",
+        type=int,
+        default=4,
+        help="minimum number of tokens in a sentence",
+    )
+    parser.add_argument(
+        "--max-tokens",
+        dest="max_tokens",
+        type=int,
+        default=100,
+        help="maximum number of tokens in a sentence",
+    )
     args = parser.parse_args()
-
-    if not 0.0 < args.t_split <= 1.0:
-        raise ValueError("invalid training split; got {}".format(args.t_split))
 
     logger.info("retrieving spaCy model")
     nlp_ = get_lg_nlp()
@@ -359,4 +386,6 @@ if __name__ == "__main__":
         args.sep,
         args.shuffle,
         args.t_split,
+        args.min_tokens,
+        args.max_tokens,
     )

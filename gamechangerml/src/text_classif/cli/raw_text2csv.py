@@ -47,9 +47,11 @@ def raw2df(src_path, glob, key="raw_text"):
     for fname, doc in cu.gen_gc_docs(src_path, glob, key=key):
         if key in doc:
             raw_text = doc[key]
-            sent_df = cu.make_sentences(raw_text, fname)
-            logger.info("{:>35s} : {:>5,d}".format(fname, len(sent_df)))
-            yield sent_df, fname
+            sent_list = cu.make_sentences(raw_text, fname)
+            logger.info(
+                "{:>35s} : {:>5,d} sentences".format(fname, len(sent_list))
+            )
+            yield sent_list, fname
         else:
             logger.warning("no key '{}' in {}".format(key, fname))
 
