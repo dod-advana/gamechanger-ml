@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Response, status
 import subprocess
 import os
+import json
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.utils.pathselect import get_model_paths
@@ -83,7 +84,7 @@ def get_downloaded_models_list():
     }
     return model_list
 
-@router.get("/files_in_corpus", status_code=200)
+@router.get("/getFilesInCorpus", status_code=200)
 async def files_in_corpus(response: Response):
     """files_in_corpus - checks how many files are in the corpus directory
     Args:
@@ -96,7 +97,7 @@ async def files_in_corpus(response: Response):
     except:
         logger.warning(f"Could not get dependencies from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return number_files
+    return json.dumps(number_files)
 
 @router.get("/getCurrentTransformer")
 async def get_trans_model():

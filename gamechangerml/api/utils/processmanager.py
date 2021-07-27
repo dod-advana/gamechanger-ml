@@ -3,10 +3,11 @@ from datetime import datetime
 from gamechangerml.api.utils.redisdriver import CacheVariable
 
 # Process Keys
-corpus_download = "corpus_download"
-loading_corpus = "loading_corpus"
-training = "model_training"
-reloading = "reloading"
+clear_corpus = "corpus: corpus_download"
+corpus_download = "corpus: corpus_download"
+loading_corpus = "training: load_corpus"
+training = "training: train_model"
+reloading = "models: reloading_models"
 
 # the dictionary that holds all the progress values
 PROCESS_STATUS = CacheVariable("process_status", True)
@@ -15,6 +16,7 @@ thread_lock = threading.Lock()
 
 default_flags = {
     corpus_download: False,
+    clear_corpus: False,
     training: False,
     loading_corpus:False,
     reloading:False
