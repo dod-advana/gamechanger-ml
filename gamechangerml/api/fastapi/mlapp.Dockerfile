@@ -16,13 +16,25 @@ RUN apt-get -y install python3-pip
 RUN pip3 install --upgrade pip wheel setuptools
 RUN pip3 install awscli
 # add source code paths and use volume
-RUN mkdir gamechanger-ml
-COPY setup.py gamechanger-ml/.
-COPY requirements.txt gamechanger-ml/.
-COPY dev-requirements.txt gamechanger-ml/.
-COPY README.md gamechanger-ml/.
+RUN mkdir gamechangerml
+COPY setup.py gamechangerml/.
+COPY requirements.txt gamechangerml/.
+COPY dev-requirements.txt gamechangerml/.
+COPY README.md gamechangerml/.
 # install gamechangerml python module
-RUN pip3 install gamechanger-ml/.
-RUN mkdir gamechanger-ml/gamechangerml
-WORKDIR gamechanger-ml
-ENTRYPOINT  ["/bin/bash",  "gamechangerml/api/fastapi/startFast.sh", "DEV"]
+ENV BASE_APP_VENV_PATH="/opt/gc-venv-current"
+RUN python3 -m venv "${BASE_APP_VENV_PATH}" --copies
+RUN "${BASE_APP_VENV_PATH}/bin/pip" install --no-cache-dir --upgrade pip setuptools wheel
+RUN "${BASE_APP_VENV_PATH}/bin/pip" install --no-cache-dir --no-deps -r "gamechangerml/requirements.txt"
+# RUN pip3 install gamechangerml/.
+COPY . gamechangerml/.
+# RUN mkdir gamechanger-ml/gamechangerml
+WORKDIR gamechangerml
+
+EXPOSE 5000
+
+ENV ENV_TYPE="DEV" \
+    DOWNLOAD_DEP="false" \
+    CONTAINER_RELOAD="false"
+
+ENTRYPOINT ["/bin/bash", "./gamechangerml/api/fastapi/startFast.sh"]

@@ -37,7 +37,7 @@ from gamechangerml.src.featurization.abbreviations_utils import (
     get_agencies_dict,
     get_agencies,
 )
-from gamechangerml.src.text_classif.utils.entity_link import EntityLink
+from gamechangerml.src.entity.entity_link import EntityLink
 from gamechangerml.src.text_classif.utils.log_init import initialize_logger
 from gamechangerml.src.text_classif.cli.resp_stats import count_output
 
