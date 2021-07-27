@@ -173,7 +173,7 @@ async def reload_models(model_dict: dict, response: Response):
             )
             # uses SENT_INDEX_PATH by default
             logger.info("Attempting to load Sentence Transformer")
-            MODELS.initSentence()
+            MODELS.initSentence(SENT_INDEX_PATH.value)
             progress +=1
             processmanager.update_status(processmanager.reloading, progress, total)
         if "qexp" in model_dict:
@@ -182,7 +182,7 @@ async def reload_models(model_dict: dict, response: Response):
             )
             # uses QEXP_MODEL_NAME by default
             logger.info("Attempting to load QE")
-            MODELS.initQE()
+            MODELS.initQE(QEXP_MODEL_NAME.value)
             progress +=1
             processmanager.update_status(processmanager.reloading, progress, total)
     except Exception as e:
