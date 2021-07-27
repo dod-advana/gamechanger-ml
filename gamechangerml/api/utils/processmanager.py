@@ -30,11 +30,6 @@ COMPLETED_PROCESS.value = []
 
 
 def update_status(key, progress = 0, total = 100, failed = False):
-    # log update at most 1000 times
-    update_step = total/1000
-    if update_step < 1:
-        update_step = 1
-        
     if progress == total or failed:
         date = datetime.now()
         date_string = date.strftime("%Y-%m-%d %H:%M:%S")
@@ -53,7 +48,7 @@ def update_status(key, progress = 0, total = 100, failed = False):
                 completed_list = COMPLETED_PROCESS.value
                 completed_list.append(completed)
                 COMPLETED_PROCESS.value = completed_list
-    elif progress%update_step ==0:
+    else:
         status = {
             "progress":progress,
             "total":total
@@ -61,7 +56,7 @@ def update_status(key, progress = 0, total = 100, failed = False):
         with thread_lock:
             status_dict = PROCESS_STATUS.value
             status_dict[key] = status
-            status_dict["flags"][key] = False
+            status_dict["flags"][key] = True
             PROCESS_STATUS.value = status_dict
 
 def set_flags(key, value):
