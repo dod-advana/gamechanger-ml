@@ -4,13 +4,13 @@
 # Adapted from Hugging Face run.sh
 #--------------------------------------------------------------------
 
-# path to train, test, dev data   !!! UPDATE FOR YOUR ENVIRONMENT !!!
+# !!! TEST ONLY - UPDATE FOR YOUR ENVIRONMENT !!!
 export ML_ROOT=../../../../
 echo "content root: $ML_ROOT"
 
 export NER_DIR=$ML_ROOT/gamechangerml/src/entity
 
-# path to train, test, dev data   !!! UPDATE FOR YOUR ENVIRONMENT !!!
+# path to train, test, dev data   !!! TEST ONLY - UPDATE FOR YOUR ENVIRONMENT !!!
 export DATA_DIR=$NER_DIR/tests/test_data
 
 # parameters for the tokenizer & model
@@ -22,9 +22,6 @@ export SAVE_STEPS=750
 export SEED=1
 
 export PYTHONPATH=$ML_ROOT:$PYTHONPATH
-
-export NER_SCRIPT=$NER_DIR/run_ner.py
-
 
 if ! [ -f $DATA_DIR/labels.txt ]; then
   echo "finding unique labels..."
@@ -51,7 +48,7 @@ if ! [ -f $DATA_DIR/train.txt ]; then
   exit 1
 fi
 
-python3 $NER_SCRIPT \
+python3 $NER_DIR/run_ner.py \
 --task_type NER \
 --data_dir $DATA_DIR \
 --labels $DATA_DIR/labels.txt \

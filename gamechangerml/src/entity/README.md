@@ -5,7 +5,7 @@ The Hugging Face format follows CoNLL-2003. Every token in a sentence (or sequen
 line along with its "B-", "I-", "O" tag. In our corpus, we have GCPER (person) and GCORG (organization),
 thus there are five unique tags.
 
-For example the sentence _The Director, DLA and the VA shall:_ would be represented as
+For example the sequence _The Director, DLA and the VA shall:_ would be represented as
 ```
 The O
 Director B-GCPER
@@ -16,17 +16,18 @@ the O
 VA I-GCORG
 shall O
 : O
+
 ```
 Sequences are separated by a single new line.
 
 ## Creating CoNLL Training Data
-This is a multi-step process at the moment. We'll use DoDD, DoDI, and DoDM documents from the corpus.
+This is a multi-step process at the moment. We'll use DoDD, DoDI, and DoDM documents from the corpus as an example.
 
 1. Create sentence `.csv` files. Run the CLI `src/text_classif/cli/raw_text2csv.py` with glob "DoD[DIM]*.json".
-This will write a `<doc-id>_sentences.csv`, _e.g._, `DoDD_1000.20_sentences.csv` for each
-matching document to a specified output directory.
+This will write a `<doc-id>_sentences.csv` file, _e.g._, `DoDD_1000.20_sentences.csv` for each
+matching document, to a specified output directory.
 
-2. We'll need to sample, UAR, a subset of the sentences, so first `cat` these files into one file, 
+2. We'll need a randomly chosen subset of the sentences, so first `cat` these files into one file, 
 _e.g._, 
     ```
     cat *sentences.csv > your/output_path/big_sentence_file.csv
@@ -44,22 +45,24 @@ _e.g._,
     ```
     python ner_training_data.py \
         --sentence-csv rnd_3K_big_sentence_file.csv \
-        --entity-csv you_path_to/gamechanger-ml/gamechangerml/src/entity/aux_data/entities.csv \
+        --entity-csv path_to/gamechanger-ml/gamechangerml/src/entity/aux_data/entities.csv \
         --separator space \
         --n-samples 0 \
         --train-split 0.80 \
         --min-tokens 4 \
         --max-tokens 100
     ```
-   This will create three files, `train.txt.tmp`, `test.txt.tmp`, and `val.txt.tmp` (.80, .10, .10).
+   This will create three files, `train.txt.tmp`, `test.txt.tmp`, and `val.txt.tmp` (.80, .10, .10) in CoNLL format.
    
-   **NB**: Due to the tagging, etc., the resulting files get very large, very quickly. For 3,000 sentences (430KB `.csv`),
-   the `train.txt.tmp` is close to 80MB.
+   **NB**: Due to the tokenizing and tagging, the resulting files get very large, very quickly. For 3,000 sentences (430KB `.csv`),
+   resulting `train.txt.tmp` is close to 80MB.
 
 ## Training
-The shell script `entity/bin/run.sh`, run from `entity/bin`, sets up the environment using the
+The shell script `entity/bin/sample_run.sh`, run from `entity/bin`, sets up a small test using the
 data in `tests/test_data`. It first runs `preprocessing.py` on each of the three files. This insures
 the model-tokenized sentence is less than a specified number of tokens (128). If not, it splits the sentence.
-
-This is a _very_ slow process. If you know you're within your limit or you're willing to tolerate
+This is a _very_ slow process. If you know the sentences are within your limit or you're willing to tolerate
 some truncation, this step can be skipped. Simply change the file extension from `.txt.tmp` to `.txt`.
+
+By default, the trained model will be saved in the data directory, `tests/test_data/model`. The `model`
+directory will be created.

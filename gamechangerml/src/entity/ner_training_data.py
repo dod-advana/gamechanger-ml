@@ -141,7 +141,7 @@ def ner_training_data(
         logger.warning("unrecognized value for `sep`, got {}".format(sep))
         SEP = " "
 
-    multiplier = 1.5
+    multiplier = 1.5  # for now
     NL = "\n"
     EMPTYSTR = ""
     print_str = EMPTYSTR
