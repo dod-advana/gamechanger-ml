@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Response, status
 import subprocess
 import os
+import json
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.utils.pathselect import get_model_paths
@@ -33,40 +34,46 @@ async def get_process_status():
     }
 @router.get("/getModelsList")
 def get_downloaded_models_list():
-    qexp_list = []
-    sent_index_list = []
-    transformer_list = []
+    qexp_list = {}
+    sent_index_list = {}
+    transformer_list = {}
     try:
-        qexp_list = [
-            f
-            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if ("qexp_" in f) and ("tar" not in f)
-        ]
-        qexp_list.sort(reverse=True)
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("qexp_" in f) and ("tar" not in f):
+                qexp_list[f] = {}
+                meta_path = os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json")
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    qexp_list[f] = json.load(meta_file)
+                    meta_file.close()
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get QEXP model path")
 
     # TRANSFORMER MODEL PATH
     try:
-        transformer_list = [
-            trans
-            for trans in os.listdir(LOCAL_TRANSFORMERS_DIR.value)
-            if trans not in ignore_files and '.' not in trans
-        ]
+        for trans in os.listdir(LOCAL_TRANSFORMERS_DIR.value):
+            if trans not in ignore_files and '.' not in trans:
+                transformer_list[trans] = {}
+                config_path = os.path.join(LOCAL_TRANSFORMERS_DIR.value, trans, "config.json")
+                if os.path.isfile(config_path):
+                    config_file = open(config_path)
+                    transformer_list[trans] = json.load(config_file)
+                    config_file.close()
     except Exception as e:
         logger.error(e)
-
         logger.info("Cannot get TRANSFORMER model path")
     # SENTENCE INDEX
     # get largest file name with sent_index prefix (by date)
     try:
-        sent_index_list = [
-            f
-            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if ("sent_index" in f) and ("tar" not in f)
-        ]
-        sent_index_list.sort(reverse=True)
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("sent_index" in f) and ("tar" not in f):
+                sent_index_list[f] = {}
+                meta_path = os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json")
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    sent_index_list[f] = json.load(meta_file)
+                    meta_file.close()
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get Sentence Index model path")
@@ -77,6 +84,20 @@ def get_downloaded_models_list():
     }
     return model_list
 
+@router.get("/getFilesInCorpus", status_code=200)
+async def files_in_corpus(response: Response):
+    """files_in_corpus - checks how many files are in the corpus directory
+    Args:
+    Returns: integer
+    """
+    number_files = 0
+    try:
+        logger.info("Attempting to download dependencies from S3")
+        number_files = len([name for name in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, name))])
+    except:
+        logger.warning(f"Could not get dependencies from S3")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    return json.dumps(number_files)
 
 @router.get("/getCurrentTransformer")
 async def get_trans_model():
@@ -88,7 +109,9 @@ async def get_trans_model():
     sent_model = latest_intel_model_sent.value
     return {
         "sentence_models": sent_model,
-        # "model_name": intel_model,
+        "sentence_index":SENT_INDEX_PATH.value,
+        "qexp_model":QEXP_MODEL_NAME.value,
+        "qa_model": latest_qa_model.value
     }
 
 
@@ -96,7 +119,6 @@ async def get_trans_model():
 async def download(response: Response):
     """download - downloads dependencies from s3
     Args:
-        model: str
     Returns:
     """
     try:
@@ -115,7 +137,7 @@ async def download(response: Response):
 async def s3_func(function, response: Response):
     """s3_func - s3 functionality for model managment
     Args:
-        model: str
+        function: str
     Returns:
     """
     models = []
@@ -129,6 +151,7 @@ async def s3_func(function, response: Response):
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return models
 
+
 ## Post Methods ##
 
 @router.post("/reloadModels", status_code=200)
@@ -140,30 +163,36 @@ async def reload_models(model_dict: dict, response: Response):
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
-    model_path_dict = get_model_paths()
-    if "sentence" in model_dict:
-        SENT_INDEX_PATH.value = os.path.join(
-            Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
-        )
-        model_path_dict["sentence"] = SENT_INDEX_PATH.value
-    if "qexp" in model_dict:
-        QEXP_MODEL_NAME.value = os.path.join(
-            Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
-        )
-        model_path_dict["qexp"] = QEXP_MODEL_NAME.value
-
-    logger.info("Attempting to load QE")
-    MODELS.initQE(model_path_dict["qexp"])
-    logger.info("Attempting to load QA")
-    MODELS.initQA()
-    logger.info("Attempting to load Sentence Transformer")
-    MODELS.initSentence(
-        index_path=model_path_dict["sentence"],
-        transformer_path=model_path_dict["transformers"],
-    )
-
+    try:
+        total = len(model_dict)
+        progress = 0
+        processmanager.update_status(processmanager.reloading, progress, total)
+        if "sentence" in model_dict:
+            SENT_INDEX_PATH.value = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
+            )
+            # uses SENT_INDEX_PATH by default
+            logger.info("Attempting to load Sentence Transformer")
+            MODELS.initSentence()
+            progress +=1
+            processmanager.update_status(processmanager.reloading, progress, total)
+        if "qexp" in model_dict:
+            QEXP_MODEL_NAME.value = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
+            )
+            # uses QEXP_MODEL_NAME by default
+            logger.info("Attempting to load QE")
+            MODELS.initQE()
+            progress +=1
+            processmanager.update_status(processmanager.reloading, progress, total)
+    except Exception as e:
+        logger.warning(e)
+        processmanager.update_status(processmanager.reloading, failed = True)
+    
+    #logger.info("Attempting to load QA")
+    #MODELS.initQA()
     logger.info("Reload Complete")
-    return
+    return await get_process_status()
 
 @router.post("/downloadCorpus", status_code=200)
 async def download_corpus(corpus_dict: dict, response: Response):
@@ -179,12 +208,13 @@ async def download_corpus(corpus_dict: dict, response: Response):
         # grabs the s3 path to the corpus from the post in "corpus" 
         # then passes in where to dowload the corpus locally.
         args = {"corpus_dir":corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+        processmanager.update_status(processmanager.corpus_download)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()
     except:
-        logger.warning(f"Could not get dependencies from S3")
+        logger.warning(f"Could not get corpus from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return get_process_status()
+    return await get_process_status()
 
 @router.post("/trainModel", status_code=200)
 async def tain_model(model_dict: dict, response: Response):
@@ -207,10 +237,11 @@ async def tain_model(model_dict: dict, response: Response):
             "upload": bool(model_dict["upload"]),
             "version": model_dict["version"]
         }
+        processmanager.update_status(processmanager.training)
         corpus_thread = MlThread(create_embedding, args)
         corpus_thread.start()
 
     except:
         logger.warning(f"Could not train the model")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return
+    return await get_process_status()
