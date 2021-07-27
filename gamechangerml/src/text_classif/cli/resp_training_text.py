@@ -21,7 +21,6 @@ from nltk.tokenize import sent_tokenize
 
 import gamechangerml.src.utilities.spacy_model as spacy_m
 from gamechangerml.src.featurization.table import Table
-from gamechangerml.src.text_classif.utils.entity_lookup import ContainsEntity
 
 logger = logging.getLogger(__name__)
 
@@ -38,28 +37,10 @@ class ExtractRespText(Table):
         logger.info("input dir : {}".format(input_dir))
         self.train_df = pd.DataFrame(columns=["source", "label", "text"])
 
-        # matches 1.2.3., etc. at the start of the text
+        # matches 3.2.3., etc. at the start of the text
         self.dd_re = re.compile("(^\\d\\..*?\\d+\\. )")
         self.kw = "shall"
         self.resp = "RESPONSIBILITIES"
-        self.contains_entity = ContainsEntity()
-
-    def correct_false_negs(self, pos_ex, neg_ex):  # experimental
-        logger.info("corrections")
-        negs_to_pop = list()
-        for idx, sent in enumerate(neg_ex):
-            if self.kw in sent:
-                l, r = sent.split(self.kw)
-                logger.info("left  : {}".format(l))
-                logger.info("right : {}".format(r))
-                if self.contains_entity(l) and wc(r) > 3:  # magic number 3
-                    pos_ex.append(sent)
-                    negs_to_pop.append(idx)
-                    logger.info("added positive ex : {}".format(sent))
-        new_negs = [
-            neg for idx, neg in enumerate(neg_ex) if idx not in negs_to_pop
-        ]
-        return pos_ex, new_negs
 
     def scrubber(self, txt):
         txt = re.sub("[\\n\\t\\r]+", " ", txt)
