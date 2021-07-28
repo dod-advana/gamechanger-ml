@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 
 from gamechangerml.src.featurization.ref_list import collect_ref_list
-from gamechangerml.src.text_classif.cli.resp_stats import count_output
+from gamechangerml.src.text_classif.utils.resp_stats import count_output
 
 
 # FUNCTIONS
@@ -12,7 +12,8 @@ def get_agencies_dict(agencies_file):
     Pulls agencies list into a dictionary for use in abbreviations pipeline.
 
     Args:
-        agencies_file: file of the agency documents. currently set to agencies.csv
+        agencies_file: file of the agency documents. currently set to
+            agencies.csv
 
     Returns:
         dictionary of all agencies
@@ -98,7 +99,7 @@ def filter_primary_org(file_dataframe, orgs_file):
     Returns:
         list of extracted primary entities
     """
-    orgs = pd.read_csv(orgs_file, delimiter='\n', header=None)[0]
+    orgs = pd.read_csv(orgs_file, delimiter="\n", header=None)[0]
     df = file_dataframe
     primary_orgs = []
 
@@ -106,7 +107,7 @@ def filter_primary_org(file_dataframe, orgs_file):
         for j in orgs:
             temp = []
             if "(" in j:
-                check_org = j.split('(')[0].strip()
+                check_org = j.split("(")[0].strip()
                 if check_org in row:
                     temp.append(check_org)
             primary_orgs.append(temp)
@@ -121,21 +122,19 @@ def _agg_stats(df, model_name, seq_len, batch_size):
         df_resp_doc = pd.DataFrame(
             list(resp_per_doc.items()), columns=["doc", "count"]
         )
-        df_resp_doc.to_csv("resp-in-doc-stats_{md}_{sl}_{bs}_{rd}.csv".format(
-            md=model_name, 
-            sl=seq_len, 
-            bs=batch_size, 
-            rd=run_date
-            ), index=False
+        df_resp_doc.to_csv(
+            "resp-in-doc-stats_{md}_{sl}_{bs}_{rd}.csv".format(
+                md=model_name, sl=seq_len, bs=batch_size, rd=run_date
+            ),
+            index=False,
         )
     if resp_no_entity:
         df_resp_no_e = pd.DataFrame(
             list(resp_per_doc.items()), columns=["doc", "count"]
         )
-        df_resp_no_e.to_csv("resp-no-entity-stats_{md}_{sl}_{bs}_{rd}.csv".format(
-            md=model_name, 
-            sl=seq_len, 
-            bs=batch_size, 
-            rd=run_date
-            ), index=False
+        df_resp_no_e.to_csv(
+            "resp-no-entity-stats_{md}_{sl}_{bs}_{rd}.csv".format(
+                md=model_name, sl=seq_len, bs=batch_size, rd=run_date
+            ),
+            index=False,
         )
