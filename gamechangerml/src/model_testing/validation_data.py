@@ -76,9 +76,10 @@ class MSMarcoData(ValidationData):
         super().__init__(validation_config)
         self.orig_queries = open_json(validation_config['msmarco']['queries'], self.validation_dir)
         self.collection = open_json(validation_config['msmarco']['collection'], self.validation_dir)
-        self.relations = open_json(validation_config['msmarco']['relations'], self.validation_dir)
+        self.orig_relations = open_json(validation_config['msmarco']['relations'], self.validation_dir)
         self.metadata = open_json(validation_config['msmarco']['metadata'], self.validation_dir)
         self.queries = self.filter_queries()
+        self.relations = {k: self.orig_relations[k][0] for k in self.orig_relations.keys()}
         self.corpus = self.get_msmarco_corpus()
 
     def get_msmarco_corpus(self):
@@ -112,8 +113,10 @@ class RetrieverDomainData(ValidationData):
         q_idx = ["query_" + str(i) for i in range(len(query_list))]
         d_idx = ["doc_" + str(i) for i in range(len(doc_list))]
         queries = dict(zip(q_idx, query_list))
-        collection = dict(zip(d_idx, doc_list))
-        relations = dict(zip(q_idx, d_idx))
+        collection = dict(zip(doc_list, doc_list))
+        relations = dict(zip(q_idx, doc_list))
+
+        print("Generated {} test queries of in-domain data".format(len(query_list)))
 
         return queries, collection, relations
 

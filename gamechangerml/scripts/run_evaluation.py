@@ -5,7 +5,6 @@ from gamechangerml.configs.config import QAConfig
 if __name__ == '__main__':
 
     print("\nStarting QA Evaluation...")
-    #QAEval = QAEvaluator(**QAConfig.MODEL_ARGS, new_model=True)
     print("\nEvaluating QA with SQuAD Data...")
     QAEval = SQuADQAEvaluator(**QAConfig.MODEL_ARGS, new_model=True)
     print(QAEval.results)

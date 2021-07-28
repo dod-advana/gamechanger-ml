@@ -188,8 +188,8 @@ class RetrieverEvaluator(TransformerEvaluator):
             'in_top_10',
             'score'
         ]
-
-        csv_filename = os.path.join(self.save_path, timestamp_filename(index, '.csv'))
+        fname = index.split('/')[-1]
+        csv_filename = os.path.join(self.save_path, timestamp_filename(fname, '.csv'))
         with open(csv_filename, 'w') as csvfile:
             csvwriter = csv.writer(csvfile)  
             csvwriter.writerow(columns) 
@@ -202,9 +202,15 @@ class RetrieverEvaluator(TransformerEvaluator):
                 top_result_match = False
                 in_top_10 = False
                 print(query_count, query)
-                expected_id = data.relations[idx][0]
+                expected_id = data.relations[idx]
                 doc_texts, doc_ids, doc_scores = self.retriever.retrieve_topn(query)
+                if index != 'msmarco_index':
+                    doc_ids = ['.'.join(i.split('.')[:-1]) for i in doc_ids]
+                    print("found ids: ", doc_ids)
+                    print("expected id: ", expected_id)
+
                 if expected_id in doc_ids:
+                    print("FOUND EXPECTED ID")
                     in_top_10 = True
                     rank = doc_ids.index(expected_id)
                     matching_text = data.collection[expected_id]
@@ -232,8 +238,15 @@ class RetrieverEvaluator(TransformerEvaluator):
         df = self.predict(data, index)
 
         num_queries = df['queries'].nunique()
-        proportion_expected_in_top_10 = np.round(df['in_top_10'].value_counts(normalize = True)[True], 2)
-        proportion_expected_is_top = np.round(df['top_result_match'].value_counts(normalize = True)[True], 2)
+
+        proportion_expected_in_top_10 = 0
+        proportion_expected_is_top = 0
+
+        if True in df['in_top_10'].unique():
+            proportion_expected_in_top_10 = np.round(df['in_top_10'].value_counts(normalize = True)[True], 2)
+        if True in df['top_result_match'].unique():
+            proportion_expected_is_top = np.round(df['top_result_match'].value_counts(normalize = True)[True], 2)
+        
         agg_results = {
             "num_queries": num_queries,
             "proportion_expected_in_top_10": proportion_expected_in_top_10,
