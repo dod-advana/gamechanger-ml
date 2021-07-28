@@ -108,8 +108,7 @@ class ValidationConfig:
         },
         "nli": {
             "matched": "multinli_1.0/multinli_1.0_dev_matched.jsonl",
-            "mismatched": "multinli_1.0/multinli_1.0_dev_mismatched.jsonl",
-            "train": "multinli_1.0/multinli_1.0_train.jsonl",
+            "mismatched": "multinli_1.0/multinli_1.0_dev_mismatched.jsonl"
         },
         "msmarco": {
             "collection": "msmarco_1k/collection.json",
@@ -121,6 +120,6 @@ class ValidationConfig:
             "queries": "QA_domain_data.json"
         },
         "retriever_gc": {
-            "gold_standard": ""
+            "gold_standard": "gold_standard.csv"
         }
     }

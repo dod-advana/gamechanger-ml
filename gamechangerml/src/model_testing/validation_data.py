@@ -49,14 +49,14 @@ class QADomainData(ValidationData):
     def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
 
         super().__init__(validation_config)
-        self.queries = open_json(validation_config['question_gc']['queries'], self.validation_dir)
-        self.checked_queries = self.check_queries()
+        self.all_queries = open_json(validation_config['question_gc']['queries'], self.validation_dir)
+        self.queries = self.check_queries()
 
     def check_queries(self):
         '''Check that in-domain examples contain expected answers in their context'''
 
         checked = []
-        for test in self.queries['test_queries']:
+        for test in self.all_queries['test_queries']:
             alltext = normalize_answer(' '.join(test['search_context']))
             checked_answers = [i for i in test['expected'] if normalize_answer(i['text']) in alltext]
             test['expected'] = checked_answers
@@ -98,6 +98,7 @@ class RetrieverDomainData(ValidationData):
 
     def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
 
+        super().__init__(validation_config)
         self.samples = pd.read_csv(os.path.join(self.validation_dir, validation_config['retriever_gc']['gold_standard']), names=['query', 'document'])
         self.queries, self.collection, self.relations = self.dictify_data()
     
