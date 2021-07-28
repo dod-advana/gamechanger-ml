@@ -279,7 +279,7 @@ def main():
 
     def align_predictions(
         predictions: np.ndarray, label_ids: np.ndarray
-    ) -> Tuple[List[int], List[int]]:
+    ) -> Tuple[List[list], List[list]]:
         preds = np.argmax(predictions, axis=2)
 
         batch_size, seq_len = preds.shape
