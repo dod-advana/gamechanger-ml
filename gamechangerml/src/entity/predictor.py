@@ -12,16 +12,20 @@ class Predictor(object):
 
     def __init__(self, model_name_or_path):
         """
-        Wrapper for HF `pipeline`
+        Wrapper for HF NER `pipeline`
 
         Args:
-            model_name_or_path (str): directory of a trained model or a
+            model_name_or_path (str): directory of a trained model or an
                 HF named model
 
         Raises:
              ValueError if `model_name_or_path` is missing
              OSError if the model cannot be loaded
         """
+        logger.info(
+            "{} version {}".format(self.__class__.__name__, self.__version__)
+        )
+
         if not model_name_or_path:
             raise ValueError("no value for `model_name_or_path`")
         try:
@@ -30,6 +34,8 @@ class Predictor(object):
             )
         except OSError as e:
             raise e
+
+        self.empty_list = list()
 
     def __call__(self, seq):
         """
@@ -43,10 +49,17 @@ class Predictor(object):
 
             [
              {'entity_group': 'GCORG', 'score': 0.9965277761220932,
-              'word': 'defense threat reduction agency', 'start': 4, 'end': 35},
+              'word': 'defense threat reduction agency',
+              'start': 4, 'end': 35},
              {'entity_group': 'GCORG', 'score': 0.9997164011001587,
-              'word': 'dt', 'start': 37, 'end': 39},
+              'word': 'dt',
+              'start': 37, 'end': 39},
             {'entity_group': 'GCPER', 'score': 0.9998179872830709,
-              'word': 'secretary of state', 'start': 52, 'end': 70}]
+              'word': 'secretary of state',
+              'start': 52, 'end': 70}
+            ]
         """
-        return self.ner_pipe(seq)
+        if not seq:
+            return self.empty_list
+        else:
+            return self.ner_pipe(seq)
