@@ -120,30 +120,33 @@ def get_s3_corpus_list():
     return corp
 
 
-def get_s3_corpus(corpus_dir, output_dir = "corpus"):
+def get_s3_corpus(corpus_dir, output_dir="corpus"):
     corp = []
     try:
         bucket = s3_connect()
-        
+
         if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
+            os.makedirs(output_dir)
         else:
             files = os.listdir(output_dir)
             total = len(files)
             progress = 0
-            if total >0:
-                processmanager.update_status(processmanager.delete_corpus, progress, total)
+            if total > 0:
+                processmanager.update_status(
+                    processmanager.delete_corpus, progress, total)
                 logger.info("Removing existing corpus files.")
                 for f in files:
                     os.remove(os.path.join(output_dir, f))
-                    progress+=1
-                    processmanager.update_status(processmanager.delete_corpus, progress, total)
+                    progress += 1
+                    processmanager.update_status(
+                        processmanager.delete_corpus, progress, total)
         # get the s3.Bucket.objectsCollection of objects that meet the prefix
         filter = bucket.objects.filter(Prefix=f"{corpus_dir}/")
         total = len(list(filter))
         completed = 0
         # Initialize Progress
-        processmanager.update_status(processmanager.corpus_download, completed, total)
+        processmanager.update_status(
+            processmanager.corpus_download, completed, total)
         logger.info("Downloading corpus from " + corpus_dir)
         for obj in filter:
             corp.append(obj.key)
@@ -151,17 +154,19 @@ def get_s3_corpus(corpus_dir, output_dir = "corpus"):
             try:
                 local_path = os.path.join(output_dir, filename)
                 # Only grab file if it is not already downloaded
-                if not os.path.exists(local_path):
+                if ".json" in filename and not os.path.exists(local_path):
                     bucket.Object(obj.key).download_file(local_path)
-                completed += 1
+                    completed += 1
                 # Update Progress
-                processmanager.update_status(processmanager.corpus_download, completed, total)
+                processmanager.update_status(
+                    processmanager.corpus_download, completed, total)
             except RuntimeError:
                 logger.debug(f"Could not retrieve {filename}")
     except Exception as error:
         logger.warning(error)
         processmanager.update_status(processmanager.delete_corpus, failed=True)
-        processmanager.update_status(processmanager.corpus_download, failed=True)
+        processmanager.update_status(
+            processmanager.corpus_download, failed=True)
     return corp
 
 
@@ -169,7 +174,7 @@ def get_models_list(s3_models_dir):
     bucket = s3_connect()
     models = []
     for obj in bucket.objects.filter(Prefix=s3_models_dir):
-        models.append((obj.key[len(s3_models_dir) :], obj.last_modified))
+        models.append((obj.key[len(s3_models_dir):], obj.last_modified))
     return models
 
 
@@ -190,7 +195,7 @@ def get_latest_model_name(s3_models_dir):
     bucket = s3_connect()
     model_list = []
     for key in bucket.objects.filter(Prefix=s3_models_dir):
-        model_list.append((key.key[len(s3_models_dir) :], key.last_modified))
+        model_list.append((key.key[len(s3_models_dir):], key.last_modified))
     sorted_models = sorted(model_list, key=lambda x: x[1])
     latest_model_name = sorted_models[-1][0].split("/")[0]
     return latest_model_name
