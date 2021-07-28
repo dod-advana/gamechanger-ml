@@ -243,12 +243,12 @@ class Pipeline():
         # If existing index exists, copy content from reference index
         if existing_embeds is not None:
             copy_tree(existing_embeds, local_sent_index_dir)
-
+        logger.info("-------------- Building Sentence Embeddings --------------")
         logger.info("Loading Encoder Model...")
         encoder = SentenceEncoder(encoder_path, use_gpu)
         logger.info("Creating Document Embeddings...")
         encoder.index_documents(corpus, local_sent_index_dir)
-
+        logger.info("-------------- Indexing Documents--------------")
         try:
             user = os.environ.get("GC_USER", default="root")
             if (user =="root"):
@@ -278,6 +278,8 @@ class Pipeline():
         create_tgz_from_dir(src_dir=local_sent_index_dir, dst_archive=dst_path)
 
         logger.info(f"Created tgz file and saved to {dst_path}")
+
+        logger.info("-------------- Finished Sentence Embedding--------------")
         # Upload to S3
         if upload:
             # Loop through each file and upload to S3
@@ -290,5 +292,6 @@ class Pipeline():
             )
             utils.upload_file(local_path, s3_path)
             logger.info(f"Successfully uploaded files to {s3_sent_index_dir}")
+            logger.info("-------------- Finished Uploading Sentence Embedding--------------")
 
 

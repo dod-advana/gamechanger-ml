@@ -9,6 +9,7 @@ from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.routers.startup import *
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.scripts.create_embedding import create_embedding
+from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
@@ -196,7 +197,8 @@ async def train_model(model_dict: dict, response: Response):
     Returns:
     """
     try:
-        logger.info("Attempting to train model")
+        logger.info("Attempting to start train pipeline")
+        pipeline = Pipeline()
         if not os.path.exists(CORPUS_DIR):
             logger.warning(f"Corpus is not in local directory")
             raise Exception("Corpus is not in local directory")
@@ -207,7 +209,7 @@ async def train_model(model_dict: dict, response: Response):
             "upload": bool(model_dict["upload"]),
             "version": model_dict["version"]
         }
-        corpus_thread = MlThread(create_embedding, args)
+        corpus_thread = MlThread(pipeline.create_embedding, args)
         corpus_thread.start()
 
     except:
