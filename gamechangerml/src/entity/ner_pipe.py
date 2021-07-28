@@ -7,7 +7,7 @@ import gamechangerml.src.entity.version as v
 logger = logging.getLogger(__name__)
 
 
-class Predictor(object):
+class NERPipe(object):
     __version__ = v.__version__
 
     def __init__(self, model_name_or_path):
@@ -45,8 +45,14 @@ class Predictor(object):
             seq (str): sequence to predict
 
         Returns:
-            List[dict]: prediction results, e.g.,
+            List[dict]: prediction results
 
+        Example:
+            ner_pipe = NERPipe("model/directory")
+            seq = "The Defense Threat Reduction Agency (DTRA), and the
+                Secretary of State"
+            ner_pipe(seq)
+            # output
             [
              {'entity_group': 'GCORG', 'score': 0.9965277761220932,
               'word': 'defense threat reduction agency',
