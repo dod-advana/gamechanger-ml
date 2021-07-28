@@ -48,22 +48,26 @@ class NERPipe(object):
             List[dict]: prediction results
 
         Example:
-            ner_pipe = NERPipe("model/directory")
-            seq = "The Defense Threat Reduction Agency (DTRA), and the
-                Secretary of State"
-            ner_pipe(seq)
-            # output
-            [
-             {'entity_group': 'GCORG', 'score': 0.9965277761220932,
+           >>> ner_pipe = NERPipe("model/directory")
+           >>> seq = "The Defense Threat Reduction Agency (DTRA), and the Secretary of State"
+           >>> ner_pipe(seq)
+           [
+             {'entity_group': 'GCORG',
+              'score': 0.9965277761220932,
               'word': 'defense threat reduction agency',
-              'start': 4, 'end': 35},
-             {'entity_group': 'GCORG', 'score': 0.9997164011001587,
+              'start': 4,
+              'end': 35},
+             {'entity_group': 'GCORG',
+              'score': 0.9997164011001587,
               'word': 'dt',
-              'start': 37, 'end': 39},
-            {'entity_group': 'GCPER', 'score': 0.9998179872830709,
+              'start': 37,
+              'end': 39},
+             {'entity_group': 'GCPER',
+              'score': 0.9998179872830709,
               'word': 'secretary of state',
-              'start': 52, 'end': 70}
-            ]
+              'start': 52,
+              'end': 70}
+           ]
         """
         if not seq:
             return self.empty_list
