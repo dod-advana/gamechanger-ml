@@ -127,9 +127,9 @@ def ner_training_data(
         entity2type (dict): map of an entity to its type, e.g.,
             GCORG, GCPER, etc; optional.
 
-        min_tokens (int): minimum number of tokens in a sentence
+        min_tokens (int): minimum number of tokens in a sentence (unused)
 
-        max_tokens (int): maximum number of tokens in a sentence
+        max_tokens (int): maximum number of tokens in a sentence (unused)
     """
     if sep == "space":
         SEP = " "
@@ -141,7 +141,7 @@ def ner_training_data(
         logger.warning("unrecognized value for `sep`, got {}".format(sep))
         SEP = " "
 
-    multiplier = 1.5  # for now
+    multiplier = 1.0  # for now
     NL = "\n"
     EMPTYSTR = ""
     print_str = EMPTYSTR
@@ -150,9 +150,7 @@ def ner_training_data(
         abbrv_re, entity_re, entity2type = em.make_entity_re(entity_csv)
 
     sent_dict = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
-    sent_dict = [
-        row for row in sent_dict if min_tokens < _wc(row[SENT]) <= max_tokens
-    ]
+    logger.info("num sentences : {}".format(len(sent_dict)))
 
     ent_sents = [
         row
@@ -163,25 +161,14 @@ def ner_training_data(
         logger.warning("no entities discovered in the input...")
         return
 
-    n_ents = len(ent_sents)
-    logger.info("     entity sentences : {:>5,d}".format(n_ents))
-
-    sz = int(n_ents * multiplier)
-    non_ent_sents = [
-        row
-        for row in sent_dict
-        if len(row[SENT]) > 1
-        if not em.contains_entity(row[SENT], entity_re, abbrv_re)
-    ][:sz]
-
-    logger.info(" non-entity sentences : {:>5,d}".format(len(non_ent_sents)))
     t_sum = [_wc(row[SENT]) for row in sent_dict]
     avg_tokens = sum(t_sum) / len(sent_dict)
+    logger.info("     entity sentences : {:>5,d}".format(len(ent_sents)))
+    logger.info("           sum tokens : {:>5,d}".format(sum(t_sum)))
     logger.info("min tokens / sentence : {:>5d}".format(min(t_sum)))
     logger.info("max tokens / sentence : {:>5d}".format(max(t_sum)))
     logger.info("avg tokens / sentence : {:3.2f}".format(avg_tokens))
 
-    ent_sents.extend(non_ent_sents)
     random.shuffle(ent_sents)
 
     training_generator = _gen_ner_conll_tags(
@@ -216,7 +203,7 @@ def main(
     shuffle,
     t_split,
     save_tdv=True,
-    min_tokens=4,
+    min_tokens=0,
     max_tokens=100,
 ):
     """
