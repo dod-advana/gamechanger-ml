@@ -29,6 +29,7 @@ RUN "${BASE_APP_VENV_PATH}/bin/pip" install --no-cache-dir --no-deps -r "gamecha
 # RUN pip3 install gamechangerml/.
 COPY . gamechangerml/.
 # RUN mkdir gamechanger-ml/gamechangerml
+RUN mkdir /opt/app-root/src/gamechangerml/corpus
 WORKDIR gamechangerml
 
 EXPOSE 5000

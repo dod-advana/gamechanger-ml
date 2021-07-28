@@ -125,17 +125,19 @@ def get_s3_corpus(corpus_dir, output_dir = "corpus"):
     try:
         bucket = s3_connect()
         
-        try:
-            if not os.path.exists(output_dir):
+        if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
-            else:
-                files = os.listdir(output_dir)
-                total = len(files)
+        else:
+            files = os.listdir(output_dir)
+            total = len(files)
+            progress = 0
+            if total >0:
+                processmanager.update_status(processmanager.delete_corpus, progress, total)
                 logger.info("Removing existing corpus files.")
                 for f in files:
                     os.remove(os.path.join(output_dir, f))
-        except OSError as error:
-            logger.warning(error)
+                    progress+=1
+                    processmanager.update_status(processmanager.delete_corpus, progress, total)
         # get the s3.Bucket.objectsCollection of objects that meet the prefix
         filter = bucket.objects.filter(Prefix=f"{corpus_dir}/")
         total = len(list(filter))
@@ -158,6 +160,7 @@ def get_s3_corpus(corpus_dir, output_dir = "corpus"):
                 logger.debug(f"Could not retrieve {filename}")
     except Exception as error:
         logger.warning(error)
+        processmanager.update_status(processmanager.delete_corpus, failed=True)
         processmanager.update_status(processmanager.corpus_download, failed=True)
     return corp
 
