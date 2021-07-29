@@ -161,13 +161,13 @@ def ner_training_data(
     all_tokens = [wc(row[SENT]) for row in sent_list]
     avg_tokens = sum(all_tokens) / len(sent_list)
     logger.info("            num sentences : {:>5,d}".format(len(sent_list)))
-    logger.info(" num sentence w/ entities : {:>5,d}".format(len(ent_sents)))
-    logger.info("               sum tokens : {:>5,d}".format(sum(all_tokens)))
+    logger.info("num sentences w/ entities : {:>5,d}".format(len(ent_sents)))
+    logger.info("               num tokens : {:>5,d}".format(sum(all_tokens)))
     logger.info("    min tokens / sentence : {:>5d}".format(min(all_tokens)))
     logger.info("    max tokens / sentence : {:>5d}".format(max(all_tokens)))
     logger.info("    avg tokens / sentence : {:>5.2f}".format(avg_tokens))
 
-    random.shuffle(sent_list)
+    random.shuffle(ent_sents)
 
     training_generator = _gen_ner_conll_tags(
         abbrv_re, entity_re, entity2type, ent_sents, nlp
@@ -219,7 +219,7 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split,
         shuffle (bool): If True, randomize the sentence data
 
         t_split (float): fraction used for training data, e.g., 0.80; dev
-            and val data are split as (1 - t_split) / 2
+            and test data are split as (1 - t_split) / 2
 
         min_tokens (int): minimum number of tokens in a sentence
 
@@ -240,12 +240,12 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split,
     df = pd.read_csv(sentence_csv, delimiter=",", header=None)
     logger.info("examples : {:>4,d}".format(len(df)))
 
-    # subset the data; else get it all
+    # subset the data?
     if n_samples > 0:
         df = df.head(n_samples)
 
-    train, val_test = train_test_split(df, train_size=t_split)
-    dev, test = train_test_split(val_test, train_size=0.50)
+    train, dev_test = train_test_split(df, train_size=t_split)
+    dev, test = train_test_split(dev_test, train_size=0.50)
 
     # save intermediate output for now
     for idx, df in enumerate((train, dev, test)):
