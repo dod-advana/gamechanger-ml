@@ -4,7 +4,6 @@ import os
 import json
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
-from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.routers.startup import *
@@ -165,33 +164,41 @@ async def reload_models(model_dict: dict, response: Response):
     """
     try:
         total = len(model_dict)
-        progress = 0
-        processmanager.update_status(processmanager.reloading, progress, total)
-        if "sentence" in model_dict:
-            SENT_INDEX_PATH.value = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
-            )
-            # uses SENT_INDEX_PATH by default
-            logger.info("Attempting to load Sentence Transformer")
-            MODELS.initSentence(SENT_INDEX_PATH.value)
-            progress +=1
-            processmanager.update_status(processmanager.reloading, progress, total)
-        if "qexp" in model_dict:
-            QEXP_MODEL_NAME.value = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
-            )
-            # uses QEXP_MODEL_NAME by default
-            logger.info("Attempting to load QE")
-            MODELS.initQE(QEXP_MODEL_NAME.value)
-            progress +=1
-            processmanager.update_status(processmanager.reloading, progress, total)
+        processmanager.update_status(processmanager.reloading, 0, total)
+        # put the reload process on a thread
+        def reload_thread(model_dict):
+            try:
+                progress = 0
+                if "sentence" in model_dict:
+                    setence_path= os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
+                    )
+                    # uses SENT_INDEX_PATH by default
+                    logger.info("Attempting to load Sentence Transformer")
+                    MODELS.initSentence(setence_path)
+                    SENT_INDEX_PATH.value = setence_path
+                    progress +=1
+                    processmanager.update_status(processmanager.reloading, progress, total)
+                if "qexp" in model_dict:
+                    qexp_name = os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
+                    )
+                    # uses QEXP_MODEL_NAME by default
+                    logger.info("Attempting to load QE")
+                    MODELS.initQE(qexp_name)
+                    QEXP_MODEL_NAME.value = qexp_name
+                    progress +=1
+                    processmanager.update_status(processmanager.reloading, progress, total)
+            except Exception as e:
+                logger.warning(e)
+                processmanager.update_status(processmanager.reloading, failed = True)
+
+        args = {"model_dict":model_dict}
+        thread = MlThread(reload_thread, args)
+        thread.start()
     except Exception as e:
         logger.warning(e)
-        processmanager.update_status(processmanager.reloading, failed = True)
-    
-    #logger.info("Attempting to load QA")
-    #MODELS.initQA()
-    logger.info("Reload Complete")
+
     return await get_process_status()
 
 @router.post("/downloadCorpus", status_code=200)
@@ -237,7 +244,7 @@ async def tain_model(model_dict: dict, response: Response):
             "upload": bool(model_dict["upload"]),
             "version": model_dict["version"]
         }
-        processmanager.update_status(processmanager.training)
+        processmanager.update_status(processmanager.training, 0,1)
         corpus_thread = MlThread(create_embedding, args)
         corpus_thread.start()
 
