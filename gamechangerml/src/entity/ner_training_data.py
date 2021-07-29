@@ -101,8 +101,6 @@ def ner_training_data(
     abbrv_re=None,
     entity_re=None,
     entity2type=None,
-    min_tokens=None,
-    max_tokens=None,
 ):
     """
     Create NER training data in CoNLL-2003 format. For more information on
@@ -130,9 +128,6 @@ def ner_training_data(
         entity2type (dict): map of an entity to its type, e.g.,
             GCORG, GCPER, etc; optional.
 
-        min_tokens (int): minimum number of tokens in a sentence (unused)
-
-        max_tokens (int): maximum number of tokens in a sentence (unused)
     """
     if sep == "space":
         SEP = " "
@@ -195,8 +190,17 @@ def ner_training_data(
     logger.info("output written to : {}".format(out_fp))
 
 
-def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split,
-         min_tokens=None, max_tokens=None):
+def main(
+    entity_csv,
+    sentence_csv,
+    n_samples,
+    nlp,
+    sep,
+    shuffle,
+    t_split,
+    min_tokens=None,
+    max_tokens=None,
+):
     """
     This creates CoNLL-formatted data for use in the NER model. Three files
     are created `train.txt.tmp`, `dev.txt.tmp`, and `test.txt.tmp` in the
@@ -268,8 +272,6 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split,
             abbrv_re=abbrv_re,
             entity_re=entity_re,
             entity2type=entity2type,
-            min_tokens=min_tokens,
-            max_tokens=max_tokens,
         )
 
 
@@ -335,25 +337,18 @@ if __name__ == "__main__":
         default=0.80,
         help="training split; dev, val are evenly split from 1 - t_split",
     )
-    parser.add_argument(
-        "--min-tokens",
-        dest="min_tokens",
-        type=int,
-        default=0,
-        help="minimum number of tokens in a sentence",
-    )
-    parser.add_argument(
-        "--max-tokens",
-        dest="max_tokens",
-        type=int,
-        default=500,
-        help="maximum number of tokens in a sentence",
-    )
     args = parser.parse_args()
 
     logger.info("retrieving spaCy model")
     nlp_ = get_lg_nlp()
     logger.info("spaCy model loaded")
 
-    main(args.entity_csv, args.sent_csv, args.n_samples, nlp_, args.sep,
-         args.shuffle, args.t_split, args.max_tokens)
+    main(
+        args.entity_csv,
+        args.sent_csv,
+        args.n_samples,
+        nlp_,
+        args.sep,
+        args.shuffle,
+        args.t_split,
+    )

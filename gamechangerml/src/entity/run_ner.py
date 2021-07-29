@@ -32,8 +32,9 @@ from seqeval.metrics import (
     f1_score,
     precision_score,
     recall_score,
-    classification_report
+    classification_report,
 )
+
 # from sklearn.metrics import classification_report, confusion_matrix
 from torch import nn
 from transformers import (
