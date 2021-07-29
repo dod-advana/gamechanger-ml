@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 SENT = "sentence"
 
 
-def _wc(txt):
+def wc(txt):
     return txt.count(" ") + 1
 
 
@@ -73,7 +73,7 @@ def _gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_dict, nlp):
             ]
             if not token_idxs:
                 continue
-            if _wc(ent) == 1:
+            if wc(ent) == 1:
                 ner_labels[token_idxs[0]] = I_PRFX + entity2type[ent.lower()]
                 continue
 
@@ -160,7 +160,7 @@ def ner_training_data(
         logger.warning("no entities discovered in the input...")
         return
 
-    t_sum = [_wc(row[SENT]) for row in sent_dict]
+    t_sum = [wc(row[SENT]) for row in sent_dict]
     avg_tokens = sum(t_sum) / len(sent_dict)
     logger.info("     entity sentences : {:>5,d}".format(len(ent_sents)))
     logger.info("           sum tokens : {:>5,d}".format(sum(t_sum)))

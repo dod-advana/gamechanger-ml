@@ -156,7 +156,6 @@ def count_glob(corpus_dir, glob, entity_re, abbrv_re):
         Dict[List[tuple]] : key is the document name, each tuple is
             (entity, frequency)
     """
-    SENT = "sentence"
     nfiles = cu.nfiles_in_glob(corpus_dir, glob)
     entity_count = defaultdict(int)
     doc_entity = dict()
