@@ -4,9 +4,9 @@ import pandas as pd
 import csv
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder, SentenceSearcher, SimilarityRanker
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs.config import EmbedderConfig, SimilarityConfig, ValidationConfig
+from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, ValidationConfig
 from gamechangerml.src.utilities.model_helper import *
-from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverDomainData
+from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
 
@@ -27,19 +27,19 @@ class QAEvaluator(TransformerEvaluator):
 
     def __init__(
         self, 
-        model_name, 
-        qa_type, 
-        nbest, 
-        null_threshold, 
+        model=None,
+        config=QAConfig.MODEL_ARGS,
         transformer_path=LOCAL_TRANSFORMERS_DIR, 
         save_path=SAVE_PATH,
-        use_gpu=False,
+        use_gpu=False
         ):
 
         super().__init__(transformer_path, save_path)
 
-        self.model_path = os.path.join(transformer_path, model_name)
-        self.model = QAReader(self.model_path, qa_type, nbest, null_threshold, use_gpu)
+        if model:
+            self.model = model
+        else:
+            self.model = QAReader(os.path.join(transformer_path, config['model_name']), config['qa_type'], config['nbest'], config['null_threshold'], use_gpu)
 
     def compare(self, predicted, actual):
         '''Compare predicted to expected answers'''
@@ -70,11 +70,11 @@ class QAEvaluator(TransformerEvaluator):
         csv_filename = os.path.join(self.save_path, timestamp_filename(test_data, '.csv'))
         with open(csv_filename, 'w') as csvfile: 
             csvwriter = csv.writer(csvfile)  
-            csvwriter.writerow(columns) 
+            csvwriter.writerow(columns)
 
             for query in data.queries:
                 try:
-                    print(query_count, query['question'])
+                    logger.info(query_count, query['question'])
                     actual_null = query['null_expected']
                     actual = query['expected']
                     prediction = self.model.answer(query['question'], query['search_context'])[0]
@@ -122,61 +122,52 @@ class SQuADQAEvaluator(QAEvaluator):
 
     def __init__(
         self, 
-        model_name, 
-        qa_type, 
-        nbest, 
-        null_threshold, 
+        model=None,
+        config=QAConfig.MODEL_ARGS,
         transformer_path=LOCAL_TRANSFORMERS_DIR, 
         save_path=SAVE_PATH, 
-        new_model=False,
         use_gpu=False,
+        sample_limit=None
         ):
 
-        super().__init__(model_name, qa_type, nbest, null_threshold, transformer_path, save_path, use_gpu)
+        super().__init__(model, config, transformer_path, save_path, use_gpu)
 
-        self.data = SQuADData()
-        if new_model == True:
-            self.results = self.eval(data=self.data, test_data='squad')
+        self.data = SQuADData(sample_limit)
+        self.results = self.eval(data=self.data, test_data='squad')
 
 class IndomainQAEvaluator(QAEvaluator):
 
     def __init__(
         self, 
-        model_name, 
-        qa_type, 
-        nbest, 
-        null_threshold, 
+        model=None,
+        config=QAConfig.MODEL_ARGS,
         transformer_path=LOCAL_TRANSFORMERS_DIR, 
         save_path=SAVE_PATH, 
-        new_model=False,
         use_gpu=False,
         ):
 
-        super().__init__(model_name, qa_type, nbest, null_threshold, transformer_path, save_path, use_gpu)
+        super().__init__(model, config, transformer_path, save_path, use_gpu)
 
         self.data = QADomainData()
-        if new_model == True:
-            self.results = self.eval(data=self.data, test_data='domain')
+        self.results = self.eval(data=self.data, test_data='domain')
 
 
 class RetrieverEvaluator(TransformerEvaluator):
 
     def __init__(
             self, 
-            model_name=EmbedderConfig.MODEL_ARGS['model_name'],
             transformer_path=LOCAL_TRANSFORMERS_DIR,
             save_path=SAVE_PATH, 
         ):
 
         super().__init__(transformer_path, save_path)
 
-        self.model_path = os.path.join(self.transformer_path, model_name)
 
     def make_index(self, encoder, corpus_path):
 
         return encoder.index_documents(corpus_path)
 
-    def predict(self, data, index):
+    def predict(self, data, index, retriever):
 
         columns = [
             'index',
@@ -201,16 +192,13 @@ class RetrieverEvaluator(TransformerEvaluator):
                 score = 'NA'
                 top_result_match = False
                 in_top_10 = False
-                print(query_count, query)
+                logger.info(query_count, query)
                 expected_id = data.relations[idx]
-                doc_texts, doc_ids, doc_scores = self.retriever.retrieve_topn(query)
+                doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query)
                 if index != 'msmarco_index':
                     doc_ids = ['.'.join(i.split('.')[:-1]) for i in doc_ids]
-                    print("found ids: ", doc_ids)
-                    print("expected id: ", expected_id)
 
                 if expected_id in doc_ids:
-                    print("FOUND EXPECTED ID")
                     in_top_10 = True
                     rank = doc_ids.index(expected_id)
                     matching_text = data.collection[expected_id]
@@ -233,9 +221,9 @@ class RetrieverEvaluator(TransformerEvaluator):
 
         return pd.read_csv(csv_filename)
         
-    def eval(self, data, index):
+    def eval(self, data, index, retriever):
         
-        df = self.predict(data, index)
+        df = self.predict(data, index, retriever)
 
         num_queries = df['queries'].nunique()
 
@@ -258,75 +246,94 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
 
     def __init__(
             self, 
-            model_name=EmbedderConfig.MODEL_ARGS['model_name'],
+            encoder=None,
+            retriever=None,
             transformer_path=LOCAL_TRANSFORMERS_DIR,
-            index='msmarco_index',
             save_path=SAVE_PATH, 
-            encoder_args=EmbedderConfig.MODEL_ARGS, 
-            similarity_args=SimilarityConfig.MODEL_ARGS,
-            use_gpu=False,
-            new_model=False
+            index='msmarco_index',
+            encoder_config=EmbedderConfig.MODEL_ARGS, 
+            similarity_config=SimilarityConfig.MODEL_ARGS,
+            use_gpu=False
         ):
 
-        super().__init__(model_name, transformer_path, save_path)
+        super().__init__(transformer_path, save_path)
 
-        self.data = MSMarcoData()
         self.index_path = os.path.join(save_path, index)
         if not os.path.exists(self.index_path):  
-            print("Making new embeddings index at {}".format(str(self.index_path)))
+            logger.info("Making new embeddings index at {}".format(str(self.index_path)))
             os.makedirs(self.index_path)
-            self.encoder = SentenceEncoder(encoder_args, self.index_path, use_gpu)
+            if encoder:
+                self.encoder=encoder
+            else:
+                self.encoder = SentenceEncoder(encoder_config, self.index_path, use_gpu)
             self.make_index(encoder=self.encoder, corpus_path=None)
-        self.retriever = SentenceSearcher(self.index_path, transformer_path, encoder_args, similarity_args)
-        if new_model == True:
-            self.results = self.eval(data=self.data, index=index)
+        self.data = MSMarcoData()
+        if retriever:
+            self.retriever = retriever
+        else:
+            self.retriever = SentenceSearcher(self.index_path, transformer_path, encoder_config, similarity_config)
+        self.results = self.eval(data=self.data, index=index, retriever=self.retriever)
 
 class IndomainRetrieverEvaluator(RetrieverEvaluator):
 
     def __init__(
             self, 
-            model_name=EmbedderConfig.MODEL_ARGS['model_name'],
+            encoder=None,
+            retriever=None,
             transformer_path=LOCAL_TRANSFORMERS_DIR,
-            index=SENT_INDEX_PATH,
             save_path=SAVE_PATH, 
-            corpus_path='/Users/katherinedowdy/Documents/GameChanger/gamechanger-ml/gamechangerml/data/corpus_test', # default corpus path??
-            encoder_args=EmbedderConfig.MODEL_ARGS, 
-            similarity_args=SimilarityConfig.MODEL_ARGS,
+            index=SENT_INDEX_PATH,
+            encoder_config=EmbedderConfig.MODEL_ARGS, 
+            similarity_config=SimilarityConfig.MODEL_ARGS,
             use_gpu=False,
-            new_model=False
+            corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'], 
         ):
 
-        super().__init__(model_name, transformer_path, save_path)
+        super().__init__(transformer_path, save_path)
 
-        self.data = RetrieverDomainData()
         self.index_path = index
         if not os.path.exists(self.index_path):  
-            print("Making new embeddings index at {}".format(str(self.index_path)))
+            logger.info("Making new embeddings index at {}".format(str(self.index_path)))
             os.makedirs(self.index_path)
-            self.encoder = SentenceEncoder(encoder_args, self.index_path, use_gpu)
+            if encoder:
+                self.encoder=encoder
+            else:
+                self.encoder = SentenceEncoder(encoder_config, self.index_path, use_gpu)
             self.make_index(encoder=self.encoder, corpus_path=corpus_path)
-        self.retriever = SentenceSearcher(self.index_path, transformer_path, encoder_args, similarity_args)
-        if new_model == True:
-            self.results = self.eval(data=self.data, index=index)
+            self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
+        self.data = RetrieverGSData(self.doc_ids)
+        if retriever:
+            self.retriever=retriever
+        else:
+            self.retriever = SentenceSearcher(self.index_path, transformer_path, encoder_config, similarity_config)
+        self.results = self.eval(data=self.data, index=index, retriever=self.retriever)
+
+    def check_docids(self):
+
+        path_to_ids = os.path.join(self.index_path, 'doc_ids.txt')
+        ids = [i.strip('\n') for i in open_txt(path_to_ids)]
+        
 
 class SimilarityEvaluator(TransformerEvaluator):
 
     def __init__(
             self, 
+            model=None,
             transformer_path=LOCAL_TRANSFORMERS_DIR, 
             save_path=SAVE_PATH, 
-            model_args=SimilarityConfig.MODEL_ARGS, 
-            new_model = False,
+            model_config=SimilarityConfig.MODEL_ARGS, 
             sample_limit=1000
         ):
 
         super().__init__(transformer_path, save_path)
 
-        self.model = SimilarityRanker(model_args, transformer_path)
+        if model:
+            self.model = model
+        else:
+            self.model = SimilarityRanker(model_config, transformer_path)
         self.nli = NLIData()
         self.sample_limit = sample_limit
-        if new_model == True:
-            self.results = self.eval_nli()
+        self.results = self.eval_nli()
 
     def predict_nli(self):
         '''Get rank predictions from similarity model'''
@@ -337,7 +344,7 @@ class SimilarityEvaluator(TransformerEvaluator):
         cutoff = np.min([df['promptID'].nunique(), self.sample_limit])
         for i in df['promptID'].unique():
             if count <= cutoff:
-                print(count, i)
+                logger.info(count, i)
                 subset = df[df['promptID']==i]
                 iddict = dict(zip(subset['sentence2'], subset['pairID']))
                 texts = [i for i in iddict.keys()]

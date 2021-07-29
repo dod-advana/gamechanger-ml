@@ -1,6 +1,8 @@
 import pandas as pd
+import numpy as np
 from gamechangerml.src.utilities.model_helper import *
 from gamechangerml.configs.config import ValidationConfig
+from gamechangerml.api.utils.logger import logger
 
 class ValidationData():
 
@@ -10,37 +12,49 @@ class ValidationData():
 
 class SQuADData(ValidationData):
 
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(self, sample_limit=None, validation_config=ValidationConfig.DATA_ARGS):
 
         super().__init__(validation_config)
         self.dev = open_json(validation_config['squad']['dev'], self.validation_dir)
-        self.sample_limit = validation_config['squad']['sample_limit']
-        self.queries = self.get_squad_sample()
+        self.queries = self.get_squad_sample(sample_limit)
     
-    def get_squad_sample(self):
+    def get_squad_sample(self, sample_limit):
         '''Format SQuAD data into list of dictionaries (length = sample size)'''
 
-        queries = []
+        data_limit = len(self.dev['data'])
+
+        if sample_limit:
+            data_limit = np.min([data_limit, sample_limit])
+            par_limit = sample_limit // data_limit
+        else:
+            par_limit = np.max([len(d['paragraphs']) for d in self.dev['data']])
+
         count = 0
-        for entry in self.dev['data']:
-            for para in entry['paragraphs']:
-                context = para['context']
-                if type(context) == str:
-                    context = [context]
-                for test in para['qas']:
-                    if count < self.sample_limit:
-                        count += 1
-                        mydict = {
-                            "search_context": context,
-                            "question": test['question'],
-                            "id": test['id'],
-                            "null_expected": test['is_impossible'],
-                            "expected": test['answers']
-                        }
-                        queries.append(mydict)
-                    break
+        queries = []
+        for p in range(par_limit):
+            for d in range(data_limit):
+                try:
+                    base = self.dev['data'][d]['paragraphs'][p]
+                    context = base['context']
+                    questions = base['qas']
+                    q_limit = np.min([2, par_limit, len(questions)])
+                    for q in range(q_limit):
+                        if count < sample_limit:
+                            count += 1
+                            mydict = {
+                                "search_context": context,
+                                "question": questions[q]['question'],
+                                "id": questions[q]['id'],
+                                "null_expected": questions[q]['is_impossible'],
+                                "expected": questions[q]['answers']
+                            }
+                            queries.append(mydict)
+                        else:
+                            break
+                except:
+                    pass
         
-        print("Generated {} SQuAD queries".format(len(queries)))
+        logger.info("Generated {} question/answer pairs from SQuAD dataset".format(len(queries)))
 
         return queries
 
@@ -63,9 +77,9 @@ class QADomainData(ValidationData):
             if test['expected'] != []:
                 checked.append(test)
             else:
-                print("Could not add {} to test queries: answer not in context".format(test['question']))
+                logger.info("Could not add {} to test queries: answer not in context".format(test['question']))
         
-        print("Number of in-domain question/answer examples: {}".format(len(checked)))
+        logger.info("Generated {} question/answer pairs from in-domain data".format(len(checked)))
 
         return checked
 
@@ -91,32 +105,40 @@ class MSMarcoData(ValidationData):
         '''Filter out MSMarco examples with more than one top expected doc'''
 
         include = [i for i, x in self.relations.items() if len(x)==1]
-        print("Number MSMarco test queries: ", len(include))
+        logger.info("Generated {} test queries from msmarco dataset", len(include))
 
         return {x: self.orig_queries[x] for x in include}
 
-class RetrieverDomainData(ValidationData):
+class RetrieverGSData(ValidationData):
 
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(self, available_ids, validation_config=ValidationConfig.DATA_ARGS):
 
         super().__init__(validation_config)
         self.samples = pd.read_csv(os.path.join(self.validation_dir, validation_config['retriever_gc']['gold_standard']), names=['query', 'document'])
-        self.queries, self.collection, self.relations = self.dictify_data()
+        self.queries, self.collection, self.relations = self.dictify_data(available_ids)
     
-    def dictify_data(self):
+    def dictify_data(self, available_ids):
         '''Format gold standard csv examples into MSMarco format'''
 
+        ids = [i.strip('\n') for i in available_ids]
         self.samples['document'] = self.samples['document'].apply(lambda x: x.split(';'))
         self.samples = self.samples.explode('document')
-        query_list = self.samples['query'].to_list()
-        doc_list = self.samples['document'].to_list()
+        df = self.samples[self.samples['document'].isin(ids)] # check ids are in the index
+        if df.shape[0] < self.samples.shape[0]:
+            logger.info("Validation Ids found that were not in the index: ")
+            all_ids = self.samples['document'].to_list()
+            missing_ids = [i for i in all_ids if i not in ids]
+            logger.info(missing_ids)
+            logger.info("Ids have been removed from validation set.")
+
+        query_list = df['query'].to_list()
+        doc_list = df['document'].to_list()
         q_idx = ["query_" + str(i) for i in range(len(query_list))]
-        d_idx = ["doc_" + str(i) for i in range(len(doc_list))]
         queries = dict(zip(q_idx, query_list))
         collection = dict(zip(doc_list, doc_list))
         relations = dict(zip(q_idx, doc_list))
 
-        print("Generated {} test queries of in-domain data".format(len(query_list)))
+        logger.info("Generated {} test queries of gold standard data".format(len(query_list)))
 
         return queries, collection, relations
 
@@ -127,10 +149,10 @@ class NLIData(ValidationData):
         super().__init__(validation_config)
         self.matched = open_jsonl(validation_config['nli']['matched'], self.validation_dir)
         self.mismatched = open_jsonl(validation_config['nli']['mismatched'], self.validation_dir)
-        self.sample_csv = self.get_sample_csv()
+        self.sample_csv = self.get_sample_csv(sample_limit=None)
         self.query_lookup = dict(zip(self.sample_csv['promptID'], self.sample_csv['sentence1']))
 
-    def get_sample_csv(self):
+    def get_sample_csv(self, sample_limit=None):
         '''Format NLI data into smaller sample for evaluation'''
 
         match_df = pd.DataFrame(self.matched)
@@ -159,13 +181,17 @@ class NLIData(ValidationData):
         }
         both['expected_rank'] = both['gold_label'].map(rank_map)
 
+        cats = both['genre'].nunique()
+
         # get smaller sample df with even proportion of genres across matched/mismatched
         sample = pd.DataFrame()
         for i in both['genre'].unique():
-            subset = both[both['genre']==i].sort_values(by='promptID').head(300)
+            subset = both[both['genre']==i].sort_values(by='promptID')
+            if sample_limit:
+                split = sample_limit * 3 // cats
+                subset = subset.head(split)
             sample = pd.concat([sample, subset])
 
-        print("Created {} sample sentence pairs:".format(sample.shape[0]))
-        print(sample.head())
+        logger.info(("Created {} sample sentence pairs from {} unique queries:".format(sample.shape[0], sample_limit)))
 
         return sample[['genre', 'gold_label', 'pairID', 'promptID', 'sentence1', 'sentence2', 'expected_rank']]
