@@ -98,8 +98,8 @@ def contains_entity(text, entity_re, abbrv_re):
 
     Args:
         text (str): text to search
-        entity_re (SRE_Pattern): compiled regular expression
-        abbrv_re (SRE_Pattern): compiled regular expression
+        entity_re (SRE_Pattern): compiled regular expression for entities
+        abbrv_re (SRE_Pattern): compiled regular expression for abbreviations
 
     Returns:
         List[str]
@@ -107,13 +107,12 @@ def contains_entity(text, entity_re, abbrv_re):
     entity_list = list()
 
     entities = entity_re.findall(text)
-    if entities:
-        entity_list.extend(entities)
+    entity_list.extend(entities)
 
     abbrvs = abbrv_re.findall(text)
-    if abbrvs:
-        for a in abbrvs:
-            entity_list.append(a)
+    abbrvs_list = [a for a in abbrvs]
+    entity_list.extend(abbrvs_list)
+
     return entity_list
 
 
@@ -129,7 +128,7 @@ def entities_spans(text, entity_re, abbrv_re):
         abbrv_re (SRE_Pattern): compiled regular expression
 
     Returns:
-        List[tuple]
+        List[tuple, tuple]
     """
     ent_list = list()
     for mobj in entity_re.finditer(text):
@@ -278,7 +277,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t",
         "--task",
-        dest="run_type",
+        dest="task",
         choices=["mentions", "spans"],
         required=True,
         help="what do you want to run?",
@@ -294,11 +293,11 @@ if __name__ == "__main__":
 
     output = None
     start = time.time()
-    if args.run_type == "spans":
+    if args.task == "spans":
         output = entities_and_spans(
             args.entity_file, args.input_path, args.glob
         )
-    elif args.run_type == "mentions":
+    elif args.task == "mentions":
         output = entity_mentions_glob(
             args.entity_file, args.input_path, args.glob
         )

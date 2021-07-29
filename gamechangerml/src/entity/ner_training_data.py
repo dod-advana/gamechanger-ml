@@ -98,8 +98,8 @@ def ner_training_data(
     abbrv_re=None,
     entity_re=None,
     entity2type=None,
-    min_tokens=4,
-    max_tokens=100,
+    min_tokens=None,
+    max_tokens=None,
 ):
     """
     Create NER training data in CoNLL-2003 format. For more information on
@@ -141,7 +141,6 @@ def ner_training_data(
         logger.warning("unrecognized value for `sep`, got {}".format(sep))
         SEP = " "
 
-    multiplier = 1.0  # for now
     NL = "\n"
     EMPTYSTR = ""
     print_str = EMPTYSTR
@@ -202,9 +201,9 @@ def main(
     sep,
     shuffle,
     t_split,
-    save_tdv=True,
-    min_tokens=0,
-    max_tokens=100,
+    save_sent_csv=True,
+    min_tokens=None,
+    max_tokens=None,
 ):
     """
     This creates CoNLL-formatted data for use in the NER model. Three files
@@ -233,7 +232,7 @@ def main(
         t_split (float): fraction used for training data, e.g., 0.80; dev
             and val data are split as (1 - t_split) / 2
 
-        save_tdv (bool): save train, dev, val datasets to their own .csv
+        save_sent_csv (bool): save train, dev, val datasets to their own .csv
 
         min_tokens (int): minimum number of tokens in a sentence
 
@@ -256,7 +255,7 @@ def main(
         df = df.head(n_samples)
     logger.info("examples : {:>4,d}".format(len(df)))
 
-    if save_tdv:
+    if save_sent_csv:
         train, dev_val = train_test_split(df, train_size=t_split)
         dev, val = train_test_split(dev_val, train_size=0.50)
 
@@ -349,14 +348,14 @@ if __name__ == "__main__":
         "--min-tokens",
         dest="min_tokens",
         type=int,
-        default=4,
+        default=0,
         help="minimum number of tokens in a sentence",
     )
     parser.add_argument(
         "--max-tokens",
         dest="max_tokens",
         type=int,
-        default=100,
+        default=500,
         help="maximum number of tokens in a sentence",
     )
     args = parser.parse_args()

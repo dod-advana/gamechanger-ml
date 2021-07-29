@@ -32,7 +32,9 @@ from seqeval.metrics import (
     f1_score,
     precision_score,
     recall_score,
+    classification_report
 )
+# from sklearn.metrics import classification_report, confusion_matrix
 from torch import nn
 from transformers import (
     AutoConfig,
@@ -278,32 +280,34 @@ def main():
     )
 
     def align_predictions(
-        predictions: np.ndarray, label_ids: np.ndarray
+        predictions_: np.ndarray, label_ids: np.ndarray
     ) -> Tuple[List[list], List[list]]:
-        preds = np.argmax(predictions, axis=2)
+        preds = np.argmax(predictions_, axis=2)
 
         batch_size, seq_len = preds.shape
 
         out_label_list = [[] for _ in range(batch_size)]
-        preds_list = [[] for _ in range(batch_size)]
+        preds_list_ = [[] for _ in range(batch_size)]
 
         for i in range(batch_size):
             for j in range(seq_len):
                 if label_ids[i, j] != nn.CrossEntropyLoss().ignore_index:
                     out_label_list[i].append(label_map[label_ids[i][j]])
-                    preds_list[i].append(label_map[preds[i][j]])
+                    preds_list_[i].append(label_map[preds[i][j]])
 
-        return preds_list, out_label_list
+        return preds_list_, out_label_list
 
     def compute_metrics(p: EvalPrediction) -> Dict:
-        preds_list, out_label_list = align_predictions(
+        preds_list_, out_label_list = align_predictions(
             p.predictions, p.label_ids
         )
+        clf_report = classification_report(out_label_list, preds_list_)
+        logger.info("\n" + clf_report)
         return {
-            "accuracy_score": accuracy_score(out_label_list, preds_list),
-            "precision": precision_score(out_label_list, preds_list),
-            "recall": recall_score(out_label_list, preds_list),
-            "f1": f1_score(out_label_list, preds_list),
+            "accuracy_score": accuracy_score(out_label_list, preds_list_),
+            "precision": precision_score(out_label_list, preds_list_),
+            "recall": recall_score(out_label_list, preds_list_),
+            "f1": f1_score(out_label_list, preds_list_),
         }
 
     # Data collator
