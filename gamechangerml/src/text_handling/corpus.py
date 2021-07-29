@@ -4,7 +4,9 @@ import json
 # import pandas as pd
 from gensim.models.doc2vec import TaggedDocument
 from gamechangerml.src.text_handling.process import preprocess
+from gamechangerml.api.utils.logger import logger
 from tqdm import tqdm
+
 
 
 class LocalCorpus(object):
@@ -41,7 +43,7 @@ class LocalCorpus(object):
                         else:
                             yield tokens
             except:
-                print("Could not tokenize {}".format(doc))
+                logger.info("Could not index {}".format(file_name))
                 pass
 
     def _get_doc(self, file_name):

@@ -18,8 +18,6 @@ from gamechangerml.src.model_testing.validation_data import MSMarcoData
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SENT_INDEX_PATH = model_path_dict["sentence"]
-print("LOCAL TRANSFORMER DIR: ", LOCAL_TRANSFORMERS_DIR)
-print("SENT INDEX PATH: ", SENT_INDEX_PATH)
 
 class SentenceEncoder(object):
     """

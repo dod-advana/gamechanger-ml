@@ -3,6 +3,7 @@ import string
 import re
 import json
 from datetime import date
+from gamechangerml.api.utils.logger import logger
 
 def open_json(filename, path):
     with open(os.path.join(path, filename)) as f:
@@ -32,7 +33,7 @@ def timestamp_filename(filename, extension):
 def check_directory(directory):
 
     if not os.path.exists(directory):
-        print("Creating new directory {}".format(directory))
+        logger.info("Creating new directory {}".format(directory))
         os.makedirs(directory)
 
     return directory
