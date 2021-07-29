@@ -25,7 +25,7 @@ export PYTHONPATH=$ML_ROOT:$PYTHONPATH
 
 if ! [ -f $DATA_DIR/labels.txt ]; then
   echo "finding unique labels..."
-  cat $DATA_DIR/train.txt.tmp $DATA_DIR/val.txt.tmp $DATA_DIR/test.txt.tmp | cut -d " " -f 2 | grep -v "^$"| sort | uniq > $DATA_DIR/labels.txt
+  cat $DATA_DIR/train.txt.tmp $DATA_DIR/dev.txt.tmp $DATA_DIR/test.txt.tmp | cut -d " " -f 2 | grep -v "^$"| sort | uniq > $DATA_DIR/labels.txt
 fi
 
 if ! [ -f $DATA_DIR/test.txt ]; then
@@ -35,7 +35,7 @@ fi
 
 if ! [ -f $DATA_DIR/dev.txt ]; then
   echo "preprocessing dev.txt.tmp"
-  python3 $NER_DIR/preprocess.py -d $DATA_DIR/val.txt.tmp -m $BERT_MODEL -l $MAX_LENGTH > $DATA_DIR/dev.txt
+  python3 $NER_DIR/preprocess.py -d $DATA_DIR/dev.txt.tmp -m $BERT_MODEL -l $MAX_LENGTH > $DATA_DIR/dev.txt
 fi
 
 if ! [ -f $DATA_DIR/train.txt ]; then

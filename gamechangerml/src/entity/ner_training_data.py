@@ -148,27 +148,26 @@ def ner_training_data(
     if None in (abbrv_re, entity_re, entity2type):
         abbrv_re, entity_re, entity2type = em.make_entity_re(entity_csv)
 
-    sent_dict = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
-    logger.info("num sentences : {}".format(len(sent_dict)))
+    sent_list = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
 
     ent_sents = [
         row
-        for row in sent_dict
+        for row in sent_list
         if em.contains_entity(row[SENT], entity_re, abbrv_re)
     ]
     if not ent_sents:
         logger.warning("no entities discovered in the input...")
-        return
 
-    t_sum = [wc(row[SENT]) for row in sent_dict]
-    avg_tokens = sum(t_sum) / len(sent_dict)
-    logger.info("     entity sentences : {:>5,d}".format(len(ent_sents)))
-    logger.info("           sum tokens : {:>5,d}".format(sum(t_sum)))
-    logger.info("min tokens / sentence : {:>5d}".format(min(t_sum)))
-    logger.info("max tokens / sentence : {:>5d}".format(max(t_sum)))
-    logger.info("avg tokens / sentence : {:3.2f}".format(avg_tokens))
+    all_tokens = [wc(row[SENT]) for row in sent_list]
+    avg_tokens = sum(all_tokens) / len(sent_list)
+    logger.info("            num sentences : {:>5,d}".format(len(sent_list)))
+    logger.info(" num sentence w/ entities : {:>5,d}".format(len(ent_sents)))
+    logger.info("               sum tokens : {:>5,d}".format(sum(all_tokens)))
+    logger.info("    min tokens / sentence : {:>5d}".format(min(all_tokens)))
+    logger.info("    max tokens / sentence : {:>5d}".format(max(all_tokens)))
+    logger.info("    avg tokens / sentence : {:>5.2f}".format(avg_tokens))
 
-    random.shuffle(ent_sents)
+    random.shuffle(sent_list)
 
     training_generator = _gen_ner_conll_tags(
         abbrv_re, entity_re, entity2type, ent_sents, nlp
@@ -193,18 +192,8 @@ def ner_training_data(
     logger.info("output written to : {}".format(out_fp))
 
 
-def main(
-    entity_csv,
-    sentence_csv,
-    n_samples,
-    nlp,
-    sep,
-    shuffle,
-    t_split,
-    save_sent_csv=True,
-    min_tokens=None,
-    max_tokens=None,
-):
+def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split,
+         min_tokens=None, max_tokens=None):
     """
     This creates CoNLL-formatted data for use in the NER model. Three files
     are created `train.txt.tmp`, `dev.txt.tmp`, and `test.txt.tmp` in the
@@ -232,8 +221,6 @@ def main(
         t_split (float): fraction used for training data, e.g., 0.80; dev
             and val data are split as (1 - t_split) / 2
 
-        save_sent_csv (bool): save train, dev, val datasets to their own .csv
-
         min_tokens (int): minimum number of tokens in a sentence
 
         max_tokens (int): maximum number of tokens in a sentence
@@ -251,19 +238,20 @@ def main(
     output_names = [p.replace("_sent.csv", ".txt.tmp") for p in sent_fnames]
 
     df = pd.read_csv(sentence_csv, delimiter=",", header=None)
-    if n_samples > 0:
-        df = df.head(n_samples)
     logger.info("examples : {:>4,d}".format(len(df)))
 
-    if save_sent_csv:
-        train, dev_val = train_test_split(df, train_size=t_split)
-        dev, val = train_test_split(dev_val, train_size=0.50)
+    # subset the data; else get it all
+    if n_samples > 0:
+        df = df.head(n_samples)
 
-        # save intermediate output for now
-        for idx, df in enumerate((train, dev, val)):
-            df.to_csv(sent_fnames[idx], header=False, index=False, sep=",")
-            fn_ = os.path.split(sent_fnames[idx])[-1]
-            logger.info("samples {:>5,d} : {:>14s}".format(len(df), fn_))
+    train, val_test = train_test_split(df, train_size=t_split)
+    dev, test = train_test_split(val_test, train_size=0.50)
+
+    # save intermediate output for now
+    for idx, df in enumerate((train, dev, test)):
+        df.to_csv(sent_fnames[idx], header=False, index=False, sep=",")
+        fn_ = os.path.split(sent_fnames[idx])[-1]
+        logger.info("samples {:>5,d} : {:>14s}".format(len(df), fn_))
 
     for idx in range(3):
         ner_training_data(
@@ -364,14 +352,5 @@ if __name__ == "__main__":
     nlp_ = get_lg_nlp()
     logger.info("spaCy model loaded")
 
-    main(
-        args.entity_csv,
-        args.sent_csv,
-        args.n_samples,
-        nlp_,
-        args.sep,
-        args.shuffle,
-        args.t_split,
-        args.min_tokens,
-        args.max_tokens,
-    )
+    main(args.entity_csv, args.sent_csv, args.n_samples, nlp_, args.sep,
+         args.shuffle, args.t_split, args.max_tokens)

@@ -1,6 +1,6 @@
 """
 usage: python entity_mentions.py [-h] -i INPUT_PATH -e ENTITY_FILE -o
-                                 OUTPUT_JSON -g GLOB -t {mentions,spans,ner}
+                                 OUTPUT_JSON -g GLOB -t {mentions,spans}
                                  [-s ENT_SPANS]
 
 brute force counting of entity mentions in each document
@@ -10,13 +10,13 @@ optional arguments:
   -i INPUT_PATH, --input-path INPUT_PATH
                         corpus path
   -e ENTITY_FILE, --entity-file ENTITY_FILE
-                        list of entities with their abbreviations
+                        csv of entities, abbreviations, and entity type
   -o OUTPUT_JSON, --output-json OUTPUT_JSON
                         output path for .csv files
   -g GLOB, --glob GLOB  file pattern to match
-  -t {mentions,spans,ner}, --run_type {mentions,spans,ner}
+  -t {mentions,spans}, --task {mentions,spans}
                         what do you want to run?
-  -s ENT_SPANS, --entity_spans ENT_SPANS
+  -s ENT_SPANS, --entity-spans ENT_SPANS
                         json file resulting from '--run_type mentions'
 """
 import json
@@ -34,17 +34,19 @@ import gamechangerml.src.text_classif.utils.classifier_utils as cu
 
 logger = logging.getLogger(__name__)
 
-LF = "long_form"
-SF = "short_form"
+# LF = "long_form"
+# SF = "short_form"
 ETYPE = "etype"
 SENT = "sentence"
 TEXTTYPE = "raw_text"
+ABBRV = "ABBRV"
+ENTITY = "entity"
 
 
 def entity_csv_to_df(entity_csv):
     if not os.path.isfile(entity_csv):
         raise FileNotFoundError("can't find {}".format(entity_csv))
-    df = pd.read_csv(entity_csv, names=[LF, SF, ETYPE])
+    df = pd.read_csv(entity_csv, names=[ENTITY, ETYPE])
     df = df.replace(np.nan, "")
     return df
 
@@ -65,27 +67,24 @@ def make_entity_re(entity_csv):
     """
     df = entity_csv_to_df(entity_csv)
     entity2type = dict()
+    long_forms = list()
+    short_forms = list()
+
     for _, row in df.iterrows():
-        ent_lf, ent_sf, etype = row[LF], row[SF], row[ETYPE]
-        entity2type[ent_lf.lower()] = etype
-        if ent_sf:
-            entity2type[ent_sf.lower()] = etype
+        entity, etype = row[ENTITY], row[ETYPE]
+        entity2type[entity.lower()] = etype
+        if ABBRV in etype:
+            short_forms.append(entity)
+        else:
+            long_forms.append(entity)
 
-    entities = list(set(df[LF]))
-    abbrvs = list(set(df[SF]))
-    unique_etypes = set(df[ETYPE])
+    long_forms.sort(key=lambda s: len(s), reverse=True)
+    short_forms.sort(key=lambda s: len(s), reverse=True)
 
-    logger.debug("      num entities : {}".format(len(entities)))
-    logger.debug("unique entity tags : {}".format(unique_etypes))
-    logger.debug("       num abbrevs : {}".format(len(abbrvs)))
-
-    entities.sort(key=lambda s: len(s), reverse=True)
-    abbrvs.sort(key=lambda s: len(s), reverse=True)
-
-    entity_re = "|".join([re.escape(e.strip()) for e in entities])
+    entity_re = "|".join([re.escape(e.strip()) for e in long_forms])
     entity_re = re.compile("(\\b" + entity_re + "\\b)", re.I)
 
-    abbrv_re = "|".join(([re.escape(a.strip()) for a in abbrvs if a.strip()]))
+    abbrv_re = "|".join(([re.escape(a.strip()) for a in short_forms]))
     abbrv_re = re.compile("(\\b" + abbrv_re + "\\b)")
     return abbrv_re, entity_re, entity2type
 
@@ -187,8 +186,8 @@ def entity_mentions_glob(entity_file, corpus_dir, glob):
         Dict[List[tuple]] : key is the document name, each tuple is
             (entity, frequency)
     """
-    abbvs, ents, _ = make_entity_re(entity_file)
-    return count_glob(corpus_dir, glob, ents, abbvs)
+    abbrvs, ents, _ = make_entity_re(entity_file)
+    return count_glob(corpus_dir, glob, ents, abbrvs)
 
 
 def entities_in_raw(entity_file, corpus_dir, glob):
@@ -236,9 +235,8 @@ if __name__ == "__main__":
 
     li.initialize_logger(to_file=False, log_name="none")
 
-    fp = "python " + os.path.split(__file__)[-1]
     parser = ArgumentParser(
-        prog=fp,
+        prog="python " + os.path.split(__file__)[-1],
         description="brute force counting of entity mentions in each document",
     )
     parser.add_argument(
@@ -254,7 +252,7 @@ if __name__ == "__main__":
         "--entity-file",
         dest="entity_file",
         type=str,
-        help="list of entities with their abbreviations",
+        help="csv of entities, abbreviations, and entity type",
         required=True,
     )
     parser.add_argument(
@@ -289,6 +287,8 @@ if __name__ == "__main__":
         help="json file resulting from '--run_type mentions'",
     )
     args = parser.parse_args()
+    if not os.path.isfile(args.entity_file):
+        raise ValueError("cannot find {}".format(args.entity_file))
 
     output = None
     start = time.time()
