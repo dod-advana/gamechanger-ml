@@ -4,6 +4,7 @@ import json
 # import pandas as pd
 from gensim.models.doc2vec import TaggedDocument
 from gamechangerml.src.text_handling.process import preprocess
+from gamechangerml.api.utils import processmanager
 from tqdm import tqdm
 
 
@@ -28,17 +29,28 @@ class LocalCorpus(object):
         else:
             iterator = self.file_list
 
+        total = len(self.file_list)
+        progress = 0
+        processmanager.update_status(
+            processmanager.loading_corpus, progress, total)
         for file_name in iterator:
-            doc = self._get_doc(file_name)
-            paragraphs = [p["par_raw_text_t"] for p in doc["paragraphs"]]
-            paragraph_ids = [p["id"] for p in doc["paragraphs"]]
-            for para_text, para_id in zip(paragraphs, paragraph_ids):
-                tokens = preprocess(para_text, min_len=1)
-                if len(tokens) > self.min_token_len:
-                    if self.return_id:
-                        yield tokens, para_id
-                    else:
-                        yield tokens
+            try:
+                doc = self._get_doc(file_name)
+                paragraphs = [p["par_raw_text_t"] for p in doc["paragraphs"]]
+                paragraph_ids = [p["id"] for p in doc["paragraphs"]]
+                for para_text, para_id in zip(paragraphs, paragraph_ids):
+                    tokens = preprocess(para_text, min_len=1)
+                    if len(tokens) > self.min_token_len:
+                        if self.return_id:
+                            yield tokens, para_id
+                        else:
+                            yield tokens
+                progress += 1
+                processmanager.update_status(
+                    processmanager.loading_corpus, progress, total)
+            except Exception as e:
+                print(e)
+                print(f"Error with {file_name} in creating local corpus")
 
     def _get_doc(self, file_name):
         with open(file_name, "r") as f:

@@ -7,47 +7,97 @@
 
 ## Directory
 ```
-gamechangerml
-├── api
-│   ├── fastapi
-│   └── utils
-├── configs
-├── data
-├── experimental
-│   ├── notebooks
-│   │   ├── evaluation
-│   │   ├── portion_marking_demo
-│   │   └── sentence-transformer
-├── mlflow
-├── models
-│   ├── qexp_*
-│   ├── sent_index_*
-│   ├── topic_models
-│   └── transformers
-├── scripts
-├── src
-│   ├── featurization
-│   │   ├── data
-│   │   ├── keywords
-│   │   │   └── qe_mlm
-│   │   ├── term_extract
-│   ├── model_testing
-│   ├── search
-│   │   ├── QA
-│   │   ├── embed_reader
-│   │   ├── evaluation
-│   │   ├── query_expansion
-│   │   ├── ranking
-│   │   ├── semantic
-│   │   └── sent_transformer
-│   ├── text_classif
-│   ├── text_handling
-│   │   └── assets
-│   └── utilities
-│       └── numpy_encoder
-├── train
-│   └── scripts
+├── gamechangerml
+│   ├── api
+│   │   ├── fastapi
+│   │   │   └── routers
+│   │   ├── kube
+│   │   │   └── gc-ml-workflow
+│   │   │       ├── charts
+│   │   │       └── templates
+│   │   ├── logs
+│   │   ├── tests
+│   │   └── utils
+│   ├── configs
+│   ├── corpus
+│   ├── data
+│   │   ├── agencies
+│   │   ├── nltk_data
+│   │   │   └── tokenizers
+│   │   │       └── punkt
+│   │   ├── test_data
+│   │   └── test_output
+│   ├── experimental
+│   │   └── notebooks
+│   │       ├── evaluation
+│   │       │   ├── ablation_inputs
+│   │       │   ├── ablation_outputs
+│   │       │   ├── assets
+│   │       │   ├── eval_folder
+│   │       │   └── msmarco_1k
+│   │       ├── portion_marking_demo
+│   │       └── sentence-transformer
+│   │           ├── sample_corpus
+│   │           └── sample_index
+│   ├── mlflow
+│   ├── models
+│   │   ├── sent_index_20210728
+│   │   ├── topic_models
+│   │   └── transformers
+│   │       ├── bert-base-cased-squad2
+│   │       ├── distilbart-mnli-12-3
+│   │       ├── distilbert-base-uncased-distilled-squad
+│   │       ├── distilroberta-base
+│   │       └── msmarco-distilbert-base-v2
+│   ├── scripts
+│   │   └── topic_model
+│   ├── src
+│   │   ├── featurization
+│   │   │   ├── data
+│   │   │   ├── extract_improvement
+│   │   │   ├── keywords
+│   │   │   │   └── qe_mlm
+│   │   │   │       ├── example
+│   │   │   │       └── tests
+│   │   │   ├── term_extract
+│   │   │   └── tests
+│   │   ├── model_testing
+│   │   ├── search
+│   │   │   ├── QA
+│   │   │   ├── embed_reader
+│   │   │   │   ├── examples
+│   │   │   │   ├── schema_example
+│   │   │   │   └── test
+│   │   │   ├── evaluation
+│   │   │   │   ├── sample_data
+│   │   │   │   └── tests
+│   │   │   ├── query_expansion
+│   │   │   │   ├── aux_data
+│   │   │   │   ├── build_ann_cli
+│   │   │   │   └── tests
+│   │   │   ├── ranking
+│   │   │   │   ├── generated_files
+│   │   │   │   └── tests
+│   │   │   ├── semantic
+│   │   │   └── sent_transformer
+│   │   │       └── tests
+│   │   ├── text_classif
+│   │   │   ├── cli
+│   │   │   ├── examples
+│   │   │   ├── tests
+│   │   │   └── utils
+│   │   ├── text_handling
+│   │   │   └── assets
+│   │   └── utilities
+│   │       └── numpy_encoder
+│   │           └── tests
+│   ├── stresstest
+│   ├── train
+│   │   └── scripts
+│   └── unittest
 └── unittest
+
+127 directories
 ```
 
 ## Development Rules
