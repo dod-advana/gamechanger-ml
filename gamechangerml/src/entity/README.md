@@ -68,8 +68,12 @@ some truncation, this step can be skipped. Simply change the file extension from
 By default, the trained model will be saved in the data directory, `tests/test_data/model`. The `model`
 directory will be created.
 
-During training, you may see the warning
+During training, you may see the warnings
 ```
 /opt/conda/envs/gc-venv-blue/lib/python3.6/site-packages/torch/nn/parallel/_functions.py:64: UserWarning: Was asked to gather along dimension 0, but all input tensors were scalars; will instead unsqueeze and return a vector.
 ```
-This is harmless and is fixed in later version of `torch`.
+and
+```
+[WARNING|training_args.py:423] 2021-07-29 20:59:05,363 >> Using deprecated `--per_gpu_train_batch_size` argument which will be removed in a future version. Using `--per_device_train_batch_size` is preferred.
+```
+These are harmless and are fixed in later version of `torch`.
