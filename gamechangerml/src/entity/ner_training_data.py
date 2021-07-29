@@ -47,7 +47,7 @@ def wc(txt):
 
 
 # TODO exclude abbreviations if it's part of an entity? e.g.,
-# TODO "The Director, DLA shall:". This will be tagged as
+# TODO "The Director, DLA shall:" will be tagged as
 # TODO  O GCPER GCPER GCORG-ABBRV O O
 def _gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_dict, nlp):
     I_PRFX = "I-"
