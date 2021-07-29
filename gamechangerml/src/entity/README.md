@@ -2,8 +2,9 @@
 
 ## CoNLL Format
 The Hugging Face format follows CoNLL-2003. Every token in a sentence (or sequence) is on a separate
-line along with its "B-", "I-", "O" tag. In our corpus, we have GCPER (person) and GCORG (organization),
-thus there are five unique tags.
+line along with its "B-", "I-", "O" tag. In our corpus, we have GCPER (person) and GCORG 
+(organization), with abbreviations suffixed with "-ABBRV"
+thus there are 9 unique tags.
 
 For example the sequence _The Director, DLA and the VA shall:_ would be represented as
 ```
@@ -13,7 +14,7 @@ Director B-GCPER
 DLA I-GCPER
 and O
 the O
-VA I-GCORG
+VA I-GCORG-ABBRV
 shall O
 : O
 
@@ -66,3 +67,9 @@ some truncation, this step can be skipped. Simply change the file extension from
 
 By default, the trained model will be saved in the data directory, `tests/test_data/model`. The `model`
 directory will be created.
+
+During training, you may see the warning
+```
+/opt/conda/envs/gc-venv-blue/lib/python3.6/site-packages/torch/nn/parallel/_functions.py:64: UserWarning: Was asked to gather along dimension 0, but all input tensors were scalars; will instead unsqueeze and return a vector.
+```
+This is harmless and is fixed in later version of `torch`.
