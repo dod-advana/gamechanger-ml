@@ -1,8 +1,7 @@
 """
 usage: python ner_training_data.py [-h] -s SENT_CSV -e ENTITY_CSV
                                    [-n N_SAMPLES] [-r] [-p {tab,space}]
-                                   [-x T_SPLIT] [--min-tokens MIN_TOKENS]
-                                   [--max-tokens MAX_TOKENS]
+                                   [-x T_SPLIT]
 
 Create NER training data in CoNLL format
 
@@ -21,10 +20,6 @@ optional arguments:
   -x T_SPLIT, --train-split T_SPLIT
                         training split; dev, val are evenly split from 1 -
                         t_split
-  --min-tokens MIN_TOKENS
-                        minimum number of tokens in a sentence
-  --max-tokens MAX_TOKENS
-                        maximum number of tokens in a sentence
 """
 import logging
 import os
@@ -190,17 +185,7 @@ def ner_training_data(
     logger.info("output written to : {}".format(out_fp))
 
 
-def main(
-    entity_csv,
-    sentence_csv,
-    n_samples,
-    nlp,
-    sep,
-    shuffle,
-    t_split,
-    min_tokens=None,
-    max_tokens=None,
-):
+def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split):
     """
     This creates CoNLL-formatted data for use in the NER model. Three files
     are created `train.txt.tmp`, `dev.txt.tmp`, and `test.txt.tmp` in the
@@ -228,9 +213,6 @@ def main(
         t_split (float): fraction used for training data, e.g., 0.80; dev
             and test data are split as (1 - t_split) / 2
 
-        min_tokens (int): minimum number of tokens in a sentence
-
-        max_tokens (int): maximum number of tokens in a sentence
     """
     if not os.path.isfile(sentence_csv):
         raise FileExistsError("no sentence_csv; got {}".format(sentence_csv))
