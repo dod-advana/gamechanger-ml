@@ -11,6 +11,7 @@ from collections import OrderedDict
 import collections
 import numpy as np
 from typing import List, NamedTuple, Tuple, Dict, Union, Any
+import os
 
 question_words = {
     "what's": "what is",
@@ -72,9 +73,9 @@ def sort_answers(answers: List[Tuple]) -> List[Dict[str, Union[str, float]]]:
     return app_answers
 
 class DocumentReader:
-    def __init__(self, model_path: str, qa_type: str, nbest: int, null_threshold: float, use_gpu: bool=False):
+    def __init__(self, transformer_path: str, model_name: str, qa_type: str, nbest: int, null_threshold: float, use_gpu: bool=False):
 
-        self.READER_PATH = model_path
+        self.READER_PATH = os.path.join(transformer_path, model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(self.READER_PATH)
         self.model = AutoModelForQuestionAnswering.from_pretrained(self.READER_PATH)
         self.max_len = self.model.config.max_position_embeddings

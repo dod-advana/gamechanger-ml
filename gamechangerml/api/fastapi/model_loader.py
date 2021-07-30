@@ -55,12 +55,10 @@ class ModelLoader:
         Returns:
         """
         try:
-            qa_model_path = os.path.join(
-                LOCAL_TRANSFORMERS_DIR.value, "bert-base-cased-squad2")
             logger.info("Starting QA pipeline")
-            ModelLoader.__qa_model = QAReader(qa_model_path, use_gpu=True, **QAConfig.MODEL_ARGS)
+            ModelLoader.__qa_model = QAReader(transformer_path=LOCAL_TRANSFORMERS_DIR, use_gpu=True, **QAConfig.MODEL_ARGS)
             # set cache variable defined in settings.py
-            latest_qa_model.value = qa_model_path
+            latest_qa_model.value =  ModelLoader.__qa_model.READER_PATH
             logger.info("Finished loading QA Reader")
         except OSError:
             logger.error(f"Could not load Question Answer Model")
