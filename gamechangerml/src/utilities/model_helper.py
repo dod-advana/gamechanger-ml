@@ -13,6 +13,17 @@ class TimeoutException(Exception):   # Custom exception class
 def timeout_handler(signum, frame):   # Custom signal handler
     raise TimeoutException
 
+# from create_embeddings.py
+def get_user(logger):
+    try:
+        user = os.environ.get("GC_USER", default="root")
+        if (user =="root"):
+            user = str(os.getlogin())
+    except Exception as e:
+        user = "unknown"
+        logger.info("Could not get system user")
+        logger.info(e)
+
 def save_json(filename, path, data):
 
     filepath = os.path.join(path, filename)

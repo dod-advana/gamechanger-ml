@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import csv
 import math
-from datetime import date
+from datetime import datetime
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder, SentenceSearcher, SimilarityRanker
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, ValidationConfig
@@ -134,11 +134,14 @@ class QAEvaluator(TransformerEvaluator):
         exact_match = np.round(np.mean(df['exact_match'].to_list()), 2)
         partial_match = np.round(np.mean(df['partial_match'].to_list()), 2)
 
+        user = get_user(logger)
+
         agg_results = {
-            "date": date.today().strftime("%Y-%m-%d"),
+            "user": user,
+            "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": self.model_name,
             "validation_data": self.data_name,
-            "num_queries": num_queries,
+            "query_count": num_queries,
             "proportion_exact_match": exact_match,
             "proportion_partial_match": partial_match,
         }
@@ -268,12 +271,15 @@ class RetrieverEvaluator(TransformerEvaluator):
         num_queries = df['queries'].shape[0]
         proportion_in_top_10 = np.round(np.mean(df['proportion_hits'].to_list()), 2)
         proportion_any_hits = np.round(np.mean(df['any_hits'].to_list()), 2)
+
+        user = get_user(logger)
         
         agg_results = {
-            "date": date.today().strftime("%Y-%m-%d"),
+            "user": user,
+            "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": self.model_name,
             "validation_data": data_name,
-            "num_queries": num_queries,
+            "query_count": num_queries,
             "proportion_in_top_10": proportion_in_top_10,
             "proportion_any_hits": proportion_any_hits
         }
@@ -378,25 +384,20 @@ class SimilarityEvaluator(TransformerEvaluator):
         df = self.data.sample_csv
         ranks = {}
         count = 0
-        cutoff = np.min([df['promptID'].nunique(), self.sample_limit])
         for i in df['promptID'].unique():
-            if count <= cutoff:
-                subset = df[df['promptID']==i]
-                iddict = dict(zip(subset['sentence2'], subset['pairID']))
-                texts = [i for i in iddict.keys()]
-                ids = [i for i in iddict.values()]
-                query = self.data.query_lookup[i]
-                logger.info("S-{}: {}".format(count, query))
-                rank = 0
-                for result in self.model.re_rank(query, texts, ids):
-                    match_id = result['id']
-                    match = result['text']
-                    ranks[match_id] = rank
-                    rank +=1
+            subset = df[df['promptID']==i]
+            iddict = dict(zip(subset['sentence2'], subset['pairID']))
+            texts = [i for i in iddict.keys()]
+            ids = [i for i in iddict.values()]
+            query = self.data.query_lookup[i]
+            logger.info("S-{}: {}".format(count, query))
+            rank = 0
+            for result in self.model.re_rank(query, texts, ids):
+                match_id = result['id']
+                ranks[match_id] = rank
+                rank +=1
 
-                count += 1
-            else:
-                break
+            count += 1
         
         df['predicted_rank'] = df['pairID'].map(ranks)
         df.dropna(subset = ['predicted_rank'], inplace = True)
@@ -419,12 +420,15 @@ class SimilarityEvaluator(TransformerEvaluator):
         num_queries = df['promptID'].nunique()
         num_sentence_pairs = df.shape[0]
 
+        user = get_user(logger)
+
         agg_results = {
-            "date": date.today().strftime("%Y-%m-%d"),
+            "user": user,
+            "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": self.model_name,
             "validation_data": "NLI",
-            "num_queries": num_queries,
-            "num_sentence_pairs": num_sentence_pairs,
+            "query_count": num_queries,
+            "pairs_count": num_sentence_pairs,
             "proportion_all_match": proportion_all_match,
             "proportion_top_match": proportion_top_match
         }
