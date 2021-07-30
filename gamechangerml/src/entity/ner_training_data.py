@@ -151,11 +151,21 @@ def ner_training_data(
 
     all_tokens = [wc(row[SENT]) for row in ent_sents]
     avg_tokens = sum(all_tokens) / len(ent_sents)
-    logger.info("                 num sentences : {:>6,d}".format(len(sent_list)))
-    logger.info("     num sentences w/ entities : {:>6,d}".format(len(ent_sents)))
-    logger.info("                    num tokens : {:>6,d}".format(sum(all_tokens)))
-    logger.info("    min tokens / all sentences : {:>6,d}".format(min(all_tokens)))
-    logger.info("    max tokens / all sentences : {:>6,d}".format(max(all_tokens)))
+    logger.info(
+        "                 num sentences : {:>6,d}".format(len(sent_list))
+    )
+    logger.info(
+        "     num sentences w/ entities : {:>6,d}".format(len(ent_sents))
+    )
+    logger.info(
+        "                    num tokens : {:>6,d}".format(sum(all_tokens))
+    )
+    logger.info(
+        "    min tokens / all sentences : {:>6,d}".format(min(all_tokens))
+    )
+    logger.info(
+        "    max tokens / all sentences : {:>6,d}".format(max(all_tokens))
+    )
     logger.info("    avg tokens / all sentences : {:>6.2f}".format(avg_tokens))
 
     random.seed(1)
