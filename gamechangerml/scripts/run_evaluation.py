@@ -5,7 +5,7 @@ if __name__ == '__main__':
 
     logger.info("\nStarting QA Evaluation...")
     logger.info("\nEvaluating QA with SQuAD Data...")
-    QAEval = SQuADQAEvaluator(model=None, sample_limit=100)
+    QAEval = SQuADQAEvaluator(model=None, sample_limit=20)
     logger.info(QAEval.results)
     logger.info("\nEvaluating QA with in-domain data...")
     GCEval = IndomainQAEvaluator(model=None)

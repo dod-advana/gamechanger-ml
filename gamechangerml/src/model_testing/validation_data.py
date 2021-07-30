@@ -88,26 +88,16 @@ class MSMarcoData(ValidationData):
     def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
 
         super().__init__(validation_config)
-        self.orig_queries = open_json(validation_config['msmarco']['queries'], self.validation_dir)
+        self.queries = open_json(validation_config['msmarco']['queries'], self.validation_dir)
         self.collection = open_json(validation_config['msmarco']['collection'], self.validation_dir)
-        self.orig_relations = open_json(validation_config['msmarco']['relations'], self.validation_dir)
+        self.relations = open_json(validation_config['msmarco']['relations'], self.validation_dir)
         self.metadata = open_json(validation_config['msmarco']['metadata'], self.validation_dir)
-        self.queries = self.filter_queries()
-        self.relations = {k: self.orig_relations[k][0] for k in self.orig_relations.keys()}
         self.corpus = self.get_msmarco_corpus()
 
     def get_msmarco_corpus(self):
         '''Format MSMarco so it can be indexed like the GC corpus'''
 
         return [(x, y, '') for x, y in self.collection.items()]
-
-    def filter_queries(self):
-        '''Filter out MSMarco examples with more than one top expected doc'''
-
-        include = [i for i, x in self.relations.items() if len(x)==1]
-        logger.info("Generated {} test queries from msmarco dataset", len(include))
-
-        return {x: self.orig_queries[x] for x in include}
 
 class RetrieverGSData(ValidationData):
 
@@ -118,24 +108,28 @@ class RetrieverGSData(ValidationData):
         self.queries, self.collection, self.relations = self.dictify_data(available_ids)
     
     def dictify_data(self, available_ids):
-        '''Format gold standard csv examples into MSMarco format'''
+        '''
+        Filter out any validation queries whose documents areen't in the index. 
+        Forrmat gold standard csv examples into MSMarco format.
+        '''
 
-        ids = [i.strip('\n') for i in available_ids]
-        self.samples['document'] = self.samples['document'].apply(lambda x: x.split(';'))
+        ids = ['.'.join(i.strip('\n').split('.')[:-1]).strip().lstrip() for i in available_ids]
+
+
+        self.samples['document'] = self.samples['document'].apply(lambda x: [i.strip().lstrip() for i in x.split(';')])
         self.samples = self.samples.explode('document')
         df = self.samples[self.samples['document'].isin(ids)] # check ids are in the index
         if df.shape[0] < self.samples.shape[0]:
-            logger.info("Validation Ids found that were not in the index: ")
-            all_ids = self.samples['document'].to_list()
+            all_ids = self.samples['document'].unique()
             missing_ids = [i for i in all_ids if i not in ids]
-            logger.info(missing_ids)
-            logger.info("Ids have been removed from validation set.")
+            logger.info("Validation IDs not in the index (removed from validation set): {}".format(missing_ids))
 
+        df = df.groupby('query').agg({'document': lambda x: x.tolist()}).reset_index()
         query_list = df['query'].to_list()
         doc_list = df['document'].to_list()
         q_idx = ["query_" + str(i) for i in range(len(query_list))]
         queries = dict(zip(q_idx, query_list))
-        collection = dict(zip(doc_list, doc_list))
+        collection = dict(zip(all_ids, all_ids))
         relations = dict(zip(q_idx, doc_list))
 
         logger.info("Generated {} test queries of gold standard data".format(len(query_list)))
@@ -144,15 +138,15 @@ class RetrieverGSData(ValidationData):
 
 class NLIData(ValidationData):
 
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(self, sample_limit, validation_config=ValidationConfig.DATA_ARGS):
 
         super().__init__(validation_config)
         self.matched = open_jsonl(validation_config['nli']['matched'], self.validation_dir)
         self.mismatched = open_jsonl(validation_config['nli']['mismatched'], self.validation_dir)
-        self.sample_csv = self.get_sample_csv(sample_limit=None)
+        self.sample_csv = self.get_sample_csv(sample_limit)
         self.query_lookup = dict(zip(self.sample_csv['promptID'], self.sample_csv['sentence1']))
 
-    def get_sample_csv(self, sample_limit=None):
+    def get_sample_csv(self, sample_limit):
         '''Format NLI data into smaller sample for evaluation'''
 
         match_df = pd.DataFrame(self.matched)

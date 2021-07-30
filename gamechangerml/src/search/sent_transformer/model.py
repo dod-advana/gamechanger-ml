@@ -153,7 +153,7 @@ class SentenceEncoder(object):
         else:
             logger.info("Did not include path to corpus, making test index with msmarco data")
             data = MSMarcoData()
-            corpus = data.msmarco_corpus
+            corpus = data.corpus
 
         self._index(
             corpus
