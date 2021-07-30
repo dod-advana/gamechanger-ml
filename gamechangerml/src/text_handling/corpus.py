@@ -8,7 +8,6 @@ from gamechangerml.api.utils import processmanager
 from tqdm import tqdm
 
 
-
 class LocalCorpus(object):
     def __init__(
         self, directory, return_id=False, min_token_len=3, verbose=False
