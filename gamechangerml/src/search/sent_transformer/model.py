@@ -123,8 +123,9 @@ class SentenceEncoder(object):
         self.embedder.config["dimensions"] = dimensions
 
         # Create embeddings index
-        logger.info(f"Creating embeddings index")
+        logger.info(f"Creating embeddings and index")
         self.embedder.embeddings = ANN.create(self.embedder.config)
+        logger.info(f"Created embeddings")
 
         # Build the index
         self.embedder.embeddings.index(embeddings)
