@@ -46,7 +46,7 @@ _e.g._,
     ```
     python ner_training_data.py \
         --sentence-csv rnd_3K_big_sentence_file.csv \
-        --entity-csv path_to/gamechanger-ml/gamechangerml/src/entity/aux_data/entities.csv \
+        --entity-csv path_to/gamechanger-ml/gamechangerml/src/entity/aux_data/flat_entities.csv \
         --separator space \
         --n-samples 0 \
         --train-split 0.80 \
@@ -76,4 +76,4 @@ and
 ```
 [WARNING|training_args.py:423] 2021-07-29 20:59:05,363 >> Using deprecated `--per_gpu_train_batch_size` argument which will be removed in a future version. Using `--per_device_train_batch_size` is preferred.
 ```
-These are harmless and are fixed in later version of `torch`.
+These are harmless and are fixed in later versions of `torch`.

@@ -41,15 +41,12 @@ def wc(txt):
     return txt.count(" ") + 1
 
 
-# TODO exclude abbreviations if it's part of an entity? e.g.,
-# TODO "The Director, DLA shall:" will be tagged as
-# TODO  O GCPER GCPER GCORG-ABBRV O O
-def _gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_dict, nlp):
+def _gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_list, nlp):
     I_PRFX = "I-"
     B_PRFX = "B-"
     OH = "O"
 
-    for row in sent_dict:
+    for row in sent_list:
         sentence_text = row[SENT]
         if not sentence_text.strip():
             continue
@@ -80,8 +77,9 @@ def _gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_dict, nlp):
                 if ent.lower() in entity2type:
                     ner_labels[idx] = I_PRFX + entity2type[ent.lower()]
                 else:
-                    logger.error("KeyError: {}".format(ent.lower()))
+                    logger.error("KeyError (why?): {}".format(ent.lower()))
         unique_labels = set(ner_labels)
+        logger.debug([(t, s) for t, s in zip(tokens, ner_labels)])
         yield zip(tokens, ner_labels), unique_labels
 
 
@@ -136,7 +134,6 @@ def ner_training_data(
 
     NL = "\n"
     EMPTYSTR = ""
-    print_str = EMPTYSTR
 
     if None in (abbrv_re, entity_re, entity2type):
         abbrv_re, entity_re, entity2type = em.make_entity_re(entity_csv)
@@ -160,6 +157,7 @@ def ner_training_data(
     logger.info("    max tokens / sentence : {:>5d}".format(max(all_tokens)))
     logger.info("    avg tokens / sentence : {:>5.2f}".format(avg_tokens))
 
+    random.seed(1)
     random.shuffle(ent_sents)
 
     training_generator = _gen_ner_conll_tags(
@@ -167,6 +165,7 @@ def ner_training_data(
     )
     labels = set()
     count = 0
+    print_str = EMPTYSTR
     with open(out_fp, "w") as fp:
         for zipped, unique_labels in tqdm(
             training_generator, total=len(ent_sents), desc="sentence"
@@ -179,6 +178,7 @@ def ner_training_data(
                 + NL
             )
             fp.write(print_str)
+            print_str = EMPTYSTR
         if print_str:
             fp.write(print_str[:-1])
 

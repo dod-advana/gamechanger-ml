@@ -34,8 +34,6 @@ import gamechangerml.src.text_classif.utils.classifier_utils as cu
 
 logger = logging.getLogger(__name__)
 
-# LF = "long_form"
-# SF = "short_form"
 ETYPE = "etype"
 SENT = "sentence"
 TEXTTYPE = "raw_text"
@@ -81,11 +79,15 @@ def make_entity_re(entity_csv):
     long_forms.sort(key=lambda s: len(s), reverse=True)
     short_forms.sort(key=lambda s: len(s), reverse=True)
 
-    entity_re = "|".join([re.escape(e.strip()) for e in long_forms])
-    entity_re = re.compile("(\\b" + entity_re + "\\b)", re.I)
+    entity_re = "|".join(
+        ["(\\b" + re.escape(e.strip()) + "\\b)" for e in long_forms]
+    )
+    entity_re = re.compile(entity_re, re.I)
 
-    abbrv_re = "|".join(([re.escape(a.strip()) for a in short_forms]))
-    abbrv_re = re.compile("(\\b" + abbrv_re + "\\b)")
+    abbrv_re = "|".join(
+        (["(\\b" + re.escape(a.strip()) + "\\b)" for a in short_forms])
+    )
+    abbrv_re = re.compile(abbrv_re)
     return abbrv_re, entity_re, entity2type
 
 
@@ -109,10 +111,27 @@ def contains_entity(text, entity_re, abbrv_re):
     entity_list.extend(entities)
 
     abbrvs = abbrv_re.findall(text)
-    abbrvs_list = [a for a in abbrvs]
+    abbrvs_list = [a for a in abbrvs]  # TODO needed?
     entity_list.extend(abbrvs_list)
 
     return entity_list
+
+
+def embedded_entity(entity_span_list, abbrv_span_list):
+    contained = list()
+    scrubbed_ents = list()
+
+    for ent, ent_spans in entity_span_list:
+        scrubbed_ents.append((ent, ent_spans))
+        for abbrv, abrv_spans in abbrv_span_list:
+            if abrv_spans[0] >= ent_spans[0] and abrv_spans[1] <= ent_spans[1]:
+                contained.append((abbrv, ent))
+                logger.debug("'{}' contained in '{}'".format(abbrv, ent))
+            else:
+                scrubbed_ents.append((abbrv, abrv_spans))
+    if contained:
+        logger.debug(set(contained))
+    return scrubbed_ents
 
 
 def entities_spans(text, entity_re, abbrv_re):
@@ -129,15 +148,27 @@ def entities_spans(text, entity_re, abbrv_re):
     Returns:
         List[tuple, tuple]
     """
-    ent_list = list()
+    logger.debug(text)
+    ent_span_list = list()
+    abbrv_span_list = list()
     for mobj in entity_re.finditer(text):
         entity_span = (mobj.group(), (mobj.start(), mobj.end()))
-        ent_list.append(entity_span)
+        ent_span_list.append(entity_span)
 
     for mobj in abbrv_re.finditer(text):
         entity_span = (mobj.group(), (mobj.start(), mobj.end()))
-        ent_list.append(entity_span)
-    return ent_list
+        abbrv_span_list.append(entity_span)
+
+    if ent_span_list:
+        scrubbed_ents = embedded_entity(ent_span_list, abbrv_span_list)
+        logger.debug(scrubbed_ents)
+        logger.debug("-------")
+        return scrubbed_ents
+    else:
+        ent_span_list.extend(abbrv_span_list)
+        logger.debug(ent_span_list)
+        logger.debug("-------")
+        return ent_span_list
 
 
 def count_glob(corpus_dir, glob, entity_re, abbrv_re):
