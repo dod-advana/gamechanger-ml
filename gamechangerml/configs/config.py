@@ -2,6 +2,9 @@ from datetime import datetime
 from os import environ
 import os
 from gamechangerml import REPO_PATH
+#from gamechangerml.api.utils.pathselect import get_model_paths
+#model_path_dict = get_model_paths()
+#LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 
 class DefaultConfig:
 
@@ -67,7 +70,7 @@ class BertSummConfig:
 
 class QAConfig:
     MODEL_ARGS = {
-        "model_name": "bert-base-cased-squad2", # SOURCE:
+        "model_name": "bert-base-cased-squad2",
         "qa_type": 'scored_answer', # options are: ['scored_answer', 'simple_answer']
         "nbest": 1, # number of answers to retrieve from each context for comparison
         "null_threshold": -3 # if diff between the answer score and null answer score is greater than this threshold, don't return answer
