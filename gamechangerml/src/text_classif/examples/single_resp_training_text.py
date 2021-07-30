@@ -12,9 +12,13 @@ from gamechangerml.src.text_classif.utils.entity_link import EntityLink
 from gamechangerml.src.text_classif.utils.entity_lookup import ContainsEntity
 from gamechangerml.src.text_classif.utils.predict_glob import predict_glob, _predict_docs
 from gamechangerml.src.featurization.table import Table
-import gamechangerml.src.utilities.spacy_model as spacy_
 
 logger = logging.getLogger(__name__)
+
+#TODO: Add NER filtering of the processed sentences (split on shall, check entity list, label 0)
+#TODO: Use synthetic data for negative examples?
+#TODO: Eventually fold appropriate methods from here into ExtractRespText() in resp_training_text.py
+#TODO: Change labeling schema to match ExtractRespText()
 
 
 class SingleRespTrain(Table):
