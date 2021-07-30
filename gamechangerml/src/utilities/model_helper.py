@@ -5,6 +5,20 @@ import json
 from datetime import date
 from gamechangerml.api.utils.logger import logger
 
+# https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
+class TimeoutException(Exception):   # Custom exception class
+    pass
+
+# https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
+def timeout_handler(signum, frame):   # Custom signal handler
+    raise TimeoutException
+
+def save_json(filename, path, data):
+
+    filepath = os.path.join(path, filename)
+    with open(filepath, "w") as outfile: 
+        return json.dump(data, outfile)
+
 def open_json(filename, path):
     with open(os.path.join(path, filename)) as f:
         return json.load(f)
