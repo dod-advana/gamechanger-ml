@@ -2,18 +2,12 @@ from datetime import datetime
 from os import environ
 import os
 from gamechangerml import REPO_PATH
-#from gamechangerml.api.utils.pathselect import get_model_paths
-#model_path_dict = get_model_paths()
-#LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 
 class DefaultConfig:
 
     DATA_DIR = os.path.join(REPO_PATH, "common/data/processed")
     LOCAL_MODEL_DIR = os.path.join(REPO_PATH, "gamechangerml/models")
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
-    # DEFAULT_MODEL_NAME = "20200728"
-    # MODEL_DIR = "gamechangerml/src/modelzoo/semantic/packaged_models/20200728"
-    # LOCAL_PACKAGED_MODELS_DIR = os.path.join(REPO_PATH, "gamechangerml/src/modelzoo/semantic/packaged_models")
 
 class S3Config:
     STORE_S3 = True
@@ -22,10 +16,6 @@ class S3Config:
 
 
 class D2VConfig:
-    # MODEL_ID = datetime.now().strftime("%Y%m%d")
-    # MODEL_DIR = os.path.join(REPO_PATH, "gamechangerml/src/modelzoo/semantic/models")
-    # CORPUS_DIR = "../tinytestcorpus"
-    # CORPUS_DIR = "test/small_corpus"
     MODEL_ARGS = {
         "dm": 1,
         "dbow_words": 1,
