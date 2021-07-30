@@ -140,6 +140,7 @@ def ner_training_data(
 
     sent_list = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
 
+    logger.info("finding sentences with entities")
     ent_sents = [
         row
         for row in sent_list
@@ -148,14 +149,14 @@ def ner_training_data(
     if not ent_sents:
         logger.warning("no entities discovered in the input...")
 
-    all_tokens = [wc(row[SENT]) for row in sent_list]
-    avg_tokens = sum(all_tokens) / len(sent_list)
-    logger.info("            num sentences : {:>5,d}".format(len(sent_list)))
-    logger.info("num sentences w/ entities : {:>5,d}".format(len(ent_sents)))
-    logger.info("               num tokens : {:>5,d}".format(sum(all_tokens)))
-    logger.info("    min tokens / sentence : {:>5d}".format(min(all_tokens)))
-    logger.info("    max tokens / sentence : {:>5d}".format(max(all_tokens)))
-    logger.info("    avg tokens / sentence : {:>5.2f}".format(avg_tokens))
+    all_tokens = [wc(row[SENT]) for row in ent_sents]
+    avg_tokens = sum(all_tokens) / len(ent_sents)
+    logger.info("                 num sentences : {:>6,d}".format(len(sent_list)))
+    logger.info("     num sentences w/ entities : {:>6,d}".format(len(ent_sents)))
+    logger.info("                    num tokens : {:>6,d}".format(sum(all_tokens)))
+    logger.info("    min tokens / all sentences : {:>6,d}".format(min(all_tokens)))
+    logger.info("    max tokens / all sentences : {:>6,d}".format(max(all_tokens)))
+    logger.info("    avg tokens / all sentences : {:>6.2f}".format(avg_tokens))
 
     random.seed(1)
     random.shuffle(ent_sents)
@@ -227,7 +228,6 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split):
     output_names = [p.replace("_sent.csv", ".txt.tmp") for p in sent_fnames]
 
     df = pd.read_csv(sentence_csv, delimiter=",", header=None)
-    logger.info("examples : {:>4,d}".format(len(df)))
 
     # subset the data?
     if n_samples > 0:
