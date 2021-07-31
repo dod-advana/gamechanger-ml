@@ -12,13 +12,13 @@ optional arguments:
   -e ENTITY_CSV, --entity-csv ENTITY_CSV
                         csv of entities & types
   -n N_SAMPLES, --n-samples N_SAMPLES
-                        how many samples to extract and tag (0 means get
+                        how many samples to extract and tag (0 means use
                         everything)
   -r, --shuffle         randomly shuffle the sentence data
   -p {tab,space}, --separator {tab,space}
                         token <-> label separator, default is 'space'
   -x T_SPLIT, --train-split T_SPLIT
-                        training split; dev, val are evenly split from 1 -
+                        training split; dev, test are evenly split at 1 -
                         t_split
 """
 import logging
@@ -32,57 +32,21 @@ from tqdm import tqdm
 
 import gamechangerml.src.entity.entity_mentions as em
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
-from gamechangerml.src.entity.format_generator import gen_ner_conll_tags
+
 
 logger = logging.getLogger(__name__)
 
+I_PRFX = "I-"
+B_PRFX = "B-"
+OH = "O"
 SENT = "sentence"
 
 
 def wc(txt):
-    return txt.count(" ") + 1
-
-
-# def gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_list, nlp):
-#     I_PRFX = "I-"
-#     B_PRFX = "B-"
-#     OH = "O"
-#
-#     for row in sent_list:
-#         sentence_text = row[SENT]
-#         if not sentence_text.strip():
-#             continue
-#
-#         doc = nlp(sentence_text)
-#         starts_ends = [(t.idx, t.idx + len(t.orth_) - 1) for t in doc]
-#         ner_labels = [OH] * len(starts_ends)
-#         tokens = [t.orth_ for t in doc]
-#         ent_spans = em.entities_spans(sentence_text, ent_re, abbrv_re)
-#
-#         # find token indices of an extracted entity using their spans;
-#         # create CoNLL tags
-#         for ent, ent_st_end in ent_spans:
-#             token_idxs = [
-#                 idx
-#                 for idx, tkn_st_end in enumerate(starts_ends)
-#                 if tkn_st_end[0] >= ent_st_end[0]
-#                 and tkn_st_end[1] <= ent_st_end[1] - 1
-#             ]
-#             if not token_idxs:
-#                 continue
-#             if wc(ent) == 1:
-#                 ner_labels[token_idxs[0]] = I_PRFX + entity2type[ent.lower()]
-#                 continue
-#
-#             ner_labels[token_idxs[0]] = B_PRFX + entity2type[ent.lower()]
-#             for idx in token_idxs[1:]:
-#                 if ent.lower() in entity2type:
-#                     ner_labels[idx] = I_PRFX + entity2type[ent.lower()]
-#                 else:
-#                     logger.error("KeyError (why?): {}".format(ent.lower()))
-#         unique_labels = set(ner_labels)
-#         logger.debug([(t, s) for t, s in zip(tokens, ner_labels)])
-#         yield zip(tokens, ner_labels), unique_labels
+    if not txt:
+        return 0
+    else:
+        return txt.count(" ") + 1
 
 
 def ner_training_data(
@@ -147,7 +111,7 @@ def ner_training_data(
     ent_sents = [
         row
         for row in sent_list
-        if wc(row[SENT]) < 1000
+        if wc(row[SENT]) < 1000  # magic number (for now)
         if em.contains_entity(row[SENT], entity_re, abbrv_re)
     ]
     elapsed = time.time() - start
@@ -241,7 +205,7 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split):
     train, dev_test = train_test_split(df, train_size=t_split)
     dev, test = train_test_split(dev_test, train_size=0.50)
 
-    # save intermediate output for now
+    # save intermediate output
     for idx, df in enumerate((train, dev, test)):
         df.to_csv(sent_fnames[idx], header=False, index=False, sep=",")
         fn_ = os.path.split(sent_fnames[idx])[-1]
@@ -263,6 +227,63 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split):
         )
     elapsed = time.time() - start
     logger.info("time : {:}".format(cu.format_time(elapsed)))
+
+
+def gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_list, nlp):
+    """
+    Generator to label text tokens according to the entity tags.
+
+    Args:
+        abbrv_re (SRE_Pattern): compiled regular expression
+
+        ent_re  (SRE_Pattern): compiled regular expression
+
+        entity2type (dict): map of an entity to its type, e.g.,
+            GCORG, GCPER, etc; optional.
+
+        sent_list (list): list of text(sentences) to label
+
+        nlp (spacy.lang.en.English): spaCy language model
+
+    Yields:
+       zip(tokens, ner_labels), List[str] of unique labels
+
+    """
+    for row in sent_list:
+        sentence_text = row[SENT]
+        if not sentence_text.strip():
+            continue
+
+        doc = nlp(sentence_text)
+        starts_ends = [(t.idx, t.idx + len(t.orth_) - 1) for t in doc]
+        ner_labels = [OH] * len(starts_ends)
+        tokens = [t.orth_ for t in doc]
+        ent_spans = em.entities_spans(sentence_text, ent_re, abbrv_re)
+
+        # find token indices of an extracted entity using their spans;
+        # create CoNLL tags
+        for ent, ent_st_end in ent_spans:
+            token_idxs = [
+                idx
+                for idx, tkn_st_end in enumerate(starts_ends)
+                if tkn_st_end[0] >= ent_st_end[0]
+                and tkn_st_end[1] <= ent_st_end[1] - 1
+            ]
+            if not token_idxs:
+                continue
+            if wc(ent) == 1:
+                ner_labels[token_idxs[0]] = I_PRFX + entity2type[ent.lower()]
+                continue
+
+            ner_labels[token_idxs[0]] = B_PRFX + entity2type[ent.lower()]
+            for idx in token_idxs[1:]:
+                if ent.lower() in entity2type:
+                    ner_labels[idx] = I_PRFX + entity2type[ent.lower()]
+                else:
+                    logger.error("KeyError (why?): {}".format(ent.lower()))
+        unique_labels = set(ner_labels)
+        logger.debug([(t, s) for t, s in zip(tokens, ner_labels)])
+        yield zip(tokens, ner_labels), unique_labels
 
 
 if __name__ == "__main__":
@@ -300,7 +321,7 @@ if __name__ == "__main__":
         type=int,
         required=False,
         default=0,
-        help="how many samples to extract and tag (0 means get everything)",
+        help="how many samples to extract and tag (0 means use everything)",
     )
     parser.add_argument(
         "-r",

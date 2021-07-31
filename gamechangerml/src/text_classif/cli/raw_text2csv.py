@@ -48,7 +48,7 @@ def raw2df(src_path, glob, key="raw_text"):
         if key in doc:
             raw_text = doc[key]
             sent_list = cu.make_sentences(raw_text, fname)
-            logger.info(
+            logger.debug(
                 "{:>35s} : {:>5,d} sentences".format(fname, len(sent_list))
             )
             yield sent_list, fname
@@ -75,8 +75,8 @@ def raw_text2csv(src_path, glob, output_path):
     fname = None
     output_df = new_df()
     try:
-        for sent_df, fname in raw2df(src_path, glob):
-            output_df = output_df.append(sent_df, ignore_index=True)
+        for sent_list, fname in raw2df(src_path, glob):
+            output_df = output_df.append(sent_list, ignore_index=True)
             if output_path is None:
                 return output_df
             base, ext = os.path.splitext(os.path.basename(fname))

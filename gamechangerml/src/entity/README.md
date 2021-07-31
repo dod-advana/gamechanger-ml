@@ -3,8 +3,7 @@
 ## CoNLL Format
 The Hugging Face format follows CoNLL-2003. Every token in a sentence (or sequence) is on a separate
 line along with its "B-", "I-", "O" tag. In our corpus, we have GCPER (person) and GCORG 
-(organization), with abbreviations suffixed with "-ABBRV"
-thus there are 9 unique tags.
+(organization), with their abbreviations suffixed with "-ABBRV".
 
 For example the sequence _The Director, DLA and the VA shall:_ would be represented as
 ```
@@ -14,7 +13,7 @@ Director B-GCPER
 DLA I-GCPER
 and O
 the O
-VA I-GCORG-ABBRV
+DLA I-GCORG-ABBRV
 shall O
 : O
 
@@ -22,11 +21,12 @@ shall O
 Sequences are separated by a single new line.
 
 ## Creating CoNLL Training Data
-This is a multi-step process at the moment. We'll use DoDD, DoDI, and DoDM documents from the corpus as an example.
+This is a multi-step process at the moment. We'll use DoDD, DoDI, and DoDM documents from the corpus as 
+an example.
 
-1. Create sentence `.csv` files. Run the CLI `src/text_classif/cli/raw_text2csv.py` with glob "DoD[DIM]*.json".
-This will write a `<doc-id>_sentences.csv` file, _e.g._, `DoDD_1000.20_sentences.csv` for each
-matching document, to a specified output directory.
+1. Create sentence `.csv` files. Run the CLI `src/text_classif/cli/raw_text2csv.py` with 
+glob "DoD[DIM]*.json".This will write a `<doc-id>_sentences.csv` file, _e.g._, `DoDD_1000.20_sentences.csv` 
+for each matching document, to a specified output directory.
 
 2. We'll need a randomly chosen subset of the sentences, so first `cat` these files into one file, 
 _e.g._, 
@@ -60,10 +60,13 @@ _e.g._,
 
 ## Training
 The shell script `entity/bin/sample_run.sh`, run from `entity/bin`, sets up a small test using the
-data in `tests/test_data`. It first runs `preprocessing.py` on each of the three files. This insures
-the model-tokenized sentence is less than a specified number of tokens (128). If not, it splits the sentence.
-This is a _very_ slow process. If you know the sentences are within your limit or you're willing to tolerate
-some truncation, this step can be skipped. Simply change the file extension from `.txt.tmp` to `.txt`.
+data in `tests/test_data`. 
+
+It first runs `preprocessing.py` on each of the three files. This insures the number of tokens in 
+the model-tokenized sentence is less than a maximum tokens (128). If not, it 
+splits the sentence. This can be a slow process. If you know the sentences are within your limit or 
+you're willing to tolerate some truncation, this step can be skipped. Simply change the file extension 
+from `.txt.tmp` to `.txt`.
 
 By default, the trained model will be saved in the data directory, `tests/test_data/model`. The `model`
 directory will be created.

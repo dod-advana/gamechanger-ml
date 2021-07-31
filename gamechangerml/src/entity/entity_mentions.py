@@ -88,6 +88,7 @@ def make_entity_re(entity_csv):
         (["(\\b" + re.escape(a.strip()) + "\\b)" for a in short_forms])
     )
     abbrv_re = re.compile(abbrv_re)
+
     return abbrv_re, entity_re, entity2type
 
 
@@ -108,10 +109,12 @@ def contains_entity(text, entity_re, abbrv_re):
     entity_list = list()
 
     entities = entity_re.findall(text)
-    entity_list.extend(entities)
+    if entities:
+        entity_list.extend([e for e in entities[0] if e])
 
     abbrvs = abbrv_re.findall(text)
-    entity_list.extend(abbrvs)
+    if abbrvs:
+        entity_list.extend([a for a in abbrvs[0] if a])
 
     return entity_list
 
@@ -119,7 +122,7 @@ def contains_entity(text, entity_re, abbrv_re):
 def resolve_nested_entity(entity_span_list, abbrv_span_list):
     """
     If an abbreviation entity is part of a larger entity, exclude it as
-    as an abbreviation entity.
+    an abbreviation entity.
 
     Args:
         entity_span_list: list of entities and their spans
@@ -129,26 +132,26 @@ def resolve_nested_entity(entity_span_list, abbrv_span_list):
             List[(abbreviation_text, (start_position, end_position))]
 
     Returns:
-        List
+        List[tuple(str, tuple(int, int))]
 
     """
     contained = list()
-    scrubbed_ents = list()
+    resolved_ents = list()
 
     for ent, ent_spans in entity_span_list:
-        scrubbed_ents.append((ent, ent_spans))
+        resolved_ents.append((ent, ent_spans))
         for abbrv, abbrv_spans in abbrv_span_list:
             if (
                 abbrv_spans[0] >= ent_spans[0]
                 and abbrv_spans[1] <= ent_spans[1]
             ):
-                contained.append((abbrv, ent))
+                contained.append((abbrv, ent))  # good for testing, for now
                 logger.debug("'{}' contained in '{}'".format(abbrv, ent))
             else:
-                scrubbed_ents.append((abbrv, abbrv_spans))
+                resolved_ents.append((abbrv, abbrv_spans))
     if contained:
         logger.debug(set(contained))
-    return scrubbed_ents
+    return resolved_ents
 
 
 def entities_spans(text, entity_re, abbrv_re):
@@ -163,11 +166,12 @@ def entities_spans(text, entity_re, abbrv_re):
         abbrv_re (SRE_Pattern): compiled regular expression
 
     Returns:
-        List[tuple, tuple]
+        List[tuple(str,tuple(int, int))]
     """
     logger.debug(text)
     ent_span_list = list()
     abbrv_span_list = list()
+
     for mobj in entity_re.finditer(text):
         entity_span = (mobj.group(), (mobj.start(), mobj.end()))
         ent_span_list.append(entity_span)
@@ -177,10 +181,10 @@ def entities_spans(text, entity_re, abbrv_re):
         abbrv_span_list.append(entity_span)
 
     if ent_span_list:
-        scrubbed_ents = resolve_nested_entity(ent_span_list, abbrv_span_list)
-        logger.debug(scrubbed_ents)
+        resolved_ents = resolve_nested_entity(ent_span_list, abbrv_span_list)
+        logger.debug(resolved_ents)
         logger.debug("-------")
-        return scrubbed_ents
+        return resolved_ents
     else:
         ent_span_list.extend(abbrv_span_list)
         logger.debug(ent_span_list)
@@ -188,7 +192,7 @@ def entities_spans(text, entity_re, abbrv_re):
         return ent_span_list
 
 
-def count_glob(corpus_dir, glob, entity_re, abbrv_re):
+def count_entity_mentions(corpus_dir, glob, entity_re, abbrv_re):
     """
     For each matching document, list each entity and its frequency of
     occurrence.
@@ -208,12 +212,12 @@ def count_glob(corpus_dir, glob, entity_re, abbrv_re):
     doc_entity = dict()
 
     r2d = cu.raw2dict(corpus_dir, glob)
-    for sent_dict, fname in tqdm(r2d, total=nfiles, desc="docs"):
-        for sd in sent_dict:
+    for sent_list, fname in tqdm(r2d, total=nfiles, desc="docs"):
+        for sd in sent_list:
             sent = sd[SENT]
             ent_list = contains_entity(sent, entity_re, abbrv_re)
             for ent in ent_list:
-                entity_count[ent.strip()] += 1
+                entity_count[ent] += 1
         doc_entity[fname] = sorted(
             entity_count.items(), key=lambda x: x[1], reverse=True
         )
@@ -221,9 +225,9 @@ def count_glob(corpus_dir, glob, entity_re, abbrv_re):
     return doc_entity
 
 
-def entity_mentions_glob(entity_file, corpus_dir, glob):
+def count_entity_mentions_in_corpus(entity_file, corpus_dir, glob):
     """
-    Wrapper for `count_glob()`.
+    Wrapper for `count_entity_mentions()`.
 
     Args:
         entity_file (str): entity / abbreviation files
@@ -235,7 +239,7 @@ def entity_mentions_glob(entity_file, corpus_dir, glob):
             (entity, frequency)
     """
     abbrvs, ents, _ = make_entity_re(entity_file)
-    return count_glob(corpus_dir, glob, ents, abbrvs)
+    return count_entity_mentions(corpus_dir, glob, ents, abbrvs)
 
 
 def entities_in_raw(entity_file, corpus_dir, glob):
@@ -266,7 +270,7 @@ def entities_and_spans(entity_file, corpus_dir, glob):
         glob (str): file matching
 
     Returns:
-        Dict[List, Tuple(tuple)]
+        Dict[list: tuple(tuple)]
     """
     nfiles = cu.nfiles_in_glob(corpus_dir, glob)
     entity_span_d = dict()
@@ -345,7 +349,7 @@ if __name__ == "__main__":
             args.entity_file, args.input_path, args.glob
         )
     elif args.task == "mentions":
-        output = entity_mentions_glob(
+        output = count_entity_mentions_in_corpus(
             args.entity_file, args.input_path, args.glob
         )
 
