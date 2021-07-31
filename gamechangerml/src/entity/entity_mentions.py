@@ -108,6 +108,7 @@ def contains_entity(text, entity_re, abbrv_re):
     """
     entity_list = list()
 
+    # TODO use finditer()
     entities = entity_re.findall(text)
     if entities:
         entity_list.extend([e for e in entities[0] if e])
@@ -143,7 +144,7 @@ def resolve_nested_entity(entity_span_list, abbrv_span_list):
         for abbrv, abbrv_spans in abbrv_span_list:
             if (
                 abbrv_spans[0] >= ent_spans[0]
-                and abbrv_spans[1] <= ent_spans[1]
+                and abbrv_spans[1] <= ent_spans[1]  # not needed now, but...
             ):
                 contained.append((abbrv, ent))  # good for testing, for now
                 logger.debug("'{}' contained in '{}'".format(abbrv, ent))
