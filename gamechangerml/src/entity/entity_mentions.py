@@ -51,14 +51,14 @@ def entity_csv_to_df(entity_csv):
 
 def make_entity_re(entity_csv):
     """
-    Creates regular expressions for long form entities and their abbreviations,
-    if they exist. These are large alternations. No magic. A mapping of
-    entity to entity type is created for subsequent lookup in creating
+    Creates regular expressions for long form entities and abbreviations.
+    These are large alternations. No magic. A mapping of entity to entity
+    type (`entity2type`) is created for subsequent lookup in creating
     NER training data.
 
     Args:
         entity_csv (str): csv with entries consisting of
-            *LF*, *SF*, *ETYPE*
+            *ENT*, *ETYPE*
 
     Returns:
         SRE_Pattern, SRE_Pattern, Dict
@@ -111,24 +111,41 @@ def contains_entity(text, entity_re, abbrv_re):
     entity_list.extend(entities)
 
     abbrvs = abbrv_re.findall(text)
-    abbrvs_list = [a for a in abbrvs]  # TODO needed?
-    entity_list.extend(abbrvs_list)
+    entity_list.extend(abbrvs)
 
     return entity_list
 
 
-def embedded_entity(entity_span_list, abbrv_span_list):
+def resolve_nested_entity(entity_span_list, abbrv_span_list):
+    """
+    If an abbreviation entity is part of a larger entity, exclude it as
+    as an abbreviation entity.
+
+    Args:
+        entity_span_list: list of entities and their spans
+            List[(entity_text, (start_position, end_position))]
+
+        abbrv_span_list: list of abbreviations and their spans
+            List[(abbreviation_text, (start_position, end_position))]
+
+    Returns:
+        List
+
+    """
     contained = list()
     scrubbed_ents = list()
 
     for ent, ent_spans in entity_span_list:
         scrubbed_ents.append((ent, ent_spans))
-        for abbrv, abrv_spans in abbrv_span_list:
-            if abrv_spans[0] >= ent_spans[0] and abrv_spans[1] <= ent_spans[1]:
+        for abbrv, abbrv_spans in abbrv_span_list:
+            if (
+                abbrv_spans[0] >= ent_spans[0]
+                and abbrv_spans[1] <= ent_spans[1]
+            ):
                 contained.append((abbrv, ent))
                 logger.debug("'{}' contained in '{}'".format(abbrv, ent))
             else:
-                scrubbed_ents.append((abbrv, abrv_spans))
+                scrubbed_ents.append((abbrv, abbrv_spans))
     if contained:
         logger.debug(set(contained))
     return scrubbed_ents
@@ -160,7 +177,7 @@ def entities_spans(text, entity_re, abbrv_re):
         abbrv_span_list.append(entity_span)
 
     if ent_span_list:
-        scrubbed_ents = embedded_entity(ent_span_list, abbrv_span_list)
+        scrubbed_ents = resolve_nested_entity(ent_span_list, abbrv_span_list)
         logger.debug(scrubbed_ents)
         logger.debug("-------")
         return scrubbed_ents
@@ -249,7 +266,7 @@ def entities_and_spans(entity_file, corpus_dir, glob):
         glob (str): file matching
 
     Returns:
-        Dict[List, tuple(tuple)]
+        Dict[List, Tuple(tuple)]
     """
     nfiles = cu.nfiles_in_glob(corpus_dir, glob)
     entity_span_d = dict()

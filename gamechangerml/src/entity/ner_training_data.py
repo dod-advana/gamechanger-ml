@@ -24,6 +24,7 @@ optional arguments:
 import logging
 import os
 import random
+import time
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -31,6 +32,7 @@ from tqdm import tqdm
 
 import gamechangerml.src.entity.entity_mentions as em
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
+from gamechangerml.src.entity.format_generator import gen_ner_conll_tags
 
 logger = logging.getLogger(__name__)
 
@@ -41,46 +43,46 @@ def wc(txt):
     return txt.count(" ") + 1
 
 
-def _gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_list, nlp):
-    I_PRFX = "I-"
-    B_PRFX = "B-"
-    OH = "O"
-
-    for row in sent_list:
-        sentence_text = row[SENT]
-        if not sentence_text.strip():
-            continue
-
-        doc = nlp(sentence_text)
-        starts_ends = [(t.idx, t.idx + len(t.orth_) - 1) for t in doc]
-        ner_labels = [OH] * len(starts_ends)
-        tokens = [t.orth_ for t in doc]
-        ent_spans = em.entities_spans(sentence_text, ent_re, abbrv_re)
-
-        # find token indices of an extracted entity using their spans;
-        # create CoNLL tags
-        for ent, ent_st_end in ent_spans:
-            token_idxs = [
-                idx
-                for idx, tkn_st_end in enumerate(starts_ends)
-                if tkn_st_end[0] >= ent_st_end[0]
-                and tkn_st_end[1] <= ent_st_end[1] - 1
-            ]
-            if not token_idxs:
-                continue
-            if wc(ent) == 1:
-                ner_labels[token_idxs[0]] = I_PRFX + entity2type[ent.lower()]
-                continue
-
-            ner_labels[token_idxs[0]] = B_PRFX + entity2type[ent.lower()]
-            for idx in token_idxs[1:]:
-                if ent.lower() in entity2type:
-                    ner_labels[idx] = I_PRFX + entity2type[ent.lower()]
-                else:
-                    logger.error("KeyError (why?): {}".format(ent.lower()))
-        unique_labels = set(ner_labels)
-        logger.debug([(t, s) for t, s in zip(tokens, ner_labels)])
-        yield zip(tokens, ner_labels), unique_labels
+# def gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_list, nlp):
+#     I_PRFX = "I-"
+#     B_PRFX = "B-"
+#     OH = "O"
+#
+#     for row in sent_list:
+#         sentence_text = row[SENT]
+#         if not sentence_text.strip():
+#             continue
+#
+#         doc = nlp(sentence_text)
+#         starts_ends = [(t.idx, t.idx + len(t.orth_) - 1) for t in doc]
+#         ner_labels = [OH] * len(starts_ends)
+#         tokens = [t.orth_ for t in doc]
+#         ent_spans = em.entities_spans(sentence_text, ent_re, abbrv_re)
+#
+#         # find token indices of an extracted entity using their spans;
+#         # create CoNLL tags
+#         for ent, ent_st_end in ent_spans:
+#             token_idxs = [
+#                 idx
+#                 for idx, tkn_st_end in enumerate(starts_ends)
+#                 if tkn_st_end[0] >= ent_st_end[0]
+#                 and tkn_st_end[1] <= ent_st_end[1] - 1
+#             ]
+#             if not token_idxs:
+#                 continue
+#             if wc(ent) == 1:
+#                 ner_labels[token_idxs[0]] = I_PRFX + entity2type[ent.lower()]
+#                 continue
+#
+#             ner_labels[token_idxs[0]] = B_PRFX + entity2type[ent.lower()]
+#             for idx in token_idxs[1:]:
+#                 if ent.lower() in entity2type:
+#                     ner_labels[idx] = I_PRFX + entity2type[ent.lower()]
+#                 else:
+#                     logger.error("KeyError (why?): {}".format(ent.lower()))
+#         unique_labels = set(ner_labels)
+#         logger.debug([(t, s) for t, s in zip(tokens, ner_labels)])
+#         yield zip(tokens, ner_labels), unique_labels
 
 
 def ner_training_data(
@@ -110,7 +112,7 @@ def ner_training_data(
 
         sep (str): separator between entity & label
 
-        out_fp (str): where to write the resulting `.tsv` file
+        out_fp (str): where to write the resulting `.csv` file
 
         shuffle (bool): if True, randomize the order of the sentences
 
@@ -140,49 +142,41 @@ def ner_training_data(
 
     sent_list = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
 
+    start = time.time()
     logger.info("finding sentences with entities")
     ent_sents = [
         row
         for row in sent_list
+        if wc(row[SENT]) < 1000
         if em.contains_entity(row[SENT], entity_re, abbrv_re)
     ]
+    elapsed = time.time() - start
+    logger.info("time : {:}".format(cu.format_time(elapsed)))
+
     if not ent_sents:
         logger.warning("no entities discovered in the input...")
 
     all_tokens = [wc(row[SENT]) for row in ent_sents]
     avg_tokens = sum(all_tokens) / len(ent_sents)
-    logger.info(
-        "                 num sentences : {:>6,d}".format(len(sent_list))
-    )
-    logger.info(
-        "     num sentences w/ entities : {:>6,d}".format(len(ent_sents))
-    )
-    logger.info(
-        "                    num tokens : {:>6,d}".format(sum(all_tokens))
-    )
-    logger.info(
-        "    min tokens / all sentences : {:>6,d}".format(min(all_tokens))
-    )
-    logger.info(
-        "    max tokens / all sentences : {:>6,d}".format(max(all_tokens))
-    )
-    logger.info("    avg tokens / all sentences : {:>6.2f}".format(avg_tokens))
+    logger.info("            num sentences : {:>7,d}".format(len(sent_list)))
+    logger.info("num sentences w/ entities : {:>7,d}".format(len(ent_sents)))
+    logger.info("               num tokens : {:>7,d}".format(sum(all_tokens)))
+    logger.info("    min tokens / sentence : {:>7,d}".format(min(all_tokens)))
+    logger.info("    max tokens / sentence : {:>7,d}".format(max(all_tokens)))
+    logger.info("    avg tokens / sentence : {:>7.2f}".format(avg_tokens))
 
     random.seed(1)
     random.shuffle(ent_sents)
 
-    training_generator = _gen_ner_conll_tags(
+    training_generator = gen_ner_conll_tags(
         abbrv_re, entity_re, entity2type, ent_sents, nlp
     )
-    labels = set()
-    count = 0
     print_str = EMPTYSTR
+    desc = "labeling tokens"
     with open(out_fp, "w") as fp:
         for zipped, unique_labels in tqdm(
-            training_generator, total=len(ent_sents), desc="sentence"
+            training_generator, total=len(ent_sents), desc=desc
         ):
-            labels = labels.union(unique_labels)
-            count += 1
             print_str += (
                 NL.join([str(e[0]) + SEP + str(e[1]) for e in zipped])
                 + NL
@@ -227,6 +221,7 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split):
     """
     if not os.path.isfile(sentence_csv):
         raise FileExistsError("no sentence_csv; got {}".format(sentence_csv))
+    start = time.time()
     abbrv_re, entity_re, entity2type = em.make_entity_re(entity_csv)
 
     in_path, _ = os.path.split(sentence_csv)
@@ -252,7 +247,8 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split):
         fn_ = os.path.split(sent_fnames[idx])[-1]
         logger.info("samples {:>5,d} : {:>14s}".format(len(df), fn_))
 
-    for idx in range(3):
+    for idx, tag in enumerate(["train", "dev", "test"]):
+        logger.info("creating data for {}".format(tag))
         ner_training_data(
             entity_csv,
             sent_fnames[idx],
@@ -265,6 +261,8 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split):
             entity_re=entity_re,
             entity2type=entity2type,
         )
+    elapsed = time.time() - start
+    logger.info("time : {:}".format(cu.format_time(elapsed)))
 
 
 if __name__ == "__main__":
@@ -327,7 +325,7 @@ if __name__ == "__main__":
         dest="t_split",
         type=float,
         default=0.80,
-        help="training split; dev, val are evenly split from 1 - t_split",
+        help="training split; dev, test are evenly split at 1 - t_split",
     )
     args = parser.parse_args()
 
