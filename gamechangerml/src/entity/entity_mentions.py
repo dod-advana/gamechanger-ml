@@ -145,7 +145,7 @@ def unnest_nested_abbrv_entity(entity_span_list, abbrv_span_list):
     return unnested_ents
 
 
-def entities_spans(text, entity_re, abbrv_re):
+def entities_spans_in_text(text, entity_re, abbrv_re):
     """
     Finds all the entities in the text, returning a list with every
     instance of the entity. If no entities are found, an empty list is
@@ -161,10 +161,10 @@ def entities_spans(text, entity_re, abbrv_re):
     Returns:
         List[tuple(str,tuple(int, int))]
     """
-    logger.debug(text)
     ent_span_list = list()
     abbrv_span_list = list()
 
+    # TODO use list comprehension - ?
     for mobj in entity_re.finditer(text):
         entity_span = (mobj.group(), (mobj.start(), mobj.end()))
         ent_span_list.append(entity_span)
@@ -174,12 +174,12 @@ def entities_spans(text, entity_re, abbrv_re):
         abbrv_span_list.append(entity_span)
 
     if ent_span_list:
-        resolved_ents = unnest_nested_abbrv_entity(
+        unnested_entity = unnest_nested_abbrv_entity(
             ent_span_list, abbrv_span_list
         )
-        logger.debug(resolved_ents)
+        logger.debug(unnested_entity)
         logger.debug("-------")
-        return resolved_ents
+        return unnested_entity
     else:
         ent_span_list.extend(abbrv_span_list)
         logger.debug(ent_span_list)
@@ -239,7 +239,7 @@ def count_entity_mentions_in_corpus(entity_file, corpus_dir, glob):
 
 def entities_in_raw(entity_file, corpus_dir, glob):
     """
-    Finds each occurrence of an entity with its span.
+    Finds each occurrence of an entity along with its span.
 
     Args:
         entity_file (str): entity / abbreviation files
@@ -252,7 +252,7 @@ def entities_in_raw(entity_file, corpus_dir, glob):
     abbrv_re, entity_re, _ = make_entity_re(entity_file)
     for fname, json_doc in cu.gen_gc_docs(corpus_dir, glob):
         text = cu.scrubber(json_doc[TEXTTYPE])
-        entity_spans = entities_spans(text, entity_re, abbrv_re)
+        entity_spans = entities_spans_in_text(text, entity_re, abbrv_re)
         yield fname, entity_spans
 
 

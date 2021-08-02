@@ -109,7 +109,7 @@ def ner_training_data(
     start = time.time()
     logger.info("finding sentences with entities")
 
-    # TODO something better
+    # TODO something better?
     ent_sents = [
         row
         for row in sent_list
@@ -188,6 +188,7 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split):
     """
     if not os.path.isfile(sentence_csv):
         raise FileExistsError("no sentence_csv; got {}".format(sentence_csv))
+
     start = time.time()
     abbrv_re, entity_re, entity2type = em.make_entity_re(entity_csv)
 
@@ -261,7 +262,7 @@ def gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_list, nlp):
         starts_ends = [(t.idx, t.idx + len(t.orth_) - 1) for t in doc]
         ner_labels = [OH] * len(starts_ends)
         tokens = [t.orth_ for t in doc]
-        ent_spans = em.entities_spans(sentence_text, ent_re, abbrv_re)
+        ent_spans = em.entities_spans_in_text(sentence_text, ent_re, abbrv_re)
 
         # find token indices of an extracted entity using their spans;
         # create CoNLL tags
@@ -285,7 +286,6 @@ def gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_list, nlp):
                 else:
                     logger.error("KeyError (why?): {}".format(ent.lower()))
         unique_labels = set(ner_labels)
-        logger.debug([(t, s) for t, s in zip(tokens, ner_labels)])
         yield zip(tokens, ner_labels), unique_labels
 
 
