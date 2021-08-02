@@ -105,7 +105,7 @@ class ModelLoader:
             encoder_model = ModelLoader.__sentence_trans.encoder_model
             logger.info(f"Using {encoder_model} for sentence transformer")
             sim_model = ModelLoader.__sentence_trans.similarity
-            logger.info(f"Loading Sentence Transformer from {sim_model}")
+            logger.info(f"Loading Sentence Transformer from {sim_model.sim_model}")
             # set cache variable defined in settings.py
             latest_intel_model_sent.value  = {"encoder": encoder_model, "sim": sim_model.sim_model}
             logger.info("** Loaded Sentence Transformers")
