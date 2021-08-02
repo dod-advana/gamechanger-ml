@@ -1,9 +1,8 @@
 """
 usage: python entity_mentions.py [-h] -i INPUT_PATH -e ENTITY_FILE -o
                                  OUTPUT_JSON -g GLOB -t {mentions,spans}
-                                 [-s ENT_SPANS]
 
-brute force counting of entity mentions in each document
+brute force extraction of entity mentions in documents
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -16,8 +15,6 @@ optional arguments:
   -g GLOB, --glob GLOB  file pattern to match
   -t {mentions,spans}, --task {mentions,spans}
                         what do you want to run?
-  -s ENT_SPANS, --entity-spans ENT_SPANS
-                        json file resulting from '--run_type mentions'
 """
 import json
 import logging
@@ -113,7 +110,7 @@ def contains_entity(text, entity_re, abbrv_re):
     return entity_list
 
 
-def resolve_nested_entity(entity_span_list, abbrv_span_list):
+def unnest_nested_abbrv_entity(entity_span_list, abbrv_span_list):
     """
     If an abbreviation entity is part of a larger entity, exclude it as
     an abbreviation entity.
@@ -156,7 +153,9 @@ def entities_spans(text, entity_re, abbrv_re):
 
     Args:
         text (str): text to search
+
         entity_re (SRE_Pattern): compiled regular expression
+
         abbrv_re (SRE_Pattern): compiled regular expression
 
     Returns:
@@ -175,7 +174,9 @@ def entities_spans(text, entity_re, abbrv_re):
         abbrv_span_list.append(entity_span)
 
     if ent_span_list:
-        resolved_ents = resolve_nested_entity(ent_span_list, abbrv_span_list)
+        resolved_ents = unnest_nested_abbrv_entity(
+            ent_span_list, abbrv_span_list
+        )
         logger.debug(resolved_ents)
         logger.debug("-------")
         return resolved_ents
@@ -283,7 +284,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser(
         prog="python " + os.path.split(__file__)[-1],
-        description="brute force counting of entity mentions in each document",
+        description="brute force extraction of entity mentions in documents",
     )
     parser.add_argument(
         "-i",
@@ -325,13 +326,7 @@ if __name__ == "__main__":
         required=True,
         help="what do you want to run?",
     )
-    parser.add_argument(
-        "-s",
-        "--entity-spans",
-        dest="ent_spans",
-        required=False,
-        help="json file resulting from '--run_type mentions'",
-    )
+
     args = parser.parse_args()
     if not os.path.isfile(args.entity_file):
         raise ValueError("cannot find {}".format(args.entity_file))

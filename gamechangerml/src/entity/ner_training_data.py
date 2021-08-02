@@ -108,12 +108,15 @@ def ner_training_data(
 
     start = time.time()
     logger.info("finding sentences with entities")
+
+    # TODO something better
     ent_sents = [
         row
         for row in sent_list
         if wc(row[SENT]) < 1000  # magic number (for now)
         if em.contains_entity(row[SENT], entity_re, abbrv_re)
     ]
+
     elapsed = time.time() - start
     logger.info("time : {:}".format(cu.format_time(elapsed)))
 
