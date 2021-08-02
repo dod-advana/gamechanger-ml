@@ -104,18 +104,11 @@ def contains_entity(text, entity_re, abbrv_re):
         abbrv_re (SRE_Pattern): compiled regular expression for abbreviations
 
     Returns:
-        List[str]
+        List
     """
-    entity_list = list()
 
-    # TODO use finditer()
-    entities = entity_re.findall(text)
-    if entities:
-        entity_list.extend([e for e in entities[0] if e])
-
-    abbrvs = abbrv_re.findall(text)
-    if abbrvs:
-        entity_list.extend([a for a in abbrvs[0] if a])
+    entity_list = [e.group() for e in entity_re.finditer(text)]
+    entity_list.extend([a.group() for a in abbrv_re.finditer(text)])
 
     return entity_list
 
