@@ -75,6 +75,7 @@ def sort_answers(answers: List[Tuple]) -> List[Dict[str, Union[str, float]]]:
 class DocumentReader:
     def __init__(self, transformer_path: str, model_name: str, qa_type: str, nbest: int, null_threshold: float, use_gpu: bool=False):
 
+        self.model_name = model_name
         self.READER_PATH = os.path.join(transformer_path, model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(self.READER_PATH)
         self.model = AutoModelForQuestionAnswering.from_pretrained(self.READER_PATH)
