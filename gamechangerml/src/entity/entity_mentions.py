@@ -130,10 +130,10 @@ def resolve_nested_entity(entity_span_list, abbrv_span_list):
 
     """
     contained = list()
-    resolved_ents = list()
+    unnested_ents = list()
 
     for ent, ent_spans in entity_span_list:
-        resolved_ents.append((ent, ent_spans))
+        unnested_ents.append((ent, ent_spans))
         for abbrv, abbrv_spans in abbrv_span_list:
             if (
                 abbrv_spans[0] >= ent_spans[0]
@@ -142,10 +142,10 @@ def resolve_nested_entity(entity_span_list, abbrv_span_list):
                 contained.append((abbrv, ent))  # good for testing, for now
                 logger.debug("'{}' contained in '{}'".format(abbrv, ent))
             else:
-                resolved_ents.append((abbrv, abbrv_spans))
+                unnested_ents.append((abbrv, abbrv_spans))
     if contained:
         logger.debug(set(contained))
-    return resolved_ents
+    return unnested_ents
 
 
 def entities_spans(text, entity_re, abbrv_re):
@@ -255,7 +255,7 @@ def entities_in_raw(entity_file, corpus_dir, glob):
         yield fname, entity_spans
 
 
-def entities_and_spans(entity_file, corpus_dir, glob):
+def entities_and_spans_by_doc(entity_file, corpus_dir, glob):
     """
     Wrapper for `entities_from_raw()`
     Args:
@@ -264,7 +264,7 @@ def entities_and_spans(entity_file, corpus_dir, glob):
         glob (str): file matching
 
     Returns:
-        Dict[list: tuple(tuple)]
+        Dict[str: tuple[str, tuple(int, int)]
     """
     nfiles = cu.nfiles_in_glob(corpus_dir, glob)
     entity_span_d = dict()
@@ -339,7 +339,7 @@ if __name__ == "__main__":
     output = None
     start = time.time()
     if args.task == "spans":
-        output = entities_and_spans(
+        output = entities_and_spans_by_doc(
             args.entity_file, args.input_path, args.glob
         )
     elif args.task == "mentions":
