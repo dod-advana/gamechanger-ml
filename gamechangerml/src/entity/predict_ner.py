@@ -7,33 +7,37 @@ import gamechangerml.src.entity.version as v
 logger = logging.getLogger(__name__)
 
 
-class NERPipe(object):
+class PredictNER:
+    """
+    Wrapper for HF NER `pipeline`
+
+    Args:
+        model_name_or_path (str): directory of a trained model or an
+            HF named model
+
+    Raises:
+         ValueError if `model_name_or_path` is missing or cannot be loaded
+    """
+
     __version__ = v.__version__
 
-    def __init__(self, model_name_or_path):
-        """
-        Wrapper for HF NER `pipeline`
+    def __init__(self, model_name_or_path=None):
 
-        Args:
-            model_name_or_path (str): directory of a trained model or an
-                HF named model
-
-        Raises:
-             ValueError if `model_name_or_path` is missing
-             OSError if the model cannot be loaded
-        """
         logger.info(
             "{} version {}".format(self.__class__.__name__, self.__version__)
         )
 
-        if not model_name_or_path:
+        if model_name_or_path is not None:
             raise ValueError("no value for `model_name_or_path`")
         try:
             self.ner_pipe = pipeline(
                 "ner", model=model_name_or_path, grouped_entities=True
             )
         except OSError as e:
-            raise e
+            msg = "`model_name_or_path` could not be found or loaded; got "
+            msg += "{}\n".format(model_name_or_path)
+            msg += "exception type / string {}: {}".format(type(e), str(e))
+            raise ValueError(msg)
 
         self.empty_list = list()
 
@@ -48,7 +52,7 @@ class NERPipe(object):
             List[dict]: prediction results
 
         Example:
-           >>> ner_pipe = NERPipe("model/directory")
+           >>> ner_pipe = PredictNER("model/directory")
            >>> seq = "The Defense Threat Reduction Agency (DTRA), and the Secretary of State"
            >>> ner_pipe(seq)
            [

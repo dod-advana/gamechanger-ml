@@ -159,7 +159,7 @@ def entities_spans_in_text(text, entity_re, abbrv_re):
         abbrv_re (SRE_Pattern): compiled regular expression
 
     Returns:
-        List[tuple(str,tuple(int, int))]
+        List[tuple(str, tuple(int, int))]
     """
     ent_span_list = list()
     abbrv_span_list = list()
@@ -222,7 +222,7 @@ def count_entity_mentions(corpus_dir, glob, entity_re, abbrv_re):
 
 def count_entity_mentions_in_corpus(entity_file, corpus_dir, glob):
     """
-    Wrapper for `count_entity_mentions()`.
+    Convenience method for `count_entity_mentions()`.
 
     Args:
         entity_file (str): entity / abbreviation files
@@ -275,6 +275,39 @@ def entities_and_spans_by_doc(entity_file, corpus_dir, glob):
     return entity_span_d
 
 
+def entity_types_in_text(text, entity_re, abbrv_re, entity2type):
+    entity_list = contains_entity(text, entity_re, abbrv_re)
+    entity_types = [
+        entity2type[entity.lower()] for entity in entity_list if entity
+    ]
+    return entity_types
+
+
+def uniq_entity_types_in_sentences(
+    sent_list, entity_re, abbrv_re, entity2type
+):
+    names = list()
+    unique_labels = sorted(list(set(list(entity2type.values()))))
+    names.extend(unique_labels)
+    names.append(SENT)
+    count = 0
+    df = pd.DataFrame(columns=names)
+    for text in tqdm(sent_list, desc="sentences"):
+        row = {etype: 0 for etype in unique_labels}
+        row[SENT] = text
+        ent_types = entity_types_in_text(
+            text, entity_re, abbrv_re, entity2type
+        )
+        if not ent_types:
+            continue
+        count += 1
+        unique_in_sent = list(set(ent_types))
+        for ent_type in unique_in_sent:
+            row[ent_type] = 1
+        df = df.append(row, ignore_index=True)
+    return df
+
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
@@ -291,23 +324,23 @@ if __name__ == "__main__":
         "--input-path",
         dest="input_path",
         type=str,
+        required=False,
         help="corpus path",
-        required=True,
     )
     parser.add_argument(
         "-e",
         "--entity-file",
         dest="entity_file",
         type=str,
-        help="csv of entities, abbreviations, and entity type",
         required=True,
+        help="csv of entities, abbreviations, and entity type",
     )
     parser.add_argument(
         "-o",
         "--output-json",
         dest="output_json",
         type=str,
-        required=True,
+        required=False,
         help="output path for .csv files",
     )
     parser.add_argument(
@@ -315,21 +348,30 @@ if __name__ == "__main__":
         "--glob",
         dest="glob",
         type=str,
-        required=True,
+        required=False,
         help="file pattern to match",
     )
     parser.add_argument(
         "-t",
         "--task",
         dest="task",
-        choices=["mentions", "spans"],
+        choices=["mentions", "spans", "profile"],
         required=True,
         help="what do you want to run?",
+    )
+    parser.add_argument(
+        "-s",
+        "--sentence_csv",
+        dest="sentence_csv",
+        required=False,
+        default=None,
+        help=".csv of sentences",
     )
 
     args = parser.parse_args()
     if not os.path.isfile(args.entity_file):
         raise ValueError("cannot find {}".format(args.entity_file))
+    logger.info(args.sentence_csv)
 
     output = None
     start = time.time()
@@ -341,6 +383,15 @@ if __name__ == "__main__":
         output = count_entity_mentions_in_corpus(
             args.entity_file, args.input_path, args.glob
         )
+    elif args.task == "profile":
+        df_ = pd.read_csv(args.sentence_csv, names=["fname", "label", SENT])
+        sent_list_ = df_[SENT].to_list()
+        abbrv_re_, entity_re_, entity2type_ = make_entity_re(args.entity_file)
+        out_df = uniq_entity_types_in_sentences(
+            sent_list_, entity_re_, abbrv_re_, entity2type_
+        )
+        logger.info(out_df.head())
+        out_df.to_csv("/Users/chrisskiscim/projects/gamechanger-ml/gamechangerml/src/entity/tests/test_data/profile.csv", header=True, index=False)
 
     if output:
         output = json.dumps(output)

@@ -1,11 +1,22 @@
-# Entity Linking & Named Entity Recognition (NER)
+# Named Entity Recognition (NER)
+
+## NER Model
+NER is modelled as a token classification problem. The underlying BERT model is augmented
+with classification heads for each token in a sequence:
+
+![ner_model](img/ner_model.png "token classification")
+
+Each token in a sequence must therefore carry a label.
 
 ## CoNLL Format
-The Hugging Face format follows CoNLL-2003. Every token in a sentence (or sequence) is on a separate
-line along with its "B-", "I-", "O" tag. In our corpus, we have GCPER (person) and GCORG 
-(organization), with their abbreviations suffixed with "-ABBRV".
+The Hugging Face format follows CoNLL-2003. Each token in a sequence is on a separate
+line along with its "B-" (**B**egin), "I-" (**I**n), "O" (**O**utside) tag for the
+entity type.
 
-For example the sequence _The Director, DLA and the VA shall:_ would be represented as
+In our corpus, we have suffixes GCPER (person) and GCORG 
+(organization) and their abbreviations, further suffixed with "-ABBRV".
+
+For example the sequence _The Director, DLA and the DLA shall:_ would be represented as
 ```
 The O
 Director B-GCPER
@@ -16,9 +27,10 @@ the O
 DLA I-GCORG-ABBRV
 shall O
 : O
-
+<BLANK LINE>
 ```
-Sequences are separated by a single new line.
+Sequences are separated by a single new line. Note that _Director, DLA_ contains an
+abbreviation. In this context, it is _not_ labeled as "GCORG-ABBRV".
 
 ## Creating CoNLL Training Data
 This is a multi-step process at the moment. We'll use DoDD, DoDI, and DoDM documents from the corpus as 
@@ -49,15 +61,10 @@ _e.g._,
         --entity-csv path_to/gamechanger-ml/gamechangerml/src/entity/aux_data/flat_entities.csv \
         --separator space \
         --n-samples 0 \
-        --train-split 0.80 \
-        --min-tokens 4 \
-        --max-tokens 100
+        --train-split 0.80 
     ```
    This will create three files, `train.txt.tmp`, `test.txt.tmp`, and `val.txt.tmp` (.80, .10, .10) in CoNLL format.
    
-   **NB**: Due to the tokenizing and tagging, the resulting files get very large, very quickly. For 3,000 sentences (430KB `.csv`),
-   resulting `train.txt.tmp` is close to 80MB.
-
 ## Training
 The shell script `entity/bin/sample_run.sh`, run from `entity/bin`, sets up a small test using the
 data in `tests/test_data`. 
@@ -75,8 +82,21 @@ During training, you may see the warnings
 ```
 /opt/conda/envs/gc-venv-blue/lib/python3.6/site-packages/torch/nn/parallel/_functions.py:64: UserWarning: Was asked to gather along dimension 0, but all input tensors were scalars; will instead unsqueeze and return a vector.
 ```
-and
+This is harmless and is fixed in later versions of `torch`.
+
+## Metrics
+Metrics are reported at the entity level excluding `O`. For example, with two sequences:
 ```
-[WARNING|training_args.py:423] 2021-07-29 20:59:05,363 >> Using deprecated `--per_gpu_train_batch_size` argument which will be removed in a future version. Using `--per_device_train_batch_size` is preferred.
+y_true = [['O', 'O', 'O', 'B-GCORG', 'I-GCORG', 'I-GCORG', 'O'], ['B-GCPER', 'I-GCPER', 'O']]
+y_pred = [['O', 'O', ''B-GCORG', 'I-GCORG', 'I-GCORG', 'I-GCORG', 'O'], ['B-GCPER', 'I-GCPER', 'O']]
+
+                       precision    recall  f1-score   support
+
+              GCORG       0.00      0.00      0.00         1
+              GCPER       1.00      1.00      1.00         1
+
+          micro avg       0.50      0.50      0.50         2
+          macro avg       0.50      0.50      0.50         2
+       weighted avg       0.50      0.50      0.50         2
+
 ```
-These are harmless and are fixed in later versions of `torch`.

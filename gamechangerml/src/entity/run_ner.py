@@ -35,7 +35,6 @@ from seqeval.metrics import (
     classification_report,
 )
 
-# from sklearn.metrics import classification_report, confusion_matrix
 from torch import nn
 from transformers import (
     AutoConfig,
@@ -302,8 +301,11 @@ def main():
         preds_list_, out_label_list = align_predictions(
             p.predictions, p.label_ids
         )
-        clf_report = classification_report(out_label_list, preds_list_)
+        clf_report = classification_report(
+            out_label_list, preds_list_, output_dict=False
+        )
         logger.info("\n" + clf_report)
+        writer.write(clf_report)
         return {
             "accuracy_score": accuracy_score(out_label_list, preds_list_),
             "precision": precision_score(out_label_list, preds_list_),

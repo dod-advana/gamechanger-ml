@@ -235,7 +235,7 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split):
 
 def gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_list, nlp):
     """
-    Generator to label text tokens according to the entity tags.
+    Generator to IOB label text tokens according to the entity tags.
 
     Args:
         abbrv_re (SRE_Pattern): compiled regular expression
