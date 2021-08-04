@@ -10,15 +10,13 @@ from nltk.tokenize import sent_tokenize
 
 from gamechangerml.src.text_classif.utils.entity_link import EntityLink
 from gamechangerml.src.text_classif.utils.entity_lookup import ContainsEntity
-from gamechangerml.src.text_classif.utils.predict_glob import predict_glob, _predict_docs
 from gamechangerml.src.featurization.table import Table
 
 logger = logging.getLogger(__name__)
 
-#TODO: Add NER filtering of the processed sentences (split on shall, check entity list, label 0)
+
 #TODO: Use synthetic data for negative examples?
-#TODO: Eventually fold appropriate methods from here into ExtractRespText() in resp_training_text.py
-#TODO: Change labeling schema to match ExtractRespText()
+#TODO: Add feature to allow for multiple verbs at command line instead of hard-coded
 
 
 class SingleRespTrain(Table):
@@ -35,6 +33,7 @@ class SingleRespTrain(Table):
         self.contains_entity = ContainsEntity()
         self.train_df = pd.DataFrame(columns=['source', 'label', 'text'])
         self.resp_verbs = ['shall']
+        self.agencies = pd.read_csv(agency_file)
         
     def scrubber(self, txt):
         txt = re.sub("[\\n\\t\\r]+", " ", txt)
@@ -44,7 +43,7 @@ class SingleRespTrain(Table):
             txt = txt.replace(mobj.group(1), "")
         return txt.strip()
         
-    def extract(self, input_dir):
+    def extract_single(self, input_dir):
         temp_df = pd.DataFrame(columns=['source', 'label', 'text'])
         for file in sorted(os.listdir(input_dir)):
             if not fnmatch.fnmatch(file, self.glob):
@@ -68,10 +67,18 @@ class SingleRespTrain(Table):
                     if j in i:
                         if ":" not in i:
                             single_resp = self.scrubber(i)
-                            if len(single_resp) > 70:
+                            if len(single_resp) > 100:
                                 temp = {'source': file, 'text': single_resp, 'label':1}
                             else:
                                 temp = {'source': file, 'text': single_resp, 'label':0}
+                            #TODO: replace with Chris's NER when available
+                            # for i, row in self.agencies.iterrows():
+                            #     if row['Agency_Aliases'] in single_resp:
+                            #         temp = {'source': file, 'text': single_resp, 'label':1}
+                            #     elif row['Agency_Name'] in single_resp:
+                            #         temp = {'source': file, 'text': single_resp, 'label':1}
+                            #     else:
+                            #         temp = {'source': file, 'text': single_resp, 'label':0}
                             temp_df = temp_df.append(temp, ignore_index=True)
             logger.info(
                 "{:>25s} : {:>3,d}".format(
@@ -79,11 +86,47 @@ class SingleRespTrain(Table):
                 )
             )
             yield temp_df, file
+
+    def extract_header(self, input_dir):
+        temp_df = pd.DataFrame(columns=['source', 'label', 'text'])
+        for file in sorted(os.listdir(input_dir)):
+            if not fnmatch.fnmatch(file, self.glob):
+                continue
+            with open(os.path.join(input_dir, file)) as f_in:
+                try:
+                    self.doc_dict = json.load(f_in)
+                except json.JSONDecodeError:
+                    logger.warning("could not decode `{}`".format(file))
+                    continue
+            file = self.doc_dict["filename"]
+            text = self.doc_dict["raw_text"]
+            self.raw_text = text
+            if self.resp in text:
+                resp_text, entity = self.get_section(text, file)
+            else:
+                continue
+            for i in resp_text.split('.'):
+                for j in i.split('\n'):
+                    if "shall:" in j:
+                        if len(j) > 10:
+                            temp = {'source': file, 'text': j, 'label':2}
+                            temp_df = temp_df.append(temp, ignore_index=True) 
+                        else:
+                            temp = {'source': file, 'text': j, 'label':0}
+                            temp_df = temp_df.append(temp, ignore_index=True)          
+            # temp_df = temp_df.drop_duplicates(subset=['source', 'text']).reset_index(drop=True)
+            yield temp_df, file
     
-    def process_glob(self):
-        for tmp_df, fname in self.extract(self.input_dir):
+    def process_all(self):
+        for tmp_df, fname in self.extract_single(self.input_dir):
             self.train_df = self.train_df.append(tmp_df, ignore_index=True)
-            self.df.to_csv(self.output)
+        
+        for tmp_df, fname in self.extract_header(self.input_dir):
+            self.train_df = self.train_df.append(tmp_df, ignore_index=True)
+        
+        tmp = self.train_df.drop_duplicates(subset=['source', 'text']).sort_values(by=['source']).reset_index(drop=True)
+        # tmp = self.train_df.sort_values(by=['source']).reset_index(drop=True)
+        return tmp
 
 
 if __name__ == "__main__":
@@ -109,6 +152,14 @@ if __name__ == "__main__":
         help="name of the output file (.csv)",
     )
     parser.add_argument(
+        "-a",
+        "--agencies-file",
+        dest="agencies_file",
+        type=str,
+        required=True,
+        help="the magic agencies file",
+    )
+    parser.add_argument(
         "-g",
         "--glob",
         dest="glob",
@@ -127,8 +178,11 @@ if __name__ == "__main__":
         args.input_dir,
         args.output,
         spacy_model_,
+        args.agencies_file,
         args.glob,
     )
 
-    table_obj.process_glob()
+    output_file = table_obj.process_all()
+    #TODO: move the csv call to process_all()
+    output_file.to_csv(args.output, index=False, header=False, doublequote=True)
     logger.info("training data extracted")
