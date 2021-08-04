@@ -123,12 +123,12 @@ def ner_training_data(
 
     all_tokens = [wc(row[SENT]) for row in ent_sents]
     avg_tokens = sum(all_tokens) / len(ent_sents)
-    logger.info("            num sentences : {:>7,d}".format(len(sent_list)))
-    logger.info("num sentences w/ entities : {:>7,d}".format(len(ent_sents)))
-    logger.info("               num tokens : {:>7,d}".format(sum(all_tokens)))
-    logger.info("    min tokens / sentence : {:>7,d}".format(min(all_tokens)))
-    logger.info("    max tokens / sentence : {:>7,d}".format(max(all_tokens)))
-    logger.info("    avg tokens / sentence : {:>7.2f}".format(avg_tokens))
+    logger.info("            num sentences : {:>9,d}".format(len(sent_list)))
+    logger.info("num sentences w/ entities : {:>9,d}".format(len(ent_sents)))
+    logger.info("               num tokens : {:>9,d}".format(sum(all_tokens)))
+    logger.info("    min tokens / sentence : {:>9,d}".format(min(all_tokens)))
+    logger.info("    max tokens / sentence : {:>9,d}".format(max(all_tokens)))
+    logger.info("    avg tokens / sentence : {:>9.2f}".format(avg_tokens))
 
     random.seed(1)
     random.shuffle(ent_sents)
@@ -211,7 +211,7 @@ def main(entity_csv, sentence_csv, n_samples, nlp, sep, shuffle, t_split):
     for idx, df in enumerate((train, dev, test)):
         df.to_csv(sent_fnames[idx], header=False, index=False, sep=",")
         fn_ = os.path.split(sent_fnames[idx])[-1]
-        logger.info("samples {:>5,d} : {:>14s}".format(len(df), fn_))
+        logger.info("samples {:>6,d} : {:<14s}".format(len(df), fn_))
 
     for idx, tag in enumerate(["train", "dev", "test"]):
         logger.info("creating data for {}".format(tag))
@@ -293,7 +293,7 @@ if __name__ == "__main__":
     import gamechangerml.src.text_classif.utils.log_init as li
     from gamechangerml.src.utilities.spacy_model import get_lg_nlp
 
-    li.initialize_logger(to_file=False, log_name="none")
+    li.initialize_logger(to_file=False, log_name="ner_training_data.log")
 
     parser = ArgumentParser(
         prog="python " + os.path.split(__file__)[-1],

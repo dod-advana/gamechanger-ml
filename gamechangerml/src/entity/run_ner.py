@@ -305,7 +305,6 @@ def main():
             out_label_list, preds_list_, output_dict=False
         )
         logger.info("\n" + clf_report)
-        writer.write(clf_report)
         return {
             "accuracy_score": accuracy_score(out_label_list, preds_list_),
             "precision": precision_score(out_label_list, preds_list_),

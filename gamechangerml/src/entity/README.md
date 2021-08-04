@@ -9,9 +9,9 @@ with classification heads for each token in a sequence:
 Each token in a sequence must therefore carry a label.
 
 ## CoNLL Format
-The Hugging Face format follows CoNLL-2003. Each token in a sequence is on a separate
-line along with its "B-" (**B**egin), "I-" (**I**n), "O" (**O**utside) tag for the
-entity type.
+The Hugging Face format follows CoNLL-2003 conventions: Each token in a sequence is 
+on a separate line along with its "I-" (**I**n), "B-" (**B**egin),  "O" (**O**utside) 
+tag for the entity type.
 
 In our corpus, we have suffixes GCPER (person) and GCORG 
 (organization) and their abbreviations, further suffixed with "-ABBRV".
@@ -29,8 +29,10 @@ shall O
 : O
 <BLANK LINE>
 ```
-Sequences are separated by a single new line. Note that _Director, DLA_ contains an
-abbreviation. In this context, it is _not_ labeled as "GCORG-ABBRV".
+Sequences are separated by a single new line. 
+
+Note that _Director, DLA_ contains an abbreviation. In that context, it is _not_ labeled 
+as "GCORG-ABBRV".
 
 ## Creating CoNLL Training Data
 This is a multi-step process at the moment. We'll use DoDD, DoDI, and DoDM documents from the corpus as 
@@ -63,7 +65,9 @@ _e.g._,
         --n-samples 0 \
         --train-split 0.80 
     ```
-   This will create three files, `train.txt.tmp`, `test.txt.tmp`, and `val.txt.tmp` (.80, .10, .10) in CoNLL format.
+   A subset of sentences that contain one or more entities is first extracted.
+   This subset is used to create three files, `train.txt.tmp`, `test.txt.tmp`, and `val.txt.tmp` 
+   in CoNLL format.
    
 ## Training
 The shell script `entity/bin/sample_run.sh`, run from `entity/bin`, sets up a small test using the

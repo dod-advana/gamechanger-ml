@@ -308,6 +308,16 @@ def uniq_entity_types_in_sentences(
     return df
 
 
+def _json_out(output_dict, output_path):
+    if output_dict:
+        enc_output = json.dumps(output_dict)
+        with open(output_path, "w") as fp:
+            fp.write(enc_output)
+        logger.info("output written to : {}".format(args.output_json))
+    else:
+        logger.warning("no output produced")
+
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
@@ -375,14 +385,17 @@ if __name__ == "__main__":
 
     output = None
     start = time.time()
+
     if args.task == "spans":
         output = entities_and_spans_by_doc(
             args.entity_file, args.input_path, args.glob
         )
+        _json_out(output, args.output_json)
     elif args.task == "mentions":
         output = count_entity_mentions_in_corpus(
             args.entity_file, args.input_path, args.glob
         )
+        _json_out(output, args.output_json)
     elif args.task == "profile":
         df_ = pd.read_csv(args.sentence_csv, names=["fname", "label", SENT])
         sent_list_ = df_[SENT].to_list()
@@ -390,15 +403,4 @@ if __name__ == "__main__":
         out_df = uniq_entity_types_in_sentences(
             sent_list_, entity_re_, abbrv_re_, entity2type_
         )
-        logger.info(out_df.head())
-        out_df.to_csv("/Users/chrisskiscim/projects/gamechanger-ml/gamechangerml/src/entity/tests/test_data/profile.csv", header=True, index=False)
-
-    if output:
-        output = json.dumps(output)
-        with open(args.output_json, "w") as f:
-            f.write(output)
-        logger.info("output written to : {}".format(args.output_json))
-    else:
-        logger.warning("no output produced")
-
-    logger.info("time : {:}".format(cu.format_time(time.time() - start)))
+        out_df.to_csv(args.output_json, header=True, index=False)
