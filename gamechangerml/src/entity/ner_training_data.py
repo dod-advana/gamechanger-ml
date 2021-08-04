@@ -1,25 +1,23 @@
 """
-usage: python ner_training_data.py [-h] -s SENT_CSV -e ENTITY_CSV
-                                   [-n N_SAMPLES] [-r] [-p {tab,space}]
-                                   [-x T_SPLIT]
+usage: python entity_mentions.py [-h] [-i INPUT_PATH] -e ENTITY_FILE
+                                 [-o OUTPUT_JSON] [-g GLOB] -t
+                                 {mentions,spans,profile} [-s SENTENCE_CSV]
 
-Create NER training data in CoNLL format
+brute force extraction of entity mentions in documents
 
 optional arguments:
   -h, --help            show this help message and exit
-  -s SENT_CSV, --sentence-csv SENT_CSV
-                        csv of input sentences and labels
-  -e ENTITY_CSV, --entity-csv ENTITY_CSV
-                        csv of entities & types
-  -n N_SAMPLES, --n-samples N_SAMPLES
-                        how many samples to extract and tag (0 means use
-                        everything)
-  -r, --shuffle         randomly shuffle the sentence data
-  -p {tab,space}, --separator {tab,space}
-                        token <-> label separator, default is 'space'
-  -x T_SPLIT, --train-split T_SPLIT
-                        training split; dev, test are evenly split at 1 -
-                        t_split
+  -i INPUT_PATH, --input-path INPUT_PATH
+                        corpus path
+  -e ENTITY_FILE, --entity-file ENTITY_FILE
+                        csv of entities, abbreviations, and entity type
+  -o OUTPUT_JSON, --output-json OUTPUT_JSON
+                        output path for .csv files
+  -g GLOB, --glob GLOB  file pattern to match
+  -t {mentions,spans,profile}, --task {mentions,spans,profile}
+                        what do you want to run?
+  -s SENTENCE_CSV, --sentence_csv SENTENCE_CSV
+                        .csv of sentences
 """
 import logging
 import os
