@@ -9,3 +9,5 @@ typing_extensions
 jedi==0.17.2
 matplotlib
 seaborn
+autopep8
+black

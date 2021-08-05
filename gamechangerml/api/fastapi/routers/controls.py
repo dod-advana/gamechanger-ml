@@ -8,7 +8,6 @@ from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.routers.startup import *
 from gamechangerml.api.utils.threaddriver import MlThread
-from gamechangerml.train.scripts.create_embedding import create_embedding
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
