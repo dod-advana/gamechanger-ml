@@ -44,11 +44,12 @@ class QAEvaluator(TransformerEvaluator):
         super().__init__(transformer_path, use_gpu)
 
         self.model_name = config['model_name']
+        self.transformer_path = transformer_path
+        self.model_path = os.path.join(transformer_path, config['model_name'])
         if model:
             self.model = model
         else:
-            self.model = QAReader(os.path.join(self.transformer_path, self.model_name), config['qa_type'], config['nbest'], config['null_threshold'], self.use_gpu)
-        self.model_path = os.path.join(transformer_path, config['model_name'])
+            self.model = QAReader(self.transformer_path, self.model_name, config['qa_type'], config['nbest'], config['null_threshold'], self.use_gpu)
         self.data_name=data_name
 
     def compare(self, prediction, query):
