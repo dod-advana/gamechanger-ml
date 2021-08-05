@@ -16,6 +16,7 @@ import typing as t
 import subprocess
 from gamechangerml.train.pipeline import Pipeline
 
+
 def main():
     parser = LocalParser()
     parser.add_argument(
@@ -74,7 +75,6 @@ def main():
     args = parser.parse_args()
     pipeline = Pipeline()
     pipeline.create_embedding(**args.__dict__)
-    
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from gamechangerml.src.utilities.arg_parser import LocalParser
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
 from gamechangerml.api.utils.logger import logger
-
+from gamechangerml.api.utils import processmanager
 from distutils.dir_util import copy_tree
 
 import torch
@@ -286,6 +286,7 @@ class Pipeline:
             logger.warning(e)
             logger.warning("Could not create experiment")
         try:
+            processmanager.update_status(processmanager.training)
             with mlflow.start_run(run_name=index_name) as run:
                 mlflow.log_param("model_id", index_name)
                 encoder = SentenceEncoder(encoder_path, use_gpu)
@@ -326,13 +327,17 @@ class Pipeline:
                 logger.info(f"Created tgz file and saved to {dst_path}")
                 for param in metadata:
                     mlflow.log_param(param, metadata[param])
-
+                processmanager.update_status(processmanager.training, 1, 1)
             mlflow.end_run()
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")
         except Exception as e:
-            print(e)
-            logger.warning("Could not use MLFlow with this run")
+            logger.error(e)
+            logger.warning("Error with creating embedding")
+            processmanager.update_status(processmanager.loading_corpus, failed=True)
+            processmanager.update_status(processmanager.training, failed=True)
+            logger.warning(e)
+
         # Upload to S3
         if upload:
             # Loop through each file and upload to S3
@@ -348,3 +353,4 @@ class Pipeline:
             logger.info(
                 "-------------- Finished Uploading Sentence Embedding--------------"
             )
+
