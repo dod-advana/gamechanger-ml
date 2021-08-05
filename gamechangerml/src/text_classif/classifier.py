@@ -462,7 +462,7 @@ class Classifier(object):
 
         mcc = clf_metrics.mcc_val(self.true_val, self.predicted_val)
 
-        auc_val = clf_metrics.auc_val(self.true_val, self.predicted_val)
+        # auc_val = clf_metrics.auc_val(self.true_val, self.predicted_val)
         acc_score = clf_metrics.accuracy_score(
             self.true_val, self.predicted_val
         )
@@ -471,7 +471,7 @@ class Classifier(object):
         logger.info("confusion matrix\n\n\t{}\n".format(cm_matrix))
         logger.info("\tvalidation loss : {:>0.3f}".format(avg_val_loss))
         logger.info("\t            MCC : {:>0.3f}".format(mcc))
-        logger.info("\t            AUC : {:>0.3f}".format(auc_val))
+        # logger.info("\t            AUC : {:>0.3f}".format(auc_val))
         logger.info("\t accuracy score : {:>0.3f}".format(acc_score))
         logger.info("\tvalidation time : {:}".format(validation_time))
 
@@ -483,7 +483,7 @@ class Classifier(object):
                 "avg_val_loss": avg_val_loss,
                 "avg_val_acc": avg_val_accuracy,
                 "training_time": trn_time,
-                "auc": auc_val,
+                # "auc": auc_val,
                 "mcc": mcc,
                 "val_time": validation_time,
                 "clf_report": clf_report,
@@ -491,7 +491,8 @@ class Classifier(object):
             }
         )
         # write to tensorboard, if it configured
-        self._tb_epoch_metrics(avg_val_loss, auc_val, mcc, acc_score, epoch)
+        #self._tb_epoch_metrics(avg_val_loss, auc_val, mcc, acc_score, epoch)
+        self._tb_epoch_metrics(avg_val_loss, mcc, acc_score, epoch) #removing auc_val
 
         if self.cfg.checkpoint_path is not None:
             self.runtime["timestamp"] = time.time()
@@ -504,13 +505,15 @@ class Classifier(object):
             )
             self.best_loss = avg_val_loss
 
-    def _tb_epoch_metrics(self, avg_val_loss, auc_val, mcc, acc_score, epoch):
+    # def _tb_epoch_metrics(self, avg_val_loss, auc_val, mcc, acc_score, epoch):
+    def _tb_epoch_metrics(self, avg_val_loss, mcc, acc_score, epoch): #removing auc_val
         if self.summary_writer is None:
             return
         self.summary_writer.add_scalar("avg loss/epoch", avg_val_loss, epoch)
         self.summary_writer.add_scalars(
             "Metrics",
-            {"AUC": auc_val, "MCC": mcc, "ACC": acc_score},
+            # {"AUC": auc_val, "MCC": mcc, "ACC": acc_score},
+            {"MCC": mcc, "ACC": acc_score}, #removing auc_val
             epoch,
         )
 
