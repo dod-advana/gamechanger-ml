@@ -11,6 +11,7 @@ from collections import OrderedDict
 import collections
 import numpy as np
 from typing import List, NamedTuple, Tuple, Dict, Union, Any
+import os
 
 question_words = {
     "what's": "what is",
@@ -31,7 +32,10 @@ def clean_query(query: str, question_words=question_words) -> str:
     for key in question_words.keys():
         query = query.replace(key, question_words[key])
 
-    return query.lower().strip('?')
+    if query.upper() == query:
+        query = query.lower()
+
+    return query.strip('?')
 
 def prediction_probabilities(predictions: NamedTuple) -> float:
     """ Calculates probabilities of answers (optional, not used) """
@@ -69,9 +73,10 @@ def sort_answers(answers: List[Tuple]) -> List[Dict[str, Union[str, float]]]:
     return app_answers
 
 class DocumentReader:
-    def __init__(self, model_path: str, qa_type: str, nbest: int, null_threshold: float, use_gpu: bool=False):
+    def __init__(self, transformer_path: str, model_name: str, qa_type: str, nbest: int, null_threshold: float, use_gpu: bool=False):
 
-        self.READER_PATH = model_path
+        self.model_name = model_name
+        self.READER_PATH = os.path.join(transformer_path, model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(self.READER_PATH)
         self.model = AutoModelForQuestionAnswering.from_pretrained(self.READER_PATH)
         self.max_len = self.model.config.max_position_embeddings
@@ -280,7 +285,7 @@ class DocumentReader:
             - answers (List[Dict]): each answer is a dictionary including text, context index, and score (if scored)
         """
         question = clean_query(question)
-        print(f"Question: {question}")
+        #print(f"Question: {question}")
 
         inputs, tracker = self.tokenize(question, context)
         all_answers = []
