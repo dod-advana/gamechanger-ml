@@ -53,7 +53,8 @@ data_path = "gamechangerml/data"
 try:
     import mlflow
     from mlflow.tracking import MlflowClient
-except RuntimeError:
+except Exception as e:
+    logger.warning(e)
     logger.warning("MLFLOW may not be installed")
 
 
@@ -152,18 +153,12 @@ class Pipeline:
         try:
             # try to create experiment by exp name
             mlflow_id = mlflow.create_experiment(name=exp_name)
-        except mlflow.exceptions.MlfloweException as e:
-            print(e)
-            try:
-                # if it exists set id
-                mlflow_id = mlflow.get_experiment_by_name(
-                    exp_name).experiment_id
-            except:
-                # if mlflow does not exist
-                logger.warning("cannot get experiment from MLFlow")
+        except Exception as e:
+            logger.warning(e)
+            logger.warning("Cannot create experiment")
         # attempt mlflow start
         try:
-            with mlflow.start_run(experiment_id=mlflow_id):
+            with mlflow.start_run(run_name=mlflow_id) as run:
                 # build ANN indices
                 index_dir = os.path.join(model_dest, model_id)
                 bqe.main(
@@ -285,7 +280,11 @@ class Pipeline:
         # If existing index exists, copy content from reference index
         if existing_embeds is not None:
             copy_tree(existing_embeds, local_sent_index_dir)
-
+        try:
+            mlflow.create_experiment("Sentence Embeddings")
+        except Exception as e:
+            logger.warning(e)
+            logger.warning("Could not create experiment")
         try:
             with mlflow.start_run(run_name=index_name) as run:
                 mlflow.log_param("model_id", index_name)
@@ -328,10 +327,12 @@ class Pipeline:
                 for param in metadata:
                     mlflow.log_param(param, metadata[param])
 
+            mlflow.end_run()
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")
         except Exception as e:
-            logger.warning("Could not use MLFlow with ")
+            print(e)
+            logger.warning("Could not use MLFlow with this run")
         # Upload to S3
         if upload:
             # Loop through each file and upload to S3
