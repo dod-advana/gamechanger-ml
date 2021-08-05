@@ -331,6 +331,7 @@ def main():
 
     # Training
     if training_args.do_train:
+        logger.info("into the breach...")
         trainer.train(
             model_path=model_args.model_name_or_path
             if os.path.isdir(model_args.model_name_or_path)

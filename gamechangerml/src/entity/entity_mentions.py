@@ -21,7 +21,7 @@ import logging
 import os
 import re
 import time
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 import numpy as np
 import pandas as pd
@@ -280,32 +280,31 @@ def entity_types_in_text(text, entity_re, abbrv_re, entity2type):
     entity_types = [
         entity2type[entity.lower()] for entity in entity_list if entity
     ]
-    return entity_types
+    return entity_types, entity_list
 
 
-def uniq_entity_types_in_sentences(
-    sent_list, entity_re, abbrv_re, entity2type
-):
+def entity_types_in_sentences(sent_list, entity_re, abbrv_re, entity2type):
+    entity_count = Counter()
     names = list()
     unique_labels = sorted(list(set(list(entity2type.values()))))
     names.extend(unique_labels)
     names.append(SENT)
-    count = 0
     df = pd.DataFrame(columns=names)
+
     for text in tqdm(sent_list, desc="sentences"):
         row = {etype: 0 for etype in unique_labels}
         row[SENT] = text
-        ent_types = entity_types_in_text(
+        ent_types, ent_list = entity_types_in_text(
             text, entity_re, abbrv_re, entity2type
         )
+        entity_count.update(ent_list)
         if not ent_types:
             continue
-        count += 1
         unique_in_sent = list(set(ent_types))
         for ent_type in unique_in_sent:
             row[ent_type] = 1
         df = df.append(row, ignore_index=True)
-    return df
+    return df, entity_count
 
 
 def _json_out(output_dict, output_path):
@@ -347,8 +346,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-o",
-        "--output-json",
-        dest="output_json",
+        "--output-path",
+        dest="output_path",
         type=str,
         required=False,
         help="output path for .csv files",
@@ -390,17 +389,19 @@ if __name__ == "__main__":
         output = entities_and_spans_by_doc(
             args.entity_file, args.input_path, args.glob
         )
-        _json_out(output, args.output_json)
+        _json_out(output, args.output_path)
     elif args.task == "mentions":
         output = count_entity_mentions_in_corpus(
             args.entity_file, args.input_path, args.glob
         )
-        _json_out(output, args.output_json)
+        _json_out(output, args.output_path)
     elif args.task == "profile":
         df_ = pd.read_csv(args.sentence_csv, names=["fname", "label", SENT])
         sent_list_ = df_[SENT].to_list()
         abbrv_re_, entity_re_, entity2type_ = make_entity_re(args.entity_file)
-        out_df = uniq_entity_types_in_sentences(
+        out_df, ent_counts = entity_types_in_sentences(
             sent_list_, entity_re_, abbrv_re_, entity2type_
         )
-        out_df.to_csv(args.output_json, header=True, index=False)
+        out_df.to_csv(args.output_path, header=True, index=False)
+        for k, v in ent_counts.most_common():
+            logger.info("{:>6,d} : {}".format(v, k))

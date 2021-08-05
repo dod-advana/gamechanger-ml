@@ -10,7 +10,7 @@ Each token in a sequence must therefore carry a label.
 
 ## CoNLL Format
 The Hugging Face format follows CoNLL-2003 conventions: Each token in a sequence is 
-on a separate line along with its "I-" (**I**n), "B-" (**B**egin),  "O" (**O**utside) 
+on a separate line along with its "B-" (**B**egin),  "I-" (**I**n),"O" (**O**utside) 
 tag for the entity type.
 
 In our corpus, we have suffixes GCPER (person) and GCORG 
