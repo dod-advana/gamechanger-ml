@@ -279,6 +279,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             "user": user,
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": self.model_name,
+            'sent_index': index,
             "validation_data": data_name,
             "query_count": num_queries,
             "proportion_in_top_10": proportion_in_top_10,
