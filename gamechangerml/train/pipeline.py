@@ -155,7 +155,7 @@ class Pipeline:
         model_dir = model_dest
 
         # get model name schema
-        model_id = utils.create_model_schema(model_dir, model_id)
+        model_id = utils.create_model_schema(model_dir, "qexp_" + model_id)
         evals = {"results": ""}
         params = D2VConfig.MODEL_ARGS
         try:
