@@ -6,6 +6,7 @@ from datetime import datetime, date
 # import wikipedia
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.utilities.arg_parser import LocalParser
+from gamechangerml.src.model_testing.evaluation import IndomainRetrieverEvaluator
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
@@ -58,14 +59,6 @@ except Exception as e:
     logger.warning("MLFLOW may not be installed")
 
 
-def lookup_wiki_summary(query):
-    try:
-        return wikipedia.summary(query).replace("\n", "")
-    except:
-        print(f"Could not retrieve description for {query}")
-        return ""
-
-
 class Pipeline:
     def __init__(self, steps={}):
         self.steps = steps
@@ -73,29 +66,39 @@ class Pipeline:
         if POP_DOCS_PATH.is_file():
             self.popular_docs = pd.read_csv(POP_DOCS_PATH)
         else:
-            print("popular_documents.csv does not exist - generating meta data")
+            logger.info(
+                "popular_documents.csv does not exist - generating meta data")
             self.create_metadata()
             self.popular_docs = pd.read_csv(POP_DOCS_PATH)
 
-    def run_pipeline(
-        self,
-    ):
+    def run_pipeline(self, params):
+        """
+        run_pipeline: runs a list of configured components
+        Args:
+            params: dict of params
+        Returns:
+        """
         for step in self.steps:
             logger.info("Running step %s in pipeline." % step)
             if step == "sentence":
-                self.create_embedding(self.steps["sentence"])
+                self.run("sentence", f"sentence_{date.today()}", params)
             if step == "meta":
                 self.create_metadata()
             if step == "qexp":
-                self.create_qexp(self.steps["qexp"])
+                self.run("qexp", f"qexp_{date.today()}", params)
 
     def create_metadata(
         self,
     ):
+        """
+        create_metadata: combines datasets to create a readable set for ingest
+        Args:
+        Returns:
+        """
         try:
             mappings = pd.read_csv(SEARCH_MAPPINGS_FILE)
         except Exception as e:
-            print(e)
+            logger.info(e)
         mappings = self.process_mappings(mappings)
         mappings.to_csv(os.path.join(
             data_path, "popular_documents.csv"), index=False)
@@ -103,7 +106,7 @@ class Pipeline:
             topics = pd.read_csv(TOPICS_FILE)
             orgs = pd.read_csv(ORGS_FILE)
         except Exception as e:
-            print(e)
+            logger.info(e)
         orgs.drop(columns=["Unnamed: 0"], inplace=True)
         topics.rename(
             columns={"name": "entity_name", "type": "entity_type"}, inplace=True
@@ -137,82 +140,26 @@ class Pipeline:
         corpus_dir=DefaultConfig.DATA_DIR,
         model_dest=DefaultConfig.LOCAL_MODEL_DIR,
         exp_name=modelname,
-        validate=False,
+        validate=True,
         sentenceTrans=False,
         gpu=False,
     ):
+        """
+        create_qexp: creates a query expansion model
+        Args:
+            params for qexp configuration
+        Returns:
+            metadata: params or meta information for qexp
+            evals: evaluation results dict
+        """
         model_dir = model_dest
 
         # get model name schema
         model_id = utils.create_model_schema(model_dir, model_id)
-
-        # todo: revise try/catch logic so mlflow_id is not referenced before assignment
-        mlflow_id = None
-
-        # start experiment
+        evals = {"results": ""}
+        params = D2VConfig.MODEL_ARGS
         try:
-            # try to create experiment by exp name
-            mlflow_id = mlflow.create_experiment(name=exp_name)
-        except Exception as e:
-            logger.warning(e)
-            logger.warning("Cannot create experiment")
-        # attempt mlflow start
-        try:
-            with mlflow.start_run(run_name=mlflow_id) as run:
-                # build ANN indices
-                index_dir = os.path.join(model_dest, model_id)
-                bqe.main(
-                    corpus_dir,
-                    index_dir,
-                    num_trees=125,
-                    num_keywords=2,
-                    ngram=(1, 2),
-                    word_wt_file="word-freq-corpus-20201101.txt",
-                    abbrv_file=None,
-                )
-                for param in D2VConfig.MODEL_ARGS:
-                    mlflow.log_param(param, D2VConfig.MODEL_ARGS[param])
-                mlflow.log_param("model_id", model_id)
-                logger.info(
-                    "-------------- Model Training Complete --------------")
-                logger.info(
-                    "-------------- Building Sentence Embeddings --------------"
-                )
-                if save_remote:
-                    utils.save_all_s3(model_dest, model_id)
-
-                if validate:
-                    logger.info(
-                        "-------------- Running Assessment Model Script --------------"
-                    )
-
-                    logger.info(
-                        "-------------- Assessment is not available--------------"
-                    )
-                    """
-                    results = mau.assess_model(
-                        model_name=model_id,
-                        logger=logger,
-                        s3_corpus="corpus_20200909",
-                        model_dir="gamechangerml/models/",
-                        verbose=True,
-                    )
-                    for metric in results:
-                        if metric != "model_name":
-                            mlflow.log_metric(
-                                key=metric, value=results[metric])
-                    """
-                    logger.info(
-                        "-------------- Finished Assessment --------------")
-                else:
-                    logger.info(
-                        "-------------- No Assessment Ran --------------")
-
-            mlflow.end_run()
-        except Exception:
-            # try only models without mlflow
-            logger.info(
-                "-------------- Training without MLFLOW --------------")
+            # build ANN indices
             index_dir = os.path.join(model_dest, model_id)
             bqe.main(
                 corpus_dir,
@@ -223,9 +170,39 @@ class Pipeline:
                 word_wt_file="word-freq-corpus-20201101.txt",
                 abbrv_file=None,
             )
+            logger.info(
+                "-------------- Model Training Complete --------------")
             if save_remote:
                 utils.save_all_s3(model_dest, model_id)
-        logger.info("-------------- Model Training Complete --------------")
+
+            if validate:
+                logger.info(
+                    "-------------- Running Assessment Model Script --------------"
+                )
+
+                logger.info(
+                    "-------------- Assessment is not available--------------")
+                """
+                results = mau.assess_model(
+                    model_name=model_id,
+                    logger=logger,
+                    s3_corpus="corpus_20200909",
+                    model_dir="gamechangerml/models/",
+                    verbose=True,
+                )
+                for metric in results:
+                    if metric != "model_name":
+                        mlflow.log_metric(
+                            key=metric, value=results[metric])
+                """
+                logger.info(
+                    "-------------- Finished Assessment --------------")
+            else:
+                logger.info("-------------- No Assessment Ran --------------")
+        except Exception as e:
+            logger.error(e)
+            logger.error("Error with QExp building")
+        return params, evals
 
     def create_tgz_from_dir(
         self,
@@ -245,6 +222,14 @@ class Pipeline:
         upload=False,
         version="v4",
     ):
+        """
+        create_embedding: creates a sentence embedding
+        Args:
+            params for sentence configuration
+        Returns:
+            metadata: params or meta information for qexp
+            evals: evaluation results dict
+        """
         # Error fix for saving index and model to tgz
         # https://github.com/huggingface/transformers/issues/5486
         try:
@@ -261,8 +246,6 @@ class Pipeline:
             use_gpu = False
 
         # Define model saving directories
-        # here = os.path.dirname(os.path.realpath(__file__))
-        # p = Path(here)
         model_dir = os.path.join("gamechangerml", "models")
         encoder_path = os.path.join(model_dir, "transformers", encoder_model)
 
@@ -280,64 +263,57 @@ class Pipeline:
         # If existing index exists, copy content from reference index
         if existing_embeds is not None:
             copy_tree(existing_embeds, local_sent_index_dir)
-        try:
-            mlflow.create_experiment("Sentence Embeddings")
-        except Exception as e:
-            logger.warning(e)
-            logger.warning("Could not create experiment")
+
         try:
             processmanager.update_status(processmanager.training)
-            with mlflow.start_run(run_name=index_name) as run:
-                mlflow.log_param("model_id", index_name)
-                encoder = SentenceEncoder(encoder_path, use_gpu)
-                logger.info("Creating Document Embeddings...")
-                encoder.index_documents(corpus, local_sent_index_dir)
-                logger.info("-------------- Indexing Documents--------------")
-                try:
-                    user = os.environ.get("GC_USER", default="root")
-                    if user == "root":
-                        user = str(os.getlogin())
-                except Exception as e:
-                    user = "unknown"
-                    logger.info("Could not get system user")
-                    logger.info(e)
 
-                # Generating process metadata
-                metadata = {
-                    "user": user,
-                    "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "doc_id_count": len(encoder.embedder.config["ids"]),
-                    "corpus_name": corpus,
-                    "encoder_model": encoder_model,
-                }
+            encoder = SentenceEncoder(use_gpu=use_gpu)
+            logger.info("Creating Document Embeddings...")
+            encoder.index_documents(corpus)
+            logger.info("-------------- Indexing Documents--------------")
+            try:
+                user = os.environ.get("GC_USER", default="root")
+                if user == "root":
+                    user = str(os.getlogin())
+            except Exception as e:
+                user = "unknown"
+                logger.info("Could not get system user")
+                logger.info(e)
 
-                # Create metadata file
-                metadata_path = os.path.join(
-                    local_sent_index_dir, "metadata.json")
-                with open(metadata_path, "w") as fp:
-                    json.dump(metadata, fp)
+            # Generating process metadata
+            metadata = {
+                "user": user,
+                "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "doc_id_count": len(encoder.embedder.config["ids"]),
+                "corpus_name": corpus,
+                "encoder_model": encoder_model,
+            }
 
-                logger.info(f"Saved metadata.json to {metadata_path}")
-                # Create .tgz file
-                dst_path = local_sent_index_dir + ".tar.gz"
-                self.create_tgz_from_dir(
-                    src_dir=local_sent_index_dir, dst_archive=dst_path
-                )
+            # Create metadata file
+            metadata_path = os.path.join(local_sent_index_dir, "metadata.json")
+            with open(metadata_path, "w") as fp:
+                json.dump(metadata, fp)
 
-                logger.info(f"Created tgz file and saved to {dst_path}")
-                for param in metadata:
-                    mlflow.log_param(param, metadata[param])
-                processmanager.update_status(processmanager.training, 1, 1)
-            mlflow.end_run()
+            logger.info(f"Saved metadata.json to {metadata_path}")
+            # Create .tgz file
+            dst_path = local_sent_index_dir + ".tar.gz"
+            self.create_tgz_from_dir(
+                src_dir=local_sent_index_dir, dst_archive=dst_path)
+
+            logger.info(f"Created tgz file and saved to {dst_path}")
+            logger.info(
+                "-------------- Running Assessment Model Script --------------")
+
+            sent_eval = IndomainRetrieverEvaluator(index=local_sent_index_dir)
+            processmanager.update_status(processmanager.training, 1, 1)
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")
         except Exception as e:
-            logger.error(e)
             logger.warning("Error with creating embedding")
-            processmanager.update_status(processmanager.loading_corpus, failed=True)
+            logger.error(e)
+            processmanager.update_status(
+                processmanager.loading_corpus, failed=True)
             processmanager.update_status(processmanager.training, failed=True)
-            logger.warning(e)
-
         # Upload to S3
         if upload:
             # Loop through each file and upload to S3
@@ -354,3 +330,42 @@ class Pipeline:
                 "-------------- Finished Uploading Sentence Embedding--------------"
             )
 
+        return metadata, sent_eval.results
+
+    def run(self, build_type, run_name, params):
+        """
+        run: record results of params and evaulations
+        Args:
+        Returns:
+        """
+        try:
+            mlflow.create_experiment(str(date.today()))
+        except Exception as e:
+            logger.warning(e)
+            logger.warning("Could not create experiment")
+        try:
+            with mlflow.start_run(run_name=run_name) as run:
+                if build_type == "sentence":
+                    metadata, evals = self.create_embedding(**params)
+                elif build_type == "qexp":
+                    metadata, evals = self.create_qexp(**params)
+                self.mlflow_record(metadata, evals)
+
+            mlflow.end_run()
+        except Exception as e:
+            logger.warning(f"Error building {build_type} with MLFlow")
+            logger.error(e)
+
+    def mlflow_record(self, metadata, evals):
+        """
+        mlflow_record: record results of params and evaulations
+        Args:
+        Returns:
+        """
+        for param in metadata:
+            mlflow.log_param(param, metadata[param])
+        for metric in evals:
+            try:
+                mlflow.log_metric(metric, evals[metric])
+            except Exception as e:
+                logger.warning(f"could not log metric: {metric}")
