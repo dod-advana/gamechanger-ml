@@ -89,6 +89,14 @@ def make_entity_re(entity_csv):
     return abbrv_re, entity_re, entity2type
 
 
+def contains_abbrv(text, abbrv_re):
+    return [a.group() for a in abbrv_re.finditer(text)]
+
+
+def contains_non_abbrv(text, entity_re):
+    return [e.group() for e in entity_re.finditer(text)]
+
+
 def contains_entity(text, entity_re, abbrv_re):
     """
     Finds all the entities in the text, returning a list with every
@@ -104,8 +112,8 @@ def contains_entity(text, entity_re, abbrv_re):
         List
     """
 
-    entity_list = [e.group() for e in entity_re.finditer(text)]
-    entity_list.extend([a.group() for a in abbrv_re.finditer(text)])
+    entity_list = contains_abbrv(text,  abbrv_re)
+    entity_list.extend(contains_non_abbrv(text, entity_re))
 
     return entity_list
 
@@ -164,7 +172,7 @@ def entities_spans_in_text(text, entity_re, abbrv_re):
     ent_span_list = list()
     abbrv_span_list = list()
 
-    # TODO use list comprehension - ?
+    # TODO use list comprehension
     for mobj in entity_re.finditer(text):
         entity_span = (mobj.group(), (mobj.start(), mobj.end()))
         ent_span_list.append(entity_span)
@@ -307,6 +315,17 @@ def entity_types_in_sentences(sent_list, entity_re, abbrv_re, entity2type):
     return df, entity_count
 
 
+def sentences_with_entities(sent_list, entity_re, abbrv_re):
+    ent_df = pd.DataFrame()
+    no_ent_df = pd.DataFrame()
+    for _, row in tqdm(sent_list.iterrows(), total=len(ent_df)):
+        if contains_entity(row[SENT], entity_re, abbrv_re):
+            ent_df = ent_df.append(row, ignore_index=True)
+        else:
+            no_ent_df = no_ent_df.append(row, ignore_index=True)
+    return ent_df, no_ent_df
+
+
 def _json_out(output_dict, output_path):
     if output_dict:
         enc_output = json.dumps(output_dict)
@@ -364,7 +383,7 @@ if __name__ == "__main__":
         "-t",
         "--task",
         dest="task",
-        choices=["mentions", "spans", "profile"],
+        choices=["mentions", "spans", "profile", "sentences"],
         required=True,
         help="what do you want to run?",
     )
@@ -402,6 +421,12 @@ if __name__ == "__main__":
         out_df, ent_counts = entity_types_in_sentences(
             sent_list_, entity_re_, abbrv_re_, entity2type_
         )
-        out_df.to_csv(args.output_path, header=True, index=False)
+        out_df.to_csv("corpus_entity_profile.csv", header=True, index=False)
         for k, v in ent_counts.most_common():
             logger.info("{:>6,d} : {}".format(v, k))
+    elif args.task == "sentences":
+        abbrv_re_, entity_re_, _ = make_entity_re(args.entity_file)
+        df_in = pd.read_csv(args.sentence_csv, names=["fname", "label", SENT])
+        out_ent_df, out_no_ent_df = sentences_with_entities(df_in, entity_re_, abbrv_re_)
+        out_ent_df.to_csv(args.output_path, header=False, index=False)
+        out_no_ent_df.to_csv("all_dod_dim_no_entity_sentences.csv", header=True, index=False)

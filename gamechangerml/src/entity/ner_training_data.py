@@ -83,7 +83,7 @@ def ner_training_data(
         entity_re (SRE_Pattern): compiled regular expression; optional
 
         entity2type (dict): map of an entity to its type, e.g.,
-            GCORG, GCPER, etc; optional.
+            ORG, PER, etc; optional.
 
     """
     if sep == "space":
@@ -107,7 +107,7 @@ def ner_training_data(
     start = time.time()
     logger.info("finding sentences with entities")
 
-    # TODO something better?
+    # TODO something better or not at all?
     ent_sents = [
         row
         for row in sent_list
@@ -130,7 +130,7 @@ def ner_training_data(
     logger.info("    max tokens / sentence : {:>9,d}".format(max(all_tokens)))
     logger.info("    avg tokens / sentence : {:>9.2f}".format(avg_tokens))
 
-    random.seed(1)
+    random.seed(random.randint(0, 500))
     random.shuffle(ent_sents)
 
     training_generator = gen_ner_conll_tags(
@@ -139,7 +139,7 @@ def ner_training_data(
     print_str = EMPTYSTR
     desc = "labeling tokens"
     with open(out_fp, "w") as fp:
-        for zipped, unique_labels in tqdm(
+        for zipped in tqdm(
             training_generator, total=len(ent_sents), desc=desc
         ):
             print_str += (
@@ -265,26 +265,26 @@ def gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_list, nlp):
         # find token indices of an extracted entity using their spans;
         # create CoNLL tags
         for ent, ent_st_end in ent_spans:
-            token_idxs = [
+            token_pos = [
                 idx
                 for idx, tkn_st_end in enumerate(starts_ends)
                 if tkn_st_end[0] >= ent_st_end[0]
                 and tkn_st_end[1] <= ent_st_end[1] - 1
             ]
-            if not token_idxs:
-                continue
-            if wc(ent) == 1:
-                ner_labels[token_idxs[0]] = I_PRFX + entity2type[ent.lower()]
+            if not token_pos:
                 continue
 
-            ner_labels[token_idxs[0]] = B_PRFX + entity2type[ent.lower()]
-            for idx in token_idxs[1:]:
+            if wc(ent) == 1:
+                ner_labels[token_pos[0]] = I_PRFX + entity2type[ent.lower()]
+                continue
+
+            ner_labels[token_pos[0]] = B_PRFX + entity2type[ent.lower()]
+            for idx in token_pos[1:]:
                 if ent.lower() in entity2type:
                     ner_labels[idx] = I_PRFX + entity2type[ent.lower()]
                 else:
-                    logger.error("KeyError (why?): {}".format(ent.lower()))
-        unique_labels = set(ner_labels)
-        yield zip(tokens, ner_labels), unique_labels
+                    logger.error("KeyError ?: {}".format(ent.lower()))
+        yield zip(tokens, ner_labels)
 
 
 if __name__ == "__main__":
