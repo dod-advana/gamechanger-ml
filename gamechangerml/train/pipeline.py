@@ -354,7 +354,15 @@ class Pipeline:
             mlflow.end_run()
         except Exception as e:
             logger.warning(f"Error building {build_type} with MLFlow")
-            logger.error(e)
+            logger.warning(e)
+            logger.warning(f"Trying without MLFlow")
+            try:
+                if build_type == "sentence":
+                    metadata, evals = self.create_embedding(**params)
+                elif build_type == "qexp":
+                    metadata, evals = self.create_qexp(**params)
+            except Exception as err:
+                logger.error("Could not train %s" % build_type)
 
     def mlflow_record(self, metadata, evals):
         """
