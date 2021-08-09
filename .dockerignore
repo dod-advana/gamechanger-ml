@@ -10,10 +10,4 @@ gamechangerml/models/sent*
 gamechangerml/models/transformer*
 gamechangerml/models/qexp*
 gamechangerml/corpus
-<<<<<<< HEAD
-=======
-
->>>>>>> 7d83efc7584679f2c75cb02f879f40792123cbbb
-
-
 corpus_index
