@@ -183,8 +183,6 @@ class SimilarityRanker(object):
 
     def re_rank(self, query, texts, ids):
         results = []
-        print(query)
-        print(texts)
         for idx, score in self.similarity(query, texts):
             doc = {}
             doc["score"] = score
