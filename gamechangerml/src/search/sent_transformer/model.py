@@ -19,6 +19,7 @@ model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SENT_INDEX_PATH = model_path_dict["sentence"]
 
+
 class SentenceEncoder(object):
     """
     Handles text encoding and creating of ANNOY index
@@ -31,16 +32,18 @@ class SentenceEncoder(object):
     """
 
     def __init__(
-            self, 
-            model_args=EmbedderConfig.MODEL_ARGS, 
-            sent_index=SENT_INDEX_PATH, 
-            use_gpu=False
-        ):
-        
-        self.encoder_model = os.path.join(LOCAL_TRANSFORMERS_DIR, model_args['model_name'])
+        self,
+        model_args=EmbedderConfig.MODEL_ARGS,
+        sent_index=SENT_INDEX_PATH,
+        use_gpu=False,
+    ):
+
+        self.encoder_model = os.path.join(
+            LOCAL_TRANSFORMERS_DIR, model_args["model_name"]
+        )
         self.index_path = sent_index
-        self.embed_paths = model_args['embeddings']
-        self.encoder_args = model_args['encoder']
+        self.embed_paths = model_args["embeddings"]
+        self.encoder_args = model_args["encoder"]
 
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = use_gpu
@@ -80,12 +83,14 @@ class SentenceEncoder(object):
 
         df = pd.DataFrame(all_text, columns=["text", "paragraph_id"])
 
-        embedding_path = os.path.join(self.index_path, self.embed_paths['embeddings'])
-        dataframe_path = os.path.join(self.index_path, self.embed_paths['dataframe'])
-        ids_path = os.path.join(self.index_path, self.embed_paths['ids'])
+        embedding_path = os.path.join(
+            self.index_path, self.embed_paths["embeddings"])
+        dataframe_path = os.path.join(
+            self.index_path, self.embed_paths["dataframe"])
+        ids_path = os.path.join(self.index_path, self.embed_paths["ids"])
 
         # Load new data
-        if os.path.isfile(embedding_path) and (self.encoder_args['overwrite'] is False):
+        if os.path.isfile(embedding_path) and (self.encoder_args["overwrite"] is False):
             logger.info(f"Loading new data from {embedding_path}")
 
             # Load existing embeddings
@@ -145,33 +150,35 @@ class SentenceEncoder(object):
 
         if corpus_path:
             corp = LocalCorpus(
-                corpus_path, 
-                return_id=self.encoder_args['return_id'],
-                min_token_len=self.encoder_args['min_token_len'], 
-                verbose=self.encoder_args['verbose']
+                corpus_path,
+                return_id=self.encoder_args["return_id"],
+                min_token_len=self.encoder_args["min_token_len"],
+                verbose=self.encoder_args["verbose"],
             )
-            corpus = [(para_id, " ".join(tokens), None) for tokens, para_id in corp]
+            corpus = [(para_id, " ".join(tokens), None)
+                      for tokens, para_id in corp]
         else:
-            logger.info("Did not include path to corpus, making test index with msmarco data")
+            logger.info(
+                "Did not include path to corpus, making test index with msmarco data"
+            )
             data = MSMarcoData()
             corpus = data.corpus
 
-        self._index(
-            corpus
-        )
+        self._index(corpus)
 
         self.embedder.save(self.index_path)
         logger.info(f"Saved embedder to {self.index_path}")
 
+
 class SimilarityRanker(object):
-
     def __init__(
-            self, 
-            model_args=SimilarityConfig.MODEL_ARGS, 
-            transformers_path=LOCAL_TRANSFORMERS_DIR
-        ):
+        self,
+        model_args=SimilarityConfig.MODEL_ARGS,
+        transformers_path=LOCAL_TRANSFORMERS_DIR,
+    ):
 
-        self.sim_model = os.path.join(transformers_path, model_args['model_name'])
+        self.sim_model = os.path.join(
+            transformers_path, model_args["model_name"])
         self.similarity = Similarity(self.sim_model)
 
     def re_rank(self, query, texts, ids):
@@ -183,6 +190,7 @@ class SimilarityRanker(object):
             doc["text"] = texts[idx]
             results.append(doc)
         return results
+
 
 class SentenceSearcher(object):
     """
@@ -201,21 +209,25 @@ class SentenceSearcher(object):
     """
 
     def __init__(
-            self, 
-            index_path=SENT_INDEX_PATH, 
-            transformers_path=LOCAL_TRANSFORMERS_DIR,
-            retriever_args=EmbedderConfig.MODEL_ARGS, 
-            similarity_args=SimilarityConfig.MODEL_ARGS,
-        ):
+        self,
+        index_path=SENT_INDEX_PATH,
+        transformers_path=LOCAL_TRANSFORMERS_DIR,
+        retriever_args=EmbedderConfig.MODEL_ARGS,
+        similarity_args=SimilarityConfig.MODEL_ARGS,
+    ):
 
         self.embedder = Embeddings()
-        self.encoder_model = os.path.join(transformers_path, retriever_args['model_name'])
+        self.encoder_model = os.path.join(
+            transformers_path, retriever_args["model_name"]
+        )
         self.embedder.load(index_path)
-        ## replace this with looking up ES
-        self.data = pd.read_csv(os.path.join(index_path, retriever_args['embeddings']['dataframe']))
-        self.n_returns = retriever_args['retriever']['n_returns']
+        # replace this with looking up ES
+        self.data = pd.read_csv(
+            os.path.join(index_path, retriever_args["embeddings"]["dataframe"])
+        )
+        self.n_returns = retriever_args["retriever"]["n_returns"]
         self.similarity = SimilarityRanker(similarity_args, transformers_path)
-        
+
     def retrieve_topn(self, query):
 
         retrieved = self.embedder.search(query, limit=self.n_returns)
@@ -226,9 +238,9 @@ class SentenceSearcher(object):
             doc_ids.append(doc_id)
             doc_scores.append(score)
             text = self.data[self.data["paragraph_id"]
-                             == doc_id]["text"]
+                             == doc_id].iloc[0]["text"]
             doc_texts.append(text)
-        
+
         return doc_texts, doc_ids, doc_scores
 
     def search(self, query):
@@ -241,5 +253,5 @@ class SentenceSearcher(object):
             rerank (list): List of tuples following a (score, paragraph_id,
                 paragraph_text) format ranked based on similarity with query
         """
-        top_texts, top_ids, top_scores = self.retrieve_topn(query, self.n_returns)
+        top_texts, top_ids, top_scores = self.retrieve_topn(query)
         return self.similarity.re_rank(query, top_texts, top_ids)
