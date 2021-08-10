@@ -83,11 +83,14 @@ class Pipeline:
         for step in self.steps:
             logger.info("Running step %s in pipeline." % step)
             if step == "sentence":
-                self.run("sentence", f"sentence_{date.today()}", params)
+                self.run(
+                    build_type="sentence", run_name=str(date.today()), params=params
+                )
             if step == "meta":
                 self.create_metadata()
             if step == "qexp":
-                self.run("qexp", f"qexp_{date.today()}", params)
+                self.run(build_type="qexp", run_name=str(
+                    date.today()), params=params)
 
     def create_metadata(
         self,
@@ -332,21 +335,6 @@ class Pipeline:
             S3_MODELS_PATH = "gamechanger/models"
             s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
             self.upload(s3_path, dst_path, "sentence_index", model_id, version)
-            """
-            # Loop through each file and upload to S3
-            s3_sent_index_dir = f"gamechanger/models/sentence_index/{version}"
-            logger.info(f"Uploading files to {s3_sent_index_dir}")
-            logger.info(f"\tUploading: {local_sent_index_dir}")
-            local_path = os.path.join(dst_path)
-            s3_path = os.path.join(
-                s3_sent_index_dir, "sent_index_" + model_id + ".tar.gz"
-            )
-            utils.upload_file(local_path, s3_path)
-            logger.info(f"Successfully uploaded files to {s3_sent_index_dir}")
-            logger.info(
-                "-------------- Finished Uploading Sentence Embedding--------------"
-            )
-            """
         return metadata, sent_eval.results
 
     def upload(self, s3_path, local_path, model_prefix, model_name, version):
