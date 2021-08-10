@@ -9,6 +9,7 @@ try:
     tfidf_model = Topics(model_dir, False)
     bigrams = Phraser.load(os.path.join(model_dir, 'bigrams.phr'))
 except Exception as e:
+    tfidf_model = None
+    bigrams = None
     print(e)
     print("cannot load tfidf")
-
