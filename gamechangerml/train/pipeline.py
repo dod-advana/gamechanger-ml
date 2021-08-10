@@ -71,6 +71,8 @@ class Pipeline:
             self.create_metadata()
             self.popular_docs = pd.read_csv(POP_DOCS_PATH)
 
+        self.model_suffix = datetime.now().strftime("%Y%m%d")
+
     def run_pipeline(self, params):
         """
         run_pipeline: runs a list of configured components
@@ -135,13 +137,13 @@ class Pipeline:
 
     def create_qexp(
         self,
-        model_id,
+        model_id=None,
         upload=False,
-        corpus_dir=DefaultConfig.DATA_DIR,
+        corpus=DefaultConfig.DATA_DIR,
         model_dest=DefaultConfig.LOCAL_MODEL_DIR,
         exp_name=modelname,
         validate=True,
-        sentenceTrans=False,
+        version="v4",
         gpu=False,
     ):
         """
@@ -154,15 +156,17 @@ class Pipeline:
         """
         model_dir = model_dest
 
+        if not model_id:
+            model_id = datetime.now().strftime("%Y%m%d")
         # get model name schema
-        model_id = utils.create_model_schema(model_dir, "qexp_" + model_id)
+        model_path = utils.create_model_schema(model_dir, "qexp_" + model_id)
         evals = {"results": ""}
         params = D2VConfig.MODEL_ARGS
         try:
             # build ANN indices
-            index_dir = os.path.join(model_dest, model_id)
+            index_dir = os.path.join(model_dest, model_path)
             bqe.main(
-                corpus_dir,
+                corpus,
                 index_dir,
                 num_trees=125,
                 num_keywords=2,
@@ -172,12 +176,16 @@ class Pipeline:
             )
             logger.info(
                 "-------------- Model Training Complete --------------")
+            # Create .tgz file
+            dst_path = index_dir + ".tar.gz"
+            self.create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
+
+            logger.info(f"Created tgz file and saved to {dst_path}")
+
             if upload:
                 S3_MODELS_PATH = "gamechanger/models"
-                s3_path = os.path.join(
-                    S3_MODELS_PATH, "sentence_index/{version}")
-                self.upload(s3_path, dst_path, "sentence_index",
-                            index_name, version)
+                s3_path = os.path.join(S3_MODELS_PATH, f"qexp_model/{version}")
+                self.upload(s3_path, dst_path, "qexp", model_id, version)
 
             if validate:
                 logger.info(
@@ -225,6 +233,7 @@ class Pipeline:
         gpu=True,
         upload=False,
         version="v4",
+        validate=True,
     ):
         """
         create_embedding: creates a sentence embedding
@@ -253,9 +262,9 @@ class Pipeline:
         model_dir = os.path.join("gamechangerml", "models")
         encoder_path = os.path.join(model_dir, "transformers", encoder_model)
 
-        index_name = datetime.now().strftime("%Y%m%d")
+        model_id = datetime.now().strftime("%Y%m%d")
         local_sent_index_dir = os.path.join(
-            model_dir, "sent_index_" + index_name)
+            model_dir, "sent_index_" + model_id)
 
         # Define new index directory
         if not os.path.isdir(local_sent_index_dir):
@@ -321,9 +330,8 @@ class Pipeline:
         # Upload to S3
         if upload:
             S3_MODELS_PATH = "gamechanger/models"
-            s3_path = os.path.join(S3_MODELS_PATH, "sentence_index/{version}")
-            self.upload(s3_path, dst_path, "sentence_index",
-                        index_name, version)
+            s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
+            self.upload(s3_path, dst_path, "sentence_index", model_id, version)
             """
             # Loop through each file and upload to S3
             s3_sent_index_dir = f"gamechanger/models/sentence_index/{version}"
@@ -331,7 +339,7 @@ class Pipeline:
             logger.info(f"\tUploading: {local_sent_index_dir}")
             local_path = os.path.join(dst_path)
             s3_path = os.path.join(
-                s3_sent_index_dir, "sent_index_" + index_name + ".tar.gz"
+                s3_sent_index_dir, "sent_index_" + model_id + ".tar.gz"
             )
             utils.upload_file(local_path, s3_path)
             logger.info(f"Successfully uploaded files to {s3_sent_index_dir}")
