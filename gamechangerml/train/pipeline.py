@@ -136,7 +136,7 @@ class Pipeline:
     def create_qexp(
         self,
         model_id,
-        save_remote=False,
+        upload=False,
         corpus_dir=DefaultConfig.DATA_DIR,
         model_dest=DefaultConfig.LOCAL_MODEL_DIR,
         exp_name=modelname,
@@ -172,8 +172,12 @@ class Pipeline:
             )
             logger.info(
                 "-------------- Model Training Complete --------------")
-            if save_remote:
-                utils.save_all_s3(model_dest, model_id)
+            if upload:
+                S3_MODELS_PATH = "gamechanger/models"
+                s3_path = os.path.join(
+                    S3_MODELS_PATH, "sentence_index/{version}")
+                self.upload(s3_path, dst_path, "sentence_index",
+                            index_name, version)
 
             if validate:
                 logger.info(
@@ -316,6 +320,11 @@ class Pipeline:
             processmanager.update_status(processmanager.training, failed=True)
         # Upload to S3
         if upload:
+            S3_MODELS_PATH = "gamechanger/models"
+            s3_path = os.path.join(S3_MODELS_PATH, "sentence_index/{version}")
+            self.upload(s3_path, dst_path, "sentence_index",
+                        index_name, version)
+            """
             # Loop through each file and upload to S3
             s3_sent_index_dir = f"gamechanger/models/sentence_index/{version}"
             logger.info(f"Uploading files to {s3_sent_index_dir}")
@@ -329,8 +338,19 @@ class Pipeline:
             logger.info(
                 "-------------- Finished Uploading Sentence Embedding--------------"
             )
-
+            """
         return metadata, sent_eval.results
+
+    def upload(self, s3_path, local_path, model_prefix, model_name, version):
+        # Loop through each file and upload to S3
+        logger.info(f"Uploading files to {s3_path}")
+        logger.info(f"\tUploading: {local_path}")
+        # local_path = os.path.join(dst_path)
+        s3_path = os.path.join(
+            s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
+        utils.upload_file(local_path, s3_path)
+        logger.info(f"Successfully uploaded files to {s3_path}")
+        logger.info("-------------- Finished Uploading --------------")
 
     def run(self, build_type, run_name, params):
         """
