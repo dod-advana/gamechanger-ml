@@ -33,5 +33,5 @@ tensorflow==2.5.*
 torch==1.7.*
 tqdm
 transformers
-txtai
+txtai==2.0.0
 wikipedia
