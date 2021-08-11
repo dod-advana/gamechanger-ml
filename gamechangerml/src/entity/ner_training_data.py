@@ -38,6 +38,7 @@ I_PRFX = "I-"
 B_PRFX = "B-"
 OH = "O"
 SENT = "sentence"
+MAXLEN = 64
 
 
 def wc(txt):
@@ -104,23 +105,24 @@ def ner_training_data(
 
     sent_list = cu.load_data(sentence_csv, n_samples, shuffle=shuffle)
 
-    start = time.time()
-    logger.info("finding sentences with entities")
+    # start = time.time()
+    # logger.info("finding sentences with entities")
 
     # TODO something better or not at all?
     ent_sents = [
         row
         for row in sent_list
-        if wc(row[SENT]) < 1000  # magic number (for now)
-        if em.contains_entity(row[SENT], entity_re, abbrv_re)
     ]
+    #     if wc(row[SENT]) < 128  # magic number (for now)
+    #     if em.contains_entity(row[SENT], entity_re, abbrv_re)
+    # ]
 
-    elapsed = time.time() - start
-    logger.info("time : {:}".format(cu.format_time(elapsed)))
-
-    if not ent_sents:
-        logger.warning("no entities discovered in the input...")
-
+    # elapsed = time.time() - start
+    # logger.info("time : {:}".format(cu.format_time(elapsed)))
+    #
+    # if not ent_sents:
+    #     logger.warning("no entities discovered in the input...")
+    # ent_sents = list(sent_list[SENT])
     all_tokens = [wc(row[SENT]) for row in ent_sents]
     avg_tokens = sum(all_tokens) / len(ent_sents)
     logger.info("            num sentences : {:>9,d}".format(len(sent_list)))
@@ -256,7 +258,7 @@ def gen_ner_conll_tags(abbrv_re, ent_re, entity2type, sent_list, nlp):
         if not sentence_text.strip():
             continue
 
-        doc = nlp(sentence_text)
+        doc = nlp(sentence_text[:MAXLEN])
         starts_ends = [(t.idx, t.idx + len(t.orth_) - 1) for t in doc]
         ner_labels = [OH] * len(starts_ends)
         tokens = [t.orth_ for t in doc]
