@@ -10,7 +10,7 @@ from nltk.tokenize import sent_tokenize
 from sklearn.utils import resample
 
 # from gamechangerml.src.text_classif.utils.entity_link import EntityLink
-from gamechangerml.src.text_classif.utils.entity_lookup import ContainsEntity
+# from gamechangerml.src.text_classif.utils.entity_lookup import ContainsEntity
 from gamechangerml.src.featurization.table import Table
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class SingleRespTrain(Table):
         self.dd_re = re.compile("(^\\d\\..*?\\d+\\. )")
         self.kw = "shall"
         self.resp = "RESPONSIBILITIES"
-        self.contains_entity = ContainsEntity()
+        # self.contains_entity = ContainsEntity()
         self.train_df = pd.DataFrame(columns=['source', 'label', 'text'])
         self.resp_verbs = ['shall']
         self.agencies = pd.read_csv(agency_file)
