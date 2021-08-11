@@ -1,16 +1,17 @@
-import pandas as pd
-import re
-import logging
-import json
-import os
-import spacy
 import fnmatch
+import json
+import logging
+import os
+import re
 
+import pandas as pd
+import spacy
 from nltk.tokenize import sent_tokenize
 from sklearn.utils import resample
 
 # from gamechangerml.src.text_classif.utils.entity_link import EntityLink
 # from gamechangerml.src.text_classif.utils.entity_lookup import ContainsEntity
+import gamechangerml.src.entity.entity_mentions as em
 from gamechangerml.src.featurization.table import Table
 
 logger = logging.getLogger(__name__)
@@ -18,11 +19,16 @@ logger = logging.getLogger(__name__)
 #TODO: Add feature to allow for multiple verbs at command line instead of hard-coded
 
 class SingleRespTrain(Table):
-    def __init__(self, input_dir, output, spacy_model, agency_file, glob, sampling):
+    def __init__(self, input_dir, output, spacy_model, agency_file, glob, sampling, entity_csv):
         super(SingleRespTrain, self).__init__(
             input_dir, output, spacy_model, agency_file, glob, True
         )
+        if not os.path.isfile(entity_csv):
+            raise FileNotFoundError("got {}".format(entity_csv))
+
+        self.abbrv_re, self.entity_re, _ = em.make_entity_re(entity_csv)
         logger.info('input dir : {}'.format(input_dir))
+
         self.train_df = pd.DataFrame(columns=['source', 'label', 'text'])
         self.dd_re = re.compile("(^\\d\\..*?\\d+\\. )")
         self.kw = "shall"
@@ -32,6 +38,19 @@ class SingleRespTrain(Table):
         self.resp_verbs = ['shall']
         self.agencies = pd.read_csv(agency_file)
         self.sampling = sampling
+
+    def entities_in_text(self, text):
+        """
+        Returns a list of entities in the text. An empty list is returned
+        if no entities are discovered.
+
+        Args:
+            text (str): text to search
+
+        Returns:
+            List[str]
+        """
+        return em.contains_entity(text, self.entity_re, self.abbrv_re)
         
     def scrubber(self, txt):
         txt = re.sub("[\\n\\t\\r]+", " ", txt)
@@ -62,12 +81,12 @@ class SingleRespTrain(Table):
             else:
                 continue
 
-            tokenized = sent_tokenize(resp_text)           
-            for i in tokenized:
-                for j in self.resp_verbs:
-                    if j in i:
-                        if ":" not in i:
-                            single_resp = self.scrubber(i)
+            sentences = sent_tokenize(resp_text)
+            for sent in sentences:
+                for verb in self.resp_verbs:
+                    if verb in sent:
+                        if ":" not in sent:
+                            single_resp = self.scrubber(sent)
                             if len(single_resp) > 100:
                                 temp = {'source': file, 'text': single_resp, 'label':1}
                             else:
@@ -82,7 +101,7 @@ class SingleRespTrain(Table):
                             #         temp = {'source': file, 'text': single_resp, 'label':0}
                             # temp_df = temp_df.append(temp, ignore_index=True)
                     else:
-                        single_resp = self.scrubber(i)
+                        single_resp = self.scrubber(sent)
                         temp = {'source': file, 'text': single_resp, 'label':0}
                 temp_df = temp_df.append(temp, ignore_index=True)
             logger.info(
@@ -197,6 +216,14 @@ if __name__ == "__main__":
         default=True,
         help="flag where data is downsampled to balanced classes",
     )
+    parser.add_argument(
+        "-e",
+        "--entity-csv",
+        dest="entity_csv",
+        type=str,
+        required=True,
+        help="csv containing entities, types"
+    )
 
     args = parser.parse_args()
 
@@ -210,7 +237,8 @@ if __name__ == "__main__":
         spacy_model_,
         args.agencies_file,
         args.glob,
-        args.sampling
+        args.sampling,
+        args.entity_csv,
     )
 
     output_file = table_obj.process_all()
