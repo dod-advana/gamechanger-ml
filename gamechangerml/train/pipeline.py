@@ -167,7 +167,6 @@ class Pipeline:
         evals = {"results": ""}
         params = D2VConfig.MODEL_ARGS
         try:
-            processmanager.update_status(processmanager.training, 0, 1)
             # build ANN indices
             index_dir = os.path.join(model_dest, model_path)
             bqe.main(
@@ -181,8 +180,6 @@ class Pipeline:
             )
             logger.info(
                 "-------------- Model Training Complete --------------")
-
-            processmanager.update_status(processmanager.training, 1, 1, "trained qexp model " + model_name)
             # Create .tgz file
             dst_path = index_dir + ".tar.gz"
             self.create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
@@ -286,8 +283,6 @@ class Pipeline:
             copy_tree(existing_embeds, local_sent_index_dir)
 
         try:
-            processmanager.update_status(processmanager.training, 0, 1)
-
             encoder = SentenceEncoder(use_gpu=use_gpu)
             logger.info("Creating Document Embeddings...")
             encoder.index_documents(corpus)
@@ -326,15 +321,12 @@ class Pipeline:
                 "-------------- Running Assessment Model Script --------------")
 
             sent_eval = IndomainRetrieverEvaluator(index=local_sent_index_dir)
-            processmanager.update_status(processmanager.training, 1, 1, "trained qexp model " + model_name)
+            
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")
         except Exception as e:
             logger.warning("Error with creating embedding")
             logger.error(e)
-            processmanager.update_status(
-                processmanager.loading_corpus, failed=True)
-            processmanager.update_status(processmanager.training, failed=True)
         # Upload to S3
         if upload:
             S3_MODELS_PATH = "gamechanger/models"
@@ -371,8 +363,10 @@ class Pipeline:
                 elif build_type == "qexp":
                     metadata, evals = self.create_qexp(**params)
                 self.mlflow_record(metadata, evals)
+                processmanager.update_status(processmanager.training, 0, 1, "training" + build_type + " model")
 
             mlflow.end_run()
+            processmanager.update_status(processmanager.training, 1, 1, "trained" + build_type + " model")
         except Exception as e:
             logger.warning(f"Error building {build_type} with MLFlow")
             logger.warning(e)
@@ -384,6 +378,9 @@ class Pipeline:
                     metadata, evals = self.create_qexp(**params)
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
+                processmanager.update_status(
+                    processmanager.loading_corpus, message="failed to load corpus", failed=True)
+                processmanager.update_status(processmanager.training, message="failed to train " + build_type + " model", failed=True)
 
     def mlflow_record(self, metadata, evals):
         """
