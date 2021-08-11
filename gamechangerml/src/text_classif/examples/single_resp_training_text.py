@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 #TODO: Add feature to allow for multiple verbs at command line instead of hard-coded
 
+#TODO: this util function is used in more than one script at this point--consider moving to classifier_utils.py
+def wc(text):
+    return text.count(" ") + 1
+
 class SingleRespTrain(Table):
     def __init__(self, input_dir, output, spacy_model, agency_file, glob, sampling):
         super(SingleRespTrain, self).__init__(
@@ -29,7 +33,7 @@ class SingleRespTrain(Table):
         self.resp = "RESPONSIBILITIES"
         # self.contains_entity = ContainsEntity()
         self.train_df = pd.DataFrame(columns=['source', 'label', 'text'])
-        self.resp_verbs = ['shall']
+        self.resp_verbs = ['shall'] #try additional verbs
         self.agencies = pd.read_csv(agency_file)
         self.sampling = sampling
         
@@ -68,7 +72,7 @@ class SingleRespTrain(Table):
                     if j in i:
                         if ":" not in i:
                             single_resp = self.scrubber(i)
-                            if len(single_resp) > 100:
+                            if len(single_resp) > 100: #sub out for check on # of tokens, entity linking
                                 temp = {'source': file, 'text': single_resp, 'label':1}
                             else:
                                 temp = {'source': file, 'text': single_resp, 'label':0}
@@ -129,7 +133,7 @@ class SingleRespTrain(Table):
 
         minority_class_num = max(df_1.shape[0], df_2.shape[0])
         if df_0.shape[0] > minority_class_num:
-            majority_downsampled = resample(df_0, replace=False, n_samples=minority_class_num, random_state=8)
+            majority_downsampled = resample(df_0, replace=False, n_samples=minority_class_num*5, random_state=8)
             balanced_data = pd.concat([majority_downsampled, df_1, df_2]).reset_index(drop='index')
         else:
             balanced_data = training_dataframe
