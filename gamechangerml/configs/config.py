@@ -81,7 +81,7 @@ class EmbedderConfig:
             "return_id": True # for creating LocalCorpus
         },
         "retriever": { ## args for retrieving the vectors
-            "n_returns": 10
+            "n_returns": 5
         }
     }
 
