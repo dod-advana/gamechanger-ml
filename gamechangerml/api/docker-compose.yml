@@ -9,6 +9,8 @@ services:
     command: --port 6380
     expose:
       - "6380"
+    networks:
+      - app-net
   gamechanger-ml-gpu:
     container_name: gc-ml-gpu
     image: gamechanger-ml-gpu
@@ -32,3 +34,9 @@ services:
       - ~/.aws/:/.aws
     depends_on:
       - gc-redis
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    name: "${COMPOSE_PROJECT_NAME:-gc-dev}-network"
