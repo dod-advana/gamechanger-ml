@@ -2,6 +2,7 @@ from fastapi import APIRouter, Response, status
 import subprocess
 import os
 import json
+from datetime import datetime
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
@@ -274,7 +275,7 @@ async def train_model(model_dict: dict, response: Response):
                 "upload": bool(model_dict["upload"]),
                 "version": model_dict["version"],
             }
-            pipeline.create_embedding(**args)
+            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
 
         def train_qexp(model_dict = model_dict):
             logger.info("Attempting to start qexp pipeline")
@@ -285,7 +286,7 @@ async def train_model(model_dict: dict, response: Response):
                 "upload": bool(model_dict["upload"]),
                 "version": model_dict["version"],
             }
-            pipeline.create_qexp(**args)
+            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
         
         # Create a mapping between the training methods and input from the api
         training_switch ={
@@ -294,8 +295,8 @@ async def train_model(model_dict: dict, response: Response):
         }
         # Set the training method to be loaded onto the thread
         traing_method = training_switch["sentence"]
-        if "model_type" in model_dict and model_dict["model_type"] in training_switch:
-            traing_method = training_switch[model_dict["model_type"]]
+        if "build_type" in model_dict and model_dict["build_type"] in training_switch:
+            traing_method = training_switch[model_dict["build_type"]]
             
 
         training_thread = MlThread(traing_method)
