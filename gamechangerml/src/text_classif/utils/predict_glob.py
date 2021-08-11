@@ -34,7 +34,7 @@ def _predict_docs(input_dicts, predictor, max_seq_len, batch_size):
     else:
         rate = 0.0
     logger.info("       time : {:}".format(cu.format_time(elapsed)))
-    logger.info("time / text : {:>6.3f} secs".format(rate))
+    logger.info("time / text :{:>6.3f} secs".format(rate))
     return out_list
 
 

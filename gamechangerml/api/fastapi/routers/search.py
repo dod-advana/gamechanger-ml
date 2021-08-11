@@ -89,7 +89,7 @@ async def trans_sentence_infer(
     results = {}
     try:
         query_text = query["text"]
-        results = MODELS.sentence_trans.search(query_text, n_returns=num_results)
+        results = MODELS.sentence_trans.search(query_text)
         logger.info(results)
     except Exception:
         logger.error(

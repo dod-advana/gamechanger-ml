@@ -1,7 +1,7 @@
 """
 usage: python predict_table.py [-h] -m MODEL_PATH -d DATA_PATH [-b BATCH_SIZE]
-                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV]
-                               [-r ORGS_FILE] -a AGENCIES_FILE
+                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV] -e
+                               ENTITY_CSV -a AGENCIES_FILE -t ENTITY_MENTIONS
 
 Binary classification of each sentence in the files matching the 'glob' in
 data_path
@@ -19,10 +19,12 @@ optional arguments:
   -g GLOB, --glob GLOB  file glob pattern
   -o OUTPUT_CSV, --output-csv OUTPUT_CSV
                         the .csv for output
-  -r ORGS_FILE, --orgs-file ORGS_FILE
-                        Unused
-  -a AGENCIES_FILE, --agencies_file AGENCIES_FILE
-                        the .csv for agency abbreviations
+  -e ENTITY_CSV, --entity-csv ENTITY_CSV
+                        csv of entities and abbreviations
+  -a AGENCIES_FILE, --agencies-file AGENCIES_FILE
+                        the .csv for agency abbreviations and references
+  -t ENTITY_MENTIONS, --entity-mentions ENTITY_MENTIONS
+                        JSON created by `entity_mentions.py`
 """
 import logging
 import os
@@ -30,17 +32,31 @@ import time
 import pandas as pd
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
-from gamechangerml.src.text_classif.utils.classifier_post_utils import (
+from gamechangerml.src.featurization.abbreviations_utils import (
     get_references,
     get_agencies_dict,
     get_agencies,
-    filter_primary_org,
-    _agg_stats
 )
 from gamechangerml.src.text_classif.utils.entity_link import EntityLink
 from gamechangerml.src.text_classif.utils.log_init import initialize_logger
+from gamechangerml.src.text_classif.cli.resp_stats import count_output
 
 logger = logging.getLogger(__name__)
+
+
+def _agg_stats(df):
+    resp_per_doc, resp_no_entity, n_uniq_entities, n_docs = count_output(df)
+    if resp_per_doc:
+        df_resp_doc = pd.DataFrame(
+            list(resp_per_doc.items()), columns=["doc", "count"]
+        )
+        df_resp_doc.to_csv("resp-in-doc-stats.csv", index=False)
+    if resp_no_entity:
+        df_resp_no_e = pd.DataFrame(
+            list(resp_per_doc.items()), columns=["doc", "count"]
+        )
+        df_resp_no_e.to_csv("resp-no-entity-stats.csv", index=False)
+
 
 def predict_table(
     model_path,
@@ -50,7 +66,8 @@ def predict_table(
     batch_size,
     output_csv,
     stats,
-    orgs_file,
+    entity_csv,
+    entity_mentions,
     agencies_file,
 ):
     """
@@ -75,13 +92,17 @@ def predict_table(
         "sentence": "Responsibility Text",
         "agencies": "Other Organization(s) / Personnel Mentioned",
         "refs": "Documents Referenced",
-        "org_filter": "Org Filter",
         "title": "Document Title",
         "source": "Source Document",
     }
 
     start = time.time()
-    entity_linker = EntityLink()
+    entity_linker = EntityLink(
+        entity_csv=entity_csv,
+        mentions_json=entity_mentions,
+        use_na=False,
+        topk=3,
+    )
     entity_linker.make_table(
         model_path,
         data_path,
@@ -92,22 +113,17 @@ def predict_table(
     df = entity_linker.to_df()
     df = df[df.top_class == 1].reset_index()
 
-    logger.info("retrieving additional organizations")
-    aliases = get_agencies_dict(agencies_file)
+    logger.info("retrieving agencies csv")
+    duplicates, aliases = get_agencies_dict(agencies_file)
     df["agencies"] = get_agencies(
-        file_dataframe=df['sentence'],
+        file_dataframe=df,
+        doc_dups=None,
+        duplicates=duplicates,
         agencies_dict=aliases,
     )
 
-    logger.info("retrieving document references")
-    df["refs"] = get_references(df['sentence'])
+    df["refs"] = get_references(df, doc_title_col="src")
 
-    logger.info("processing primary org filter")
-    df['org_filter'] = filter_primary_org(
-        df['sentence'], 
-        orgs_file
-    )
-    
     renamed_df = df.rename(columns=rename_dict)
     final_df = renamed_df[
         [
@@ -117,15 +133,13 @@ def predict_table(
             "Responsibility Text",
             "Other Organization(s) / Personnel Mentioned",
             "Documents Referenced",
-            "Org Filter"
         ]
     ]
     if output_csv is not None:
         final_df.to_csv(output_csv, index=False)
         logger.info("final csv written")
-    if stats is not None:
-        model = os.path.split(model_path)[-1]
-        _agg_stats(final_df, model, max_seq_len, batch_size)
+    if stats:
+        _agg_stats(final_df)
     elapsed = time.time() - start
 
     logger.info("total time : {:}".format(cu.format_time(elapsed)))
@@ -189,34 +203,34 @@ if __name__ == "__main__":
         help="the .csv for output",
     )
     parser.add_argument(
-        "-r",
-        "--orgs-file",
-        dest="orgs_file",
+        "-e",
+        "--entity-csv",
+        dest="entity_csv",
         type=str,
-        required=False,
-        help="Unused",
+        required=True,
+        help="csv of entities and abbreviations",
     )
     parser.add_argument(
         "-a",
-        "--agencies_file",
+        "--agencies-file",
         dest="agencies_file",
         type=str,
         required=True,
-        help="the .csv for agency abbreviations",
+        help="the .csv for agency abbreviations and references",
     )
     parser.add_argument(
-        "-s",
-        "--stats-path",
-        dest="stats_path",
+        "-t",
+        "--entity-mentions",
+        dest="entity_mentions",
         type=str,
-        default=None,
-        required=False,
-        help="write aggregate statistics output to file",
+        required=True,
+        help="JSON created by `entity_mentions.py`",
     )
 
     initialize_logger(to_file=False, log_name="none")
 
     args = parser.parse_args()
+    stats = False
 
     _ = predict_table(
         args.model_path,
@@ -225,7 +239,8 @@ if __name__ == "__main__":
         args.max_seq_len,
         args.batch_size,
         args.output_csv,
-        args.stats_path,
-        args.orgs_file,
+        stats,
+        args.entity_csv,
+        args.entity_mentions,
         args.agencies_file,
     )
