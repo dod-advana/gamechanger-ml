@@ -4,7 +4,7 @@ from gamechangerml.api.utils.logger import logger
 # A class that takes in a function and a dictionary of arguments.
 # The keys in args have to match the parameters in the function.
 class MlThread(threading.Thread):
-    def __init__(self, function, args):
+    def __init__(self, function, args = {}):
         super(MlThread, self).__init__()
         self.function = function
         self.args = args

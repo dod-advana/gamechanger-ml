@@ -162,10 +162,12 @@ class Pipeline:
         if not model_id:
             model_id = datetime.now().strftime("%Y%m%d")
         # get model name schema
-        model_path = utils.create_model_schema(model_dir, "qexp_" + model_id)
+        model_name = "qexp_" + model_id
+        model_path = utils.create_model_schema(model_dir, model_name)
         evals = {"results": ""}
         params = D2VConfig.MODEL_ARGS
         try:
+            processmanager.update_status(processmanager.training, 0, 1)
             # build ANN indices
             index_dir = os.path.join(model_dest, model_path)
             bqe.main(
@@ -179,6 +181,8 @@ class Pipeline:
             )
             logger.info(
                 "-------------- Model Training Complete --------------")
+
+            processmanager.update_status(processmanager.training, 1, 1, "trained qexp model " + model_name)
             # Create .tgz file
             dst_path = index_dir + ".tar.gz"
             self.create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
@@ -266,8 +270,9 @@ class Pipeline:
         encoder_path = os.path.join(model_dir, "transformers", encoder_model)
 
         model_id = datetime.now().strftime("%Y%m%d")
+        model_name = "sent_index_" + model_id
         local_sent_index_dir = os.path.join(
-            model_dir, "sent_index_" + model_id)
+            model_dir, model_name)
 
         # Define new index directory
         if not os.path.isdir(local_sent_index_dir):
@@ -281,7 +286,7 @@ class Pipeline:
             copy_tree(existing_embeds, local_sent_index_dir)
 
         try:
-            processmanager.update_status(processmanager.training)
+            processmanager.update_status(processmanager.training, 0, 1)
 
             encoder = SentenceEncoder(use_gpu=use_gpu)
             logger.info("Creating Document Embeddings...")
@@ -321,7 +326,7 @@ class Pipeline:
                 "-------------- Running Assessment Model Script --------------")
 
             sent_eval = IndomainRetrieverEvaluator(index=local_sent_index_dir)
-            processmanager.update_status(processmanager.training, 1, 1)
+            processmanager.update_status(processmanager.training, 1, 1, "trained qexp model " + model_name)
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")
         except Exception as e:
