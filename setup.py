@@ -22,13 +22,11 @@ def parse_requirements(requirements: Path) -> List[str]:
 
         final_rlist = [
             line
-            if not re.match(
-                pattern=r"^https?://.*$",
-                string=line)
+            if not re.match(pattern=r"^https?://.*$", string=line)
             else re.sub(
                 pattern=r"(.*(?:https?://.*/)([a-zA-Z0-9_].*)[-]([a-zA-Z0-9.]*)([.]tar[.]gz|[.]tgz).*)",
                 repl=r"\2 @ \1",
-                string=line
+                string=line,
             )
             for line in rlist_sans_comments
         ]
@@ -44,7 +42,7 @@ def parse_readme(readme: Path) -> str:
 
 setuptools.setup(
     name="gamechangerml",
-    version="0.1.0",
+    version="0.2.0",
     author="Booz Allen Hamilton",
     author_email="ha_robert@example.com",
     description="Package for GAMECHANGER ML modules",
@@ -59,7 +57,5 @@ setuptools.setup(
     ],
     python_requires="==3.6.*",
     install_requires=parse_requirements(REQUIREMENTS_PATH),
-    extras_require={
-        "dev": parse_requirements(DEV_REQUIREMENTS_PATH)
-    }
+    extras_require={"dev": parse_requirements(DEV_REQUIREMENTS_PATH)},
 )
