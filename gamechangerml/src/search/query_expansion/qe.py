@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class QE(object):
     __version__ = v.__version__
 
-    def __init__(self, qe_model_dir, method="emb", vocab_file=None):
+    def __init__(self, qe_model_dir, method, vocab_file):
         """
          Query expansion via smoothed inverse frequency weighted word embeddings
          and approximate nearest neighbor search.
@@ -125,7 +125,7 @@ class QE(object):
             logger.exception("{}: {}".format(type(e), str(e)), exc_info=True)
             raise
 
-    def expand(self, query_str, topn=2, threshold=0.2, min_tokens=3):
+    def expand(self, query_str, topn, threshold, min_tokens):
         """
         Expands a query string into the `topn` most similar terms excluding
         the tokens in `query_str`. If a token does not have an embedding,

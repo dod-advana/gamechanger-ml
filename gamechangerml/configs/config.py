@@ -90,6 +90,20 @@ class SimilarityConfig:
         "model_name": "distilbart-mnli-12-3" # SOURCE
     }
 
+class QEConfig:
+    MODEL_ARGS = {
+        "init": { # args for creating QE object
+            "qe_model_dir": "gamechangerml/models/qexp_20201217",
+            "method": "emb", 
+            "vocab_file": "word-freq-corpus-20201101.txt"
+        },
+        "expansion": { # configs for getting expanded terms
+            "topn": 2, 
+            "threshold": 0.2, 
+            "min_tokens": 3
+        }
+    }
+
 class ValidationConfig:
     DATA_ARGS = {
         "validation_dir": "gamechangerml/data/validation", # need to have validation data in here
