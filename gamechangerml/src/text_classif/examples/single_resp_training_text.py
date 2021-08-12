@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 
 #TODO: Add feature to allow for multiple verbs at command line instead of hard-coded
 
+#TODO: used in multiple places--move to utils script?
+def wc(text):
+    return text.count(" ") + 1
+
 class SingleRespTrain(Table):
     def __init__(self, input_dir, output, spacy_model, agency_file, glob, sampling, entity_csv):
         super(SingleRespTrain, self).__init__(
@@ -33,7 +37,6 @@ class SingleRespTrain(Table):
         self.dd_re = re.compile("(^\\d\\..*?\\d+\\. )")
         self.kw = "shall"
         self.resp = "RESPONSIBILITIES"
-        # self.contains_entity = ContainsEntity()
         self.train_df = pd.DataFrame(columns=['source', 'label', 'text'])
         self.resp_verbs = ['shall']
         self.agencies = pd.read_csv(agency_file)
@@ -61,8 +64,8 @@ class SingleRespTrain(Table):
         return txt.strip()
         
     def extract_single(self, input_dir):
-        temp_df = pd.DataFrame(columns=['source', 'label', 'text'])
         for file in sorted(os.listdir(input_dir)):
+            temp_df = pd.DataFrame(columns=['source', 'label', 'text'])
             if not fnmatch.fnmatch(file, self.glob):
                 continue
             with open(os.path.join(input_dir, file)) as f_in:
@@ -84,10 +87,11 @@ class SingleRespTrain(Table):
             sentences = sent_tokenize(resp_text)
             for sent in sentences:
                 for verb in self.resp_verbs:
-                    if verb in sent:
+                    if verb in sent and wc(sent) >= 2:
                         if ":" not in sent:
                             single_resp = self.scrubber(sent)
-                            if len(single_resp) > 100:
+                            # if len(single_resp) > 100:
+                            if len(self.entities_in_text(single_resp)) > 0:
                                 temp = {'source': file, 'text': single_resp, 'label':1}
                             else:
                                 temp = {'source': file, 'text': single_resp, 'label':0}
@@ -103,7 +107,7 @@ class SingleRespTrain(Table):
                     else:
                         single_resp = self.scrubber(sent)
                         temp = {'source': file, 'text': single_resp, 'label':0}
-                temp_df = temp_df.append(temp, ignore_index=True)
+                    temp_df = temp_df.append(temp, ignore_index=True)
             logger.info(
                 "{:>25s} : {:>3,d}".format(
                     self.doc_dict["filename"], len(temp_df)
@@ -112,8 +116,8 @@ class SingleRespTrain(Table):
             yield temp_df, file
 
     def extract_header(self, input_dir):
-        temp_df = pd.DataFrame(columns=['source', 'label', 'text'])
         for file in sorted(os.listdir(input_dir)):
+            temp_df = pd.DataFrame(columns=['source', 'label', 'text'])
             if not fnmatch.fnmatch(file, self.glob):
                 continue
             with open(os.path.join(input_dir, file)) as f_in:
@@ -132,7 +136,7 @@ class SingleRespTrain(Table):
             for i in resp_text.split('.'):
                 for j in i.split('\n'):
                     if "shall:" in j:
-                        if len(j) > 10:
+                        if len(self.entities_in_text(j)) > 0:
                             temp = {'source': file, 'text': j, 'label':2}
                             temp_df = temp_df.append(temp, ignore_index=True) 
                         else:
@@ -161,11 +165,13 @@ class SingleRespTrain(Table):
         
         for tmp_df, fname in self.extract_header(self.input_dir):
             self.train_df = self.train_df.append(tmp_df, ignore_index=True)
+        
         tmp = self.train_df.drop_duplicates(subset=['source', 'text']).sort_values(by=['source']).reset_index(drop=True)
-        # tmp = self.train_df.sort_values(by=['source']).reset_index(drop=True)
 
         if self.sampling == True:
             tmp = self.downsample_training(tmp)
+
+        tmp = self.train_df.sort_values(by=['source']).reset_index(drop=True)
         
         return tmp
 
@@ -228,6 +234,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger.info("loading spaCy")
+    #TODO: potentially replace this with GC spacy script
     spacy_model_ = spacy.load('en_core_web_lg')
     logger.info("spaCy loaded...")
 
@@ -242,5 +249,21 @@ if __name__ == "__main__":
     )
 
     output_file = table_obj.process_all()
+    # output_stats = output_file.groupby('label')
     output_file.to_csv(args.output, index=False, header=False, doublequote=True)
-    logger.info("training data extracted")
+    logger.info("training data extracted!")
+    # logger.info(
+    #     "number of extracted training rows: {:>3,d}".format(output_file.shape[0])
+    # )
+    # logger.info(
+    #     "class 0 count: {:>3,d}".format(output_file.groupby('label'))
+    # )
+    # logger.info(
+    #     output_stats
+    # )
+    # logger.info(
+    #     "class 1 count: {:>3,d}".format(output_file.shape[0])
+    # )
+    # logger.info(
+    #     "class 2 count: {:>3,d}".format(output_file.shape[0])
+    # )

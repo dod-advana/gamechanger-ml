@@ -14,7 +14,7 @@ use_checkpoint: ~
 
 # Training args
 num_labels: 3
-split: 0.80
+split: 0.85
 warmup_steps: 0
 lr: 2.0e-05
 weight_decay: 0.0
