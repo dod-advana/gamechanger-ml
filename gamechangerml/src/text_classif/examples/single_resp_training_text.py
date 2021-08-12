@@ -46,8 +46,9 @@ class SingleRespTrain(Table):
         return txt.strip()
         
     def extract_single(self, input_dir):
-        temp_df = pd.DataFrame(columns=['source', 'label', 'text'])
+
         for file in sorted(os.listdir(input_dir)):
+            temp_df = pd.DataFrame(columns=['source', 'label', 'text'])
             if not fnmatch.fnmatch(file, self.glob):
                 continue
             with open(os.path.join(input_dir, file)) as f_in:
@@ -97,8 +98,8 @@ class SingleRespTrain(Table):
             yield temp_df, file
 
     def extract_header(self, input_dir):
-        temp_df = pd.DataFrame(columns=['source', 'label', 'text'])
         for file in sorted(os.listdir(input_dir)):
+            temp_df = pd.DataFrame(columns=['source', 'label', 'text'])
             if not fnmatch.fnmatch(file, self.glob):
                 continue
             with open(os.path.join(input_dir, file)) as f_in:
