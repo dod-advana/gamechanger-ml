@@ -1,11 +1,12 @@
 import pandas as pd
 import ast
 from gamechangerml.src.search.ranking import GENERATED_FILES_PATH
+from gamechangerml import DATA_PATH
 import os
 
 df = pd.read_csv(os.path.join(GENERATED_FILES_PATH, "corpus_meta.csv"))
 pop_df = pd.read_csv(os.path.join(
-    "gamechangerml/data", "popular_documents.csv"))
+    DATA_PATH, "popular_documents.csv"))
 
 
 """ retrieve pre-generated features from corpus
