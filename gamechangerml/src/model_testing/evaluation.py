@@ -6,9 +6,11 @@ import math
 from datetime import datetime
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder, SentenceSearcher, SimilarityRanker
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, ValidationConfig
+from gamechangerml.src.search.query_expansion.qe import QE
+from gamechangerml.src.search.query_expansion.utils import remove_original_kw
+from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QEConfig, ValidationConfig
 from gamechangerml.src.utilities.model_helper import *
-from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData
+from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData, QEXPDomainData
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
 import signal
@@ -435,6 +437,77 @@ class SimilarityEvaluator(TransformerEvaluator):
         }
 
         output_file = timestamp_filename('sim_model_eval', '.json')
+        save_json(output_file, self.model_path, agg_results)
+
+        return agg_results
+
+
+class QEEvaluator():
+
+    def __init__(
+        self, 
+        model=None,
+        config=QEConfig.MODEL_ARGS,
+        ):
+
+        self.config = config
+        self.model_path = self.config['init']['qe_model_dir']
+        if model:
+            self.QE = model
+        else:
+            self.QE = QE(**self.config['init'])
+
+        self.data = QEXPDomainData()
+        
+    def predict(self):
+
+        columns = ['query', 'expected', 'received', 'prop_matching']
+        csv_filename = os.path.join(self.model_path, timestamp_filename('qe_domain', '.csv'))
+        with open(csv_filename, 'w') as csvfile:
+            csvwriter = csv.writer(csvfile)  
+            csvwriter.writerow(columns) 
+        
+        query_count = 0
+        for query, expected in self.data.items():
+            logger.info(query_count, query)
+            results = self.QE.expand(query, **self.config['expansion'])
+            results = remove_original_kw(results, query)
+            prop_matching = len(set(expected).intersection(results)) / len(results)
+            row = [[
+                    str(query),
+                    str(expected),
+                    str(results),
+                    str(prop_matching)
+                ]]
+            csvwriter.writerows(row)
+            query_count += 1
+
+        return pd.read_csv(csv_filename)
+
+    def eval(self):
+
+        df = self.predict()
+
+        # get overall stats
+        proportion_all_match = np.round(df['prop_matching'].value_counts(normalize = True)[1], 2)
+        proportion_any_match = np.round(df['prop_matching'].apply(lambda x: bool(x).value_counts(normalize=True)[True, 2]))
+        median_match = np.median(df['prop_matching'])
+        num_queries = df.shape[0]
+
+        user = get_user(logger)
+
+        agg_results = {
+            "user": user,
+            "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "model": self.model_path.split('/')[-1],
+            "validation_data": "QE_domain",
+            "query_count": num_queries,
+            "proportion_all_match": proportion_all_match,
+            "proportion_any_match": proportion_any_match,
+            "median_match": median_match
+        }
+
+        output_file = timestamp_filename('qe_model_eval', '.json')
         save_json(output_file, self.model_path, agg_results)
 
         return agg_results

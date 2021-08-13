@@ -128,5 +128,6 @@ class ValidationConfig:
         },
         "retriever_gc": {
             "gold_standard": "gold_standard.csv"
-        }
+        },
+        "qe_gc": "QE_domain.json"
     }
