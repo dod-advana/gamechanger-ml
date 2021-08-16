@@ -5,8 +5,7 @@ from gamechangerml import DATA_PATH
 import os
 
 df = pd.read_csv(os.path.join(GENERATED_FILES_PATH, "corpus_meta.csv"))
-pop_df = pd.read_csv(os.path.join(
-    DATA_PATH, "popular_documents.csv"))
+pop_df = pd.read_csv(os.path.join(DATA_PATH, "popular_documents.csv"))
 
 
 """ retrieve pre-generated features from corpus
@@ -28,7 +27,7 @@ def get_pr(docId: str) -> float:
 
 def get_pop_score(docId: str) -> float:
     if docId in list(pop_df.doc):
-        return pop_df[pop_df.doc == docId].pop_score.values[0]
+        return float(pop_df[pop_df.doc == docId].pop_score.values[0])
     else:
         return 0.0
 
