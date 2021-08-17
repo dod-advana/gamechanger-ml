@@ -162,7 +162,8 @@ class Pipeline:
         if not model_id:
             model_id = datetime.now().strftime("%Y%m%d")
         # get model name schema
-        model_path = utils.create_model_schema(model_dir, "qexp_" + model_id)
+        model_name = "qexp_" + model_id
+        model_path = utils.create_model_schema(model_dir, model_name)
         evals = {"results": ""}
         params = D2VConfig.MODEL_ARGS
         try:
@@ -266,8 +267,9 @@ class Pipeline:
         encoder_path = os.path.join(model_dir, "transformers", encoder_model)
 
         model_id = datetime.now().strftime("%Y%m%d")
+        model_name = "sent_index_" + model_id
         local_sent_index_dir = os.path.join(
-            model_dir, "sent_index_" + model_id)
+            model_dir, model_name)
 
         # Define new index directory
         if not os.path.isdir(local_sent_index_dir):
@@ -281,8 +283,6 @@ class Pipeline:
             copy_tree(existing_embeds, local_sent_index_dir)
 
         try:
-            processmanager.update_status(processmanager.training)
-
             encoder = SentenceEncoder(use_gpu=use_gpu)
             logger.info("Creating Document Embeddings...")
             encoder.index_documents(corpus)
@@ -321,15 +321,12 @@ class Pipeline:
                 "-------------- Running Assessment Model Script --------------")
 
             sent_eval = IndomainRetrieverEvaluator(index=local_sent_index_dir)
-            processmanager.update_status(processmanager.training, 1, 1)
+            
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")
         except Exception as e:
             logger.warning("Error with creating embedding")
             logger.error(e)
-            processmanager.update_status(
-                processmanager.loading_corpus, failed=True)
-            processmanager.update_status(processmanager.training, failed=True)
         # Upload to S3
         if upload:
             S3_MODELS_PATH = "gamechanger/models"
@@ -366,8 +363,10 @@ class Pipeline:
                 elif build_type == "qexp":
                     metadata, evals = self.create_qexp(**params)
                 self.mlflow_record(metadata, evals)
+                processmanager.update_status(processmanager.training, 0, 1, "training" + build_type + " model")
 
             mlflow.end_run()
+            processmanager.update_status(processmanager.training, 1, 1, "trained" + build_type + " model")
         except Exception as e:
             logger.warning(f"Error building {build_type} with MLFlow")
             logger.warning(e)
@@ -379,6 +378,9 @@ class Pipeline:
                     metadata, evals = self.create_qexp(**params)
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
+                processmanager.update_status(
+                    processmanager.loading_corpus, message="failed to load corpus", failed=True)
+                processmanager.update_status(processmanager.training, message="failed to train " + build_type + " model", failed=True)
 
     def mlflow_record(self, metadata, evals):
         """

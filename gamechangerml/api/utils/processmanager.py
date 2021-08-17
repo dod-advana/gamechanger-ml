@@ -29,13 +29,13 @@ except Exception as e:
     print(e)
 
 
-def update_status(key, progress=0, total=100, failed=False):
+def update_status(key, progress=0, total=100, message="", failed=False):
 
     try:
         if progress == total or failed:
             date = datetime.now()
             date_string = date.strftime("%Y-%m-%d %H:%M:%S")
-            completed = {"process": key, "total": total, "date": date_string}
+            completed = {"process": key, "total": total, "message":message, "date": date_string}
             with thread_lock:
                 if key in PROCESS_STATUS.value:
                     temp = PROCESS_STATUS.value
