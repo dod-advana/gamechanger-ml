@@ -457,7 +457,8 @@ class QEEvaluator():
         else:
             self.QE = QE(**self.config['init'])
 
-        self.data = QEXPDomainData()
+        self.data = QEXPDomainData().data
+        self.results = self.eval()
         
     def predict(self):
 
@@ -467,20 +468,20 @@ class QEEvaluator():
             csvwriter = csv.writer(csvfile)  
             csvwriter.writerow(columns) 
         
-        query_count = 0
-        for query, expected in self.data.items():
-            logger.info(query_count, query)
-            results = self.QE.expand(query, **self.config['expansion'])
-            results = remove_original_kw(results, query)
-            prop_matching = len(set(expected).intersection(results)) / len(results)
-            row = [[
-                    str(query),
-                    str(expected),
-                    str(results),
-                    str(prop_matching)
-                ]]
-            csvwriter.writerows(row)
-            query_count += 1
+            query_count = 0
+            for query, expected in self.data.items():
+                logger.info(query_count, query)
+                results = self.QE.expand(query, **self.config['expansion'])
+                results = remove_original_kw(results, query)
+                prop_matching = len(set(expected).intersection(results)) / len(results)
+                row = [[
+                        str(query),
+                        str(expected),
+                        str(results),
+                        str(prop_matching)
+                    ]]
+                csvwriter.writerows(row)
+                query_count += 1
 
         return pd.read_csv(csv_filename)
 
@@ -490,7 +491,7 @@ class QEEvaluator():
 
         # get overall stats
         proportion_all_match = np.round(df['prop_matching'].value_counts(normalize = True)[1], 2)
-        proportion_any_match = np.round(df['prop_matching'].apply(lambda x: bool(x).value_counts(normalize=True)[True, 2]))
+        proportion_any_match = np.round(df['prop_matching'].apply(lambda x: bool(x)).sum() /  df.shape[0])
         median_match = np.median(df['prop_matching'])
         num_queries = df.shape[0]
 
