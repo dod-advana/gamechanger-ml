@@ -2,6 +2,7 @@ from fastapi import APIRouter, Response, status
 import subprocess
 import os
 import json
+from datetime import datetime
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
@@ -260,21 +261,47 @@ async def train_model(model_dict: dict, response: Response):
     Returns:
     """
     try:
-        logger.info("Attempting to start train pipeline")
-        pipeline = Pipeline()
-        if not os.path.exists(CORPUS_DIR):
-            logger.warning(f"Corpus is not in local directory")
-            raise Exception("Corpus is not in local directory")
-        args = {
-            "corpus": CORPUS_DIR,
-            "encoder_model": model_dict["encoder_model"],
-            "gpu": bool(model_dict["gpu"]),
-            "upload": bool(model_dict["upload"]),
-            "version": model_dict["version"],
+        # Methods for all the different models we can train
+        def train_sentence(model_dict = model_dict):
+            logger.info("Attempting to start sententence pipeline")
+            pipeline = Pipeline()
+            if not os.path.exists(CORPUS_DIR):
+                logger.warning(f"Corpus is not in local directory")
+                raise Exception("Corpus is not in local directory")
+            args = {
+                "corpus": CORPUS_DIR,
+                "encoder_model": model_dict["encoder_model"],
+                "gpu": bool(model_dict["gpu"]),
+                "upload": bool(model_dict["upload"]),
+                "version": model_dict["version"],
+            }
+            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
+
+        def train_qexp(model_dict = model_dict):
+            logger.info("Attempting to start qexp pipeline")
+            pipeline = Pipeline()
+            args = {
+                "model_id": model_dict["model_id"],
+                "validate": bool(model_dict["validate"]),
+                "upload": bool(model_dict["upload"]),
+                "version": model_dict["version"],
+            }
+            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
+        
+        # Create a mapping between the training methods and input from the api
+        training_switch ={
+            "sentence":train_sentence,
+            "qexp":train_qexp
         }
-        processmanager.update_status(processmanager.training, 0, 1)
-        corpus_thread = MlThread(create_embedding, args)
-        corpus_thread.start()
+        # Set the training method to be loaded onto the thread
+        traing_method = training_switch["sentence"]
+        if "build_type" in model_dict and model_dict["build_type"] in training_switch:
+            traing_method = training_switch[model_dict["build_type"]]
+            
+
+        training_thread = MlThread(traing_method)
+        training_thread.start()   
+                    
 
     except:
         logger.warning(f"Could not train the model")
