@@ -442,7 +442,7 @@ class SimilarityEvaluator(TransformerEvaluator):
         return agg_results
 
 
-class QEEvaluator():
+class QexpEvaluator():
 
     def __init__(
         self, 
@@ -458,41 +458,48 @@ class QEEvaluator():
             self.QE = QE(**self.config['init'])
 
         self.data = QEXPDomainData().data
+        self.topn = self.config['expansion']['topn']
         self.results = self.eval()
         
     def predict(self):
 
-        columns = ['query', 'expected', 'received', 'prop_matching']
+        columns = ['query', 'expected', 'received', 'any_match']
         csv_filename = os.path.join(self.model_path, timestamp_filename('qe_domain', '.csv'))
         with open(csv_filename, 'w') as csvfile:
             csvwriter = csv.writer(csvfile)  
             csvwriter.writerow(columns) 
         
             query_count = 0
+            num_matching = 0
+            num_expected = 0
+            num_results = 0
             for query, expected in self.data.items():
                 logger.info(query_count, query)
                 results = self.QE.expand(query, **self.config['expansion'])
                 results = remove_original_kw(results, query)
-                prop_matching = len(set(expected).intersection(results)) / len(results)
+                num_results += len(results)
+                num_matching += len(set(expected).intersection(results)) 
+                num_expected += np.min([len(results), self.topn])
+                any_match = bool(num_matching)
                 row = [[
                         str(query),
                         str(expected),
                         str(results),
-                        str(prop_matching)
+                        str(any_match)
                     ]]
                 csvwriter.writerows(row)
                 query_count += 1
+        
+        precision = num_matching / num_results
+        recall = num_matching / num_expected
 
-        return pd.read_csv(csv_filename)
+        return pd.read_csv(csv_filename), precision, recall
 
     def eval(self):
 
-        df = self.predict()
+        df, precision, recall = self.predict()
 
         # get overall stats
-        proportion_all_match = np.round(df['prop_matching'].value_counts(normalize = True)[1], 2)
-        proportion_any_match = np.round(df['prop_matching'].apply(lambda x: bool(x)).sum() /  df.shape[0])
-        median_match = np.median(df['prop_matching'])
         num_queries = df.shape[0]
 
         user = get_user(logger)
@@ -503,9 +510,8 @@ class QEEvaluator():
             "model": self.model_path.split('/')[-1],
             "validation_data": "QE_domain",
             "query_count": num_queries,
-            "proportion_all_match": proportion_all_match,
-            "proportion_any_match": proportion_any_match,
-            "median_match": median_match
+            "precision": precision,
+            "recall": recall
         }
 
         output_file = timestamp_filename('qe_model_eval', '.json')
