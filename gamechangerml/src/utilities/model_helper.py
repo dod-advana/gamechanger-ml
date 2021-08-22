@@ -81,3 +81,94 @@ def normalize_answer(s):
 def get_tokens(s):
   if not s: return []
   return normalize_answer(s).split()
+
+def update_dictionary(old_dict, new_additions, prefix):
+    '''Update master dictionary of unique queries'''
+    
+    def make_ids(new_additions, last_count, prefix):
+        '''Make UUIDs for new queries/docs'''
+    
+        new_dict = {}
+        for i in new_additions:
+            if i not in old_dict.values():
+                last_count += 1
+                myid = str(last_count)
+                add = str(0) * ( 7 - len(myid))
+                myid = prefix + add + myid 
+                new_dict[myid] = i
+
+        return new_dict
+    
+    if old_dict != {}:
+        last_count = [re.sub(r'[A-Z]', '', i) for i in old_dict.keys()][-1]
+    else:
+        last_count = -1
+    new_dict = make_ids(new_additions, last_count, prefix)
+    
+    return {**old_dict, **new_dict}
+
+def map_ids(iddict, df, mapcol, idcol):
+    '''Map IDs back to df'''
+    
+    reverse = {iddict[k]: k for k in iddict.keys()}
+    col = 'ID_' + idcol
+    df[col] = df[mapcol].map(reverse)
+    
+    return df
+
+def update_meta_relations(metadata, df, query_col, return_col):
+    '''Update dict with relations and metadata about each match'''
+    
+    df = df.sort_values(by = ['date'], ascending = False).sort_values(by = ['ID_key'])
+
+    for x in df['ID_key'].unique():
+        subset = df[df['ID_key']==x].copy()
+        for i in subset['ID_value'].unique():
+            subsubset = subset[subset['ID_value']==i]
+            exact_matches = []
+            for k in subsubset.index:
+                em = {}
+                em['exact_query'] = subsubset.loc[k, query_col]
+                em['exact_result'] = subsubset.loc[k, return_col]
+                em['source'] = subsubset.loc[k, 'source']
+                em['date'] = subsubset.loc[k, 'date']
+                exact_matches.append(em)
+                
+            if x in metadata.keys() and i in metadata[x]:
+                metadata[x][i]['exact_matches'].extend(exact_matches)
+            else:
+                matchdict = {}
+                matchdict['correct_match'] = subset['correct_match'].all()
+                matchdict['last_match_date'] = list(subset['date'])[0]
+                matchdict['exact_matches'] = exact_matches
+            
+            if x in metadata.keys():
+                metadata[x][i] = matchdict
+            else:
+                searchdict = {}
+                searchdict[i] = matchdict
+                metadata[x] = searchdict
+                
+            metadata[x][i]['times_matched'] = len(metadata[x][i]['exact_matches'])
+            
+    return metadata
+
+def filter_rels(rels, min_matches):
+    
+    '''Filter relations by criteria'''
+    
+    basic_rels = {}
+    for key in rels:
+        acceptable_results = []
+        for match in rels[key]:
+            result = rels[key][match]
+            if result['correct_match'] == True: # only pull correct matches
+                sources = [i['source'] for i in result['exact_matches']]
+                if 'matamo' in sources: # we trust matamo data
+                    acceptable_results.append(match)
+                elif result['times_matched'] >= min_matches: # only pull history matches occurring more than x times
+                    acceptable_results.append(match)
+        if acceptable_results != []:
+            basic_rels[key] = acceptable_results
+        
+    return basic_rels

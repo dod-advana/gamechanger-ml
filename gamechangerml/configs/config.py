@@ -114,5 +114,7 @@ class ValidationConfig:
         },
         "retriever_gc": {
             "gold_standard": "gold_standard.csv"
-        }
+        },
+        "matamo_feedback_file": "matamo_feedback.csv",
+        "search_history_file": "SearchPdfMapping.csv" 
     }
