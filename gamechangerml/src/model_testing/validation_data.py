@@ -189,3 +189,10 @@ class NLIData(ValidationData):
         logger.info(("Created {} sample sentence pairs from {} unique queries:".format(sample.shape[0], sample_limit)))
 
         return sample[['genre', 'gold_label', 'pairID', 'promptID', 'sentence1', 'sentence2', 'expected_rank']]
+
+class QEXPDomainData(ValidationData):
+
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+
+        super().__init__(validation_config)
+        self.data = open_json(validation_config['qe_gc'], self.validation_dir)['queries']

@@ -1,6 +1,6 @@
 import os
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig
+from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QEConfig
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.search.embed_reader import sparse
@@ -72,7 +72,7 @@ class ModelLoader:
         logger.info(f"Loading Query Expansion Model from {qexp_model_path}")
         try:
             ModelLoader.__query_expander = qe.QE(
-                qexp_model_path, method="emb", vocab_file="word-freq-corpus-20201101.txt"
+                **QEConfig.MODEL_ARGS['init']
             )
             logger.info("** Loaded Query Expansion Model")
         except Exception as e:
