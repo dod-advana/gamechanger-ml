@@ -1,4 +1,4 @@
-from gamechangerml.src.model_testing.evaluation import SQuADQAEvaluator, IndomainQAEvaluator, IndomainRetrieverEvaluator, MSMarcoRetrieverEvaluator, SimilarityEvaluator
+from gamechangerml.src.model_testing.evaluation import SQuADQAEvaluator, IndomainQAEvaluator, IndomainRetrieverEvaluator, MSMarcoRetrieverEvaluator, SimilarityEvaluator, QexpEvaluator
 from gamechangerml.api.utils.logger import logger
 
 if __name__ == '__main__':
@@ -24,3 +24,8 @@ if __name__ == '__main__':
     logger.info("\nEvaluating Similarity Model with NLI Data...")
     logger.info(SimilarityEval.results)
     #print("Evaluating Similarity Model with in-domain data...")
+
+    logger.info("\nLoading Query Expansion Evaluation...")
+    QEEval = QexpEvaluator()
+    logger.info("\nEvaluating Query Expansion with GC data...")
+    logger.info(QEEval.results)

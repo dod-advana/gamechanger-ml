@@ -357,3 +357,9 @@ class IntelSearchData(SearchValidationData):
         intel_rels = filter_rels(new_intel_metadata, min_matches=2)
         
         return intel_search_queries, intel_search_results, new_intel_metadata, intel_rels
+class QEXPDomainData(ValidationData):
+
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+
+        super().__init__(validation_config)
+        self.data = open_json(validation_config['qe_gc'], self.validation_dir)['queries']

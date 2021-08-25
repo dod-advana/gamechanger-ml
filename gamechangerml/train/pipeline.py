@@ -58,6 +58,20 @@ except Exception as e:
     logger.warning(e)
     logger.warning("MLFLOW may not be installed")
 
+try:
+    import wikipedia
+except Exception as e:
+    logger.warning(e)
+    logger.warning("Wikipedia may not be installed")
+
+
+def lookup_wiki_summary(query):
+    try:
+        return wikipedia.summary(query).replace("\n", "")
+    except:
+        print(f"Could not retrieve description for {query}")
+        return ""
+
 
 class Pipeline:
     def __init__(self, steps={}):
@@ -134,7 +148,7 @@ class Pipeline:
 
     def process_mappings(self, data):
         data = data.document.value_counts().to_frame().reset_index()
-        data.rename(columns={"document": "count",
+        data.rename(columns={"document": "pop_score",
                     "index": "doc"}, inplace=True)
         return data
 

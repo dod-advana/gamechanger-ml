@@ -90,6 +90,21 @@ class SimilarityConfig:
         "model_name": "distilbart-mnli-12-3" # SOURCE
     }
 
+class QEConfig:
+    MODEL_ARGS = {
+        "init": { # args for creating QE object
+            "qe_model_dir": "gamechangerml/models/qexp_20201217",
+            "qe_files_dir": "gamechangerml/src/search/query_expansion",
+            "method": "emb", 
+            "vocab_file": "word-freq-corpus-20201101.txt"
+        },
+        "expansion": { # configs for getting expanded terms
+            "topn": 2, 
+            "threshold": 0.2, 
+            "min_tokens": 3
+        }
+    }
+
 class ValidationConfig:
     DATA_ARGS = {
         "validation_dir": "gamechangerml/data/validation", # need to have validation data in here
@@ -116,5 +131,6 @@ class ValidationConfig:
             "gold_standard": "gold_standard.csv"
         },
         "matamo_feedback_file": "matamo_feedback.csv",
-        "search_history_file": "SearchPdfMapping.csv" 
+        "search_history_file": "SearchPdfMapping.csv",
+        "qe_gc": "QE_domain.json"
     }
