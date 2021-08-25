@@ -94,26 +94,12 @@ def _read_gc_df(data_file):
 def gc_data(data_file, neg_data_file, shuffle=True, topn=0):
     try:
         df = _read_gc_df(data_file)
-        pos_samples = np.sum(df.label.values)
-        logger.info("positive samples : {:>5,d}".format(pos_samples))
-        neg_samples = len(df.label.values) - pos_samples
-        logger.info("negative samples : {:>5,d}".format(neg_samples))
-
-        # TODO kill this?
-        # balance positive / negative samples
-        if neg_data_file is not None and pos_samples > neg_samples:
-            df_neg = _read_gc_df(neg_data_file)
-            df_neg = df_neg.sample(frac=1)
-            logger.info("negative samples read : {:>5,d}".format(len(df_neg)))
-            neg_to_get = pos_samples - neg_samples
-            logger.info("adding negative samples : {:>5,d}".format(neg_to_get))
-            neg_train_df = df_neg.head(neg_to_get)
-            df = df.append(neg_train_df, ignore_index=True)
-
+        df = df.dropna(axis=1)
         if shuffle:
             df = df.sample(frac=1)
         if topn > 0:
             df = df.head(topn)
+
         sents = df.sentence.values
         labels = df.label.values
         src = df.src.values

@@ -91,11 +91,6 @@ class Table:
             )
             temp_df = self.get_entity_refs(temp_df)
             temp_df = self.get_agency(temp_df)
-            # logger.info(
-            #     "{:>25s} : {:>3,d}".format(
-            #         self.doc_dict["filename"], len(temp_df)
-            #     )
-            # )
             if len(temp_df) == 0:
                 self.no_resp_docs.append(self.doc_dict["filename"])
             yield temp_df, self.doc_dict["filename"]

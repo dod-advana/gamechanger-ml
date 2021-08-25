@@ -491,8 +491,10 @@ class Classifier(object):
             }
         )
         # write to tensorboard, if it configured
-        #self._tb_epoch_metrics(avg_val_loss, auc_val, mcc, acc_score, epoch)
-        self._tb_epoch_metrics(avg_val_loss, mcc, acc_score, epoch) #removing auc_val
+        # self._tb_epoch_metrics(avg_val_loss, auc_val, mcc, acc_score, epoch)
+        self._tb_epoch_metrics(
+            avg_val_loss, mcc, acc_score, epoch
+        )  # removing auc_val
 
         if self.cfg.checkpoint_path is not None:
             self.runtime["timestamp"] = time.time()
@@ -506,14 +508,16 @@ class Classifier(object):
             self.best_loss = avg_val_loss
 
     # def _tb_epoch_metrics(self, avg_val_loss, auc_val, mcc, acc_score, epoch):
-    def _tb_epoch_metrics(self, avg_val_loss, mcc, acc_score, epoch): #removing auc_val
+    def _tb_epoch_metrics(
+        self, avg_val_loss, mcc, acc_score, epoch
+    ):  # removing auc_val
         if self.summary_writer is None:
             return
         self.summary_writer.add_scalar("avg loss/epoch", avg_val_loss, epoch)
         self.summary_writer.add_scalars(
             "Metrics",
             # {"AUC": auc_val, "MCC": mcc, "ACC": acc_score},
-            {"MCC": mcc, "ACC": acc_score}, #removing auc_val
+            {"MCC": mcc, "ACC": acc_score},  # removing auc_val
             epoch,
         )
 

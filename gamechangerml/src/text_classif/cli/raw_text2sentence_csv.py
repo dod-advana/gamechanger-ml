@@ -18,6 +18,7 @@ import logging
 import os
 
 import pandas as pd
+from tqdm import tqdm
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
 
@@ -61,7 +62,7 @@ def raw_text2csv(src_path, glob, output_path):
     See the docstring for an explanation of the arguments.
 
     For the target document(s), sentences are extracted from the `raw_text`
-    and passed through a sentence tokenizer. Each sentence is a dictionary
+    by pass it through a sentence tokenizer. Each sentence is a dictionary
     of the document's source name, `src`, `sentence`, and `label`. Each
     `label` is `0`.
 
@@ -74,11 +75,14 @@ def raw_text2csv(src_path, glob, output_path):
     """
     fname = None
     output_df = new_df()
+    nfiles = cu.nfiles_in_glob(src_path, glob)
     try:
-        for sent_list, fname in raw2df(src_path, glob):
+        for sent_list, fname in tqdm(
+            raw2df(src_path, glob), total=nfiles, desc="docs"
+        ):
             output_df = output_df.append(sent_list, ignore_index=True)
             if output_path is None:
-                return output_df
+                yield output_df
             base, ext = os.path.splitext(os.path.basename(fname))
             output_csv = base.replace(" ", "_") + "_sentences" + ".csv"
             output_csv = os.path.join(output_path, output_csv)
@@ -97,9 +101,8 @@ if __name__ == "__main__":
     li.initialize_logger(to_file=False, log_name="none")
 
     fp = os.path.split(__file__)
-    fp = "python " + fp[-1]
     parser = ArgumentParser(
-        prog=fp,
+        prog="python " + fp[-1],
         description="csv of each sentence in the text",
     )
     parser.add_argument(
