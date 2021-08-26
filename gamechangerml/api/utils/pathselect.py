@@ -27,7 +27,7 @@ def get_model_paths():
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get QEXP model path")
-        QEXP_MODEL_PATH = "gamechanger/models/"
+        QEXP_MODEL_PATH = "bronze/gamechanger/models/"
 
     # TRANSFORMER MODEL PATH
     try:
@@ -57,7 +57,7 @@ def get_model_paths():
                 Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
     except Exception as e:
         logger.error(e)
-        INDEX_PATH = "gamechanger/models/"
+        INDEX_PATH = "bronze/gamechanger/models/"
         logger.info("Cannot get Sentence Index model path")
     model_dict = {
         "transformers": LOCAL_TRANSFORMERS_DIR,

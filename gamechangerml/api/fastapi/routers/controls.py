@@ -161,7 +161,7 @@ async def s3_func(function, response: Response):
     models = []
     try:
         logger.info("Attempting to download dependencies from S3")
-        s3_path = "gamechanger/models/"
+        s3_path = "bronze/gamechanger/models/"
         if function == "models":
             models = utils.get_models_list(s3_path)
     except:
