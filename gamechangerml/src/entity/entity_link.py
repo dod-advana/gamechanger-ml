@@ -78,6 +78,10 @@ class EntityLink(object):
         self.EO_DOT = "E. O."
         self.EO_RE = "\\b" + self.EO_DOT + "\\b"
 
+        self.NR = 0  # negative example
+        self.R = 1  # an enumerated responsibility
+        self.SR = 2  # a standalone responsibility
+
         self.dotted = [self.USC_DOT, self.PL, self.EO]
         self.subs = [self.USC, self.PL, self.EO]
         self.sub_back = [self.USC_DOT, self.PL_DOT, self.EO_DOT]
@@ -112,6 +116,7 @@ class EntityLink(object):
             return self.NA
 
     def _link_entity(self, output_list, entity_list, default_ent):
+        # TODO simplify - get the entity list up front to avoid 2 calls
         curr_entity = default_ent
         for prediction in output_list:
             sentence = prediction[self.SENT]
@@ -120,20 +125,33 @@ class EntityLink(object):
             new_entry = self._new_edict(value=curr_entity)
             new_entry.update(prediction)
 
-            if prediction[self.TOPCLASS] == 0:
+            ent_list = None
+            cand_entity = default_ent
+            match_obj = re.search(self.KW, sentence)
+            if match_obj is not None:
+                cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
+                    0
+                ].strip()
+                ent_list = em.contains_entity(
+                    cand_entity, self.entity_re, self.abbrv_re
+                )
+            if prediction[self.TOPCLASS] == self.NR:
                 new_entry[self.ENT] = default_ent
-                match_obj = re.search(self.KW, sentence)
-                if match_obj is not None:
-                    cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
-                        0
-                    ].strip()
-                    ent_list = em.contains_entity(
-                        cand_entity, self.entity_re, self.abbrv_re
-                    )
-                    if ent_list:
-                        curr_entity = cand_entity
-            elif prediction[self.TOPCLASS] == 1:
+                # match_obj = re.search(self.KW, sentence)
+                # if match_obj is not None:
+                #     cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
+                #         0
+                #     ].strip()
+                #     ent_list = em.contains_entity(
+                #         cand_entity, self.entity_re, self.abbrv_re
+                #     )
+                if ent_list:
+                    curr_entity = cand_entity
+            elif prediction[self.TOPCLASS] == self.R:
                 new_entry[self.ENT] = curr_entity
+            elif prediction[self.TOPCLASS] == self.SR:
+                if ent_list:
+                    new_entry[self.ENT] = cand_entity
             else:
                 msg = "unknown prediction for '{}', ".format(sentence)
                 msg += "got {}".format(prediction[self.TOPCLASS])
@@ -147,6 +165,7 @@ class EntityLink(object):
             default_ent = self._resolve_na(doc_name)
             e_dict = self._new_edict(value=self._resolve_na(doc_name))
             e_dict.update(entry)
+
             if e_dict[self.TOPCLASS] == 0 and self.RESP in entry[self.SENT]:
                 entity_list.append(e_dict)
                 self._link_entity(

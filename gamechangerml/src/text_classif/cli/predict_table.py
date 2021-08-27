@@ -39,7 +39,7 @@ from gamechangerml.src.featurization.abbreviations_utils import (
 )
 from gamechangerml.src.entity.entity_link import EntityLink
 from gamechangerml.src.text_classif.utils.log_init import initialize_logger
-from gamechangerml.src.text_classif.cli.resp_stats import count_output
+from gamechangerml.src.text_classif.utils.resp_stats import count_output
 
 logger = logging.getLogger(__name__)
 

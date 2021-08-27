@@ -114,7 +114,7 @@ def contains_entity(text, entity_re, abbrv_re):
 
     entity_list = contains_abbrv(text,  abbrv_re)
     entity_list.extend(contains_non_abbrv(text, entity_re))
-
+    entity_list = [e for e in entity_list if e]
     return entity_list
 
 
@@ -331,7 +331,7 @@ def _json_out(output_dict, output_path):
         enc_output = json.dumps(output_dict)
         with open(output_path, "w") as fp:
             fp.write(enc_output)
-        logger.info("output written to : {}".format(args.output_json))
+        logger.info("output written to : {}".format(output_path))
     else:
         logger.warning("no output produced")
 
@@ -399,11 +399,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if not os.path.isfile(args.entity_file):
         raise ValueError("cannot find {}".format(args.entity_file))
-    logger.info(args.sentence_csv)
 
     output = None
     start = time.time()
 
+    # TODO: Clean up below; turn into main()
     if args.task == "spans":
         output = entities_and_spans_by_doc(
             args.entity_file, args.input_path, args.glob

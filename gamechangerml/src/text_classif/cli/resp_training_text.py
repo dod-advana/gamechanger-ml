@@ -1,5 +1,6 @@
 """
 usage: python table.py [-h] -i INPUT_DIR -a AGENCIES_FILE -o OUTPUT [-g GLOB]
+                       -e ENTITY_CSV -d DROP_PROB -m MIN_TOKENS
 
 Extracts responsibility statements from policy documents
 
@@ -12,16 +13,24 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         name of the output file (.csv)
   -g GLOB, --glob GLOB  file glob to use in extracting from input_dir
+  -e ENTITY_CSV, --entity-csv ENTITY_CSV
+                        csv containing entities, types
+  -d DROP_PROB, --drop-zero-prob DROP_PROB
+                        fraction of negative examples to retain
+  -m MIN_TOKENS, --min-tokens MIN_TOKENS
+                        minimum tokens for a sentence
 """
 import logging
 import re
 
 import pandas as pd
 from nltk.tokenize import sent_tokenize
+import numpy as np
 
 import gamechangerml.src.utilities.spacy_model as spacy_m
 from gamechangerml.src.featurization.table import Table
 import gamechangerml.src.entity.entity_mentions as em
+import gamechangerml.src.text_classif.utils.classifier_utils as cu
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +41,19 @@ def wc(text):
 
 class ExtractRespText(Table):
     def __init__(
-        self, input_dir, output, spacy_model, agency_file, glob, entity_csv
+        self,
+        input_dir,
+        output,
+        spacy_model,
+        agency_file,
+        glob,
+        entity_csv,
+        drop_prob,
     ):
         super(ExtractRespText, self).__init__(
             input_dir, output, spacy_model, agency_file, glob, True
         )
+        self.drop_prob = drop_prob
         logger.info("input dir : {}".format(input_dir))
         self.train_df = pd.DataFrame(columns=["source", "label", "text"])
 
@@ -59,7 +76,9 @@ class ExtractRespText(Table):
         return txt.strip()
 
     def contains_entity(self, text):
-        return em.contains_entity(text, self.entity_re, self.abbrv_re)
+        entity_list = em.contains_entity(text, self.entity_re, self.abbrv_re)
+        entity_list = [e for e in entity_list if e]
+        return entity_list
 
     def extract_positive(self):
         for tmp_df, fname in self.extract_section(self.input_dir):
@@ -69,22 +88,25 @@ class ExtractRespText(Table):
                 pos_ex = [txt for txt in pos_ex if txt]
                 yield pos_ex, fname, self.raw_text
 
-    def raw_text2sentences(self, raw_text, min_len):
+    def raw_text2sentences(self, raw_text, min_tokens):
         self.sents = [
             self.scrubber(sent)
             for sent in sent_tokenize(raw_text)
-            if len(sent) > min_len
+            if wc(sent) > min_tokens
         ]
         return self.sents
 
-    def extract_neg_in_doc(self, raw_text, min_len):
-        neg_sentences = list()
+    def extract_neg_in_doc(self, raw_text, min_tokens):
+        neg_sentences = set()
         if self.resp in raw_text:
+            if self.drop_prob > np.random.uniform(0.0, 1.0):
+                return neg_sentences
             prev_text = raw_text.split(self.resp)[0]
             if prev_text is not None:
-                sents = self.raw_text2sentences(raw_text, min_len)
-                neg_sentences.extend(sents)
-        return neg_sentences
+                sents = self.raw_text2sentences(prev_text, min_tokens)
+                for s in sents:
+                    neg_sentences.add(s)
+        return list(neg_sentences)
 
     def extract_standalone(self, sentences):
         """
@@ -105,11 +127,15 @@ class ExtractRespText(Table):
         """
         for sent in sentences:
             entity_list = self.contains_entity(sent)
-            if not entity_list or self.kw not in sent:
+            if not entity_list:  # no entities - bail
                 continue
-            elif self.kw_colon in sent:  # start of enumerated responsibilities
+            mobj_kw = re.search(r"\b" + self.kw + r"\b", sent)
+            if mobj_kw is None:  # no keyword - bail
+                continue
+            if self.kw_colon in sent:  # start of enumerated responsibilities
                 yield sent, 0
-            elif self.COLON not in sent:  # ...<ENTITY>...shall...
+            elif self.COLON not in sent:  # "... <ENTITY> ... shall ...
+                logger.debug("--> 2 {} {}".format(sent, entity_list))
                 yield sent, 2
 
     def extract_standalone_resp(self, sentences):
@@ -127,19 +153,20 @@ class ExtractRespText(Table):
             }
             self.train_df = self.train_df.append(new_row, ignore_index=True)
 
-    def extract_pos_neg(self, min_len):
+    def extract_pos_neg(self, min_tokens):
         total_pos_1 = 0
         total_pos_2 = 0
         total_neg = 0
+        count = 0
         for pos_ex, fname, raw_text in self.extract_positive():
+            count += 1
             stand_alone = list()
             try:
                 if self.resp in raw_text:
                     resp_text, _ = self.get_section(raw_text, fname)
                     resp_sentences = self.raw_text2sentences(
-                        resp_text, min_len
+                        resp_text, min_tokens
                     )
-                    neg_sentences = raw_text.split(self.resp)[0]
 
                     for sent, label in self.extract_standalone_resp(
                         resp_sentences
@@ -148,42 +175,78 @@ class ExtractRespText(Table):
                         if label == 2:
                             stand_alone.append(sent)
                             total_pos_2 += 1
-                    for sent, label in self.extract_standalone_resp(
-                        neg_sentences
-                    ):
-                        if label == 2:
-                            total_pos_2 += 1
-                            stand_alone.append(sent)
-                        self._append_df(fname, label, [sent])
 
-                pos_examples = [p for p in pos_ex if p not in stand_alone]
-                self._append_df(fname, 1, pos_examples)
-                total_pos_1 += len(pos_examples)
+                self._append_df(fname, 1, pos_ex)
+                total_pos_1 += len(pos_ex)
 
-                neg_ex = self.extract_neg_in_doc(raw_text, min_len=min_len)
-                neg_examples = [n for n in neg_ex if n not in stand_alone]
-                total_neg += len(neg_examples)
-                self._append_df(fname, 0, neg_examples)
+                neg_ex = self.extract_neg_in_doc(
+                    raw_text, min_tokens=min_tokens
+                )
+                # belt and braces for now
+                neg_ex = [n for n in neg_ex if n not in stand_alone]
+                total_neg += len(neg_ex)
+                self._append_df(fname, 0, neg_ex)
 
                 logger.info(
-                       "{:>35s} : {:3d} +, {:3d} ++, {:3d} -".format(
-                           fname, total_pos_1, total_pos_2, total_neg
-                       )
+                    "{:>35s} : {:5,d} + {:5,d} ++ {:7,d} -".format(
+                        fname, total_pos_1, total_pos_2, total_neg
                     )
+                )
             except ValueError as e:
                 logger.exception("offending file name : {}".format(fname))
                 logger.exception("{}: {}".format(type(e), str(e)))
                 pass
-        logger.info("negative samples (0) : {:>6,d}".format(total_neg))
-        logger.info("positive samples (1) : {:>6,d}".format(total_pos_1))
-        logger.info("positive samples (2) : {:>6,d}".format(total_pos_2))
-        logger.info("               total : {:>6,d}".format(len(self.train_df)))
+        logger.info("     total documents : {:>7,d}".format(count))
+        logger.info(
+            "  training data size : {:>7,d}".format(len(self.train_df))
+        )
+        logger.info("negative samples (0) : {:>7,d}".format(total_neg))
+        logger.info("positive samples (1) : {:>7,d}".format(total_pos_1))
+        logger.info("positive samples (2) : {:>7,d}".format(total_pos_2))
         no_resp_docs = "\n".join(self.no_resp_docs)
         logger.info("no responsibilities : {}".format(no_resp_docs))
 
 
+def main(
+    input_dir,
+    output,
+    spacy_model,
+    agencies_file,
+    glob,
+    entity_csv,
+    drop_prob,
+    min_tokens,
+):
+    extractor = ExtractRespText(
+        input_dir,
+        output,
+        spacy_model,
+        agencies_file,
+        glob,
+        entity_csv,
+        drop_prob,
+    )
+
+    extractor.extract_pos_neg(min_tokens=min_tokens)
+    logger.info("train df : {:>7,d}".format(len(extractor.train_df)))
+
+    train_df = extractor.train_df.drop_duplicates().reset_index(drop=True)
+    logger.info("train df de-dup : {:>7,d}".format(len(train_df)))
+
+    train_df.to_csv(output, index=False, header=False, doublequote=True)
+    logger.info("output written to : {}".format(args.output))
+    logger.info(
+        "       total time : {:}".format(cu.format_time(time() - start))
+    )
+
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
+
+    import os
+    import sys
+    from time import time
+    import warnings
 
     log_fmt = (
         "[%(asctime)s %(levelname)-8s], [%(filename)s:%(lineno)s - "
@@ -192,7 +255,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format=log_fmt)
 
     desc = "Extracts responsibility statements from policy documents"
-    parser = ArgumentParser(prog="python table.py", description=desc)
+    parser = ArgumentParser(
+        prog="python resp_training_text.py", description=desc
+    )
 
     parser.add_argument(
         "-i",
@@ -234,25 +299,60 @@ if __name__ == "__main__":
         required=True,
         help="csv containing entities, types",
     )
-
+    parser.add_argument(
+        "-d",
+        "--drop-zero-prob",
+        dest="drop_prob",
+        type=float,
+        required=True,
+        help="fraction of negative examples to retain",
+    )
+    parser.add_argument(
+        "-m",
+        "--min-tokens",
+        dest="min_tokens",
+        type=int,
+        required=True,
+        help="minimum tokens for a sentence",
+    )
+    start = time()
     args = parser.parse_args()
+
+    if os.path.isfile(args.output):
+        msg = "output file already exists. Please delete or rename {}".format(
+            args.output
+        )
+        warnings.warn(msg)
+        sys.exit(1)
+    if not 0.0 <= args.drop_prob <= 1.0:
+        warnings.warn(
+            "invalid drop probability; got {}".format(args.drop_prob)
+        )
+        sys.exit(1)
 
     logger.info("loading spaCy")
     spacy_model_ = spacy_m.get_lg_vectors()
     logger.info("spaCy loaded...")
-    # logger.info(spacy_model_.pipe_names)
 
-    extract_obj = ExtractRespText(
+    extractor_ = ExtractRespText(
         args.input_dir,
         args.output,
         spacy_model_,
         args.agencies_file,
         args.glob,
         args.entity_csv,
+        args.drop_prob,
     )
 
-    extract_obj.extract_pos_neg(min_len=1)
-    logger.info(extract_obj.train_df.head())
-    extract_obj.train_df.to_csv(
-        args.output, index=False, header=False, doublequote=True
+    extractor_.extract_pos_neg(min_tokens=args.min_tokens)
+    logger.info("train df : {:>7,d}".format(len(extractor_.train_df)))
+
+    # not strictly necessary
+    train_df_ = extractor_.train_df.drop_duplicates().reset_index(drop=True)
+    logger.info("train df de-dup : {:>7,d}".format(len(train_df_)))
+
+    train_df_.to_csv(args.output, index=False, header=False, doublequote=True)
+    logger.info("output written to : {}".format(args.output))
+    logger.info(
+        "       total time : {:}".format(cu.format_time(time() - start))
     )
