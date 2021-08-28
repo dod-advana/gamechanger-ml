@@ -333,7 +333,7 @@ class IntelSearchData(SearchValidationData):
     def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
         
         super().__init__(validation_config)
-        self.queries, self.collection, self.meta_relations, self.relations = self.make_intel()
+        self.queries, self.collection, self.meta_relations = self.make_intel()
         
     def make_intel(self):
         
@@ -354,9 +354,9 @@ class IntelSearchData(SearchValidationData):
         new_intel_metadata = update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned')
         
         # filtere the metadata to only get relations we want to test against
-        intel_rels = filter_rels(new_intel_metadata, min_matches=2)
+        #intel_rels = filter_rels(new_intel_metadata, min_matches=2)
         
-        return intel_search_queries, intel_search_results, new_intel_metadata, intel_rels
+        return intel_search_queries, intel_search_results, new_intel_metadata
     
     def filter_rels(self, min_correct_matches):
         '''Filter relations by criteria'''
@@ -364,18 +364,23 @@ class IntelSearchData(SearchValidationData):
         correct_rels = {}
         incorrect_rels = {}
         for key in self.meta_relations:
-            acceptable_results = []
+            acceptable_positive_results = []
+            negative_results = []
             for match in self.meta_relations[key]:
                 result = self.meta_relations[key][match]
                 sources = [i['source'] for i in result['exact_matches']]
-                if 'matamo' in sources: # we trust matamo data
-                    acceptable_results.append(match)
-                elif result['times_matched'] >= min_correct_matches: # only pull history matches occurring more than x times
-                    acceptable_results.append(match)
-            if result['correct_match'] == True and acceptable_results != []:
-                correct_rels[key] = acceptable_results
-            elif result['correct_match'] == False and acceptable_results != []:
-                incorrect_rels[key] = acceptable_results
+                if result['correct_match'] == True:
+                    if 'matamo' in sources: # we trust matamo data
+                        acceptable_positive_results.append(match)
+                    elif result['times_matched'] >= min_correct_matches: # only pull history matches occurring more than x times
+                        acceptable_positive_results.append(match)
+                elif result['correct_match'] == False:
+                    negative_results.append(match)
+
+            if acceptable_positive_results != []:
+                correct_rels[key] = acceptable_positive_results
+            if negative_results != []:
+                incorrect_rels[key] = negative_results
             
         return correct_rels, incorrect_rels
 
