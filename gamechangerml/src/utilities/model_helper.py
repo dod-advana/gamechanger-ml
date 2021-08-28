@@ -152,23 +152,3 @@ def update_meta_relations(metadata, df, query_col, return_col):
             metadata[x][i]['times_matched'] = len(metadata[x][i]['exact_matches'])
             
     return metadata
-
-def filter_rels(rels, min_matches):
-    
-    '''Filter relations by criteria'''
-    
-    basic_rels = {}
-    for key in rels:
-        acceptable_results = []
-        for match in rels[key]:
-            result = rels[key][match]
-            if result['correct_match'] == True: # only pull correct matches
-                sources = [i['source'] for i in result['exact_matches']]
-                if 'matamo' in sources: # we trust matamo data
-                    acceptable_results.append(match)
-                elif result['times_matched'] >= min_matches: # only pull history matches occurring more than x times
-                    acceptable_results.append(match)
-        if acceptable_results != []:
-            basic_rels[key] = acceptable_results
-        
-    return basic_rels

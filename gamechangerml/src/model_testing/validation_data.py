@@ -357,6 +357,28 @@ class IntelSearchData(SearchValidationData):
         intel_rels = filter_rels(new_intel_metadata, min_matches=2)
         
         return intel_search_queries, intel_search_results, new_intel_metadata, intel_rels
+    
+    def filter_rels(self, min_correct_matches):
+        '''Filter relations by criteria'''
+        
+        correct_rels = {}
+        incorrect_rels = {}
+        for key in self.meta_relations:
+            acceptable_results = []
+            for match in self.meta_relations[key]:
+                result = self.meta_relations[key][match]
+                sources = [i['source'] for i in result['exact_matches']]
+                if 'matamo' in sources: # we trust matamo data
+                    acceptable_results.append(match)
+                elif result['times_matched'] >= min_correct_matches: # only pull history matches occurring more than x times
+                    acceptable_results.append(match)
+            if result['correct_match'] == True and acceptable_results != []:
+                correct_rels[key] = acceptable_results
+            elif result['correct_match'] == False and acceptable_results != []:
+                incorrect_rels[key] = acceptable_results
+            
+        return correct_rels, incorrect_rels
+
 class QEXPDomainData(ValidationData):
 
     def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
