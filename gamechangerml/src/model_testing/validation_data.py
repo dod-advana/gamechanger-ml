@@ -109,8 +109,8 @@ class RetrieverGSData(ValidationData):
     
     def dictify_data(self, available_ids):
         '''
-        Filter out any validation queries whose documents areen't in the index. 
-        Forrmat gold standard csv examples into MSMarco format.
+        Filter out any validation queries whose documents aren't in the index. 
+        Format gold standard csv examples into MSMarco format.
         '''
 
         ids = ['.'.join(i.strip('\n').split('.')[:-1]).strip().lstrip() for i in available_ids]
@@ -352,9 +352,6 @@ class IntelSearchData(SearchValidationData):
         # create new intel search metadata rels
         intel_metadata = {} # TODO: add option to add existing metadata
         new_intel_metadata = update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned')
-        
-        # filtere the metadata to only get relations we want to test against
-        #intel_rels = filter_rels(new_intel_metadata, min_matches=2)
         
         return intel_search_queries, intel_search_results, new_intel_metadata
     
