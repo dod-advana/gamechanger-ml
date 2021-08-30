@@ -82,6 +82,13 @@ class EmbedderConfig:
         },
         "retriever": { ## args for retrieving the vectors
             "n_returns": 5
+        },
+        "train_proportion": 0.8, # proportion of eval data to use for training vs. test
+        "finetune": { # args for finetuning
+            "shuffle": True,
+            "batch_size": 16, 
+            "epochs": 1,
+            "warmup_steps": 100
         }
     }
 
