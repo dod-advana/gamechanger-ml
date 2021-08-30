@@ -114,14 +114,14 @@ def gen_gc_docs(doc_path, glob, key="raw_text"):
     file_list = [f for f in os.listdir(doc_path) if fnmatch.fnmatch(f, glob)]
     logger.debug("num files : {:>3,d}".format(len(file_list)))
     if len(file_list) == 0:
-        logger.warning(
-            "no files in '{}' matching the glob '{}'".format(doc_path, glob)
-        )
+        msg = "no files in '{}' matching the glob '{}'".format(doc_path, glob)
+        logger.exception(msg)
+        raise ValueError(msg)
     for input_file in sorted(file_list):
         with open(os.path.join(doc_path, input_file)) as fin:
-            jdoc = json.load(fin)
-            if key in jdoc:
-                yield input_file, jdoc
+            json_doc = json.load(fin)
+            if key in json_doc:
+                yield input_file, json_doc
             else:
                 logger.warning("`{}` not found in {}".format(key, input_file))
 
@@ -259,6 +259,9 @@ def raw2dict(src_path, glob, key="raw_text"):
         List[Dict]: per the schema in `make_sentences()`
         str: name of the file
     """
+    nfiles = nfiles_in_glob(src_path, glob)
+    if nfiles == 0:
+        raise ValueError("no files for the glob: {}".format(glob))
     for fname, doc in gen_gc_docs(src_path, glob, key=key):
         title = doc["title"]
         source = doc["filename"]

@@ -1,15 +1,16 @@
 """
-usage: python predict_table.py [-h] -m MODEL_PATH -d DATA_PATH [-b BATCH_SIZE]
-                               [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV] -e
-                               ENTITY_CSV -a AGENCIES_FILE -t ENTITY_MENTIONS
+usage: predict_table.py [-h] -m MODEL_PATH -d DATA_PATH [-b BATCH_SIZE]
+                        [-l MAX_SEQ_LEN] -g GLOB [-o OUTPUT_CSV] -e ENTITY_CSV
+                        -a AGENCIES_FILE -t ENTITY_MENTIONS --num-labels
+                        NUM_LABELS
 
-Binary classification of each sentence in the files matching the 'glob' in
-data_path
+Classification of of responsibility statements. For each sentence in the
+matching files. For each label > 0, sentences are linked to an entity.
 
 optional arguments:
   -h, --help            show this help message and exit
   -m MODEL_PATH, --model-path MODEL_PATH
-                        directory of the pytorch model
+                        directory containing the pytorch model
   -d DATA_PATH, --data-path DATA_PATH
                         path holding the .json corpus files
   -b BATCH_SIZE, --batch-size BATCH_SIZE
@@ -25,6 +26,8 @@ optional arguments:
                         the .csv for agency abbreviations and references
   -t ENTITY_MENTIONS, --entity-mentions ENTITY_MENTIONS
                         JSON created by `entity_mentions.py`
+  --num-labels NUM_LABELS
+                        number of labels in the classification model
 """
 import logging
 import os
@@ -69,6 +72,7 @@ def predict_table(
     entity_csv,
     entity_mentions,
     agencies_file,
+    num_labels,
 ):
     """
     See the preamble (help) for a description of these arguments.
@@ -76,16 +80,25 @@ def predict_table(
     For each file matching `glob`, the `raw_text` is parsed into sentences
     and run through the classifier. Recognized entities are then associated
     with sentences classified as `1` or `responsibility`. The final output
-    is assembled by using sentences classified as `1` with organization
+    is assembled by using sentences classified as `> 0` with organization
     information, references, document title, etc.
 
     Returns:
         pandas.DataFrame
     """
+    if os.path.isfile(output_csv):
+        raise ValueError("output file exists. Please rename or remove.")
     if not os.path.isdir(data_path):
-        raise ValueError("no data path {}".format(data_path))
+        raise ValueError("no data path : {}".format(data_path))
     if not os.path.isdir(model_path):
-        raise ValueError("no model path {}".format(model_path))
+        raise ValueError("no model path : {}".format(model_path))
+    if not os.path.isfile(entity_csv):
+        raise FileNotFoundError("entity-csv; got {}".format(entity_csv))
+    if not os.path.isfile(entity_mentions):
+        raise FileNotFoundError("agencies csv; got {}".format(agencies_file))
+
+    if num_labels < 1:
+        raise ValueError("num labels must > 0; got {}".format(num_labels))
 
     rename_dict = {
         "entity": "Organization / Personnel",
@@ -103,15 +116,22 @@ def predict_table(
         use_na=False,
         topk=3,
     )
+    logger.info("into the breach...")
     entity_linker.make_table(
         model_path,
         data_path,
         glob,
         max_seq_len,
         batch_size,
+        num_labels=num_labels,
     )
     df = entity_linker.to_df()
-    df = df[df.top_class == 1].reset_index()
+    df = df[df.top_class > 0].reset_index()
+
+    # for post-hoc analysis
+    if num_labels > 1:
+        sr_df = df[df.top_class > 1].reset_index()
+        sr_df.to_csv("labels-gt-one.csv", index=False)
 
     logger.info("retrieving agencies csv")
     duplicates, aliases = get_agencies_dict(agencies_file)
@@ -137,7 +157,7 @@ def predict_table(
     ]
     if output_csv is not None:
         final_df.to_csv(output_csv, index=False)
-        logger.info("final csv written")
+        logger.info("final csv written to {}".format(output_csv))
     if stats:
         _agg_stats(final_df)
     elapsed = time.time() - start
@@ -149,18 +169,18 @@ def predict_table(
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
-    desc = "Binary classification of each sentence in the files "
-    desc += "matching the 'glob' in data_path"
-    fp = os.path.split(__file__)
-    fp = "python " + fp[-1]
-    parser = ArgumentParser(prog=fp, description=desc)
+    desc = "Classification of of responsibility statements. For each sentence "
+    desc += "in the matching files. For each label > 0, "
+    desc += "sentences are linked to its closest entity."
+
+    parser = ArgumentParser(prog=os.path.split(__file__)[-1], description=desc)
     parser.add_argument(
         "-m",
         "--model-path",
         dest="model_path",
         type=str,
         required=True,
-        help="directory of the pytorch model",
+        help="directory containing the pytorch model",
     )
     parser.add_argument(
         "-d",
@@ -226,11 +246,18 @@ if __name__ == "__main__":
         required=True,
         help="JSON created by `entity_mentions.py`",
     )
+    parser.add_argument(
+        "--num-labels",
+        dest="num_labels",
+        type=int,
+        required=True,
+        help="number of labels in the classification model",
+    )
 
     initialize_logger(to_file=False, log_name="none")
 
     args = parser.parse_args()
-    stats = False
+    stats_ = False
 
     _ = predict_table(
         args.model_path,
@@ -239,8 +266,9 @@ if __name__ == "__main__":
         args.max_seq_len,
         args.batch_size,
         args.output_csv,
-        stats,
+        stats_,
         args.entity_csv,
         args.entity_mentions,
         args.agencies_file,
+        args.num_labels,
     )

@@ -39,7 +39,12 @@ def predict_doc(input_dicts, predictor, max_seq_len, batch_size):
 
 
 def predict_glob(
-    model_path_name, data_path, glob, max_seq_len=128, batch_size=8
+    model_path_name,
+    data_path,
+    glob,
+    max_seq_len=128,
+    batch_size=8,
+    num_labels=3,
 ):
     """
     This generator performs classification on `.json` corpus docs using
@@ -52,12 +57,13 @@ def predict_glob(
     model(`model_name_path`) with the predicted class and p(class) assembled
     in a dictionary and returned on iteration.
 
-    This assumes the model directory is laid out per Hugging Face, i.e.,
+    This assumes the model directory is laid out per HuggingFace, i.e.,
         - `config.json`
         - `pytorch_model.bin`
         - etc.
 
     Args:
+        num_labels:
         model_path_name (str): path of the checkpointed model
 
         data_path (str): path containing the .json corpus files
@@ -67,6 +73,8 @@ def predict_glob(
         max_seq_len (int): max number of tokens after encoding; default=128
 
         batch_size (int): batch size
+
+        num_labels (int): number of labels in the model
 
     Yields:
         List[Dict]
@@ -78,7 +86,7 @@ def predict_glob(
     """
     if not os.path.isdir(data_path):
         raise ValueError("no directory named '{}'".format(data_path))
-    if not 128 <= max_seq_len <= 512:
+    if not 64 <= max_seq_len <= 512:
         raise ValueError("invalid max_seq_len; got {}".format(max_seq_len))
     if batch_size < 8:
         raise ValueError("invalid batch_size; got {}".format(batch_size))
@@ -87,7 +95,7 @@ def predict_glob(
     if not os.path.isfile(os.path.join(model_path_name, "config.json")):
         raise FileNotFoundError("model_path_name has no 'config.json'")
 
-    predictor = Predictor(model_path_name, num_labels=2)
+    predictor = Predictor(model_path_name, num_labels=num_labels)
 
     for input_dicts, fname in cu.raw2dict(data_path, glob, key="raw_text"):
         out_list = predict_doc(input_dicts, predictor, max_seq_len, batch_size)

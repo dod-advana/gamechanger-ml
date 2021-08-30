@@ -109,10 +109,7 @@ def ner_training_data(
     # logger.info("finding sentences with entities")
 
     # TODO something better or not at all?
-    ent_sents = [
-        row
-        for row in sent_list
-    ]
+    ent_sents = [row for row in sent_list]
     #     if wc(row[SENT]) < 128  # magic number (for now)
     #     if em.contains_entity(row[SENT], entity_re, abbrv_re)
     # ]

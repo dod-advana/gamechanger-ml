@@ -97,7 +97,7 @@ def contains_non_abbrv(text, entity_re):
     return [e.group() for e in entity_re.finditer(text)]
 
 
-def contains_entity(text, entity_re, abbrv_re):
+def entity_list(text, entity_re, abbrv_re):
     """
     Finds all the entities in the text, returning a list with every
     instance of the entity. If no entities are found, an empty list is
@@ -112,10 +112,10 @@ def contains_entity(text, entity_re, abbrv_re):
         List
     """
 
-    entity_list = contains_abbrv(text,  abbrv_re)
-    entity_list.extend(contains_non_abbrv(text, entity_re))
-    entity_list = [e for e in entity_list if e]
-    return entity_list
+    entity_list_ = contains_abbrv(text, abbrv_re)
+    entity_list_.extend(contains_non_abbrv(text, entity_re))
+    entity_list_ = [e for e in entity_list_ if e]
+    return entity_list_
 
 
 def unnest_nested_abbrv_entity(entity_span_list, abbrv_span_list):
@@ -218,7 +218,7 @@ def count_entity_mentions(corpus_dir, glob, entity_re, abbrv_re):
     for sent_list, fname in tqdm(r2d, total=nfiles, desc="docs"):
         for sd in sent_list:
             sent = sd[SENT]
-            ent_list = contains_entity(sent, entity_re, abbrv_re)
+            ent_list = entity_list(sent, entity_re, abbrv_re)
             for ent in ent_list:
                 entity_count[ent] += 1
         doc_entity[fname] = sorted(
@@ -284,7 +284,7 @@ def entities_and_spans_by_doc(entity_file, corpus_dir, glob):
 
 
 def entity_types_in_text(text, entity_re, abbrv_re, entity2type):
-    entity_list = contains_entity(text, entity_re, abbrv_re)
+    entity_list = entity_list(text, entity_re, abbrv_re)
     entity_types = [
         entity2type[entity.lower()] for entity in entity_list if entity
     ]
@@ -319,7 +319,7 @@ def sentences_with_entities(sent_list, entity_re, abbrv_re):
     ent_df = pd.DataFrame()
     no_ent_df = pd.DataFrame()
     for _, row in tqdm(sent_list.iterrows(), total=len(ent_df)):
-        if contains_entity(row[SENT], entity_re, abbrv_re):
+        if entity_list(row[SENT], entity_re, abbrv_re):
             ent_df = ent_df.append(row, ignore_index=True)
         else:
             no_ent_df = no_ent_df.append(row, ignore_index=True)
@@ -427,6 +427,10 @@ if __name__ == "__main__":
     elif args.task == "sentences":
         abbrv_re_, entity_re_, _ = make_entity_re(args.entity_file)
         df_in = pd.read_csv(args.sentence_csv, names=["fname", "label", SENT])
-        out_ent_df, out_no_ent_df = sentences_with_entities(df_in, entity_re_, abbrv_re_)
+        out_ent_df, out_no_ent_df = sentences_with_entities(
+            df_in, entity_re_, abbrv_re_
+        )
         out_ent_df.to_csv(args.output_path, header=False, index=False)
-        out_no_ent_df.to_csv("all_dod_dim_no_entity_sentences.csv", header=True, index=False)
+        out_no_ent_df.to_csv(
+            "all_dod_dim_no_entity_sentences.csv", header=True, index=False
+        )

@@ -16,7 +16,12 @@ class EntityLink(object):
     __version__ = v.__version__
 
     def __init__(
-        self, entity_csv=None, mentions_json=None, use_na=False, topk=3
+        self,
+        entity_csv=None,
+        mentions_json=None,
+        use_na=False,
+        topk=3,
+        num_labels=3,
     ):
         """
         Links a statement to an entity using a proximity method. If
@@ -50,7 +55,9 @@ class EntityLink(object):
             )
 
         topk = max(1, topk)
-        logger.info("top k : {}".format(topk))
+        self.num_labels = num_labels
+        logger.info("     top k : {}".format(topk))
+        logger.info("num labels : {}".format(num_labels))
         self.top_k_in_doc = top_k_entities(mentions_json, top_k=topk)
         self.abbrv_re, self.entity_re, _ = em.make_entity_re(entity_csv)
 
@@ -58,11 +65,11 @@ class EntityLink(object):
         self.RESP = "RESPONSIBILITIES"
         self.SENT = "sentence"
 
-        # NB: KW can be any valid regex like "shall|will"
+        # NB: KW can be any valid regex such as r"(:?\bshall\b|\bwill\b)"
         self.KW = "shall"
         self.KW_RE = re.compile("\\b" + self.KW + "\\b[:,]?")
 
-        self.NA = "Unable to connect Responsibility to Entity"
+        self.NA = "Unable to link Responsibility to Entity"
 
         self.TOPCLASS = "top_class"
         self.ENT = "entity"
@@ -78,9 +85,9 @@ class EntityLink(object):
         self.EO_DOT = "E. O."
         self.EO_RE = "\\b" + self.EO_DOT + "\\b"
 
-        self.NR = 0  # negative example
-        self.R = 1  # an enumerated responsibility
-        self.SR = 2  # a standalone responsibility
+        self.NO_RESP_LABEL = 0  # negative example
+        self.RESP_LABEL = 1  # an enumerated responsibility
+        self.STANDALONE_LABEL = 2  # a standalone responsibility
 
         self.dotted = [self.USC_DOT, self.PL, self.EO]
         self.subs = [self.USC, self.PL, self.EO]
@@ -104,7 +111,7 @@ class EntityLink(object):
         df[self.SENT] = [re.sub(regex, sub, str(x)) for x in df[self.SENT]]
 
     # TODO get rid the NA option
-    def _resolve_na(self, doc_name):
+    def _default_entity(self, doc_name):
         if self.use_na:
             return self.NA
         if doc_name in self.top_k_in_doc:
@@ -115,9 +122,18 @@ class EntityLink(object):
             logger.warning("can't find {} for lookup".format(doc_name))
             return self.NA
 
-    def _link_entity(self, output_list, entity_list, default_ent):
+    def _candidate_entity(self, sentence):
+        cand_entity = ""
+        match_obj = re.search(self.KW, sentence)
+        if match_obj is not None:
+            cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
+                0
+            ].strip()
+        return cand_entity
+
+    def _link_entity(self, output_list, entity_list, default_entity):
         # TODO simplify - get the entity list up front to avoid 2 calls
-        curr_entity = default_ent
+        curr_entity = default_entity
         for prediction in output_list:
             sentence = prediction[self.SENT]
             sentence = self._re_sub(sentence)
@@ -126,44 +142,48 @@ class EntityLink(object):
             new_entry.update(prediction)
 
             ent_list = None
-            cand_entity = default_ent
+            cand_entity = default_entity
             match_obj = re.search(self.KW, sentence)
             if match_obj is not None:
                 cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
                     0
                 ].strip()
-                ent_list = em.contains_entity(
+                ent_list = em.entity_list(
                     cand_entity, self.entity_re, self.abbrv_re
                 )
-            if prediction[self.TOPCLASS] == self.NR:
-                new_entry[self.ENT] = default_ent
-                # match_obj = re.search(self.KW, sentence)
-                # if match_obj is not None:
-                #     cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
-                #         0
-                #     ].strip()
-                #     ent_list = em.contains_entity(
-                #         cand_entity, self.entity_re, self.abbrv_re
-                #     )
+            # if this is not a responsibility, get the entity for populating
+            # enumerated responsibilities
+            if prediction[self.TOPCLASS] == self.NO_RESP_LABEL:
+                new_entry[self.ENT] = default_entity
                 if ent_list:
                     curr_entity = cand_entity
-            elif prediction[self.TOPCLASS] == self.R:
+
+            # responsibility statement - link to the current entity
+            elif prediction[self.TOPCLASS] == self.RESP_LABEL:
                 new_entry[self.ENT] = curr_entity
-            elif prediction[self.TOPCLASS] == self.SR:
-                if ent_list:
-                    new_entry[self.ENT] = cand_entity
+
+            # standalone responsibility - link to the entity contained in the
+            # sentence
+            elif prediction[self.TOPCLASS] == self.STANDALONE_LABEL:
+                logger.info("standalone responsibility found")
+                new_entry[self.ENT] = self._candidate_entity(sentence)
+                logger.info("\tentity : {}".format(new_entry[self.ENT]))
+
+            # unlikely
             else:
-                msg = "unknown prediction for '{}', ".format(sentence)
+                msg = "unknown prediction for '{}', ".format(new_entry[self.ENT])
                 msg += "got {}".format(prediction[self.TOPCLASS])
                 logger.warning(msg)
+
+            # logger.info("appending label {} : {}".format(new_entry[self.TOPCLASS], new_entry[self.ENT]))
             entity_list.append(new_entry)
 
     def _populate_entity(self, output_list):
         entity_list = list()
         for idx, entry in enumerate(output_list):
             doc_name = entry[self.SRC]
-            default_ent = self._resolve_na(doc_name)
-            e_dict = self._new_edict(value=self._resolve_na(doc_name))
+            default_ent = self._default_entity(doc_name)
+            e_dict = self._new_edict(value=self._default_entity(doc_name))
             e_dict.update(entry)
 
             if e_dict[self.TOPCLASS] == 0 and self.RESP in entry[self.SENT]:
@@ -176,14 +196,16 @@ class EntityLink(object):
                 entity_list.append(e_dict)
         return entity_list
 
-    def make_table(self, model_path, data_path, glob, max_seq_len, batch_size):
+    def make_table(
+        self, model_path, data_path, glob, max_seq_len, batch_size, num_labels
+    ):
         """
         Loop through the documents, predict each piece of text and attach
         an entity.
 
         The arguments are shown below in `args`.
 
-        A list entry looks like:
+        A list entry from the prediction looks like:
 
             {'top_class': 0,
              'prob': 0.997,
@@ -198,8 +220,8 @@ class EntityLink(object):
         """
         self.pop_entities = list()
         for output_list, file_name in predict_glob(
-            model_path, data_path, glob, max_seq_len, batch_size
-        ):
+            model_path, data_path, glob, max_seq_len, batch_size, num_labels
+        ):  # noqa
             logger.info("num input : {:>4,d}".format(len(output_list)))
             pop_list = self._populate_entity(output_list)
             logger.info(
@@ -209,7 +231,7 @@ class EntityLink(object):
 
     def _to_df(self):
         if not self.pop_entities:
-            raise ValueError("no data to convert; please run `make_table()`?")
+            raise ValueError("no data to convert to a DataFrame`?")
         else:
             return pd.DataFrame(self.pop_entities)
 

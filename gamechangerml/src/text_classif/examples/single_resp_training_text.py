@@ -66,7 +66,7 @@ class SingleRespTrain(Table):
         Returns:
             List[str]
         """
-        return em.contains_entity(text, self.entity_re, self.abbrv_re)
+        return em.entity_list(text, self.entity_re, self.abbrv_re)
 
     def scrubber(self, txt):
         txt = re.sub("[\\n\\t\\r]+", " ", txt)

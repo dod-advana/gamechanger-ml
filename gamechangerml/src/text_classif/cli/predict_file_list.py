@@ -70,7 +70,7 @@ if __name__ == "__main__":
         dest="model_path",
         type=str,
         required=True,
-        help="directory of the torch model",
+        help="directory of the pytorch model",
     )
     parser.add_argument(
         "-d",

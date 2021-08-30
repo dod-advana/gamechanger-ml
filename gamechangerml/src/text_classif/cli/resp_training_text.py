@@ -62,9 +62,11 @@ class ExtractRespText(Table):
         self.abbrv_re, self.entity_re, _ = em.make_entity_re(entity_csv)
         self.COLON = ":"
         self.kw = "shall"
+        self.kw_re = r"\b" + self.kw + r"\b"
         self.kw_colon = self.kw + self.COLON
         self.resp = "RESPONSIBILITIES"
-        self.TWO = 2
+        self.SR_LABEL = 2
+        self.NR_LABEL = 0
         self.sents = None
 
     def scrubber(self, txt):
@@ -75,14 +77,14 @@ class ExtractRespText(Table):
             txt = txt.replace(mobj.group(1), "")
         return txt.strip()
 
-    def contains_entity(self, text):
-        entity_list = em.contains_entity(text, self.entity_re, self.abbrv_re)
+    def entity_list(self, text):
+        entity_list = em.entity_list(text, self.entity_re, self.abbrv_re)
         entity_list = [e for e in entity_list if e]
         return entity_list
 
     def extract_positive(self):
         for tmp_df, fname in self.extract_section(self.input_dir):
-            if self.TWO in tmp_df:
+            if self.SR_LABEL in tmp_df:
                 tmp_df = tmp_df[2].drop_duplicates()
                 pos_ex = [self.scrubber(txt) for txt in tmp_df.tolist()]
                 pos_ex = [txt for txt in pos_ex if txt]
@@ -116,7 +118,7 @@ class ExtractRespText(Table):
 
         Statements of the form `...<ENTITY>...shall:` are labeled 0. The
         original extraction does not return statements of this form. This
-        will increase the number of negative samples.
+        slightly increase the number of negative samples.
 
         Args:
             sentences (list): sentences to label
@@ -126,17 +128,17 @@ class ExtractRespText(Table):
 
         """
         for sent in sentences:
-            entity_list = self.contains_entity(sent)
+            entity_list = self.entity_list(sent)
             if not entity_list:  # no entities - bail
                 continue
-            mobj_kw = re.search(r"\b" + self.kw + r"\b", sent)
+            mobj_kw = re.search(self.kw_re, sent)
             if mobj_kw is None:  # no keyword - bail
                 continue
             if self.kw_colon in sent:  # start of enumerated responsibilities
-                yield sent, 0
+                yield sent, self.NR_LABEL
             elif self.COLON not in sent:  # "... <ENTITY> ... shall ...
                 logger.debug("--> 2 {} {}".format(sent, entity_list))
-                yield sent, 2
+                yield sent, self.SR_LABEL
 
     def extract_standalone_resp(self, sentences):
         for sent, label in self.extract_standalone(sentences):

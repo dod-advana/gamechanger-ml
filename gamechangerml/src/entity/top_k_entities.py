@@ -17,7 +17,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-excluded_entities = ("Department of Defense",)
+excluded_entities = ("Department of Defense", "DoD",)
 
 
 def top_k_entities(mentions_json, output_json=None, top_k=3):
