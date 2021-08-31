@@ -4,8 +4,9 @@ usage: predict_table.py [-h] -m MODEL_PATH -d DATA_PATH [-b BATCH_SIZE]
                         -a AGENCIES_FILE -t ENTITY_MENTIONS --num-labels
                         NUM_LABELS
 
-Classification of of responsibility statements. For each sentence in the
-matching files. For each label > 0, sentences are linked to an entity.
+Classification of responsibility statements. For each sentence in the
+matching files. For each label > 0, sentences are linked to its closest
+entity.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -128,10 +129,13 @@ def predict_table(
     df = entity_linker.to_df()
     df = df[df.top_class > 0].reset_index()
 
-    # for post-hoc analysis
+    # for post-run analysis
     if num_labels > 1:
-        sr_df = df[df.top_class > 1].reset_index()
-        sr_df.to_csv("labels-gt-one.csv", index=False)
+        p, name = os.path.split(output_csv)
+        name, ext = os.path.splitext(name)
+        gt_one_path = os.path.join(p, name + "_labels_gt_one" + ext)
+        not_zero_df = df[df.top_class > 1].reset_index()
+        not_zero_df.to_csv(gt_one_path, index=False)
 
     logger.info("retrieving agencies csv")
     duplicates, aliases = get_agencies_dict(agencies_file)
@@ -169,7 +173,7 @@ def predict_table(
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
-    desc = "Classification of of responsibility statements. For each sentence "
+    desc = "Classification of responsibility statements. For each sentence "
     desc += "in the matching files. For each label > 0, "
     desc += "sentences are linked to its closest entity."
 

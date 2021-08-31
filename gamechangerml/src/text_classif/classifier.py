@@ -69,6 +69,7 @@ class Classifier(object):
         self.runtime["class"] = str(self.__class__.__name__)
         self.runtime["version"] = self.__version__
         self.runtime["config"] = self.cfg_name
+        self.runtime["num labels"] = self.cfg.num_labels
 
         cfg_stats = {k_.replace("_", " "): v_ for k_, v_ in cfg_dict.items()}
         self.runtime.update(cfg_stats)
