@@ -22,6 +22,8 @@ class EntityLink(object):
         use_na=False,
         topk=3,
         num_labels=3,
+        max_seq_len=128,
+        batch_size=8,
     ):
         """
         Links a statement to an entity using a proximity method. If
@@ -40,6 +42,12 @@ class EntityLink(object):
 
             topk (int): top k mentions to use when an entity has failed
 
+            num_labels (int): number of labels in the trained model
+
+            batch_size (int): batch size for prediction
+
+            max_seq_len (int): max length of the tokenized sequence
+
         Raises:
             FileExistsError if the required input files cannot be found
         """
@@ -55,9 +63,15 @@ class EntityLink(object):
             )
 
         topk = max(1, topk)
+        self.max_seq_len = max_seq_len
+        self.batch_size = batch_size
         self.num_labels = num_labels
-        logger.info("     top k : {}".format(topk))
-        logger.info("num labels : {}".format(num_labels))
+
+        logger.info(" max seq len : {:>3d}".format(max_seq_len))
+        logger.info("  batch size : {:>3d}".format(batch_size))
+        logger.info("  num labels : {:>3d}".format(num_labels))
+        logger.info("       top k : {:>3d}".format(topk))
+
         self.top_k_in_doc = top_k_entities(mentions_json, top_k=topk)
         self.abbrv_re, self.entity_re, _ = em.make_entity_re(entity_csv)
 
@@ -126,13 +140,10 @@ class EntityLink(object):
         cand_entity = ""
         match_obj = re.search(self.KW, sentence)
         if match_obj is not None:
-            cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
-                0
-            ].strip()
+            cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[0].strip()
         return cand_entity
 
     def _link_entity(self, output_list, entity_list, default_entity):
-        # TODO simplify - get the entity list up front to avoid 2 calls
         curr_entity = default_entity
         for prediction in output_list:
             sentence = prediction[self.SENT]
@@ -169,7 +180,9 @@ class EntityLink(object):
 
             # unlikely
             else:
-                msg = "unknown prediction for '{}', ".format(new_entry[self.ENT])  # noqa
+                msg = "unknown prediction for '{}', ".format(
+                    new_entry[self.ENT]
+                )
                 msg += "got {}".format(prediction[self.TOPCLASS])
                 logger.warning(msg)
 
@@ -217,12 +230,19 @@ class EntityLink(object):
         """
         self.pop_entities = list()
         for output_list, file_name in predict_glob(
-            model_path, data_path, glob, max_seq_len, batch_size, num_labels
+            model_path,
+            data_path,
+            glob,
+            self.max_seq_len,
+            self.batch_size,
+            self.num_labels,
         ):
-            logger.info("num input : {:>4,d}".format(len(output_list)))
+            logger.debug("num input : {:>4,d}".format(len(output_list)))
             pop_list = self._populate_entity(output_list)
-            logger.info(
-                "processed : {:>4,d}  file : {}".format(len(pop_list), file_name)
+            logger.debug(
+                "processed : {:>4,d}  file : {}".format(
+                    len(pop_list), file_name
+                )
             )
             self.pop_entities.extend(pop_list)
 

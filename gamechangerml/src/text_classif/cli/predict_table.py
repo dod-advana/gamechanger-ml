@@ -133,7 +133,7 @@ def predict_table(
     if num_labels > 1:
         p, name = os.path.split(output_csv)
         name, ext = os.path.splitext(name)
-        gt_one_path = os.path.join(p, name + "_labels_gt_one" + ext)
+        gt_one_path = os.path.join(p, name + "_labels_gt_zero" + ext)
         not_zero_df = df[df.top_class > 1].reset_index()
         not_zero_df.to_csv(gt_one_path, index=False)
         logger.info(
