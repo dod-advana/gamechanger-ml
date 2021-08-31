@@ -111,6 +111,7 @@ The commandline example `predict_cli.py` reads a model from a checkpoint directo
 `.csv` to effect predictions. Usage is documented in that script.
 
 ## TensorBoard
+For small examples,
 If `tensorboard_path` is a valid directory, events are logged for use in TensorBoard. Tensorboard
 is started from the command line. If you've run the example
 ```
@@ -123,6 +124,43 @@ TensorBoard 2.4.1 at http://localhost:6006/ (Press CTRL+C to quit)
 ``` 
 Point your browser to the TensorBoard URL to visualize various metrics. 
 See the `torch` [recipe here](https://pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html).
+
+## Exceptions
+```
+RuntimeError: Error(s) in loading state_dict for DistilBertForSequenceClassification:
+	size mismatch for classifier.weight: copying a param with shape torch.Size([3, 768]) from checkpoint, the shape in current model is torch.Size([2, 768]).
+	size mismatch for classifier.bias: copying a param with shape torch.Size([3]) from checkpoint, the shape in current model is torch.Size([2]).
+```
+
+```
+ValueError: output file exists. Please rename or remove.
+```
+### `predict_table.py`
+```
+[2021-08-31 10:33:51,631    INFO], [entity_link.py:47 - __init__()], EntityLink version 0.8.2
+[2021-08-31 10:33:51,631    INFO], [entity_link.py:59 - __init__()],      top k : 3
+[2021-08-31 10:33:51,631    INFO], [entity_link.py:60 - __init__()], num labels : 3
+[2021-08-31 10:33:51,833    INFO], [predict_table.py:120 - predict_table()], into the breach...
+[2021-08-31 10:33:51,833    INFO], [predictor.py:85 - __init__()], Predictor v0.8.2
+[2021-08-31 10:33:53,176    INFO], [predictor.py:50 - _log_metadata()],       checkpoint time : 2021-08-27 13:55:56
+[2021-08-31 10:33:53,176    INFO], [predictor.py:54 - _log_metadata()],       current version : 0.8.2
+[2021-08-31 10:33:53,176    INFO], [predictor.py:55 - _log_metadata()],  created with version : 0.8.2
+[2021-08-31 10:33:53,176    INFO], [predictor.py:56 - _log_metadata()],        training class : DistilBertClassifier
+[2021-08-31 10:33:53,176    INFO], [predictor.py:57 - _log_metadata()],            base model : distilbert-base-uncased
+[2021-08-31 10:33:53,176    INFO], [predictor.py:58 - _log_metadata()],                 epoch : 1
+[2021-08-31 10:33:53,176    INFO], [predictor.py:59 - _log_metadata()],          avg val loss : 0.136
+[2021-08-31 10:33:53,176    INFO], [predictor.py:60 - _log_metadata()],                   mcc : 0.913
+[2021-08-31 10:33:53,177    INFO], [predictor.py:105 - __init__()], model loaded
+predict: 100%|██████████| 44/44 [00:23<00:00,  1.85it/s]
+[2021-08-31 10:34:17,058    INFO], [predict_glob.py:36 - predict_doc()],        time : 0:00:24
+[2021-08-31 10:34:17,058    INFO], [predict_glob.py:37 - predict_doc()], time / text : 0.068 secs
+[2021-08-31 10:34:17,058    INFO], [entity_link.py:222 - make_table()], num input :  348
+[2021-08-31 10:34:17,175    INFO], [entity_link.py:225 - make_table()], processed :  348  DoDD 3002.01 CH 2.json
+[2021-08-31 10:34:17,241    INFO], [predict_table.py:140 - predict_table()], retrieving agencies csv
+refs: 100%|██████████| 177/177 [00:00<00:00, 733.93it/s]
+[2021-08-31 10:34:19,753    INFO], [predict_table.py:164 - predict_table()], final csv written to dodi_table_test.csv
+[2021-08-31 10:34:19,753    INFO], [predict_table.py:169 - predict_table()], total time : 0:00:28
+```
 
 ## Saving and Loading your Trained Models
 The configuration file has the entry `checkpoint_path` and if this is not `None`, the model is written to 

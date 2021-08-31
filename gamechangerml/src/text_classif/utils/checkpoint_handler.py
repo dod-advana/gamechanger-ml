@@ -49,6 +49,10 @@ def checkpoint_meta(chkpt_path, version_in):
             ts = chkpt_stats["timestamp"]
 
         c_version = chkpt_stats["config"]["version"]
+        if "num_labels" in chkpt_stats["config"]["version"]:
+            num_labels = chkpt_stats["config"]["num_labels"]
+        else:
+            num_labels = "not recorded"
         log_v = False
         if version_in is not None:
             if version.parse(c_version) < version.parse(version_in):
@@ -56,8 +60,8 @@ def checkpoint_meta(chkpt_path, version_in):
                     "Checkpoint was created with v{}, you're using v{}".format(
                         c_version, version_in
                     )
-                )  # noqa
-                msg1 = "...your mileage may vary."
+                )
+                msg1 = " - your mileage may vary."
                 logger.warning(msg)
                 logger.warning(msg1)
                 log_v = True
@@ -70,5 +74,6 @@ def checkpoint_meta(chkpt_path, version_in):
         if log_v:
             logger.info("  current version : {}".format(version_in))
         logger.info("            epoch : {}".format(chkpt_stats["epoch"]))
+        logger.info("       num labels : {}".format(num_labels))
         logger.info("     avg val loss : {:0.3f}".format(val_loss))
         logger.info("              mcc : {:0.3f}".format(chkpt_stats["mcc"]))

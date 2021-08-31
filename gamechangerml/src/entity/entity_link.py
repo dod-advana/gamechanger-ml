@@ -165,17 +165,14 @@ class EntityLink(object):
             # standalone responsibility - link to the entity contained in the
             # sentence
             elif prediction[self.TOPCLASS] == self.STANDALONE_LABEL:
-                logger.info("standalone responsibility found")
                 new_entry[self.ENT] = self._candidate_entity(sentence)
-                logger.info("\tentity : {}".format(new_entry[self.ENT]))
 
             # unlikely
             else:
-                msg = "unknown prediction for '{}', ".format(new_entry[self.ENT])
+                msg = "unknown prediction for '{}', ".format(new_entry[self.ENT])  # noqa
                 msg += "got {}".format(prediction[self.TOPCLASS])
                 logger.warning(msg)
 
-            # logger.info("appending label {} : {}".format(new_entry[self.TOPCLASS], new_entry[self.ENT]))
             entity_list.append(new_entry)
 
     def _populate_entity(self, output_list):
@@ -221,11 +218,11 @@ class EntityLink(object):
         self.pop_entities = list()
         for output_list, file_name in predict_glob(
             model_path, data_path, glob, max_seq_len, batch_size, num_labels
-        ):  # noqa
+        ):
             logger.info("num input : {:>4,d}".format(len(output_list)))
             pop_list = self._populate_entity(output_list)
             logger.info(
-                "processed : {:>4,d}  {}".format(len(pop_list), file_name)
+                "processed : {:>4,d}  file : {}".format(len(pop_list), file_name)
             )
             self.pop_entities.extend(pop_list)
 
