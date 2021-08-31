@@ -15,7 +15,7 @@ def write_checkpoint(output_dir, model, tokenizer, loss, stats):
     Checkpoints the model if the loss has improved.
 
     Args:
-        output_dir (str): where to write the checkpoint file
+        output_dir (str): where to write the model files
 
         model (Classifier): the model
 
@@ -33,6 +33,7 @@ def write_checkpoint(output_dir, model, tokenizer, loss, stats):
     stats_enc = json.dumps(stats)
     with open(os.path.join(output_dir, "run_stats.json"), "w") as f:
         f.write(stats_enc)
+    logger.info("model file written to : {}".format(output_dir))
 
 
 def checkpoint_meta(chkpt_path, version_in):
@@ -41,7 +42,7 @@ def checkpoint_meta(chkpt_path, version_in):
         logger.warning("no 'run_stats.json' in the checkpoint directory")
         return
     else:
-        # default: stat the config.json and that file must be present
+        # default: stat the config.json and insure it is present
         ts = os.path.getmtime(os.path.join(chkpt_path, "config.json"))
         with open(stats_path) as f:
             chkpt_stats = json.load(f)
