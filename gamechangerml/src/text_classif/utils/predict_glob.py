@@ -11,30 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 def predict_doc(input_dicts, predictor, max_seq_len, batch_size):
-    adder = 0
-    if len(input_dicts) % batch_size != 0:
-        adder = 1
-    batches = len(input_dicts) // batch_size + adder
     out_list = list()
-    start = time.time()
-    for output in tqdm(
-        predictor.predict(
-            input_dicts,
-            batch_size=int(batch_size),
-            max_seq_len=int(max_seq_len),
-        ),
-        desc="predict",
-        total=batches,
+    for output in predictor.predict(
+        input_dicts, batch_size=int(batch_size), max_seq_len=int(max_seq_len)
     ):
         out_list.extend(output)
-
-    elapsed = time.time() - start
-    if len(out_list) > 0:
-        rate = elapsed / len(out_list)
-    else:
-        rate = 0.0
-    logger.info("       time : {:}".format(cu.format_time(elapsed)))
-    logger.info("time / text :{:>6.3f} secs".format(rate))
     return out_list
 
 
@@ -97,6 +78,11 @@ def predict_glob(
 
     predictor = Predictor(model_path_name, num_labels=num_labels)
 
-    for input_dicts, fname in cu.raw2dict(data_path, glob, key="raw_text"):
+    num_files = cu.nfiles_in_glob(data_path, glob)
+    for input_dicts, fname in tqdm(
+        cu.raw2dict(data_path, glob, key="raw_text"),
+        total=num_files,
+        desc="predict",
+    ):
         out_list = predict_doc(input_dicts, predictor, max_seq_len, batch_size)
         yield out_list, fname
