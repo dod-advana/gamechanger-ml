@@ -136,6 +136,9 @@ def predict_table(
         gt_one_path = os.path.join(p, name + "_labels_gt_one" + ext)
         not_zero_df = df[df.top_class > 1].reset_index()
         not_zero_df.to_csv(gt_one_path, index=False)
+        logger.info(
+            "detail for labels > 0 written to : {}".format(gt_one_path)
+        )
 
     logger.info("retrieving agencies csv")
     duplicates, aliases = get_agencies_dict(agencies_file)
