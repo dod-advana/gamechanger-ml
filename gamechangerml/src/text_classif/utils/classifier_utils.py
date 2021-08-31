@@ -117,13 +117,25 @@ def gen_gc_docs(doc_path, glob, key="raw_text"):
         msg = "no files in '{}' matching the glob '{}'".format(doc_path, glob)
         logger.exception(msg)
         raise ValueError(msg)
-    for input_file in sorted(file_list):
-        with open(os.path.join(doc_path, input_file)) as fin:
-            json_doc = json.load(fin)
-            if key in json_doc:
-                yield input_file, json_doc
-            else:
-                logger.warning("`{}` not found in {}".format(key, input_file))
+    input_file = None
+    try:
+        for input_file in sorted(file_list):
+            with open(
+                os.path.join(doc_path, input_file),
+                encoding="utf-8",
+                errors="ignore",
+            ) as file_in:
+                in_doc = file_in.read()
+                json_doc = json.loads(in_doc)
+                if key in json_doc:
+                    yield input_file, json_doc
+                else:
+                    logger.warning(
+                        "`{}` not found in {}".format(key, input_file)
+                    )
+    except (UnicodeDecodeError, Exception) as e:
+        logger.exception("{}: {}".format(type(e), str(e)))
+        logger.exception("offending file : {}".format(input_file))
 
 
 def nfiles_in_glob(src_path, glob):
