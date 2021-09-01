@@ -79,13 +79,12 @@ def predict_table(
     See the preamble (help) for a description of these arguments.
 
     For each file matching `glob`, the `raw_text` is parsed into sentences
-    and run through the classifier. Recognized entities are then associated
-    with sentences classified as `1` or `responsibility`. The final output
-    is assembled by using sentences classified as `> 0` with organization
-    information, references, document title, etc.
+    and run through the classifier. The final output is assembled by using
+    sentences classified as `> 0` with organization information, references,
+    document title, etc.
 
     Returns:
-        pandas.DataFrame
+        pd.DataFrame
     """
     if os.path.isfile(output_csv):
         raise ValueError("output file exists. Please rename or remove.")
@@ -116,16 +115,12 @@ def predict_table(
         mentions_json=entity_mentions,
         use_na=False,
         topk=3,
+        num_labels=num_labels,
+        max_seq_len=max_seq_len,
+        batch_size=batch_size,
     )
     logger.info("into the breach...")
-    entity_linker.make_table(
-        model_path,
-        data_path,
-        glob,
-        max_seq_len,
-        batch_size,
-        num_labels=num_labels,
-    )
+    entity_linker.make_table(model_path, data_path, glob,)
     df = entity_linker.to_df()
     df = df[df.top_class > 0].reset_index()
 

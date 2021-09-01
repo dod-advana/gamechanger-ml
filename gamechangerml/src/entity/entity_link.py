@@ -40,7 +40,8 @@ class EntityLink(object):
             use_na (bool): if True, use self.NA instead of the top k mentions
                 when entity linking fails
 
-            topk (int): top k mentions to use when an entity has failed
+            topk (int): top k mentions to use when an entity has failed;
+                These are separated by a semicolon.
 
             num_labels (int): number of labels in the trained model
 
@@ -143,9 +144,9 @@ class EntityLink(object):
             cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[0].strip()
         return cand_entity
 
-    def _link_entity(self, output_list, entity_list, default_entity):
+    def _link_entity(self, predictions, output_dicts, default_entity):
         curr_entity = default_entity
-        for prediction in output_list:
+        for prediction in predictions:
             sentence = prediction[self.SENT]
             sentence = self._re_sub(sentence)
 
@@ -156,13 +157,11 @@ class EntityLink(object):
             cand_entity = default_entity
             match_obj = re.search(self.KW, sentence)
             if match_obj is not None:
-                cand_entity = re.split(self.KW_RE, sentence, maxsplit=1)[
-                    0
-                ].strip()
+                cand_entity = self._candidate_entity(sentence)
                 ent_list = em.entity_list(
                     cand_entity, self.entity_re, self.abbrv_re
                 )
-            # if this is not a responsibility, get the entity for populating
+            # if this is *not* a responsibility, get the entity for populating
             # enumerated responsibilities
             if prediction[self.TOPCLASS] == self.NO_RESP_LABEL:
                 new_entry[self.ENT] = default_entity
@@ -176,9 +175,10 @@ class EntityLink(object):
             # standalone responsibility - link to the entity contained in the
             # sentence
             elif prediction[self.TOPCLASS] == self.STANDALONE_LABEL:
-                new_entry[self.ENT] = self._candidate_entity(sentence)
+                if ent_list:
+                    new_entry[self.ENT] = self._candidate_entity(sentence)
 
-            # unlikely
+            # very unlikely - covering all the bases
             else:
                 msg = "unknown prediction for '{}', ".format(
                     new_entry[self.ENT]
@@ -186,12 +186,14 @@ class EntityLink(object):
                 msg += "got {}".format(prediction[self.TOPCLASS])
                 logger.warning(msg)
 
-            entity_list.append(new_entry)
+            output_dicts.append(new_entry)
 
     def _populate_entity(self, output_list):
         entity_list = list()
         for idx, entry in enumerate(output_list):
             doc_name = entry[self.SRC]
+
+            # default is the top k entities in the document, if any
             default_ent = self._default_entity(doc_name)
             e_dict = self._new_edict(value=self._default_entity(doc_name))
             e_dict.update(entry)
@@ -199,18 +201,16 @@ class EntityLink(object):
             if e_dict[self.TOPCLASS] == 0 and self.RESP in entry[self.SENT]:
                 entity_list.append(e_dict)
                 self._link_entity(
-                    output_list[idx + 1 :], entity_list, default_ent
+                    output_list[idx + 1:], entity_list, default_ent
                 )
                 return entity_list
             else:
                 entity_list.append(e_dict)
         return entity_list
 
-    def make_table(
-        self, model_path, data_path, glob, max_seq_len, batch_size, num_labels
-    ):
+    def make_table(self, model_path, data_path, glob):
         """
-        Loop through the documents, predict each piece of text and attach
+        Loop through the documents, predict each piece of text, and attach
         an entity.
 
         The arguments are shown below in `args`.
