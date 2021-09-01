@@ -61,7 +61,9 @@ def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
         columns=["text"],
     )
 
-    for i, row in combined_cols.iterrows():
+    for i, row in tqdm(
+        combined_cols.iterrows(), total=len(combined_cols), desc="agcs"
+    ):
         agencies = []
         for x in aliases.keys():
             if " " + x in row["text"]:

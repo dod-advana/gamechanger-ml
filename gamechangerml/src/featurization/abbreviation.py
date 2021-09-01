@@ -5,13 +5,11 @@ import os
 import typing as t
 from gamechangerml import REPO_PATH
 
+
 def expand_abbreviations(
     text,
-    dic: t.Union[
-        t.Dict[str, t.Any], str
-    ] = os.path.join(
-        REPO_PATH,
-        "gamechangerml/src/featurization/data/abbreviations.json"
+    dic: t.Union[t.Dict[str, t.Any], str] = os.path.join(
+        REPO_PATH, "gamechangerml/src/featurization/data/abbreviations.json"
     ),
 ):
     """
@@ -113,11 +111,8 @@ def expand_abbreviations(
 
 def expand_abbreviations_no_context(
     text,
-    dic: t.Union[
-        t.Dict[str, t.Any], str
-    ] = os.path.join(
-        REPO_PATH,
-        "gamechangerml/src/featurization/data/abbcounts.json"
+    dic: t.Union[t.Dict[str, t.Any], str] = os.path.join(
+        REPO_PATH, "gamechangerml/src/featurization/data/abbcounts.json"
     ),
 ):
     """
@@ -198,11 +193,8 @@ def add_abbreviations(add, path):
 
 def find_abbreviations(
     text,
-    dic: t.Union[
-        t.Dict[str, t.Any], str
-    ] = os.path.join(
-        REPO_PATH,
-        "gamechangerml/src/featurization/data/abbreviations.json"
+    dic: t.Union[t.Dict[str, t.Any], str] = os.path.join(
+        REPO_PATH, "gamechangerml/src/featurization/data/abbreviations.json"
     ),
 ):
     """

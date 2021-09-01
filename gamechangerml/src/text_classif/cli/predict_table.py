@@ -124,7 +124,7 @@ def predict_table(
     df = entity_linker.to_df()
     df = df[df.top_class > 0].reset_index()
 
-    logger.info("building agencies for {:7,d} entries".format(len(df)))
+    logger.info("building agencies for entries : {:,}".format(len(df)))
     duplicates, aliases = get_agencies_dict(agencies_file)
     df["agencies"] = get_agencies(
         file_dataframe=df,
@@ -133,7 +133,7 @@ def predict_table(
         agencies_dict=aliases,
     )
 
-    logger.info("geting references...")
+    logger.info("getting references...")
     df["refs"] = get_references(df, doc_title_col="src")
 
     renamed_df = df.rename(columns=rename_dict)
