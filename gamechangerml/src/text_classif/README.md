@@ -135,6 +135,10 @@ RuntimeError: Error(s) in loading state_dict for DistilBertForSequenceClassifica
 ```
 ValueError: output file exists. Please rename or remove.
 ```
+
+```
+[2021-09-01 10:57:04,492 WARNING], [predictor.py:45 - _log_metadata()], model was created with v0.8.2; you're using v0.8.3
+```
 ### `predict_table.py`
 ```
 [2021-08-31 10:33:51,631    INFO], [entity_link.py:47 - __init__()], EntityLink version 0.8.2

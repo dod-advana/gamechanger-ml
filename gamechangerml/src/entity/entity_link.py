@@ -131,7 +131,6 @@ class EntityLink(object):
             return self.NA
         if doc_name in self.top_k_in_doc:
             ent = ";".join(self.top_k_in_doc[doc_name])
-            logger.debug("entity : {}".format(self.top_k_in_doc[doc_name]))
             return ent
         else:
             logger.warning("can't find {} for lookup".format(doc_name))

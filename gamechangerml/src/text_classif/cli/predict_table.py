@@ -124,18 +124,7 @@ def predict_table(
     df = entity_linker.to_df()
     df = df[df.top_class > 0].reset_index()
 
-    # for post-run analysis
-    if num_labels > 1:
-        p, name = os.path.split(output_csv)
-        name, ext = os.path.splitext(name)
-        gt_one_path = os.path.join(p, name + "_labels_gt_zero" + ext)
-        not_zero_df = df[df.top_class > 1].reset_index()
-        not_zero_df.to_csv(gt_one_path, index=False)
-        logger.info(
-            "detail for labels > 0 written to : {}".format(gt_one_path)
-        )
-
-    logger.info("retrieving agencies csv")
+    logger.info("building agencies for {:7,d} entries".format(len(df)))
     duplicates, aliases = get_agencies_dict(agencies_file)
     df["agencies"] = get_agencies(
         file_dataframe=df,
@@ -144,6 +133,7 @@ def predict_table(
         agencies_dict=aliases,
     )
 
+    logger.info("geting references...")
     df["refs"] = get_references(df, doc_title_col="src")
 
     renamed_df = df.rename(columns=rename_dict)
