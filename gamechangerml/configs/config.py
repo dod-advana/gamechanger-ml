@@ -82,13 +82,6 @@ class EmbedderConfig:
         },
         "retriever": { ## args for retrieving the vectors
             "n_returns": 5
-        },
-        "train_proportion": 0.8, # proportion of eval data to use for training vs. test
-        "finetune": { # args for finetuning
-            "shuffle": True,
-            "batch_size": 16, 
-            "epochs": 1,
-            "warmup_steps": 100
         }
     }
 
@@ -137,7 +130,5 @@ class ValidationConfig:
         "retriever_gc": {
             "gold_standard": "gold_standard.csv"
         },
-        "matamo_feedback_file": "matamo_feedback.csv",
-        "search_history_file": "SearchPdfMapping.csv",
         "qe_gc": "QE_domain.json"
     }
