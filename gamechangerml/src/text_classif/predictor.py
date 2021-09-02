@@ -9,7 +9,6 @@ import transformers as trf
 from packaging import version
 
 import gamechangerml.src.text_classif.version as v
-from gamechangerml.src.text_classif.utils import classifier_utils as cu
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +32,14 @@ def _log_metadata(model_path, curr_version):
     ts = os.path.getmtime(os.path.join(model_path, "config.json"))
     with open(stats_path) as f:
         chkpt_stats = json.load(f)
+
+    default = "?"
+    ts = default
+    nl = default
     if "timestamp" in chkpt_stats:
         ts = chkpt_stats["timestamp"]
+    if "num_labels" in chkpt_stats:
+        nl = chkpt_stats["num_labels"]
 
     c_version = chkpt_stats["config"]["version"]
     if curr_version is not None:
@@ -55,6 +60,7 @@ def _log_metadata(model_path, curr_version):
     logger.info(" created with version : {}".format(c_version))
     logger.info("       training class : {}".format(class_name))
     logger.info("           base model : {}".format(base_model))
+    logger.info("           num labels : {}".format(nl))
     logger.info("                epoch : {}".format(chkpt_stats["epoch"]))
     logger.info("         avg val loss : {:0.3f}".format(val_loss))
     logger.info("                  mcc : {:0.3f}".format(chkpt_stats["mcc"]))
@@ -121,9 +127,9 @@ class Predictor:
             List[Dict]
 
         """
-        if not 128 <= max_seq_len <= 512:
+        if not 8 <= max_seq_len <= 512:
             raise ValueError(
-                "must have  128 <= max_seq_len <= 512, got {}".format(
+                "must have  8 <= max_seq_len <= 512, got {}".format(
                     max_seq_len
                 )
             )
@@ -182,11 +188,10 @@ class Predictor:
         batch_output = self._post_process(detached_outputs, inputs)
         return batch_output
 
-    @staticmethod
-    def _post_process(detached_outputs, inputs):
+    def _post_process(self, detached_outputs, inputs):
         outputs = list()
         keys = inputs[0].keys()
-        for idx, output in enumerate(cu.unbatch_preds(detached_outputs)):
+        for idx, output in enumerate(self._unbatch_preds(detached_outputs)):
             out_dict = dict()
             tc = detached_outputs["top_class"].flatten()
             prob = detached_outputs["prob"].flatten()
@@ -195,3 +200,36 @@ class Predictor:
             out_dict.update({k: inputs[idx][k] for k in keys})
             outputs.append(out_dict)
         return outputs
+
+    @staticmethod
+    def _extract_batch_length(preds):
+        """
+        Extracts batch length of predictions.
+        """
+        batch_length = None
+        for key, value in preds.items():
+            batch_length = batch_length or value.shape[0]
+            if value.shape[0] != batch_length:
+                raise ValueError(
+                    "Batch length of predictions should be same. () has "
+                    "different batch length than others.".format(key)
+                )
+        return batch_length
+
+    def _unbatch_preds(self, preds):
+        """
+        Unbatch predictions, as in estimator.predict().
+
+        Args:
+          preds: Dict[str, np.array], where all arrays have the same first
+            dimension.
+
+        Yields:
+          sequence of Dict[str, np.array], with the same keys as preds.
+        """
+        if not isinstance(preds, dict):
+            for pred in preds:
+                yield pred
+        else:
+            for i in range(self._extract_batch_length(preds)):
+                yield {key: value[i] for key, value in preds.items()}

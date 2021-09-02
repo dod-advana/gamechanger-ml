@@ -55,6 +55,9 @@ def main(config_yaml, data_file, model_type, num_samples, checkpoint_path):
         dict of runtime stats
 
     """
+    if os.path.isfile(checkpoint_path):
+        msg = "checkpoint_path exists; rename or delete : {}"
+        raise ValueError(msg.format(checkpoint_path))
     here = os.path.dirname(os.path.realpath(__file__))
     try:
         if model_type == "roberta":

@@ -99,16 +99,15 @@ class ExtractRespText(Table):
         return self.sents
 
     def extract_neg_in_doc(self, raw_text, min_tokens):
-        neg_sentences = set()
+        neg_sentences = list()
         if self.resp in raw_text:
             if self.drop_prob > np.random.uniform(0.0, 1.0):
                 return neg_sentences
             prev_text = raw_text.split(self.resp)[0]
             if prev_text is not None:
                 sents = self.raw_text2sentences(prev_text, min_tokens)
-                for s in sents:
-                    neg_sentences.add(s)
-        return list(neg_sentences)
+                neg_sentences = list(set(sents))
+        return neg_sentences
 
     def extract_standalone(self, sentences):
         """
@@ -160,6 +159,7 @@ class ExtractRespText(Table):
         total_pos_2 = 0
         total_neg = 0
         count = 0
+        logger.info("counts are cumulative")
         for pos_ex, fname, raw_text in self.extract_positive():
             count += 1
             stand_alone = list()
@@ -190,7 +190,7 @@ class ExtractRespText(Table):
                 self._append_df(fname, 0, neg_ex)
 
                 logger.info(
-                    "{:>35s} : {:5,d} + {:5,d} ++ {:7,d} (so far) -".format(
+                    "{:>40s} : {:7,d} + {:7,d} ++ {:7,d} -".format(
                         fname, total_pos_1, total_pos_2, total_neg
                     )
                 )
@@ -206,7 +206,7 @@ class ExtractRespText(Table):
         logger.info("positive samples (1) : {:>7,d}".format(total_pos_1))
         logger.info("positive samples (2) : {:>7,d}".format(total_pos_2))
         no_resp_docs = "\n".join(self.no_resp_docs)
-        logger.info("no responsibilities : {}".format(no_resp_docs))
+        logger.info("no responsibilities found in : \n{}".format(no_resp_docs))
 
 
 def main(
