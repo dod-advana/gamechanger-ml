@@ -1,63 +1,63 @@
 from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
-from gamechangerml.configs.config import ValidationConfig, EmbedderConfig
+from gamechangerml.configs.config import EmbedderConfig
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
+import argparse
+import os
+from datetime import date
 
 model_path_dict = get_model_paths()
 
-ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
-VALIDATION_DIR = ValidationConfig.DATA_ARGS['validation_dir']
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 BASE_MODEL_NAME = EmbedderConfig.MODEL_ARGS['model_name']
 
-def main():
+def main(data_path, model_load_path, model_save_path):
 
-    tuner = STFinetuner(model=None, model_load_path, model_save_path, **EmbedderConfig)
-
+    tuner = STFinetuner(model=None, model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.MODEL_ARGS['finetune'])
+    return tuner.finetune(data_path)
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Finetuning the sentence transformer model with in-domain data")
+    parser = argparse.ArgumentParser(description="Finetuning the sentence transformer model")
     
     parser.add_argument(
         "--data-path", "-d", 
         dest="data_path", 
+        required=True,
         help="path to csv with finetuning data"
         )
 
     parser.add_argument(
-        "--model-path", "-m", 
-        dest="model_path", 
-        help="path to model for fine-tuning"
+        "--model-load-path", "-m", 
+        dest="model_load_path", 
+        required=False,
+        help="path to load model for fine-tuning"
+        )
+
+    parser.add_argument(
+        "--model-save-path", "-m", 
+        dest="model_save_path", 
+        required=False,
+        help="path to save model after fine-tuning"
         )
 
     args = parser.parse_args()
-    
-    logger.info("|------------------Collecting training data------------------|")
 
-    if args.data_path:
-        training_data_csv_path = args.data_path
-        df = pd.read_csv(training_data_csv_path)
-    else:
-        training_data_csv_path = os.path.join(VALIDATION_DIR, timestamp_filename('finetune_sent_data', '.csv'))
-        df = collect_training_data() 
-
-    logger.info("|---------------------Splitting train/test-------------------|")
-    split_ratio = EmbedderConfig.MODEL_ARGS['train_proportion']
-    train, test = split_train_test(df, split_ratio)
-
-    logger.info("|---------------------Finetuning model-----------------------|")
-    if args.model_path:
-        model_load_path = args.model_path
+    ## getting default paths
+    if args.model_load_path:
+        model_load_path = args.model_load_path
     else:
         model_load_path = os.path.join(LOCAL_TRANSFORMERS_DIR, BASE_MODEL_NAME)
 
-    model_save_path = os.path.join(LOCAL_TRANSFORMERS_DIR, timestamp_filename(BASE_MODEL_NAME + '_finetuned', '/'))
+    if args.model_save_path:
+        model_save_path = args.model_save_path
+    else:
+        model_save_path = model_load_path + '_' + str(date.today())
 
-    ## load original model
-    model = SentenceTransformer(model_load_path)
-    train, test = finetune(train, test, model=model, model_save_path=model_save_path, **EmbedderConfig.MODEL_ARGS['finetune'])
+    data_path = args.data_path
 
-    all_data = pd.concat([train, test])
-    all_data.to_csv(training_data_csv_path)
-    logger.info("Training data saved to {}".format(str(training_data_csv_path)))
+    logger.info("|---------------------Beginning to finetune model-----------------------|")
+    
+    main(data_path, model_load_path, model_save_path)
+
+    logger.info("|------------------------Done finetuning model--------------------------|")

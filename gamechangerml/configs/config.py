@@ -82,6 +82,12 @@ class EmbedderConfig:
         },
         "retriever": { ## args for retrieving the vectors
             "n_returns": 5
+        },
+        "finetune": {
+            "shuffle": True,
+            "batch_size": 16,
+            "epochs": 1,
+            "warmup_steps": 100
         }
     }
 
