@@ -14,7 +14,7 @@ BASE_MODEL_NAME = EmbedderConfig.MODEL_ARGS['model_name']
 def main(data_path, model_load_path, model_save_path):
 
     tuner = STFinetuner(model=None, model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.MODEL_ARGS['finetune'])
-    return tuner.finetune(data_path)
+    return tuner.retrain(data_path)
 
 if __name__ == "__main__":
 
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         )
 
     parser.add_argument(
-        "--model-save-path", "-m", 
+        "--model-save-path", "-s", 
         dest="model_save_path", 
         required=False,
         help="path to save model after fine-tuning"
@@ -56,8 +56,8 @@ if __name__ == "__main__":
 
     data_path = args.data_path
 
-    logger.info("|---------------------Beginning to finetune model-----------------------|")
+    logger.info("\n|---------------------Beginning to finetune model-----------------------|")
     
     main(data_path, model_load_path, model_save_path)
 
-    logger.info("|------------------------Done finetuning model--------------------------|")
+    logger.info("|------------------------Done finetuning model--------------------------|\n")

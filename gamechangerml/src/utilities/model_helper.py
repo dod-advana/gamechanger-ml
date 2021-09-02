@@ -4,6 +4,7 @@ import re
 import json
 from datetime import date
 from gamechangerml.api.utils.logger import logger
+import torch
 
 # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
 class TimeoutException(Exception):   # Custom exception class
@@ -152,3 +153,26 @@ def update_meta_relations(metadata, df, query_col, return_col):
             metadata[x][i]['times_matched'] = len(metadata[x][i]['exact_matches'])
             
     return metadata
+
+# from sentence_transformers==2.0.0
+#https://github.com/UKPLab/sentence-transformers/blob/master/sentence_transformers/util.py
+def cos_sim(a, b):
+    """
+    Computes the cosine similarity cos_sim(a[i], b[j]) for all i and j.
+    :return: Matrix with res[i][j]  = cos_sim(a[i], b[j])
+    """
+    if not isinstance(a, torch.Tensor):
+        a = torch.tensor(a)
+
+    if not isinstance(b, torch.Tensor):
+        b = torch.tensor(b)
+
+    if len(a.shape) == 1:
+        a = a.unsqueeze(0)
+
+    if len(b.shape) == 1:
+        b = b.unsqueeze(0)
+
+    a_norm = torch.nn.functional.normalize(a, p=2, dim=1)
+    b_norm = torch.nn.functional.normalize(b, p=2, dim=1)
+    return torch.mm(a_norm, b_norm.transpose(0, 1))

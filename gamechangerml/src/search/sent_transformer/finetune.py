@@ -5,16 +5,41 @@ from datetime import date
 import os
 import json
 
-from gamechangerml.src.utilities.model_helper import open_json, timestamp_filename
+from gamechangerml.src.utilities.model_helper import open_json, timestamp_filename, cos_sim
 from gamechangerml.api.utils.logger import logger
+
+score_map = {
+    1.0: 0.95,
+    0.0: 0.05
+}
+
+def fix_model_config(model_load_path):
+    '''Workaround for error with sentence_transformers==0.4.1 (vs. version 2.0.0 which our model was trained on)'''
+
+    try:
+        config = open_json('config.json', model_load_path)
+        if '__version__' not in config.keys():
+            try:
+                st_config = open_json('config_sentence_transformers.json', model_load_path)
+                version = st_config["__version__"]["sentence_transformers"]
+                config['__version__'] = version
+            except:
+                config['__version__'] = "2.0.0"
+            with open(os.path.join(model_load_path, 'config.json'), "w") as outfile:
+                json.dump(config, outfile)
+    except:
+        logger.info("Could not update model config file")
 
 def get_cos_sim(model, pair):
 
     emb1 = model.encode(pair[0])
     emb2 = model.encode(pair[1])
-    cos_sim = float(util.cos_sim(emb1, emb2))
+    try:
+        sim = float(util.cos_sim(emb1, emb2))
+    except:
+        sim = float(cos_sim(emb1, emb2))
     
-    return cos_sim
+    return sim
 
 def format_inputs(train, test):
     '''Create input data for dataloader and df for tracking cosine sim'''
@@ -24,16 +49,16 @@ def format_inputs(train, test):
     count = 0
     for i in train.keys():
         texts = [train[i]['query'], train[i]['paragraph']]
-        score = float(train[i]['label'])
+        score = score_map[float(train[i]['label'])]
         inputex = InputExample(str(count), texts, score)
         train_samples.append(inputex)
         all_data.append([i, texts, score, 'train'])
         count += 1
     
     for x in test.keys():
-        texts = [test[i]['query'], test[i]['paragraph']]
-        score = float(test[i]['label'])
-        all_data.append([i, texts, score, 'test'])
+        texts = [test[x]['query'], test[x]['paragraph']]
+        score = score_map[float(test[x]['label'])]
+        all_data.append([x, texts, score, 'test'])
 
     df = pd.DataFrame(all_data, columns = ['key', 'pair', 'score', 'label'])
     
@@ -43,6 +68,7 @@ class STFinetuner():
 
     def __init__(self, model, model_load_path, model_save_path, shuffle, batch_size, epochs, warmup_steps):
 
+        fix_model_config(model_load_path)
         if model:
             self.model = model
         else:
@@ -57,7 +83,6 @@ class STFinetuner():
     def retrain(self, data_dir):
 
         data = open_json('training_data.json', data_dir)
-        metadata = open_json('training_metadata.json', data_dir)
         train = data['train']
         test = data['test']
         # make formatted training data
@@ -77,13 +102,15 @@ class STFinetuner():
 
         ## get new cosine sim
         df['new_cos_sim'] = df['pair'].apply(lambda x: get_cos_sim(self.model, x))
-        df['change_cos_sim'] = df['new_cos_sim'] - df['orig_cos_sim']
+        df['change_cos_sim'] = df['new_cos_sim'] - df['original_cos_sim']
+
+        df.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
 
         ## create training metadata
-        positive_change_train = df[(df['score']==1.0) and (df['label']=='train')]['change_cos_sim'].median()
-        negative_change_train = df[(df['score']==0.0) and (df['label']=='train')]['change_cos_sim'].median()
-        positive_change_test = df[(df['score']==1.0) and (df['label']=='test')]['change_cos_sim'].median()
-        negative_change_test = df[(df['score']==0.0) and (df['label']=='test')]['change_cos_sim'].median()
+        positive_change_train = df[(df['score']==0.95) & (df['label']=='train')]['change_cos_sim'].median()
+        negative_change_train = df[(df['score']==0.05) & (df['label']=='train')]['change_cos_sim'].median()
+        positive_change_test = df[(df['score']==0.95) & (df['label']=='test')]['change_cos_sim'].median()
+        negative_change_test = df[(df['score']==0.05) & (df['label']=='test')]['change_cos_sim'].median()
 
         ft_metadata = {
             "date_finetuned": str(date.today()),
