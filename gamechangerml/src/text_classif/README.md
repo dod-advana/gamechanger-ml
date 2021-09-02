@@ -1,8 +1,17 @@
-# `classifier` 
+# `text_classif` 
 
 This is a framework of sorts for transfer learning using Hugging Face pre-trained models for sequence
-classification, *e.g.*, text classification.
+classification. The overarching goal is to predict statements of responsibility contained in
+DoDD, DoDI, and DoDM documents. After the prediction step is completed, an entity (organization or
+person) is linked to each predicted responsibility statement and a `.csv` is produced with all
+sorts of supporting data.
 
+## Data
+Producing the aforementioned `.csv` depends on several data files and the corpus. All the
+required data for training and producing the table is collected in a single directory
+`classifier_data`. 
+
+## Classifier Details
 The `base_class` does most of the heavy lifting, however, it **must** be subclassed to provide a few
 model and data loading methods. Implemented are models based on
 
@@ -13,7 +22,7 @@ model and data loading methods. Implemented are models based on
 The Hugging Face models can be downloaded from their ['models' site](https://huggingface.co/models).
 
 > If you do have a required model, the underlying library will attempt to 
->download the required files. These will be cached in `~/.cache`.
+> download the required files. These will be cached in `~/.cache`. 
 
 ## Configuration
 The classifier is driven entirely by a configuration file such as the ones
@@ -48,27 +57,6 @@ for obvious errors.
 
 The schema is in `utils/config.py`. Changes to the schema are encouraged.
 
-## Examples
-The `examples/` directory contains sample CLI for training the CoLA data set.
-
-General usage is
-
-```
-usage: python example_cola_cli
-
-Trains the `bert-based` models on the CoLA data set
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -c CONFIG_YAML, --config-yaml CONFIG_YAML
-                        path to the `.yml` configuration file
-  -d DATA_FILE, --data-file DATA_FILE
-                        path the training data
-  -m {bert,roberta,roberta-nd,bert-nd,distilbert}, --model-type {bert,roberta,roberta-nd,bert-nd,distilbert}
-                        supported model type; default is `roberta'
-  -t TRUNC, --truncate TRUNC
-                        use rows up to this value; 0 indicates the entire data
-                        set
 ```
 If all goes well, you'll see a summary of the configuration parameters, and the training will begin:
 ```

@@ -21,6 +21,7 @@ optional arguments:
                         minimum tokens for a sentence
 """
 import logging
+import os
 import re
 
 import pandas as pd
@@ -190,7 +191,7 @@ class ExtractRespText(Table):
                 self._append_df(fname, 0, neg_ex)
 
                 logger.info(
-                    "{:>35s} : {:5,d} + {:5,d} ++ {:7,d} -".format(
+                    "{:>35s} : {:5,d} + {:5,d} ++ {:7,d} (so far) -".format(
                         fname, total_pos_1, total_pos_2, total_neg
                     )
                 )
@@ -320,16 +321,25 @@ if __name__ == "__main__":
     start = time()
     args = parser.parse_args()
 
-    if os.path.isfile(args.output):
-        msg = "output file already exists. Please delete or rename {}".format(
-            args.output
-        )
-        warnings.warn(msg)
+    if not os.path.isdir(args.input_dir):
+        warnings.warn("no input_dir; got {}".format(args.input_dir))
+        sys.exit(1)
+    if not os.path.isfile(args.agencies_file):
+        warnings.warn("no agencies_file; got {}".format(args.agencies_file))
+        sys.exit(1)
+    if not os.path.isfile(args.entity_csv):
+        warnings.warn("no entity_csv; got {}".format(args.entity_csv))
         sys.exit(1)
     if not 0.0 <= args.drop_prob <= 1.0:
         warnings.warn(
             "invalid drop probability; got {}".format(args.drop_prob)
         )
+        sys.exit(1)
+    if os.path.isfile(args.output):
+        msg = "output file already exists. Please delete or rename {}".format(
+            args.output
+        )
+        warnings.warn(msg)
         sys.exit(1)
 
     logger.info("loading spaCy")
