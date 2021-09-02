@@ -21,7 +21,6 @@ optional arguments:
                         minimum tokens for a sentence
 """
 import logging
-import os
 import re
 
 import pandas as pd
