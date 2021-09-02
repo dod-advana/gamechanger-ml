@@ -3,6 +3,9 @@ import numpy as np
 from gamechangerml.src.utilities.model_helper import *
 from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.api.utils.logger import logger
+from gamechangerml.src.utilities.es_search_utils import get_paragraph_results, connect_es
+
+ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
 
 class ValidationData():
 
@@ -114,7 +117,6 @@ class RetrieverGSData(ValidationData):
         '''
 
         ids = ['.'.join(i.strip('\n').split('.')[:-1]).strip().lstrip() for i in available_ids]
-
 
         self.samples['document'] = self.samples['document'].apply(lambda x: [i.strip().lstrip() for i in x.split(';')])
         self.samples = self.samples.explode('document')
@@ -290,113 +292,16 @@ class SearchValidationData(ValidationData):
         self.history_path = os.path.join(self.validation_dir, validation_config['search_history_file'])
         self.matamo_data = MatamoFeedback(self.matamo_path)
         self.history_data = SearchHistory(self.history_path)
-
-    def update_dictionary(old_dict, new_additions, prefix):
-        '''Update master dictionary of unique queries'''
-    
-        def make_ids(new_additions, last_count, prefix):
-            '''Make UUIDs for new queries/docs'''
-        
-            new_dict = {}
-            for i in new_additions:
-                if i not in old_dict.values():
-                    last_count += 1
-                    myid = str(last_count)
-                    add = str(0) * ( 7 - len(myid))
-                    myid = prefix + add + myid 
-                    new_dict[myid] = i
-
-            return new_dict
-        
-        if old_dict != {}:
-            last_count = [re.sub(r'[A-Z]', '', i) for i in old_dict.keys()][-1]
-        else:
-            last_count = -1
-        new_dict = make_ids(new_additions, last_count, prefix)
-        
-        return {**old_dict, **new_dict}
-
-    def map_ids(iddict, df, mapcol, idcol):
-        '''Map IDs back to df'''
-        
-        reverse = {iddict[k]: k for k in iddict.keys()}
-        col = 'ID_' + idcol
-        df[col] = df[mapcol].map(reverse)
-        
-        return df
-
-    def update_meta_relations(metadata, df, query_col, return_col):
-        '''Update dict with relations and metadata about each match'''
-        
-        df = df.sort_values(by = ['date'], ascending = False).sort_values(by = ['ID_key'])
-
-        for x in df['ID_key'].unique():
-            subset = df[df['ID_key']==x].copy()
-            for i in subset['ID_value'].unique():
-                subsubset = subset[subset['ID_value']==i]
-                exact_matches = []
-                for k in subsubset.index:
-                    em = {}
-                    em['exact_query'] = subsubset.loc[k, query_col]
-                    em['exact_result'] = subsubset.loc[k, return_col]
-                    em['source'] = subsubset.loc[k, 'source']
-                    em['date'] = subsubset.loc[k, 'date']
-                    exact_matches.append(em)
-                    
-                if x in metadata.keys() and i in metadata[x]:
-                    metadata[x][i]['exact_matches'].extend(exact_matches)
-                else:
-                    matchdict = {}
-                    matchdict['correct_match'] = subset['correct_match'].all()
-                    matchdict['last_match_date'] = list(subset['date'])[0]
-                    matchdict['exact_matches'] = exact_matches
-                
-                if x in metadata.keys():
-                    metadata[x][i] = matchdict
-                else:
-                    searchdict = {}
-                    searchdict[i] = matchdict
-                    metadata[x] = searchdict
-                    
-                metadata[x][i]['times_matched'] = len(metadata[x][i]['exact_matches'])
-                
-        return metadata
-        
-    def filter_rels(metadata, min_correct_matches):
-        '''Filter relations by criteria'''
-        
-        correct_rels = {}
-        incorrect_rels = {}
-        for key in metadata:
-            acceptable_positive_results = []
-            negative_results = []
-            for match in metadata[key]:
-                result = metadata[key][match]
-                sources = [i['source'] for i in result['exact_matches']]
-                if result['correct_match'] == True:
-                    if 'matamo' in sources: # we trust matamo data
-                        acceptable_positive_results.append(match)
-                    elif result['times_matched'] >= min_correct_matches: # only pull history matches occurring more than x times
-                        acceptable_positive_results.append(match)
-                elif result['correct_match'] == False:
-                    negative_results.append(match)
-
-            if acceptable_positive_results != []:
-                correct_rels[key] = acceptable_positive_results
-            if negative_results != []:
-                incorrect_rels[key] = negative_results
-            
-        return correct_rels, incorrect_rels
     
 class QASearchData(SearchValidationData):
     
     ##TODO: add context relations attr for QASearchData
     
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS, save=False):
         
         super().__init__(validation_config)
         self.data = self.matamo_data.qa
-        self.queries, self.collection, self.meta_relations, self.correct, self.incorrect = self.make_qa()
+        self.queries, self.collection, self.all_relations, self.correct, self.incorrect = self.make_qa()
         
     def make_qa(self):
         
@@ -419,7 +324,7 @@ class QASearchData(SearchValidationData):
         new_qa_metadata = update_meta_relations(qa_metadata, qa, 'question', 'QA answer')
         
         # filtere the metadata to only get relations we want to test against
-        correct, incorrect = self.filter_rels(new_qa_metadata, min_matches=0)
+        correct, incorrect = filter_rels(new_qa_metadata, min_correct_matches=0)
         
         return qa_search_queries, qa_search_results, new_qa_metadata, correct, incorrect
 
@@ -429,28 +334,28 @@ class IntelSearchData(SearchValidationData):
         
         super().__init__(validation_config)
         self.data = pd.concat([self.matamo_data.intel, self.history_data.intel]).reset_index()
-        self.queries, self.collection, self.meta_relations, self.correct, self.incorrect = self.make_intel()
+        self.queries, self.collection, self.all_relations, self.correct, self.incorrect = self.make_intel()
         
     def make_intel(self):
         
-        intel = self.intel_search
+        intel = self.data
         
         int_queries = set(intel['search_text_clean'])
-        intel_search_queries = self.update_dictionary(old_dict = {}, new_additions = int_queries, prefix ='S')
+        intel_search_queries = update_dictionary(old_dict = {}, new_additions = int_queries, prefix ='S')
         
         int_docs = set(intel['title_returned'])
-        intel_search_results = self.update_dictionary(old_dict = {}, new_additions = int_docs, prefix ='R')
+        intel_search_results = update_dictionary(old_dict = {}, new_additions = int_docs, prefix ='R')
         
         # map IDS back to dfs
-        intel = self.map_ids(intel_search_queries, intel, 'search_text_clean', 'key')
-        intel = self.map_ids(intel_search_results, intel, 'title_returned', 'value')
+        intel = map_ids(intel_search_queries, intel, 'search_text_clean', 'key')
+        intel = map_ids(intel_search_results, intel, 'title_returned', 'value')
 
         # create new intel search metadata rels
         intel_metadata = {} # TODO: add option to add existing metadata
-        new_intel_metadata = self.update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned')
+        new_intel_metadata = update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned')
 
         # filtere the metadata to only get relations we want to test against
-        correct, incorrect = self.filter_rels(new_intel_metadata, min_matches=2)
+        correct, incorrect = filter_rels(new_intel_metadata, min_correct_matches=2)
         
         return intel_search_queries, intel_search_results, new_intel_metadata, correct, incorrect
 

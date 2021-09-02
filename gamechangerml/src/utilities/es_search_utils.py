@@ -12,7 +12,6 @@ def connect_es(es_url):
         try:
             es = Elasticsearch([es_url]) 
             time.sleep(1)
-            print(es.info())
             print("ES connected\n")
             break
         except ConnectionError: 
@@ -164,3 +163,22 @@ def get_paragraph_results(es, query, doc):
             texts.append(par['fields']['paragraphs.par_raw_text_t'])
     
     return texts
+
+def collect_results(relations, queries, collection, es, label):
+    '''Query ES for search/doc matches and add them to query results with a label'''
+
+    found = {}
+    not_found = {}
+    for i in relations.keys():
+        query = queries[i]
+        for k in relations[i]:
+            doc = collection[k]
+            uid = str(i) + '_' + str(k)
+            try:
+                para = get_paragraph_results(es, query, doc)[0][0]
+                para = ' '.join(para.split(' ')[:400]) # truncate to 400 tokens
+                found[uid] = {"query": query, "doc": doc, "paragraph": para, "label": label}
+            except:
+                not_found[uid] = {"query": query, "doc": doc, "label": label}
+                
+    return found, not_found

@@ -2,7 +2,9 @@ import os
 import string
 import re
 import json
-from datetime import date
+import numpy as np
+from datetime import date, datetime
+
 from gamechangerml.api.utils.logger import logger
 
 # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
@@ -63,6 +65,26 @@ def check_directory(directory):
 
     return directory
 
+def make_timestamp_directory(base_dir):
+
+    now = datetime.now()
+    new_dir = os.path.join(base_dir, now.strftime("%Y-%m-%d_%H%M%S"))
+    if not os.path.exists(new_dir):
+        logger.info("Creating new directory {}".format(new_dir))
+        os.makedirs(new_dir)
+    else:
+        logger.info("Directory {} already exists.".format(new_dir))
+    
+    return new_dir
+
+# stackoverflow
+class CustomJSONizer(json.JSONEncoder):
+    def default(self, obj):
+        return super().encode(bool(obj)) \
+            if isinstance(obj, np.bool_) \
+            else super().default(obj)
+
+
 # Source: https://rajpurkar.github.io/SQuAD-explorer/
 def normalize_answer(s):
     """Lower text and remove punctuation, articles and extra whitespace."""
@@ -84,7 +106,7 @@ def get_tokens(s):
 
 def update_dictionary(old_dict, new_additions, prefix):
     '''Update master dictionary of unique queries'''
-    
+
     def make_ids(new_additions, last_count, prefix):
         '''Make UUIDs for new queries/docs'''
     
@@ -152,3 +174,29 @@ def update_meta_relations(metadata, df, query_col, return_col):
             metadata[x][i]['times_matched'] = len(metadata[x][i]['exact_matches'])
             
     return metadata
+    
+def filter_rels(metadata, min_correct_matches):
+    '''Filter relations by criteria'''
+    
+    correct_rels = {}
+    incorrect_rels = {}
+    for key in metadata:
+        acceptable_positive_results = []
+        negative_results = []
+        for match in metadata[key]:
+            result = metadata[key][match]
+            sources = [i['source'] for i in result['exact_matches']]
+            if result['correct_match'] == True:
+                if 'matamo' in sources: # we trust matamo data
+                    acceptable_positive_results.append(match)
+                elif result['times_matched'] >= min_correct_matches: # only pull history matches occurring more than x times
+                    acceptable_positive_results.append(match)
+            elif result['correct_match'] == False:
+                negative_results.append(match)
+
+        if acceptable_positive_results != []:
+            correct_rels[key] = acceptable_positive_results
+        if negative_results != []:
+            incorrect_rels[key] = negative_results
+        
+    return correct_rels, incorrect_rels
