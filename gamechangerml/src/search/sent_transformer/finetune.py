@@ -2,8 +2,10 @@ from sentence_transformers import SentenceTransformer, InputExample, util, losse
 from torch.utils.data import DataLoader
 import pandas as pd
 from datetime import date
+import os
+import json
 
-from gamechangerml.src.utilities.model_helper import open_json
+from gamechangerml.src.utilities.model_helper import open_json, timestamp_filename
 from gamechangerml.api.utils.logger import logger
 
 def get_cos_sim(model, pair):
@@ -92,5 +94,11 @@ class STFinetuner():
             "negative_change_test": negative_change_test
         }
 
-        with 
+        ft_metadata_path = os.path.join(data_dir, timestamp_filename("finetuning_metadata", ".json"))
+        with open(ft_metadata_path, "w") as outfile:
+            json.dump(ft_metadata, outfile)
+
+        logger.info("Metadata saved to {}".format(ft_metadata_path))
+        logger.info(str(ft_metadata))
+
         return 

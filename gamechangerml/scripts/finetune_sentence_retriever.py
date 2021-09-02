@@ -10,6 +10,10 @@ VALIDATION_DIR = ValidationConfig.DATA_ARGS['validation_dir']
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 BASE_MODEL_NAME = EmbedderConfig.MODEL_ARGS['model_name']
 
+def main():
+
+    tuner = STFinetuner(model=None, model_load_path, model_save_path, **EmbedderConfig)
+
 
 if __name__ == "__main__":
 
@@ -28,7 +32,6 @@ if __name__ == "__main__":
         )
 
     args = parser.parse_args()
-
     
     logger.info("|------------------Collecting training data------------------|")
 
