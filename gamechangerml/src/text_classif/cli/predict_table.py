@@ -124,6 +124,11 @@ def predict_table(
     df = entity_linker.to_df()
     df = df[df.top_class > 0].reset_index()
 
+    # for a post-run look
+    tdf = df[df.top_class > 1].reset_index()
+    tdf.to_csv("labels-gt-one.csv", index=False)
+    _ = tdf.iloc[0:0]
+
     logger.info("building agencies for entries : {:,}".format(len(df)))
     duplicates, aliases = get_agencies_dict(agencies_file)
     df["agencies"] = get_agencies(

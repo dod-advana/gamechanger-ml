@@ -44,7 +44,7 @@ def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
             set of documents
         doc_dups: list of disambiguated agencies
         duplicates: list of potentially ambiguous agencies
-        agencies_dict: dictionary of agency acroynms to full agency names
+        agencies_dict: dictionary of agency acronyms to full agency names
 
     Returns:
         Vector of all extracted agencies for every row of the input dataframe.

@@ -38,7 +38,7 @@ class EntityLink(object):
                 `entity_mentions.py`
 
             use_na (bool): if True, use self.NA instead of the top k mentions
-                when entity linking fails
+                when entity linking fails (DEPRECATED)
 
             topk (int): top k mentions to use when an entity has failed;
                 These are separated by a semicolon.
@@ -133,7 +133,7 @@ class EntityLink(object):
             ent = ";".join(self.top_k_in_doc[doc_name])
             return ent
         else:
-            logger.warning("can't find {} for lookup".format(doc_name))
+            logger.warning("can't find {} for entity lookup".format(doc_name))
             return self.NA
 
     def _candidate_entity(self, sentence):
@@ -177,7 +177,7 @@ class EntityLink(object):
                 if ent_list:
                     new_entry[self.ENT] = self._candidate_entity(sentence)
 
-            # very unlikely - covering all the bases
+            # unlikely - covering all the bases
             else:
                 msg = "unknown prediction for '{}', ".format(
                     new_entry[self.ENT]
