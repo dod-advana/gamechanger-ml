@@ -61,7 +61,9 @@ def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
 
     # speeds up iterating through the various dataframe columns dynamically,
     # excludes doc name and primary entity
-    logger.info("building intermediate table")
+    logger.info(
+        "building intermediate table, size : {:,}".format(len(file_dataframe))
+    )
     start = time.time()
     combined_cols = pd.DataFrame(
         file_dataframe[file_dataframe.columns[2:]].apply(
