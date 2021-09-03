@@ -33,11 +33,6 @@ def _log_metadata(model_path, curr_version):
     with open(stats_path) as f:
         chkpt_stats = json.load(f)
 
-    default = "?"
-    ts = default
-    nl = default
-    if "timestamp" in chkpt_stats:
-        ts = chkpt_stats["timestamp"]
     if "num_labels" in chkpt_stats:
         nl = chkpt_stats["num_labels"]
 
@@ -114,7 +109,7 @@ class Predictor:
 
     def predict(self, inputs, batch_size=8, max_seq_len=128):
         """
-        Predict the class on a set of inputs.
+        Generator to predict the class on a set of inputs.
 
         Args:
             inputs (list): text to be classified, one example per entry

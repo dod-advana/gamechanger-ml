@@ -6,10 +6,15 @@ DoDD, DoDI, and DoDM documents. After the prediction step is completed, an entit
 person) is linked to each predicted responsibility statement and a `.csv` is produced with all
 sorts of supporting data.
 
-## Data
-Producing the aforementioned `.csv` depends on several data files and the corpus. All the
+## Training Data
+Producing the aforementioned `.csv` depends on several data files the corpus. All the
 required data for training and producing the table is collected in a single directory
-`classifier_data`. 
+`classifier_data/`.
+
+**Step 1** An `entity_mentions.json` is required and is in `classifier_data/entity_mentions/`. To
+create this file, you'll need `classifier_data/entity_mentions/flat_entities_custom.csv`.
+The CLI `entity/entity_mentions.py` has instructions. For DoDD, DoDI, and DoDM, this
+takes ~45 mins to run.
 
 ## Classifier Details
 The `base_class` does most of the heavy lifting, however, it **must** be subclassed to provide a few
