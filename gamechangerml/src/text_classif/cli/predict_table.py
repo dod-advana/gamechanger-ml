@@ -130,12 +130,13 @@ def predict_table(
     if len(tdf) > 0:
         out_path, fname = os.path.split(output_csv)
         fname, ext = os.path.splitext(fname)
-        out_csv_ = os.path.join(fname + "labels_gt_1." + ext)
+        out_csv_ = os.path.join(fname + "-labels-gt-1" + ext)
         logger.info("writing {}".format(out_csv_))
         tdf.to_csv(out_csv_, index=False)
         _ = tdf.iloc[0:0]
 
-    logger.info("building agencies for entries : {:,}".format(len(df)))
+    logger.info("building agencies for entries {:,} entries".format(len(df)))
+    logger.info("please be patient...")
     duplicates, aliases = get_agencies_dict(agencies_file)
     df["agencies"] = get_agencies(
         file_dataframe=df,

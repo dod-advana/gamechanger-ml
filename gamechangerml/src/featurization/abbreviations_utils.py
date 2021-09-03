@@ -1,7 +1,13 @@
+import datetime
+import logging
+import time
+
 import pandas as pd
 from tqdm import tqdm
 
 from gamechangerml.src.featurization.ref_list import collect_ref_list
+
+logger = logging.getLogger(__name__)
 
 
 def get_agencies_dict(agencies_file):
@@ -52,15 +58,23 @@ def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
     aliases = agencies_dict
     duplicates = duplicates
     all_agencies = []
+
     # speeds up iterating through the various dataframe columns dynamically,
     # excludes doc name and primary entity
+    logger.info("building intermediate table")
+    start = time.time()
     combined_cols = pd.DataFrame(
         file_dataframe[file_dataframe.columns[2:]].apply(
             lambda x: ",".join(x.dropna().astype(str)), axis=1
         ),
         columns=["text"],
     )
+    elapsed_rounded = int(round(time.time() - start))
+    fmt = str(datetime.timedelta(seconds=elapsed_rounded))
+    logger.info("intermediate table built : {:}".format(fmt))
 
+    logger.info("attaching agencies...")
+    start = time.time()
     for i, row in combined_cols.iterrows():
         agencies = []
         for x in aliases.keys():
@@ -75,6 +89,9 @@ def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
         flat_a = set(flat_a)
         all_agencies.append(",".join(flat_a))
 
+    elapsed_rounded = int(round(time.time() - start))
+    fmt = str(datetime.timedelta(seconds=elapsed_rounded))
+    logger.info("agencies attached : {:}".format(fmt))
     return all_agencies
 
 
