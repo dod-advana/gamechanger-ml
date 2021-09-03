@@ -128,7 +128,6 @@ class Predictor:
             List[Dict]
 
         """
-        logger.info("into the breach...")
         if not 8 <= max_seq_len <= 512:
             raise ValueError(
                 "must have  8 <= max_seq_len <= 512, got {}".format(

@@ -109,6 +109,7 @@ def predict_table(
         "source": "Source Document",
     }
 
+    logger.info("into the breach...")
     start = time.time()
     entity_linker = EntityLink(
         entity_csv=entity_csv,
