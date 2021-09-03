@@ -29,12 +29,15 @@ def _log_metadata(model_path, curr_version):
         logger.info("no 'run_stats.json' in the checkpoint directory")
         return
 
-    ts = os.path.getmtime(os.path.join(model_path, "config.json"))
     with open(stats_path) as f:
         chkpt_stats = json.load(f)
-
+    nl = "not available"
     if "num_labels" in chkpt_stats:
         nl = chkpt_stats["num_labels"]
+    if "timestamp" in chkpt_stats:
+        ts = chkpt_stats["timestamp"]
+    else:
+        ts = os.path.getmtime(os.path.join(model_path, "config.json"))
 
     c_version = chkpt_stats["config"]["version"]
     if curr_version is not None:
@@ -101,6 +104,9 @@ class Predictor:
                 config=model_config,
             )
             _log_metadata(model_name_or_path, self.__version__)
+            if torch.cuda.is_available():
+                self.model.cuda()
+
             self.model.eval()
 
             logging.info("model loaded")
@@ -122,6 +128,7 @@ class Predictor:
             List[Dict]
 
         """
+        logger.info("into the breach...")
         if not 8 <= max_seq_len <= 512:
             raise ValueError(
                 "must have  8 <= max_seq_len <= 512, got {}".format(
@@ -159,7 +166,7 @@ class Predictor:
             raise e
         # Check and send to cuda (GPU) if available
         if torch.cuda.is_available():
-            self.model.cuda()
+            # self.model.cuda()
             for tensor in encoded_input:
                 encoded_input[tensor] = encoded_input[tensor].cuda()
 

@@ -126,6 +126,7 @@ def predict_table(
 
     # for a post-run look
     tdf = df[df.top_class > 1].reset_index()
+    logger.info("writing labels-gt-one.csv")
     tdf.to_csv("labels-gt-one.csv", index=False)
     _ = tdf.iloc[0:0]
 
