@@ -127,9 +127,13 @@ def predict_table(
 
     # for a post-run look
     tdf = df[df.top_class > 1].reset_index()
-    logger.info("writing labels-gt-one.csv")
-    tdf.to_csv("labels-gt-one.csv", index=False)
-    _ = tdf.iloc[0:0]
+    if len(tdf) > 0:
+        out_path, fname = os.path.split(output_csv)
+        fname, ext = os.path.splitext(fname)
+        out_csv_ = os.path.join(fname + "labels_gt_1." + ext)
+        logger.info("writing {}".format(out_csv_))
+        tdf.to_csv(out_csv_, index=False)
+        _ = tdf.iloc[0:0]
 
     logger.info("building agencies for entries : {:,}".format(len(df)))
     duplicates, aliases = get_agencies_dict(agencies_file)
