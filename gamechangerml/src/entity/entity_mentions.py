@@ -284,9 +284,9 @@ def entities_and_spans_by_doc(entity_file, corpus_dir, glob):
 
 
 def entity_types_in_text(text, entity_re, abbrv_re, entity2type):
-    entity_list = entity_list(text, entity_re, abbrv_re)
+    ent_list = entity_list(text, entity_re, abbrv_re)
     entity_types = [
-        entity2type[entity.lower()] for entity in entity_list if entity
+        entity2type[entity.lower()] for entity in ent_list if entity
     ]
     return entity_types, entity_list
 

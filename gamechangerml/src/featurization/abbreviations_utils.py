@@ -75,6 +75,7 @@ def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
     fmt = str(datetime.timedelta(seconds=elapsed_rounded))
     logger.info("intermediate table built : {:}".format(fmt))
 
+    # TODO make faster - the double iteration is very slow
     logger.info("attaching agencies...")
     start = time.time()
     for i, row in combined_cols.iterrows():
