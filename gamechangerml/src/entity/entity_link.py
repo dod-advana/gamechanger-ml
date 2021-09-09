@@ -176,7 +176,7 @@ class EntityLink(object):
             elif prediction[self.TOPCLASS] == self.STANDALONE_LABEL:
                 # if ent_list:
                 cand_entity = self._candidate_entity(sentence)
-                print("{} \n\t-> {}".format(cand_entity, sentence))
+                # print("{} \n\t-> {}".format(cand_entity, sentence))
                 if cand_entity:
                     ent_list = em.entity_list(
                         cand_entity, self.entity_re, self.abbrv_re

@@ -89,13 +89,13 @@ def predict_table(
     if os.path.isfile(output_csv):
         raise ValueError("output file exists. Please rename or remove.")
     if not os.path.isdir(data_path):
-        raise ValueError("no data path : {}".format(data_path))
+        raise ValueError("no data path {}".format(data_path))
     if not os.path.isdir(model_path):
-        raise ValueError("no model path : {}".format(model_path))
+        raise ValueError("no model path {}".format(model_path))
     if not os.path.isfile(entity_csv):
-        raise FileNotFoundError("entity-csv; got {}".format(entity_csv))
+        raise FileNotFoundError("entity-csv got {}".format(entity_csv))
     if not os.path.isfile(agencies_file):
-        raise FileNotFoundError("agencies-csv got {}".format(agencies_file))
+        raise FileNotFoundError("agencies-file got {}".format(agencies_file))
     if not os.path.isfile(entity_mentions):
         raise FileNotFoundError("entity-mentions got {}".format(entity_mentions))
 
