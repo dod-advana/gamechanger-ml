@@ -19,29 +19,23 @@ try:
         corpus_download: False,
         clear_corpus: False,
         training: False,
-        loading_corpus:False,
-        reloading:False
+        loading_corpus: False,
+        reloading: False,
     }
 
-    PROCESS_STATUS.value = {
-        "flags":default_flags
-    }
+    PROCESS_STATUS.value = {"flags": default_flags}
     COMPLETED_PROCESS.value = []
 except Exception as e:
     print(e)
 
 
-def update_status(key, progress = 0, total = 100, failed = False):
+def update_status(key, progress=0, total=100, message="", failed=False):
 
     try:
         if progress == total or failed:
             date = datetime.now()
             date_string = date.strftime("%Y-%m-%d %H:%M:%S")
-            completed = {
-                "process": key,
-                "total": total,
-                "date": date_string
-            }
+            completed = {"process": key, "total": total, "message":message, "date": date_string}
             with thread_lock:
                 if key in PROCESS_STATUS.value:
                     temp = PROCESS_STATUS.value
@@ -53,10 +47,7 @@ def update_status(key, progress = 0, total = 100, failed = False):
                     completed_list.append(completed)
                     COMPLETED_PROCESS.value = completed_list
         else:
-            status = {
-                "progress":progress,
-                "total":total
-            }
+            status = {"progress": progress, "total": total}
             with thread_lock:
                 status_dict = PROCESS_STATUS.value
                 status_dict[key] = status
@@ -65,8 +56,9 @@ def update_status(key, progress = 0, total = 100, failed = False):
     except Exception as e:
         print(e)
 
+
 def set_flags(key, value):
     with thread_lock:
-            status_dict = PROCESS_STATUS.values
-            status_dict["flags"][key] = value
-            PROCESS_STATUS.value = status_dict
+        status_dict = PROCESS_STATUS.values
+        status_dict["flags"][key] = value
+        PROCESS_STATUS.value = status_dict

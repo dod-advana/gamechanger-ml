@@ -8,10 +8,6 @@ class DefaultConfig:
     DATA_DIR = os.path.join(REPO_PATH, "common/data/processed")
     LOCAL_MODEL_DIR = os.path.join(REPO_PATH, "gamechangerml/models")
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
-    # DEFAULT_MODEL_NAME = "20200728"
-    # MODEL_DIR = "gamechangerml/src/modelzoo/semantic/packaged_models/20200728"
-    # LOCAL_PACKAGED_MODELS_DIR = os.path.join(REPO_PATH, "gamechangerml/src/modelzoo/semantic/packaged_models")
-
 
 class S3Config:
     STORE_S3 = True
@@ -20,10 +16,6 @@ class S3Config:
 
 
 class D2VConfig:
-    # MODEL_ID = datetime.now().strftime("%Y%m%d")
-    # MODEL_DIR = os.path.join(REPO_PATH, "gamechangerml/src/modelzoo/semantic/models")
-    # CORPUS_DIR = "../tinytestcorpus"
-    # CORPUS_DIR = "test/small_corpus"
     MODEL_ARGS = {
         "dm": 1,
         "dbow_words": 1,
@@ -36,7 +28,6 @@ class D2VConfig:
         "min_alpha": 0.005,
         # 'workers': multiprocessing.cpu_count() // 2 # to allow some portion of the cores to perform generator tasks
     }
-
 
 # for Bert Extractive Summarizer (https://pypi.org/project/bert-extractive-summarizer/)
 class BertSummConfig:
@@ -69,7 +60,75 @@ class BertSummConfig:
 
 class QAConfig:
     MODEL_ARGS = {
+        "model_name": "bert-base-cased-squad2",
         "qa_type": 'scored_answer', # options are: ['scored_answer', 'simple_answer']
         "nbest": 1, # number of answers to retrieve from each context for comparison
         "null_threshold": -3 # if diff between the answer score and null answer score is greater than this threshold, don't return answer
+    }
+
+class EmbedderConfig: 
+    MODEL_ARGS = {
+        "model_name": "msmarco-distilbert-base-v2", # SOURCE
+        "embeddings": {
+            "embeddings": "embeddings.npy",
+            "dataframe": "data.csv",
+            "ids": "doc_ids.txt",
+        },
+        "encoder": { ## args for making the embeddings index
+            "min_token_len": 10,
+            "overwrite": False,
+            "verbose": True, # for creating LocalCorpus
+            "return_id": True # for creating LocalCorpus
+        },
+        "retriever": { ## args for retrieving the vectors
+            "n_returns": 5
+        }
+    }
+
+class SimilarityConfig:
+    MODEL_ARGS = {
+        "model_name": "distilbart-mnli-12-3" # SOURCE
+    }
+
+class QEConfig:
+    MODEL_ARGS = {
+        "init": { # args for creating QE object
+            "qe_model_dir": "gamechangerml/models/qexp_20201217",
+            "qe_files_dir": "gamechangerml/src/search/query_expansion",
+            "method": "emb", 
+            "vocab_file": "word-freq-corpus-20201101.txt"
+        },
+        "expansion": { # configs for getting expanded terms
+            "topn": 2, 
+            "threshold": 0.2, 
+            "min_tokens": 3
+        }
+    }
+
+class ValidationConfig:
+    DATA_ARGS = {
+        "validation_dir": "gamechangerml/data/validation", # need to have validation data in here
+        "evaluation_dir": "gamechangerml/data/evaluation",
+        "test_corpus_dir": "gamechanger/data/test_corpus", # location with smaller set of corpus JSONs
+        "squad": {
+            "dev": "squad2.0/dev-v2.0.json",
+            "train": "squad2.0/train-v2.0.json"
+        },
+        "nli": {
+            "matched": "multinli_1.0/multinli_1.0_dev_matched.jsonl",
+            "mismatched": "multinli_1.0/multinli_1.0_dev_mismatched.jsonl"
+        },
+        "msmarco": {
+            "collection": "msmarco_1k/collection.json",
+            "queries": "msmarco_1k/queries.json",
+            "relations": "msmarco_1k/relations.json",
+            "metadata": "msmarco_1k/metadata.json",
+        },
+        "question_gc": {
+            "queries": "QA_domain_data.json"
+        },
+        "retriever_gc": {
+            "gold_standard": "gold_standard.csv"
+        },
+        "qe_gc": "QE_domain.json"
     }

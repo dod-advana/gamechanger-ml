@@ -1,6 +1,6 @@
 import os
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs.config import QAConfig
+from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QEConfig
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.search.embed_reader import sparse
@@ -55,12 +55,10 @@ class ModelLoader:
         Returns:
         """
         try:
-            qa_model_path = os.path.join(
-                LOCAL_TRANSFORMERS_DIR.value, "bert-base-cased-squad2")
             logger.info("Starting QA pipeline")
-            ModelLoader.__qa_model = QAReader(qa_model_path, use_gpu=True, **QAConfig.MODEL_ARGS)
+            ModelLoader.__qa_model = QAReader(transformer_path=LOCAL_TRANSFORMERS_DIR.value, use_gpu=True, **QAConfig.MODEL_ARGS)
             # set cache variable defined in settings.py
-            latest_qa_model.value = qa_model_path
+            latest_qa_model.value =  ModelLoader.__qa_model.READER_PATH
             logger.info("Finished loading QA Reader")
         except OSError:
             logger.error(f"Could not load Question Answer Model")
@@ -74,7 +72,7 @@ class ModelLoader:
         logger.info(f"Loading Query Expansion Model from {qexp_model_path}")
         try:
             ModelLoader.__query_expander = qe.QE(
-                qexp_model_path, method="emb", vocab_file="word-freq-corpus-20201101.txt"
+                **QEConfig.MODEL_ARGS['init']
             )
             logger.info("** Loaded Query Expansion Model")
         except Exception as e:
@@ -91,19 +89,25 @@ class ModelLoader:
         Returns:
         """
         # load defaults
-        encoder_model = os.path.join(
-            transformer_path, "msmarco-distilbert-base-v2")
-        logger.info(f"Using {encoder_model} for sentence transformer")
-        sim_model = os.path.join(transformer_path, "distilbart-mnli-12-3")
-        logger.info(f"Loading Sentence Transformer from {sim_model}")
+        #encoder_model = os.path.join(
+        #    transformer_path, "msmarco-distilbert-base-v2")
+        #sim_model = os.path.join(transformer_path, "distilbart-mnli-12-3")
+        
         logger.info(f"Loading Sentence Index from {index_path}")
         try:
             ModelLoader.__sentence_trans = SentenceSearcher(
                 index_path=index_path,
-                sim_model=sim_model,
+                transformers_path=LOCAL_TRANSFORMERS_DIR.value,
+                retriever_args=EmbedderConfig.MODEL_ARGS, 
+                similarity_args=SimilarityConfig.MODEL_ARGS
             )
+
+            encoder_model = ModelLoader.__sentence_trans.encoder_model
+            logger.info(f"Using {encoder_model} for sentence transformer")
+            sim_model = ModelLoader.__sentence_trans.similarity
+            logger.info(f"Loading Sentence Transformer from {sim_model.sim_model}")
             # set cache variable defined in settings.py
-            latest_intel_model_sent.value  = {"encoder": encoder_model, "sim": sim_model}
+            latest_intel_model_sent.value  = {"encoder": encoder_model, "sim": sim_model.sim_model}
             logger.info("** Loaded Sentence Transformers")
         except Exception as e:
             logger.warning("** Could not load Sentence Transformer model")

@@ -14,11 +14,15 @@ optional arguments:
                         output path for .csv files
   -g GLOB, --glob GLOB  file pattern to match
 """
+import json
 import logging
+import os
 import re
 import time
 from collections import defaultdict
 
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
@@ -26,47 +30,36 @@ import gamechangerml.src.text_classif.utils.classifier_utils as cu
 logger = logging.getLogger(__name__)
 
 
-def make_entity_re(orgs_file):
+def make_entity_re(entity_csv):
     """
     Creates regular expressions for long form entities and their abbreviations,
     if they exist. These are large alternations. No magic.
 
     Args:
-        orgs_file (str): organizations file
+        entity_csv (str): csv with entries consiting of
+            *entity name*, *entity abbreviation*, *entity type*
 
     Returns:
         SRE_Pattern, SRE_Pattern
     """
-    abbrvs = set()
-    entities = set()
+    if not os.path.isfile(entity_csv):
+        raise FileNotFoundError("can't find {}".format(entity_csv))
+    df = pd.read_csv(entity_csv, names=["long_form", "short_form", "etype"])
+    df = df.replace(np.nan, "")
 
-    with open(orgs_file) as f_in:
-        entity_list = f_in.readlines()
-    for line in entity_list:
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "(" in line:
-            entity, abbrv = line.split("(", maxsplit=1)
-        else:
-            entity = line
-            abbrv = None
-        entities.add(entity)
-        if abbrv and abbrv.endswith(")"):
-            abbrvs.add(abbrv[:-1])
+    entities = list(set(df["long_form"]))
+    abbrvs = list(set(df["short_form"]))
 
-    entities = list(entities)
-    abbrvs = list(abbrvs)
     logger.info("num entities : {}".format(len(entities)))
     logger.info(" num abbrevs : {}".format(len(abbrvs)))
 
     entities.sort(key=lambda s: len(s), reverse=True)
     abbrvs.sort(key=lambda s: len(s), reverse=True)
 
-    entity_re = "|".join([e.strip() for e in entities])
+    entity_re = "|".join([re.escape(e.strip()) for e in entities])
     entity_re = re.compile("(\\b" + entity_re + "\\b)", re.I)
 
-    abbrv_re = "|".join(([re.escape(a.strip()) for a in abbrvs]))
+    abbrv_re = "|".join(([re.escape(a.strip()) for a in abbrvs if a.strip()]))
     abbrv_re = re.compile("(\\b" + abbrv_re + "\\b)")
     return abbrv_re, entity_re
 
@@ -85,15 +78,17 @@ def contains_entity(text, entity_re, abbrv_re):
     Returns:
         List[str]
     """
-    ent_list = list()
-    ents = entity_re.findall(text)
-    if ents:
-        ent_list.extend(ents)
+    entity_list = list()
+
+    entities = entity_re.findall(text)
+    if entities:
+        entity_list.extend(entities)
+
     abbrvs = abbrv_re.findall(text)
     if abbrvs:
         for a in abbrvs:
-            ent_list.append(a)
-    return ent_list
+            entity_list.append(a)
+    return entity_list
 
 
 def entities_spans(text, entity_re, abbrv_re):
@@ -136,13 +131,15 @@ def count_glob(corpus_dir, glob, entity_re, abbrv_re):
         Dict[List[tuple]] : key is the document name, each tuple is
             (entity, frequency)
     """
+    SENT = "sentence"
     nfiles = cu.nfiles_in_glob(corpus_dir, glob)
     entity_count = defaultdict(int)
     doc_entity = dict()
+
     r2d = cu.raw2dict(corpus_dir, glob)
     for sent_dict, fname in tqdm(r2d, total=nfiles, desc="docs"):
         for sd in sent_dict:
-            sent = sd["sentence"]
+            sent = sd[SENT]
             ent_list = contains_entity(sent, entity_re, abbrv_re)
             for ent in ent_list:
                 entity_count[ent.strip()] += 1
@@ -160,7 +157,7 @@ def entity_mentions_glob(entity_file, corpus_dir, glob):
     Args:
         entity_file (str): entity / abbreviation files
         corpus_dir (str): corpus directory
-        glob (str): file matching
+        glob (str): file matching expression
 
     Returns:
         Dict[List[tuple]] : key is the document name, each tuple is
@@ -209,8 +206,6 @@ def entities_and_spans(entity_file, corpus_dir, glob):
 
 
 if __name__ == "__main__":
-    import json
-    import os
     from argparse import ArgumentParser
     import gamechangerml.src.text_classif.utils.log_init as li
 
@@ -272,7 +267,6 @@ if __name__ == "__main__":
         output = entity_mentions_glob(
             args.entity_file, args.input_path, args.glob
         )
-
     if output:
         output = json.dumps(output)
         with open(args.output_json, "w") as f:

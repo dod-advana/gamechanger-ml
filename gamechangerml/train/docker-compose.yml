@@ -3,7 +3,7 @@ services:
   gamechanger-ml-train:
     container_name: gc-ml-train
     build:
-      context: ../
+      context: ../../.
       dockerfile: Dockerfile
     environment:
       - DOCKER=true
@@ -19,12 +19,12 @@ services:
   mlflow-server:
     container_name: mlflow-server
     build:
-      context: ../
-      dockerfile: mlflow/mlflow.Dockerfile
+      context: ../../.
+      dockerfile: gamechangerml/mlflow/mlflow.Dockerfile
     environment:
       - AWS_DEFAULT_REGION=us-east-1
       - FILE_DIR=/mlflow
     volumes:
-      - ../mlruns:/mlflow
+      - ../../mlruns:/mlflow
     ports:
       - 5050:5050

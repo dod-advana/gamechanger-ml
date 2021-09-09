@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class QE(object):
     __version__ = v.__version__
 
-    def __init__(self, qe_model_dir, method="emb", vocab_file=None):
+    def __init__(self, qe_model_dir, qe_files_dir, method, vocab_file):
         """
          Query expansion via smoothed inverse frequency weighted word embeddings
          and approximate nearest neighbor search.
@@ -53,6 +53,7 @@ class QE(object):
         self.method = method
         self.empty = np.array([0.0])
         self._alpha = 1e-03
+        self.qe_files_dir = qe_files_dir
         np.set_printoptions(precision=2)
 
         try:
@@ -76,13 +77,14 @@ class QE(object):
 
     def _setup_emb(self, qe_model_dir, vocab_file):
         cfg = QEConfig()
-        here = os.path.dirname(os.path.realpath(__file__))
-        wt_path = os.path.join(here, "aux_data", vocab_file)
+        #here = os.path.dirname(os.path.realpath(__file__))
+        wt_path = os.path.join(self.qe_files_dir, "aux_data", vocab_file)
+        print("wt_path: ", wt_path)
 
         try:
             ann_file, vocab_file = find_ann_indexes(qe_model_dir)
             self._nlp = get_lg_vectors()
-            self.word_wt = get_word_weight(weight_file=wt_path, a=self._alpha)
+            self.word_wt = get_word_weight(weight_file_path=wt_path, a=self._alpha)
 
             logger.info("loading QE indexes")
             vector_dim = spacy_vector_width(self._nlp)
@@ -125,7 +127,7 @@ class QE(object):
             logger.exception("{}: {}".format(type(e), str(e)), exc_info=True)
             raise
 
-    def expand(self, query_str, topn=2, threshold=0.2, min_tokens=3):
+    def expand(self, query_str, topn, threshold, min_tokens):
         """
         Expands a query string into the `topn` most similar terms excluding
         the tokens in `query_str`. If a token does not have an embedding,
