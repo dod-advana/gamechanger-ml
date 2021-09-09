@@ -62,6 +62,20 @@ def _agg_stats(df):
         df_resp_no_e.to_csv("resp-no-entity-stats.csv", index=False)
 
 
+def dump_label(df, num_labels, output_csv):
+    out_path, fname = os.path.split(output_csv)
+    fname, ext = os.path.splitext(fname)
+    for lbl in range(num_labels):
+        tdf = df[df.top_class == lbl].reset_index()
+        if len(tdf) == 0:
+            logger.warning("no output for label {}".format(lbl))
+            continue
+        out_csv_ = os.path.join(fname + "-label-{}".format(lbl) + ext)
+        logger.info("writing {}".format(out_csv_))
+        tdf.to_csv(out_csv_, index=False)
+        _ = tdf.iloc[0:0]
+
+
 def predict_table(
     model_path,
     data_path,
@@ -102,6 +116,8 @@ def predict_table(
     if num_labels < 1:
         raise ValueError("num labels must > 0; got {}".format(num_labels))
 
+    dump_individ = True
+
     rename_dict = {
         "entity": "Organization / Personnel",
         "sentence": "Responsibility Text",
@@ -128,17 +144,10 @@ def predict_table(
         glob,
     )
     df = entity_linker.to_df()
-    df = df[df.top_class > 0].reset_index()
 
     # for a post-run look
-    tdf = df[df.top_class > 1].reset_index()
-    if len(tdf) > 0:
-        out_path, fname = os.path.split(output_csv)
-        fname, ext = os.path.splitext(fname)
-        out_csv_ = os.path.join(fname + "-labels-gt-1" + ext)
-        logger.info("writing {}".format(out_csv_))
-        tdf.to_csv(out_csv_, index=False)
-        _ = tdf.iloc[0:0]
+    if dump_individ:
+        dump_label(df, num_labels, output_csv)
 
     logger.info("building agencies for entries {:,} entries".format(len(df)))
     logger.info("please be patient...")
