@@ -11,13 +11,14 @@ manner of ancillary data.
 Producing the aforementioned `.csv` depends on a trained model which in turn, depends on several data files and the corpus. 
 All the required data for training and producing this table (excluding the corpus) is collected in a single directory
 `classifier_data/`. This directory is archived on Advana Teams and is up-to-date as of 
-this writing (see General > Data Science > Classifier Model).
+this writing (see General > Data Science > Classifier Model). I create training data on my local machine
+and transfer it to the GPU instance for training the model. 
 
 **Step 1**: An `entity_mentions.json` is required. An update-to-date version is in `classifier_data/entity_mentions/`. 
 To create this file, you'll need `classifier_data/entity_mentions/flat_entities_custom.csv`.
 *This file needs to re-created only if the entities change. Its validity for other document types is not known*.
 ```
-python /your-path-to/gamechanger-ml/gamechangerml/src/entity/entity_mentions.py \
+python ~/gamechanger-ml/gamechangerml/src/entity/entity_mentions.py \
     --input-path your-path-to/gc-corpus \
     --entity-file your-path-to/classifier_data/entity_mentions/flat_entities_custom.csv \
     --glob DoD[DIM]*.json \
@@ -27,9 +28,10 @@ python /your-path-to/gamechanger-ml/gamechangerml/src/entity/entity_mentions.py 
 
 **Step 2**: Create the training data for targeted document types. The CLI is `gamechangerml/src/text_classif/cli/resp_training_text.py`.
 I recommend running this on individually on each of the types DoDD, DoDI, and DoDM with the output directed to
-the proper subdirectory of `classifier_data/`. For example, to create training data for DoDI documents:
+the proper subdirectory of `classifier_data/`. This way, if anything goes wrong, previous work is not lost. 
+For example, to create training data for DoDI documents:
 ```
-python /your-path-to/gamechanger-ml/gamechangerml/src/text_classif/cli/resp_training_text.py \
+python ~/gamechanger-ml/gamechangerml/src/text_classif/cli/resp_training_text.py \
     --input-dir your-path-to/gc-corpus \
     --glob DoDI*.json \
     --agencies-file your-path-to/classifier_data/agency/agencies.csv \

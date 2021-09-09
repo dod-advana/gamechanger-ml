@@ -94,8 +94,10 @@ def predict_table(
         raise ValueError("no model path : {}".format(model_path))
     if not os.path.isfile(entity_csv):
         raise FileNotFoundError("entity-csv; got {}".format(entity_csv))
+    if not os.path.isfile(agencies_file):
+        raise FileNotFoundError("agencies-csv got {}".format(agencies_file))
     if not os.path.isfile(entity_mentions):
-        raise FileNotFoundError("agencies csv; got {}".format(agencies_file))
+        raise FileNotFoundError("entity-mentions got {}".format(entity_mentions))
 
     if num_labels < 1:
         raise ValueError("num labels must > 0; got {}".format(num_labels))
@@ -109,7 +111,6 @@ def predict_table(
         "source": "Source Document",
     }
 
-    logger.info("into the breach...")
     start = time.time()
     entity_linker = EntityLink(
         entity_csv=entity_csv,
@@ -121,7 +122,11 @@ def predict_table(
         batch_size=batch_size,
     )
     logger.info("into the breach...")
-    entity_linker.make_table(model_path, data_path, glob,)
+    entity_linker.make_table(
+        model_path,
+        data_path,
+        glob,
+    )
     df = entity_linker.to_df()
     df = df[df.top_class > 0].reset_index()
 

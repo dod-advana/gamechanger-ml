@@ -174,8 +174,15 @@ class EntityLink(object):
             # standalone responsibility - link to the entity contained in the
             # sentence
             elif prediction[self.TOPCLASS] == self.STANDALONE_LABEL:
-                if ent_list:
-                    new_entry[self.ENT] = self._candidate_entity(sentence)
+                # if ent_list:
+                cand_entity = self._candidate_entity(sentence)
+                print("{} \n\t-> {}".format(cand_entity, sentence))
+                if cand_entity:
+                    ent_list = em.entity_list(
+                        cand_entity, self.entity_re, self.abbrv_re
+                    )
+                    if ent_list:
+                        new_entry[self.ENT] = self._candidate_entity(sentence)
 
             # unlikely - covering all the bases
             else:
