@@ -149,6 +149,8 @@ def predict_table(
     if dump_individ:
         dump_label(df, num_labels, output_csv)
 
+    df = df[df.top_class > 0].reset_index()
+
     logger.info("building agencies for entries {:,} entries".format(len(df)))
     logger.info("please be patient...")
     duplicates, aliases = get_agencies_dict(agencies_file)
@@ -157,6 +159,7 @@ def predict_table(
         doc_dups=None,
         duplicates=duplicates,
         agencies_dict=aliases,
+        verbose=True,
     )
 
     logger.info("getting references...")

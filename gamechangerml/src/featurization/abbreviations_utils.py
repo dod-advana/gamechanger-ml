@@ -9,6 +9,10 @@ from gamechangerml.src.featurization.ref_list import collect_ref_list
 
 logger = logging.getLogger(__name__)
 
+EMPTY = ""
+SPACE = " "
+TEXT = "text"
+
 
 def get_agencies_dict(agencies_file):
     """
@@ -41,7 +45,9 @@ def get_agencies_dict(agencies_file):
     return duplicates, aliases
 
 
-def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
+def get_agencies(
+        file_dataframe, doc_dups, duplicates, agencies_dict, verbose=False
+):
     """
     Get all the disambiguated agencies for a list of documents.
 
@@ -61,40 +67,43 @@ def get_agencies(file_dataframe, doc_dups, duplicates, agencies_dict):
 
     # speeds up iterating through the various dataframe columns dynamically,
     # excludes doc name and primary entity
-    logger.info(
-        "building intermediate table, size : {:,}".format(len(file_dataframe))
-    )
+    if verbose:
+        logger.info(
+            "building intermediate table, size : {:,}".format(len(file_dataframe))  # noqa
+        )
     start = time.time()
     combined_cols = pd.DataFrame(
         file_dataframe[file_dataframe.columns[2:]].apply(
             lambda x: ",".join(x.dropna().astype(str)), axis=1
         ),
-        columns=["text"],
+        columns=[TEXT],
     )
     elapsed_rounded = int(round(time.time() - start))
     fmt = str(datetime.timedelta(seconds=elapsed_rounded))
     logger.info("intermediate table built : {:}".format(fmt))
 
     # TODO make faster - the double iteration is very slow
-    logger.info("attaching agencies...")
+    if verbose:
+        logger.info("attaching agencies...")
     start = time.time()
     for i, row in combined_cols.iterrows():
         agencies = []
-        for x in aliases.keys():
-            if " " + x in row["text"]:
-                if x not in duplicates:
-                    agencies.append(aliases[x])
+        for alias in aliases.keys():
+            if SPACE + alias in row[TEXT]:
+                if alias not in duplicates:
+                    agencies.append(aliases[alias])
                 if doc_dups is not None:
                     if doc_dups[i] is not None:
                         agencies.append(doc_dups[i])
         flat_a = [item for sublist in agencies for item in sublist]
-        flat_a = ["".join(x) for x in flat_a]
+        flat_a = [EMPTY.join(x) for x in flat_a]
         flat_a = set(flat_a)
         all_agencies.append(",".join(flat_a))
 
     elapsed_rounded = int(round(time.time() - start))
     fmt = str(datetime.timedelta(seconds=elapsed_rounded))
-    logger.info("agencies attached : {:}".format(fmt))
+    if verbose:
+        logger.info("agencies attached : {:}".format(fmt))
     return all_agencies
 
 
