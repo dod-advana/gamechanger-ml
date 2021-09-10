@@ -112,7 +112,6 @@ def gc_data(data_file, neg_data_file, shuffle=True, topn=0):
 
 def gen_gc_docs(doc_path, glob, key="raw_text"):
     file_list = [f for f in os.listdir(doc_path) if fnmatch.fnmatch(f, glob)]
-    logger.debug("num files : {:>3,d}".format(len(file_list)))
     if len(file_list) == 0:
         msg = "no files in '{}' matching the glob '{}'".format(doc_path, glob)
         logger.exception(msg)
@@ -186,40 +185,6 @@ def scrubber(txt, no_sec=False):
         if mobj:
             txt = txt.replace(mobj.group(1), "").strip()
     return txt
-
-
-def _extract_batch_length(preds):
-    """
-    Extracts batch length of predictions.
-    """
-    batch_length = None
-    for key, value in preds.items():
-        batch_length = batch_length or value.shape[0]
-        if value.shape[0] != batch_length:
-            raise ValueError(
-                "Batch length of predictions should be same. () has "
-                "different batch length than others.".format(key)
-            )
-    return batch_length
-
-
-def unbatch_preds(preds):
-    """
-    Unbatch predictions, as in estimator.predict().
-
-    Args:
-      preds: Dict[str, np.array], where all arrays have the same first
-        dimension.
-
-    Yields:
-      sequence of Dict[str, np.array], with the same keys as preds.
-    """
-    if not isinstance(preds, dict):
-        for pred in preds:
-            yield pred
-    else:
-        for i in range(_extract_batch_length(preds)):
-            yield {key: value[i] for key, value in preds.items()}
 
 
 def new_df():

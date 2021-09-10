@@ -73,16 +73,14 @@ def raw_text2csv(src_path, glob, output_path):
     Returns:
         None
     """
+    nfiles = cu.nfiles_in_glob(src_path, glob)
     fname = None
     output_df = new_df()
-    nfiles = cu.nfiles_in_glob(src_path, glob)
     try:
         for sent_list, fname in tqdm(
             raw2df(src_path, glob), total=nfiles, desc="docs"
         ):
             output_df = output_df.append(sent_list, ignore_index=True)
-            if output_path is None:
-                yield output_df
             base, ext = os.path.splitext(os.path.basename(fname))
             output_csv = base.replace(" ", "_") + "_sentences" + ".csv"
             output_csv = os.path.join(output_path, output_csv)
@@ -100,9 +98,8 @@ if __name__ == "__main__":
 
     li.initialize_logger(to_file=False, log_name="none")
 
-    fp = os.path.split(__file__)
     parser = ArgumentParser(
-        prog="python " + fp[-1],
+        prog="python " + os.path.split(__file__)[-1],
         description="csv of each sentence in the text",
     )
     parser.add_argument(
@@ -115,8 +112,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-o",
-        "--output-csv",
-        dest="output_csv",
+        "--output-path",
+        dest="output_path",
         type=str,
         required=True,
         help="output path for .csv files",
@@ -131,4 +128,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    raw_text2csv(args.input_path, args.glob, args.output_csv)
+    raw_text2csv(args.input_path, args.glob, args.output_path)

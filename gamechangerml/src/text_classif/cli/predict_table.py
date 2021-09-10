@@ -5,7 +5,7 @@ usage: predict_table.py [-h] -m MODEL_PATH -d DATA_PATH [-b BATCH_SIZE]
                         NUM_LABELS
 
 Classification of responsibility statements. For each sentence in the
-matching files. For each label > 0, sentences are linked to its closest
+matching files. For each label > 0, sentences are linked to their closest
 entity.
 
 optional arguments:
@@ -71,7 +71,8 @@ def dump_label(df, num_labels, output_csv):
             logger.warning("no output for label {}".format(lbl))
             continue
         out_csv_ = os.path.join(fname + "-label-{}".format(lbl) + ext)
-        logger.info("writing {}".format(out_csv_))
+        logger.info("writing : {}".format(out_csv_))
+        logger.info("label {} : {:>7,d}".format(lbl, len(tdf)))
         tdf.to_csv(out_csv_, index=False)
         _ = tdf.iloc[0:0]
 
@@ -112,11 +113,10 @@ def predict_table(
         raise FileNotFoundError("agencies-file got {}".format(agencies_file))
     if not os.path.isfile(entity_mentions):
         raise FileNotFoundError("entity-mentions got {}".format(entity_mentions))
-
     if num_labels < 1:
-        raise ValueError("num labels must > 0; got {}".format(num_labels))
+        raise ValueError("num labels must > 0 got {}".format(num_labels))
 
-    dump_individ = True
+    write_all_labels = False
 
     rename_dict = {
         "entity": "Organization / Personnel",
@@ -146,12 +146,12 @@ def predict_table(
     df = entity_linker.to_df()
 
     # for a post-run look
-    if dump_individ:
+    if write_all_labels:
         dump_label(df, num_labels, output_csv)
 
     df = df[df.top_class > 0].reset_index()
 
-    logger.info("building agencies for entries {:,} entries".format(len(df)))
+    logger.info("building agencies for {:,} entries".format(len(df)))
     logger.info("please be patient...")
     duplicates, aliases = get_agencies_dict(agencies_file)
     df["agencies"] = get_agencies(
@@ -192,7 +192,7 @@ if __name__ == "__main__":
 
     desc = "Classification of responsibility statements. For each sentence "
     desc += "in the matching files. For each label > 0, "
-    desc += "sentences are linked to its closest entity."
+    desc += "sentences are linked to their closest entity."
 
     parser = ArgumentParser(prog=os.path.split(__file__)[-1], description=desc)
     parser.add_argument(
