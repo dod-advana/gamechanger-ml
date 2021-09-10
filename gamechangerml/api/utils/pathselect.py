@@ -38,6 +38,18 @@ def get_model_paths():
         logger.error(e)
 
         logger.info("Cannot get TRANSFORMER model path")
+    # WORK SIM MODEL PATH
+    try:
+        WORD_SIM_MODEL_PATH = os.path.join(
+            # Config.LOCAL_PACKAGED_MODELS_DIR, "wiki-news-300d-1M.vec"
+            Config.LOCAL_PACKAGED_MODELS_DIR,
+            "crawl-300d-2M.vec",
+        )
+    except Exception as e:
+        logger.error(e)
+
+        logger.info("Cannot get word sim model path")
+
     # SENTENCE INDEX
     # get largest file name with sent_index prefix (by date)
     try:
@@ -63,5 +75,6 @@ def get_model_paths():
         "transformers": LOCAL_TRANSFORMERS_DIR,
         "sentence": INDEX_PATH,
         "qexp": QEXP_MODEL_PATH,
+        "word_sim": WORD_SIM_MODEL_PATH,
     }
     return model_dict
