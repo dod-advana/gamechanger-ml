@@ -37,7 +37,6 @@ from lit_nlp.api import types as lit_types
 from lit_nlp.lib import utils
 
 from gamechangerml.src.nlp_lit.gc_dataset import GCDataset
-
 # NOTE: additional flags defined in server_flags.py
 FLAGS = flags.FLAGS
 
