@@ -9,9 +9,9 @@ Start the LIT server
 optional arguments:
   -h, --help            show this help message and exit
   --absl_flags ABSL_FLAGS
-                        absl flags - do not change
+                        absl flags - use the default
   --model_path MODEL_PATH
-                        tar.gz, name, or directory of the pytorch model
+                        directory of the pytorch model
   --data_path DATA_PATH
                         path + file.csv, for input data .csv
   --num_labels NUM_LABELS
@@ -37,6 +37,7 @@ from lit_nlp.api import types as lit_types
 from lit_nlp.lib import utils
 
 from gamechangerml.src.nlp_lit.gc_dataset import GCDataset
+
 # NOTE: additional flags defined in server_flags.py
 FLAGS = flags.FLAGS
 
@@ -48,7 +49,6 @@ def _from_pretrained(cls, *args, **kw):
     try:
         return cls.from_pretrained(*args, **kw)
     except OSError as e:
-        logging.exception("Error loading model: {}: {}".format(type(e), str(e)))
         raise e
 
 
@@ -198,18 +198,21 @@ class TextClassifier(lit_model.Model):
             "src": lit_types.TextSegment(),
         }
 
+    def fit_transform_with_metadata(self, indexed_inputs):
+        raise NotImplementedError
+
+    def get_embedding_table(self):
+        raise NotImplementedError
+
 
 def main(_):
     data_path_ = FLAGS.data_path
     model_path = FLAGS.model_path
     num_labels = FLAGS.num_labels
 
-    if model_path.endswith(".tar.gz"):
-        if not os.path.isfile(model_path):
-            raise ValueError("can't find {}".format(model_path))
-        model_path = trf.file_utils.cached_path(
-            model_path, extract_compressed_file=True
-        )
+    model_path = trf.file_utils.cached_path(
+        model_path, extract_compressed_file=False
+    )
     if not os.path.isfile(data_path_):
         raise FileNotFoundError(data_path_)
 
@@ -238,14 +241,14 @@ if __name__ == "__main__":
         "--absl_flags",
         action="append",
         default=[],
-        help="absl flags - do not change",
+        help="absl flags - use the default",
     )
     parser.add_argument(
         "--model_path",
         dest="model_path",
         type=str,
         required=True,
-        help="tar.gz, name, or directory of the pytorch model",
+        help="directory of the pytorch model",
     )
     parser.add_argument(
         "--data_path",

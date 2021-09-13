@@ -112,7 +112,9 @@ def predict_table(
     if not os.path.isfile(agencies_file):
         raise FileNotFoundError("agencies-file got {}".format(agencies_file))
     if not os.path.isfile(entity_mentions):
-        raise FileNotFoundError("entity-mentions got {}".format(entity_mentions))
+        raise FileNotFoundError(
+            "entity-mentions got {}".format(entity_mentions)
+        )
     if num_labels < 1:
         raise ValueError("num labels must > 0 got {}".format(num_labels))
 

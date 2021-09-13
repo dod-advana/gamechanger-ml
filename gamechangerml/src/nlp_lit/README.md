@@ -72,14 +72,14 @@ You can navigate to 127.0.0.1:5432
 
 I0604 16:10:49.811561 139835092129600 _internal.py:122]  * Running on http://127.0.0.1:5432/ (Press CTRL+C to quit)
 ``` 
-In the browser, you'll see something like
+In the browser you'll see something like
 
 ![Alt text](img/lit.png)
 
 
 ### Using a GPU
-Inference on a even a moderate set of sentences can be computationally intensive and benefits from
-GPU assistance. Typically, this is a headless cloud instance.
+Inference on a even a moderate set of data can be computationally intensive. 
+Typically, a remote, headless cloud GPU-instance is used.
 
 In this case, use SSH with port forwarding from the remote, e.g.,
 ```
