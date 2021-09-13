@@ -75,7 +75,7 @@ def main(config_yaml, data_file, model_type, num_samples, checkpoint_path):
             to_file=True, log_name=clf.cfg.log_id, output_dir=here
         )
         train_txt, train_labels, _ = cu.gc_data(
-            data_file, None, shuffle=True, topn=num_samples
+            data_file, shuffle=True, top_n=num_samples
         )
         _, data_name = os.path.split(data_file)
 

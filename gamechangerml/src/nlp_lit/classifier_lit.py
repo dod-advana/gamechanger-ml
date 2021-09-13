@@ -36,7 +36,7 @@ from lit_nlp.api import model as lit_model
 from lit_nlp.api import types as lit_types
 from lit_nlp.lib import utils
 
-from nlp_lit.gc_dataset import GCDataset
+from gamechangerml.src.nlp_lit.gc_dataset import GCDataset
 
 # NOTE: additional flags defined in server_flags.py
 FLAGS = flags.FLAGS
@@ -50,6 +50,7 @@ def _from_pretrained(cls, *args, **kw):
         return cls.from_pretrained(*args, **kw)
     except OSError as e:
         logging.exception("Error loading model: {}: {}".format(type(e), str(e)))
+        raise e
 
 
 class TextClassifier(lit_model.Model):

@@ -91,14 +91,14 @@ def _read_gc_df(data_file):
     return df
 
 
-def gc_data(data_file, neg_data_file, shuffle=True, topn=0):
+def gc_data(data_file, shuffle=True, top_n=0):
     try:
         df = _read_gc_df(data_file)
         df = df.dropna(axis=1)
         if shuffle:
             df = df.sample(frac=1)
-        if topn > 0:
-            df = df.head(topn)
+        if top_n > 0:
+            df = df.head(top_n)
 
         sents = df.sentence.values
         labels = df.label.values
