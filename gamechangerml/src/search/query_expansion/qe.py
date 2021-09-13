@@ -78,13 +78,13 @@ class QE(object):
     def _setup_emb(self, qe_model_dir, vocab_file):
         cfg = QEConfig()
         #here = os.path.dirname(os.path.realpath(__file__))
-        wt_path = os.path.join(self.qe_files_dir, "aux_data", vocab_file)
-        print("wt_path: ", wt_path)
+        #wt_path = os.path.join(self.qe_files_dir, "aux_data", vocab_file)
+        #print("wt_path: ", wt_path)
 
         try:
             ann_file, vocab_file = find_ann_indexes(qe_model_dir)
             self._nlp = get_lg_vectors()
-            self.word_wt = get_word_weight(weight_file_path=wt_path, a=self._alpha)
+            self.word_wt = get_word_weight(weight_file_path=vocab_file, a=self._alpha)
 
             logger.info("loading QE indexes")
             vector_dim = spacy_vector_width(self._nlp)

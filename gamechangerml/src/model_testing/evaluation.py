@@ -8,7 +8,7 @@ from gamechangerml.src.search.sent_transformer.model import SentenceEncoder, Sen
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
-from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QEConfig, ValidationConfig
+from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig, ValidationConfig
 from gamechangerml.src.utilities.model_helper import *
 from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData, QEXPDomainData
 from gamechangerml.api.utils.pathselect import get_model_paths
@@ -446,19 +446,26 @@ class QexpEvaluator():
 
     def __init__(
         self, 
-        model=None,
-        config=QEConfig.MODEL_ARGS,
+        qe_model_dir,
+        qe_files_dir,
+        method,
+        vocab_file,
+        topn,
+        threshold,
+        min_tokens,
+        model=None
         ):
 
-        self.config = config
-        self.model_path = self.config['init']['qe_model_dir']
+        self.model_path = qe_model_dir
         if model:
             self.QE = model
         else:
-            self.QE = QE(**self.config['init'])
+            self.QE = QE(qe_model_dir, qe_files_dir, method, vocab_file)
 
         self.data = QEXPDomainData().data
-        self.topn = self.config['expansion']['topn']
+        self.topn = topn
+        self.threshold = threshold
+        self.min_tokens = min_tokens
         self.results = self.eval()
         
     def predict(self):
@@ -475,7 +482,7 @@ class QexpEvaluator():
             num_results = 0
             for query, expected in self.data.items():
                 logger.info(query_count, query)
-                results = self.QE.expand(query, **self.config['expansion'])
+                results = self.QE.expand(query, self.topn, self.threshold, self.min_tokens)
                 results = remove_original_kw(results, query)
                 num_results += len(results)
                 num_matching += len(set(expected).intersection(results)) 

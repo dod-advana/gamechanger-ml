@@ -35,6 +35,7 @@ import gamechangerml.src.search.query_expansion.build_ann_cli.version_ as v
 from gamechangerml.src.featurization.keywords.rake import Rake
 from gamechangerml.src.search.query_expansion.sif_alg import sif_embedding
 from gamechangerml.src.search.query_expansion.utils import QEConfig
+from gamechangerml.configs.config import QexpConfig
 from gamechangerml.src.search.query_expansion.word_wt import get_word_weight
 from gamechangerml.src.utilities.np_utils import is_zero_vector
 from gamechangerml.src.utilities.spacy_model import (
@@ -140,7 +141,7 @@ def main(
             "directory not found; got {}".format(corpus_dir)
         )
 
-    word_wt = get_word_weight(weight_file=word_wt_file, a=1e-03)
+    word_wt = get_word_weight(word_wt_file, a=1e-03)
 
     if ngram[0] < 1:
         raise ValueError("minimum ngram must be > 0; got {}".format(ngram))

@@ -90,13 +90,19 @@ class SimilarityConfig:
         "model_name": "distilbart-mnli-12-3" # SOURCE
     }
 
-class QEConfig:
+class QexpConfig:
     MODEL_ARGS = {
         "init": { # args for creating QE object
-            "qe_model_dir": "gamechangerml/models/qexp_20201217",
             "qe_files_dir": "gamechangerml/src/search/query_expansion",
             "method": "emb", 
-            "vocab_file": "word-freq-corpus-20201101.txt"
+            "vocab_file": "gamechangerml/src/search/query_expansion/aux_data/word-freq-corpus-20201101.txt"
+        },
+        "bqe": {
+            "num_trees": 125,
+            "num_keywords": 2,
+            "ngram": (1, 2),
+            "word_wt_file": "gamechangerml/src/search/query_expansion/aux_data/enwiki_vocab_min200.txt",
+            "abbrv_file": None
         },
         "expansion": { # configs for getting expanded terms
             "topn": 2, 
