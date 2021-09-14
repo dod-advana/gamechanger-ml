@@ -205,8 +205,9 @@ class Pipeline:
                 logger.info(
                     "-------------- Running Assessment Model Script --------------"
                 )
-                results = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
-
+                qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
+                evals = qxpeval.results
+                '''
                 logger.info(
                     "-------------- Assessment is not available--------------")
                 """
@@ -222,6 +223,7 @@ class Pipeline:
                         mlflow.log_metric(
                             key=metric, value=results[metric])
                 """
+                '''
                 logger.info(
                     "-------------- Finished Assessment --------------")
             else:
@@ -324,7 +326,9 @@ class Pipeline:
             logger.info(
                 "-------------- Running Assessment Model Script --------------")
 
-            sent_eval = IndomainRetrieverEvaluator(encoder=encoder, index=local_sent_index_dir)
+            sentev = IndomainRetrieverEvaluator(encoder=encoder, index=local_sent_index_dir)
+            evals = sentev.results
+            logger.info("evals: {}".format(str(evals)))
             
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")
@@ -336,7 +340,7 @@ class Pipeline:
             S3_MODELS_PATH = "gamechanger/models"
             s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
             self.upload(s3_path, dst_path, "sentence_index", model_id, version)
-        return metadata, sent_eval.results
+        return metadata, evals
 
     def upload(self, s3_path, local_path, model_prefix, model_name, version):
         # Loop through each file and upload to S3

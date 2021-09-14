@@ -102,7 +102,7 @@ def main(
     num_trees=125,
     num_keywords=2,
     ngram=(1, 2),
-    word_wt_file=None,
+    weight_file=None,
     abbrv_file=None,
 ):
     """
@@ -134,14 +134,14 @@ def main(
     logger.info("{} version {}".format(__name__, v.__version__))
     if not os.path.isdir(index_dir):
         raise FileNotFoundError(
-            "directory not found; got {}".format(index_dir)
+            "directory not found; got {}".format(str(index_dir))
         )
     if not os.path.isdir(corpus_dir):
         raise FileNotFoundError(
-            "directory not found; got {}".format(corpus_dir)
+            "directory not found; got {}".format(str(corpus_dir))
         )
 
-    word_wt = get_word_weight(word_wt_file, a=1e-03)
+    word_wt = get_word_weight(weight_file="enwiki_vocab_min200.txt", a=1e-03)
 
     if ngram[0] < 1:
         raise ValueError("minimum ngram must be > 0; got {}".format(ngram))
@@ -246,7 +246,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-w",
         "--word-wt",
-        dest="word_wt_file",
+        dest="weight_file",
         required=True,
         help="path + name of the word weight file in aux_data/",
     )

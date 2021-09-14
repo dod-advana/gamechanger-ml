@@ -449,7 +449,6 @@ class QexpEvaluator():
         qe_model_dir,
         qe_files_dir,
         method,
-        vocab_file,
         topn,
         threshold,
         min_tokens,
@@ -460,7 +459,7 @@ class QexpEvaluator():
         if model:
             self.QE = model
         else:
-            self.QE = QE(qe_model_dir, qe_files_dir, method, vocab_file)
+            self.QE = QE(qe_model_dir, qe_files_dir, method)
 
         self.data = QEXPDomainData().data
         self.topn = topn
@@ -481,7 +480,7 @@ class QexpEvaluator():
             num_expected = 0
             num_results = 0
             for query, expected in self.data.items():
-                logger.info(query_count, query)
+                logger.info("Query {}: {}".format(str(query_count), query))
                 results = self.QE.expand(query, self.topn, self.threshold, self.min_tokens)
                 results = remove_original_kw(results, query)
                 num_results += len(results)
