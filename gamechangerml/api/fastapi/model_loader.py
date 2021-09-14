@@ -1,6 +1,6 @@
 import os
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QEConfig
+from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.search.embed_reader import sparse
@@ -71,8 +71,8 @@ class ModelLoader:
         """
         logger.info(f"Loading Query Expansion Model from {qexp_model_path}")
         try:
-            ModelLoader.__query_expander = qe.QE(
-                **QEConfig.MODEL_ARGS['init']
+            ModelLoader.__query_expander = qe.QE(qexp_model_path,
+                **QexpConfig.MODEL_ARGS['init']
             )
             logger.info("** Loaded Query Expansion Model")
         except Exception as e:
@@ -81,7 +81,7 @@ class ModelLoader:
 
     @staticmethod
     def initSentence(
-        index_path=SENT_INDEX_PATH.value, transformer_path=LOCAL_TRANSFORMERS_DIR.value
+        index_path=SENT_INDEX_PATH.value, transformers_path=LOCAL_TRANSFORMERS_DIR.value
     ):
         """
         initQE - loads Sentence Transformers on start
