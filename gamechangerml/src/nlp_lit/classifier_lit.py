@@ -54,7 +54,7 @@ def _from_pretrained(cls, *args, **kw):
         raise e
 
 
-class ClfLit(lit_model.Model):
+class ClfLIT(lit_model.Model):
     compute_grads: bool = True
 
     def __init__(self, model_name_or_path, num_labels):
@@ -237,7 +237,7 @@ def main(_):
     )
 
     # Load everything.
-    models = {"classifier": ClfLit(model_path, num_labels)}
+    models = {"classifier": ClfLIT(model_path, num_labels)}
     # GC data
     datasets = {"gc-data": GCDataset(data_path_, num_labels)}
 

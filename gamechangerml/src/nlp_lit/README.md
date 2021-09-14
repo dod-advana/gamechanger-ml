@@ -1,7 +1,7 @@
 # `classifier-lit`
-This package provides an implementation of the Language Interpretability Tool (ClfLit) for
-a `pytorch` sequence classifier.  Additional information on ClfLit can be 
-found on [GitHub](https://pair-code.github.io/lit/). This code assembled from various
+This package provides an implementation of the Language Interpretability Tool (LIT) for
+a `pytorch` sequence classifiers.  Additional information on LIT can be 
+found on [GitHub](https://pair-code.github.io/lit/). This was code assembled from various
 examples in the LIT repository.
 
 ## Requirements
@@ -12,7 +12,7 @@ pip install lit-nlp==0.3
 
 ## Model and Data
 The implementation assumes you have a trained PyTorch classifier. 
-The model directory should conform to the usual layout of PyTorch models. ClfLit runs
+The model directory should conform to the usual layout of PyTorch models. ClfLIT runs
 prediction on a specified dataset.
 
 The data is held in a `.csv` with columns
@@ -20,11 +20,10 @@ The data is held in a `.csv` with columns
 "src", "label", "sentence"
 ```
 where `src` is a user-specific identifier, `sentence` is the text to be classified. The `label` column
-is the expected classification label. 
-Label values are assumed sequential starting at 0 (zero). Expected labels are used to compute various 
-metrics using the model's prediction.
-If the expected label is not known, a value of 0 can be used. The metrics will be meaningless, 
-but the other features of ClfLit will work.
+is the expected classification label, i.e., a validation dataset. 
+Expected labels are used to compute various metrics using the model's prediction.
+If the expected labels are not known, a value of 0 can be used. The metrics will be meaningless, 
+but the other features of LIT will work.
 
 For the raw text in the GAMECHANGER corpus, the `.csv` files can be created 
 using the CLI `text_classif/cli/raw_text2sentence_csv.py`. The output file uses the the
@@ -63,7 +62,7 @@ I0604 16:10:49.805324 139835092129600 dev_server.py:88]
 |____|___|  |_|
 
 
-I0604 16:10:49.805436 139835092129600 dev_server.py:89] Starting ClfLit server...
+I0604 16:10:49.805436 139835092129600 dev_server.py:89] Starting ClfLIT server...
 I0604 16:10:49.805539 139835092129600 caching.py:125] CachingModelWrapper 'distilbert': no cache path specified, not loading.
 I0604 16:10:49.810200 139835092129600 gradient_maps.py:120] Skipping token_grad_sentence since embeddings field not found.
 I0604 16:10:49.810353 139835092129600 gradient_maps.py:235] Skipping token_grad_sentence since embeddings field not found.
@@ -85,7 +84,7 @@ Inference on a even a moderate set of data can be computationally intensive.
 Typically, a cloud-based, headless GPU-instance is used. You can still
 view results in your local browser: 
 
-Use SSH with port forwarding to connect to the remote, e.g.,
+Use SSH with port forwarding to connect to the remote
 ```
 ssh -i <access_creds> -L 5432:localhost:5432 <user_name>@<remote_ip_addr>
 ```
