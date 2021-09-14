@@ -19,12 +19,12 @@ The data is held in a `.csv` with columns
 ```
 "src", "label", "sentence"
 ```
-where *src* is a user-specific identifier, `sentence` is the text to be classified. The `label` column
+where `src` is a user-specific identifier, `sentence` is the text to be classified. The `label` column
 is the expected classification label. 
 Label values are assumed sequential starting at 0 (zero). Expected labels are used to compute various 
 metrics using the model's prediction.
 If the expected label is not known, a value of 0 can be used. The metrics will be meaningless, 
-but the other LIT features will work.
+but the other features of LIT will work.
 
 For the raw text in the corpus, the `.csv` files can be created 
 with the CLI `text_classif/cli/raw_text2sentence_csv.py`. The output file uses the the
@@ -79,15 +79,16 @@ In the browser you'll see something like
 
 ### Using a GPU
 Inference on a even a moderate set of data can be computationally intensive. 
-Typically, a remote, headless cloud GPU-instance is used.
+Typically, a cloud-based GPU-instance is used. You can take advantage of the GPU
+and view the results in your browser.
 
-In this case, use SSH with port forwarding from the remote, e.g.,
+Use SSH with port forwarding to connect to the remote, e.g.,
 ```
-ssh -i <access_creds> -L 5432:localhost:5432 <user_name>@<remote IP address>
+ssh -i <access_creds> -L 5432:localhost:5432 <user_name>@<remote_ip_addr>
 ```
 The code and data need to be on the remote. Data can be copied to the remote using `scp`
 ```
-scp -i <access_creds> <filename.ext> <user_name>@<remote IP address>:. 
+scp -i <access_creds> <filename.ext> <user_name>@<remote_ip_addr>:. 
 ```
 
 Now, start the server on the remote (`classifier_lit.py`) and view the results in your 

@@ -13,7 +13,7 @@ optional arguments:
   --model_path MODEL_PATH
                         directory of the pytorch model
   --data_path DATA_PATH
-                        path + file.csv, for input data .csv
+                        path + file.csv, for input data
   --num_labels NUM_LABELS
                         number of labels in the classification model
   --batch_size BATCH_SIZE
@@ -79,7 +79,7 @@ class TextClassifier(lit_model.Model):
             config=model_config,
         )
         self.model.eval()
-        logging.info("model loaded")
+        logging.info("model is loaded")
 
     # LIT API implementation
     def max_minibatch_size(self):
@@ -199,10 +199,10 @@ class TextClassifier(lit_model.Model):
         }
 
     def fit_transform_with_metadata(self, indexed_inputs):
-        raise NotImplementedError
+        raise NotImplementedError(RuntimeError)
 
     def get_embedding_table(self):
-        raise NotImplementedError
+        raise NotImplementedError(RuntimeError)
 
 
 def main(_):
@@ -255,7 +255,7 @@ if __name__ == "__main__":
         dest="data_path",
         type=str,
         required=True,
-        help="path + file.csv, for input data .csv",
+        help="path + file.csv, for input data",
     )
     parser.add_argument(
         "--num_labels",

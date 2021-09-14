@@ -12,7 +12,7 @@ Producing the aforementioned `.csv` depends on a trained model which in turn, de
 All the required data for training and producing this table (excluding the corpus) is collected in a single directory
 `classifier_data/`. This directory is archived on Advana Teams and is up-to-date as of 
 this writing (see General > Data Science > Classifier Model). I create training data on my local machine
-and transfer it to the GPU instance for training the model. 
+and transfer it to a GPU instance for training the model. 
 
 **Step 1**: An `entity_mentions.json` is required. An update-to-date version is in `classifier_data/entity_mentions/`. 
 To create this file, you'll need `classifier_data/entity_mentions/flat_entities_custom.csv`.
