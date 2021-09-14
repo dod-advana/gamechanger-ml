@@ -1,6 +1,6 @@
 # `classifier-lit`
-This package provides an implementation of the Language Interpretability Tool (LIT) for
-a `pytorch` sequence classifier.  Additional information on LIT can be 
+This package provides an implementation of the Language Interpretability Tool (ClfLit) for
+a `pytorch` sequence classifier.  Additional information on ClfLit can be 
 found on [GitHub](https://pair-code.github.io/lit/). This code assembled from various
 examples in the LIT repository.
 
@@ -12,8 +12,8 @@ pip install lit-nlp==0.3
 
 ## Model and Data
 The implementation assumes you have a trained PyTorch classifier. 
-The model directory should conform to the usual layout of PyTorch models. LIT runs
-prediction on specified dataset.
+The model directory should conform to the usual layout of PyTorch models. ClfLit runs
+prediction on a specified dataset.
 
 The data is held in a `.csv` with columns
 ```
@@ -24,22 +24,25 @@ is the expected classification label.
 Label values are assumed sequential starting at 0 (zero). Expected labels are used to compute various 
 metrics using the model's prediction.
 If the expected label is not known, a value of 0 can be used. The metrics will be meaningless, 
-but the other features of LIT will work.
+but the other features of ClfLit will work.
 
-For the raw text in the corpus, the `.csv` files can be created 
-with the CLI `text_classif/cli/raw_text2sentence_csv.py`. The output file uses the the
-document name, e.g.,
+For the raw text in the GAMECHANGER corpus, the `.csv` files can be created 
+using the CLI `text_classif/cli/raw_text2sentence_csv.py`. The output file uses the the
+document name with spaces replaced by "_", suffixed with "sentences", e.g.,
 
 ```
 DoDD_1000.20_sentences.csv
 ```
 
+For the DoDD, DoDI, and DoDM documents, `classifier_data` has all the sentence `csv`s in
+directories `dodd-sentences/`, `dodi-sentences/`, and `dodm-sentences`, respectively. 
+
 ## Starting the LIT Server
 
 ```bash
 python classifier_lit.py \
-    --model_path <your_model_directory> \
-    --data_path <your_sentences.csv> \
+    --model_path <model_directory> \
+    --data_path <sentences.csv> \
     --num_labels 3 \
     --batch_size 8 \
     --max_seq_len 128 \
@@ -60,7 +63,7 @@ I0604 16:10:49.805324 139835092129600 dev_server.py:88]
 |____|___|  |_|
 
 
-I0604 16:10:49.805436 139835092129600 dev_server.py:89] Starting LIT server...
+I0604 16:10:49.805436 139835092129600 dev_server.py:89] Starting ClfLit server...
 I0604 16:10:49.805539 139835092129600 caching.py:125] CachingModelWrapper 'distilbert': no cache path specified, not loading.
 I0604 16:10:49.810200 139835092129600 gradient_maps.py:120] Skipping token_grad_sentence since embeddings field not found.
 I0604 16:10:49.810353 139835092129600 gradient_maps.py:235] Skipping token_grad_sentence since embeddings field not found.
@@ -79,8 +82,8 @@ In the browser you'll see something like
 
 ### Using a GPU
 Inference on a even a moderate set of data can be computationally intensive. 
-Typically, a cloud-based GPU-instance is used. You can take advantage of the GPU
-and view the results in your browser.
+Typically, a cloud-based, headless GPU-instance is used. You can still
+view results in your local browser: 
 
 Use SSH with port forwarding to connect to the remote, e.g.,
 ```

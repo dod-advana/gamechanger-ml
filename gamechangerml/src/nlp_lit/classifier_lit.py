@@ -24,6 +24,7 @@ optional arguments:
 """
 import os
 import re
+import sys
 
 import torch
 import transformers as trf
@@ -46,13 +47,14 @@ def _from_pretrained(cls, *args, **kw):
     """
     Load a transformers model in PyTorch.
     """
+    # TODO allow .tar.gz
     try:
         return cls.from_pretrained(*args, **kw)
     except OSError as e:
         raise e
 
 
-class TextClassifier(lit_model.Model):
+class ClfLit(lit_model.Model):
     compute_grads: bool = True
 
     def __init__(self, model_name_or_path, num_labels):
@@ -66,18 +68,24 @@ class TextClassifier(lit_model.Model):
             num_labels (int): number of classification labels
         """
         self.LABELS = [str(lbl) for lbl in range(num_labels)]
-        self.tokenizer = trf.AutoTokenizer.from_pretrained(model_name_or_path)
-        model_config = trf.AutoConfig.from_pretrained(
-            model_name_or_path,
-            num_labels=num_labels,
-            output_hidden_states=True,
-            output_attentions=True,
-        )
-        self.model = _from_pretrained(
-            trf.AutoModelForSequenceClassification,
-            model_name_or_path,
-            config=model_config,
-        )
+        try:
+            self.tokenizer = trf.AutoTokenizer.from_pretrained(
+                model_name_or_path
+            )
+            model_config = trf.AutoConfig.from_pretrained(
+                model_name_or_path,
+                num_labels=num_labels,
+                output_hidden_states=True,
+                output_attentions=True,
+            )
+            self.model = _from_pretrained(
+                trf.AutoModelForSequenceClassification,
+                model_name_or_path,
+                config=model_config,
+            )
+        except (OSError, IndexError, Exception) as e:
+            raise e
+
         self.model.eval()
         logging.info("model is loaded")
 
@@ -97,8 +105,11 @@ class TextClassifier(lit_model.Model):
 
         if torch.cuda.is_available():
             self.model.cuda()
+            logger.info("device : cuda")
             for tensor in encoded_input:
                 encoded_input[tensor] = encoded_input[tensor].cuda()
+        else:
+            logger.info("device: cpu")
 
         # Run a forward pass with gradient.
         with torch.set_grad_enabled(self.compute_grads):
@@ -210,18 +221,27 @@ def main(_):
     model_path = FLAGS.model_path
     num_labels = FLAGS.num_labels
 
+    if not os.path.isdir(model_path):
+        print(
+            "can't find model_dir : {}".format(model_path),
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    if not os.path.isfile(data_path_):
+        print("can't find : {}".format(data_path_), file=sys.stderr)
+        sys.exit(1)
+
     model_path = trf.file_utils.cached_path(
         model_path, extract_compressed_file=False
     )
-    if not os.path.isfile(data_path_):
-        raise FileNotFoundError(data_path_)
 
-    # Load the model we defined above.
-    models = {"classifier": TextClassifier(model_path, num_labels)}
+    # Load everything.
+    models = {"classifier": ClfLit(model_path, num_labels)}
     # GC data
     datasets = {"gc-data": GCDataset(data_path_, num_labels)}
 
-    # Start the LIT server. See server_flags.py for server options.
+    # Start the LIT server. See server_flags.py in LIT repo for server options.
     lit_demo = dev_server.Server(models, datasets, **server_flags.get_flags())
     lit_demo.serve()
 
@@ -235,7 +255,7 @@ if __name__ == "__main__":
     logger.setLevel(logging.INFO)
 
     parser = ArgumentParser(
-        prog="python classifier_lit.py", description="Start the LIT server"
+        prog=os.path.split(__file__)[-1], description="Start the LIT server"
     )
     parser.add_argument(
         "--absl_flags",
@@ -289,6 +309,7 @@ if __name__ == "__main__":
     )
 
     args_ = parser.parse_args()
+
     flags.DEFINE_string("model_path", args_.model_path, "saved model")
     flags.DEFINE_string("data_path", args_.data_path, "validation data")
     flags.DEFINE_integer("batch_size", args_.batch_size, "batch size")
