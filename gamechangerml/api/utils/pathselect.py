@@ -41,9 +41,8 @@ def get_model_paths():
     # WORK SIM MODEL PATH
     try:
         WORD_SIM_MODEL_PATH = os.path.join(
-            # Config.LOCAL_PACKAGED_MODELS_DIR, "wiki-news-300d-1M.vec"
-            Config.LOCAL_PACKAGED_MODELS_DIR,
-            "crawl-300d-2M.vec",
+            Config.LOCAL_PACKAGED_MODELS_DIR, "wiki-news-300d-1M.vec"
+            #Config.LOCAL_PACKAGED_MODELS_DIR, "crawl-300d-2M.vec",
         )
     except Exception as e:
         logger.error(e)

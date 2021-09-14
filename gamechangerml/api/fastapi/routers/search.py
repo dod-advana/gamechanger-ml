@@ -4,6 +4,7 @@ import time
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.src.featurization.keywords.extract_keywords import get_keywords
+from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.fastapi.version import __version__
 
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
@@ -144,13 +145,15 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
     Returns:
         expansion_dict: dict; expanded dictionary of terms
     """
-    termsList = termsList["termsList"]
+
+    terms_string = " ".join(termsList["termsList"])
+    terms = preprocess(terms_string)
     expansion_dict = {}
     # logger.info("[{}] expanded: {}".format(user, termsList))
 
     logger.info(f"Expanding: {termsList}")
     try:
-        for term in termsList:
+        for term in terms:
             term = unquoted(term)
             expansion_list = MODELS.query_expander.expand(
                 term, **QEConfig.MODEL_ARGS["expansion"]
@@ -161,7 +164,14 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
             finalTerms = remove_original_kw(expansion_list, term)
             expansion_dict[term] = ['"{}"'.format(exp) for exp in finalTerms]
             logger.info(f"-- Expanded {term} to \n {finalTerms}")
-        return expansion_dict
+        terms = " ".join(terms)
+        logger.info(f"Finding similiar words for: {terms}")
+        sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms)
+        logger.info(f"-- Expanded {terms} to \n {sim_words_dict}")
+        expanded_words = {}
+        expanded_words["qexp"] = expansion_dict
+        expanded_words["wordsim"] = sim_words_dict
+        return expanded_words
     except:
         logger.error(f"Error with query expansion on {termsList}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR

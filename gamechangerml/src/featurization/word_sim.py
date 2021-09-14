@@ -1,4 +1,8 @@
 import gensim
+from gensim.parsing.porter import PorterStemmer
+from gensim.parsing.preprocessing import remove_stopwords
+
+stemmer = PorterStemmer()
 
 
 class WordSim:
@@ -12,13 +16,22 @@ class WordSim:
             print("Cannot load pretrained vector for Word Similarity")
 
     def tokenize(self, text: str):
+        text = remove_stopwords(text)
         return list(gensim.utils.tokenize(text))
 
-    def most_similiar_tokens(self, text: str, sim_thresh=0.7):
+    def most_similiar_tokens(self, text: str, sim_thresh=0.65):
         tokens = self.tokenize(text)
         similar_tokens = {}
         for word in tokens:
             sim_words = self.model.most_similar(word)
-            sim_word_thresh = [x for x in sim_words if x[1] > sim_thresh]
-            similar_tokens[word] = [x[0] for x in sim_word_thresh]
+            sim_word_thresh = [x[0] for x in sim_words if x[1] > sim_thresh]
+            cleaned = self.clean_tokens(word, sim_word_thresh)
+            similar_tokens[word] = cleaned
         return similar_tokens
+
+    def clean_tokens(self, orig, tokens):
+        clean = []
+        for idx, word in enumerate(tokens):
+            if stemmer.stem(word) != stemmer.stem(orig) and orig not in word:
+                clean.append(word)
+        return clean
