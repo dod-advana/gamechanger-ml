@@ -229,7 +229,7 @@ def main(_):
         sys.exit(1)
 
     if not os.path.isfile(data_path_):
-        print("can't find : {}".format(data_path_), file=sys.stderr)
+        print("can't find data_path : {}".format(data_path_), file=sys.stderr)
         sys.exit(1)
 
     model_path = trf.file_utils.cached_path(
@@ -238,7 +238,6 @@ def main(_):
 
     # Load everything.
     models = {"classifier": ClfLIT(model_path, num_labels)}
-    # GC data
     datasets = {"gc-data": GCDataset(data_path_, num_labels)}
 
     # Start the LIT server. See server_flags.py in LIT repo for server options.
