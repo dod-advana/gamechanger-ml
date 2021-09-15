@@ -10,7 +10,7 @@ from gamechangerml.src.featurization.summary import GensimSumm
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
-from gamechangerml.configs.config import QEConfig
+from gamechangerml.configs.config import QexpConfig
 
 router = APIRouter()
 MODELS = ModelLoader()

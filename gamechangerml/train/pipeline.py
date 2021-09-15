@@ -31,7 +31,6 @@ from gamechangerml.src.search.query_expansion.build_ann_cli import (
 from gamechangerml.src.utilities import utils
 from gamechangerml.configs.config import DefaultConfig, D2VConfig, QexpConfig
 
-# from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 import pandas as pd
 import urllib3
 
