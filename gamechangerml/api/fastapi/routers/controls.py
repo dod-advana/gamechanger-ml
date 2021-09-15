@@ -263,7 +263,7 @@ async def train_model(model_dict: dict, response: Response):
     try:
         # Methods for all the different models we can train
         def train_sentence(model_dict = model_dict):
-            logger.info("Attempting to start sententence pipeline")
+            logger.info("Attempting to start sentence pipeline")
             pipeline = Pipeline()
             if not os.path.exists(CORPUS_DIR):
                 logger.warning(f"Corpus is not in local directory")
