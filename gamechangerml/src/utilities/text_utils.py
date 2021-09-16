@@ -159,3 +159,26 @@ def clean_text(doc_text: str) -> str:
     text = text.translate({ord(i): None for i in remove})
 
     return text
+
+# Source: https://rajpurkar.github.io/SQuAD-explorer/
+def normalize_answer(s):
+    """
+    Normalize answers for QA evaluation.
+    Lower text and remove punctuation, articles and extra whitespace.
+    """
+    def remove_articles(text):
+        regex = re.compile(r'\b(a|an|the)\b', re.UNICODE)
+        return re.sub(regex, ' ', text)
+    def white_space_fix(text):
+        return ' '.join(text.split())
+    def remove_punc(text):
+        exclude = set(punctuation)
+        return ''.join(ch for ch in text if ch not in exclude)
+    def lower(text):
+        return text.lower()
+    return white_space_fix(remove_articles(remove_punc(lower(s))))
+
+def get_tokens(s):
+    '''Get tokens from normalized answer.'''
+    if not s: return []
+    return normalize_answer(s).split()

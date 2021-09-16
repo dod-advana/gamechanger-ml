@@ -9,7 +9,8 @@ from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig, ValidationConfig
-from gamechangerml.src.utilities.model_helper import *
+from gamechangerml.src.utilities.text_utils import normalize_answer, get_tokens
+from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData, QEXPDomainData
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger

@@ -1,6 +1,4 @@
 import os
-import string
-import re
 import json
 from datetime import date
 from gamechangerml.api.utils.logger import logger
@@ -12,6 +10,9 @@ class TimeoutException(Exception):   # Custom exception class
 # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
 def timeout_handler(signum, frame):   # Custom signal handler
     raise TimeoutException
+
+def check_file_size(filename, path):
+    return os.path.getsize(os.path.join(path, filename))
 
 # from create_embeddings.py
 def get_user(logger):
@@ -62,22 +63,3 @@ def check_directory(directory):
         os.makedirs(directory)
 
     return directory
-
-# Source: https://rajpurkar.github.io/SQuAD-explorer/
-def normalize_answer(s):
-    """Lower text and remove punctuation, articles and extra whitespace."""
-    def remove_articles(text):
-        regex = re.compile(r'\b(a|an|the)\b', re.UNICODE)
-        return re.sub(regex, ' ', text)
-    def white_space_fix(text):
-        return ' '.join(text.split())
-    def remove_punc(text):
-        exclude = set(string.punctuation)
-        return ''.join(ch for ch in text if ch not in exclude)
-    def lower(text):
-        return text.lower()
-    return white_space_fix(remove_articles(remove_punc(lower(s))))
-
-def get_tokens(s):
-  if not s: return []
-  return normalize_answer(s).split()

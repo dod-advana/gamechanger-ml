@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from gamechangerml.src.utilities.model_helper import *
+from gamechangerml.src.utilities.text_utils import normalize_answer, get_tokens
+from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.api.utils.logger import logger
 
