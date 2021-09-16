@@ -44,9 +44,9 @@ def predict(
     data_file,
     max_seq_len,
     batch_size,
-    n_samples,
     output_csv,
     metrics,
+    n_samples,
 ):
     """
     This example performs predictions using a checked-pointed model and a
@@ -156,12 +156,11 @@ if __name__ == "__main__":
         help="maximum sequence length, up to 512",
     )
     parser.add_argument(
-        "--n",
-        "--num-samples",
-        dest="n_samples",
+        "--num-labels",
+        dest="num_labels",
         type=int,
-        default=0,
-        help="if > 0, number of sequential samples to draw from the data file",
+        required=True,
+        help="number of labels to predict",
     )
     parser.add_argument(
         "-o",
@@ -178,13 +177,14 @@ if __name__ == "__main__":
         help="uses the label column in the input csv to compute/log metrics",
     )
     args = parser.parse_args()
-    predictor_ = Predictor(args.model_path, num_labels=2)
-    predict(
+    predictor_ = Predictor(args.model_path, num_labels=args.num_labels)
+    ex = predict(
         predictor_,
         args.data_path,
         args.batch_size,
         args.max_seq_len,
-        args.n_samples,
         args.output_csv,
         args.metrics,
+        n_samples=-1,
     )
+    logger.info(ex)

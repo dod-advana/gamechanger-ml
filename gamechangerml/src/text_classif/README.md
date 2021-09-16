@@ -196,6 +196,8 @@ true: 2        9        0       12
 [2021-09-08 16:05:05,828    INFO], [classifier.py:324 - train()], training time : 0:02:37
 ```
 
+**Please make a `model-card.md` for your model and copy it to the model's directory.**
+
 ## Predicting Responsibilities
 After training the model on the *full training set*, the CLI `predict_table.py` produces the
 final product, e.g.,

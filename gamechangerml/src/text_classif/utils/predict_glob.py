@@ -1,6 +1,5 @@
 import logging
 import os
-import time
 
 from tqdm import tqdm
 
@@ -35,7 +34,7 @@ def predict_glob(
     dictionaries, one for each extracted sentence.
 
     Batches(`batch_size`) of these dictionaries are sent forward through the
-    model(`model_name_path`) with the predicted class and p(class) assembled
+    model (`model_name_path`) with the predicted class and p(class) assembled
     in a dictionary and returned on iteration.
 
     This assumes the model directory is laid out per HuggingFace, i.e.,

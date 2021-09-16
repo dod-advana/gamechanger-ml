@@ -128,16 +128,6 @@ class Predictor:
             List[Dict]
 
         """
-        if not 8 <= max_seq_len <= 512:
-            raise ValueError(
-                "must have  8 <= max_seq_len <= 512, got {}".format(
-                    max_seq_len
-                )
-            )
-        if not self.been_warned and batch_size < 8:
-            logger.warning("batch_size of at least 8 is recommended")
-            self.been_warned = True
-
         batch_size = min(len(inputs), batch_size)
         batch = list()
         for ex in inputs:
