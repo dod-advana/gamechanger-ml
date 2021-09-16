@@ -3,7 +3,7 @@ import os
 from gamechangerml.configs.config import S3Config
 import logging
 
-bucket_name = os.getenv("AWS_BUCKET_NAME", default="advana-raw-zone")
+bucket_name = os.getenv("AWS_BUCKET_NAME", default="advana-data-zone")
 env = os.getenv("ENV_TYPE")
 logger = logging.getLogger("gamechanger")
 

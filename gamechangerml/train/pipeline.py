@@ -196,7 +196,7 @@ class Pipeline:
             logger.info(f"Created tgz file and saved to {dst_path}")
 
             if upload:
-                S3_MODELS_PATH = "gamechanger/models"
+                S3_MODELS_PATH = "bronze/gamechanger/models"
                 s3_path = os.path.join(S3_MODELS_PATH, f"qexp_model/{version}")
                 self.upload(s3_path, dst_path, "qexp", model_id, version)
 
@@ -336,7 +336,7 @@ class Pipeline:
             logger.error(e)
         # Upload to S3
         if upload:
-            S3_MODELS_PATH = "gamechanger/models"
+            S3_MODELS_PATH = "bronze/gamechanger/models"
             s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
             self.upload(s3_path, dst_path, "sentence_index", model_id, version)
         return metadata, evals
