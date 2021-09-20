@@ -12,7 +12,7 @@ from gamechangerml.src.model_testing.evaluation import IndomainRetrieverEvaluato
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
-from gamechangerml.src.utilities.model_helper import get_user
+from gamechangerml.src.utilities.test_utils import get_user
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils import processmanager
 from distutils.dir_util import copy_tree

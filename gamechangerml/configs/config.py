@@ -68,26 +68,17 @@ class QAConfig:
 
 class EmbedderConfig: 
     MODEL_ARGS = {
-        "model_name": "msmarco-distilbert-base-v2", # SOURCE
-        "embeddings": {
-            "embeddings": "embeddings.npy",
-            "dataframe": "data.csv",
-            "ids": "doc_ids.txt",
-        },
-        "encoder": { ## args for making the embeddings index
-            "min_token_len": 10,
-            "overwrite": False,
-            "verbose": True, # for creating LocalCorpus
-            "return_id": True # for creating LocalCorpus
-        },
-        "retriever": { ## args for retrieving the vectors
-            "n_returns": 5
-        }
+        "encoder_model_name": "msmarco-distilbert-base-v2", 
+        "min_token_len": 10,
+        "overwrite": False,
+        "verbose": True, # for creating LocalCorpus
+        "return_id": True, # for creating LocalCorpus
+        "n_returns": 5
     }
 
 class SimilarityConfig:
     MODEL_ARGS = {
-        "model_name": "distilbart-mnli-12-3" # SOURCE
+        "sim_model_name": "distilbart-mnli-12-3" # SOURCE
     }
 
 class QexpConfig:

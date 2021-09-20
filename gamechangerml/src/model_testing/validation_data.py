@@ -110,7 +110,7 @@ class RetrieverGSData(ValidationData):
     
     def dictify_data(self, available_ids):
         '''
-        Filter out any validation queries whose documents areen't in the index. 
+        Filter out any validation queries whose documents aren't in the index. 
         Forrmat gold standard csv examples into MSMarco format.
         '''
 

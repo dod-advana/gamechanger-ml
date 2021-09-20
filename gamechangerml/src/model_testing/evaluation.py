@@ -17,8 +17,7 @@ from gamechangerml.api.utils.logger import logger
 import signal
 import torch
 
-signal.signal(signal.SIGALRM, timeout_handler)
-
+init_timer()
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SENT_INDEX_PATH = model_path_dict["sentence"]
@@ -37,8 +36,11 @@ class QAEvaluator(TransformerEvaluator):
 
     def __init__(
         self, 
+        model_name, 
+        qa_type, 
+        nbest,
+        null_threshold,
         model=None,
-        config=QAConfig.MODEL_ARGS,
         transformer_path=LOCAL_TRANSFORMERS_DIR,
         use_gpu=False,
         data_name=None
@@ -46,13 +48,16 @@ class QAEvaluator(TransformerEvaluator):
 
         super().__init__(transformer_path, use_gpu)
 
-        self.model_name = config['model_name']
+        self.model_name = model_name
+        self.qa_type = qa_type
+        self.nbest = nbest
+        self.null_threshold = null_threshold
         self.transformer_path = transformer_path
-        self.model_path = os.path.join(transformer_path, config['model_name'])
+        self.model_path = os.path.join(transformer_path, self.model_name)
         if model:
             self.model = model
         else:
-            self.model = QAReader(self.transformer_path, self.model_name, config['qa_type'], config['nbest'], config['null_threshold'], self.use_gpu)
+            self.model = QAReader(self.transformer_path, self.model_name, self.qa_type, self.nbest, self.null_threshold, self.use_gpu)
         self.data_name=data_name
 
     def compare(self, prediction, query):
@@ -129,7 +134,7 @@ class QAEvaluator(TransformerEvaluator):
 
         return pd.read_csv(csv_filename)
 
-    def eval(self, data):
+    def eval(self, data, eval_path):
         '''Get evaluation stats across predicted/expected answer comparisons'''
 
         df = self.predict(data)
@@ -145,14 +150,14 @@ class QAEvaluator(TransformerEvaluator):
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": self.model_name,
             "validation_data": self.data_name,
-            "query_count": num_queries,
-            "proportion_exact_match": exact_match,
-            "proportion_partial_match": partial_match,
+            "query_count": clean_nans(num_queries),
+            "proportion_exact_match": clean_nans(exact_match),
+            "proportion_partial_match": clean_nans(partial_match),
         }
 
         file = "_".join(["qa_eval", self.data_name])
         output_file = timestamp_filename(file, '.json')
-        save_json(output_file, self.model_path, agg_results)
+        save_json(output_file, eval_path, agg_results)
 
         return agg_results
 
@@ -160,49 +165,57 @@ class SQuADQAEvaluator(QAEvaluator):
 
     def __init__(
         self, 
+        model_name, 
+        qa_type, 
+        nbest,
+        null_threshold,
         model=None,
-        config=QAConfig.MODEL_ARGS,
         transformer_path=LOCAL_TRANSFORMERS_DIR,
         use_gpu=False,
         sample_limit=None,
         data_name='squad'
         ):
 
-        super().__init__(model, config, transformer_path, use_gpu, data_name)
+        super().__init__(model, model_name, qa_type, nbest, null_threshold, transformer_path, use_gpu, data_name)
 
         self.data = SQuADData(sample_limit)
-        self.results = self.eval(data=self.data)
+        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_squad'))
+        self.results = self.eval(data=self.data, eval_path=self.eval_path)
 
 class IndomainQAEvaluator(QAEvaluator):
 
     def __init__(
         self, 
+        model_name, 
+        qa_type, 
+        nbest,
+        null_threshold,
         model=None,
-        config=QAConfig.MODEL_ARGS,
         transformer_path=LOCAL_TRANSFORMERS_DIR,
         use_gpu=False,
         data_name='domain'
         ):
 
-        super().__init__(model, config, transformer_path, use_gpu, data_name)
+        super().__init__(model, model_name, qa_type, nbest, null_threshold, transformer_path, use_gpu, data_name)
 
         self.data = QADomainData()
-        self.results = self.eval(data=self.data)
+        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
+        self.results = self.eval(data=self.data, eval_path=self.eval_path)
 
 
 class RetrieverEvaluator(TransformerEvaluator):
 
     def __init__(
             self, 
+            encoder_model_name,
             transformer_path=LOCAL_TRANSFORMERS_DIR,
-            encoder_config=EmbedderConfig.MODEL_ARGS,
             use_gpu=False
         ):
 
         super().__init__(transformer_path, use_gpu)
 
-        self.model_name = encoder_config['model_name']
-        self.model_path = os.path.join(self.transformer_path, self.model_name)
+        self.encoder_model_name = encoder_model_name
+        self.model_path = os.path.join(self.transformer_path, self.encoder_model_name)
 
     def make_index(self, encoder, corpus_path):
 
@@ -268,7 +281,7 @@ class RetrieverEvaluator(TransformerEvaluator):
 
         return pd.read_csv(csv_filename)
         
-    def eval(self, data, index, retriever, data_name):
+    def eval(self, data, index, retriever, data_name, eval_path):
         
         df = self.predict(data, index, retriever)
 
@@ -283,14 +296,14 @@ class RetrieverEvaluator(TransformerEvaluator):
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": self.model_name,
             "validation_data": data_name,
-            "query_count": num_queries,
-            "proportion_in_top_10": proportion_in_top_10,
-            "proportion_any_hits": proportion_any_hits
+            "query_count": clean_nans(num_queries),
+            "proportion_in_top_10": clean_nans(proportion_in_top_10),
+            "proportion_any_hits": clean_nans(proportion_any_hits)
         }
 
         file = "_".join(["retriever_eval", data_name])
         output_file = timestamp_filename(file, '.json')
-        save_json(output_file, self.model_path, agg_results)
+        save_json(output_file, eval_path, agg_results)
 
         return agg_results
 
@@ -298,17 +311,22 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
 
     def __init__(
             self, 
+            encoder_model_name,
+            sim_model_name,
+            overwrite,
+            min_token_len,
+            return_id,
+            verbose,
+            n_returns,
             encoder=None,
             retriever=None,
             transformer_path=LOCAL_TRANSFORMERS_DIR,
             index='msmarco_index',
-            encoder_config=EmbedderConfig.MODEL_ARGS, 
-            similarity_config=SimilarityConfig.MODEL_ARGS,
             use_gpu=False,
             data_name='msmarco'
         ):
 
-        super().__init__(transformer_path, encoder_config, use_gpu)
+        super().__init__(transformer_path, encoder_model_name, use_gpu)
 
         self.index_path = os.path.join(os.path.dirname(transformer_path), index)
         if not os.path.exists(self.index_path):  
@@ -317,31 +335,36 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
             if encoder:
                 self.encoder=encoder
             else:
-                self.encoder = SentenceEncoder(encoder_config, self.index_path, use_gpu)
+                self.encoder = SentenceEncoder(encoder_model_name, overwrite, min_token_len, return_id, verbose, self.index_path, use_gpu)
             self.make_index(encoder=self.encoder, corpus_path=None)
         self.data = MSMarcoData()
         if retriever:
             self.retriever = retriever
         else:
-            self.retriever = SentenceSearcher(self.index_path, transformer_path, encoder_config, similarity_config)
-        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name)
+            self.retriever = SentenceSearcher(sim_model_name, encoder_model_name, n_returns, self.index_path, transformer_path)
+        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_msmarco'))
+        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path)
 
 class IndomainRetrieverEvaluator(RetrieverEvaluator):
 
     def __init__(
-            self, 
+            self,
+            encoder_model_name,
+            sim_model_name,
+            overwrite,
+            min_token_len,
+            return_id,
+            verbose,
+            n_returns,
             encoder=None,
             retriever=None,
+            data_name='gold_standard',
             transformer_path=LOCAL_TRANSFORMERS_DIR,
             index=SENT_INDEX_PATH,
-            encoder_config=EmbedderConfig.MODEL_ARGS, 
-            similarity_config=SimilarityConfig.MODEL_ARGS,
-            use_gpu=False,
-            corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'], 
-            data_name='gold_standard'
+            use_gpu=False
         ):
 
-        super().__init__(transformer_path, encoder_config, use_gpu)
+        super().__init__(transformer_path, encoder_model_name, use_gpu)
 
         self.index_path = index
         if not os.path.exists(self.index_path):  
@@ -350,23 +373,24 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             if encoder:
                 self.encoder=encoder
             else:
-                self.encoder = SentenceEncoder(encoder_config, self.index_path, use_gpu)
-            self.make_index(encoder=self.encoder, corpus_path=corpus_path)
+                self.encoder = SentenceEncoder(encoder_model_name, overwrite, min_token_len, return_id, verbose, self.index_path, use_gpu)
+            self.make_index(encoder=self.encoder, corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'])
         self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
         self.data = RetrieverGSData(self.doc_ids)
         if retriever:
             self.retriever=retriever
         else:
-            self.retriever = SentenceSearcher(self.index_path, transformer_path, encoder_config, similarity_config)
-        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name)
+            self.retriever = SentenceSearcher(sim_model_name, encoder_model_name, n_returns, self.index_path, transformer_path)
+        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
+        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path)
 
 class SimilarityEvaluator(TransformerEvaluator):
 
     def __init__(
             self, 
+            sim_model_name,
             model=None,
             transformer_path=LOCAL_TRANSFORMERS_DIR,
-            model_config=SimilarityConfig.MODEL_ARGS, 
             sample_limit=None,
             use_gpu=False
         ):
@@ -376,9 +400,9 @@ class SimilarityEvaluator(TransformerEvaluator):
         if model:
             self.model = model
         else:
-            self.model = SimilarityRanker(model_config, transformer_path)
-        self.model_name = model_config['model_name']
-        self.model_path = os.path.join(transformer_path, model_config['model_name'])
+            self.model = SimilarityRanker(sim_model_name, transformer_path)
+        self.model_name = sim_model_name
+        self.model_path = os.path.join(transformer_path, sim_model_name)
         self.data = NLIData(sample_limit)
         self.results = self.eval_nli()
 
@@ -410,7 +434,7 @@ class SimilarityEvaluator(TransformerEvaluator):
 
         return df
 
-    def eval_nli(self):
+    def eval_nli(self, eval_path):
         '''Get summary stats of predicted vs. expected ranking for NLI'''
 
         # create csv of predictions
@@ -431,14 +455,14 @@ class SimilarityEvaluator(TransformerEvaluator):
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": self.model_name,
             "validation_data": "NLI",
-            "query_count": num_queries,
-            "pairs_count": num_sentence_pairs,
-            "proportion_all_match": proportion_all_match,
-            "proportion_top_match": proportion_top_match
+            "query_count": clean_nans(num_queries),
+            "pairs_count": clean_nans(num_sentence_pairs),
+            "proportion_all_match": clean_nans(proportion_all_match),
+            "proportion_top_match": clean_nans(proportion_top_match)
         }
 
         output_file = timestamp_filename('sim_model_eval', '.json')
-        save_json(output_file, self.model_path, agg_results)
+        save_json(output_file, eval_path, agg_results)
 
         return agg_results
 
@@ -516,9 +540,9 @@ class QexpEvaluator():
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": self.model_path.split('/')[-1],
             "validation_data": "QE_domain",
-            "query_count": num_queries,
-            "precision": precision,
-            "recall": recall
+            "query_count": clean_nans(num_queries),
+            "precision": clean_nans(precision),
+            "recall": clean_nans(recall)
         }
 
         output_file = timestamp_filename('qe_model_eval', '.json')

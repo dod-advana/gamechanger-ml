@@ -10,8 +10,7 @@ import torch
 
 from gamechangerml.src.text_handling.corpus import LocalCorpus
 from gamechangerml.api.utils.logger import logger
-from gamechangerml.configs.config import EmbedderConfig, SimilarityConfig
-from gamechangerml.src.utilities.model_helper import *
+from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
@@ -33,17 +32,27 @@ class SentenceEncoder(object):
 
     def __init__(
         self,
-        model_args=EmbedderConfig.MODEL_ARGS,
+        model_name,
+        overwrite,
+        min_token_len,
+        return_id, 
+        verbose,
+        model = None,
         sent_index=SENT_INDEX_PATH,
         use_gpu=False,
     ):
 
-        self.encoder_model = os.path.join(
-            LOCAL_TRANSFORMERS_DIR, model_args["model_name"]
+        if model:
+            self.encoder_model = model
+        else:
+            self.encoder_model = os.path.join(
+            LOCAL_TRANSFORMERS_DIR, model_name
         )
+        self.min_token_len = min_token_len
+        self.return_id = return_id
+        self.verbose = verbose
+        self.overwrite = overwrite
         self.index_path = sent_index
-        self.embed_paths = model_args["embeddings"]
-        self.encoder_args = model_args["encoder"]
 
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = use_gpu
@@ -84,13 +93,13 @@ class SentenceEncoder(object):
         df = pd.DataFrame(all_text, columns=["text", "paragraph_id"])
 
         embedding_path = os.path.join(
-            self.index_path, self.embed_paths["embeddings"])
+            self.index_path, "embeddings.npy")
         dataframe_path = os.path.join(
-            self.index_path, self.embed_paths["dataframe"])
-        ids_path = os.path.join(self.index_path, self.embed_paths["ids"])
+            self.index_path, "data.csv")
+        ids_path = os.path.join(self.index_path, "doc_ids.txt")
 
         # Load new data
-        if os.path.isfile(embedding_path) and (self.encoder_args["overwrite"] is False):
+        if os.path.isfile(embedding_path) and (self.overwrite is False):
             logger.info(f"Loading new data from {embedding_path}")
 
             # Load existing embeddings
@@ -151,9 +160,9 @@ class SentenceEncoder(object):
         if corpus_path:
             corp = LocalCorpus(
                 corpus_path,
-                return_id=self.encoder_args["return_id"],
-                min_token_len=self.encoder_args["min_token_len"],
-                verbose=self.encoder_args["verbose"],
+                return_id=self.return_id,
+                min_token_len=self.min_token_len,
+                verbose=self.verbose,
             )
             corpus = [(para_id, " ".join(tokens), None)
                       for tokens, para_id in corp]
@@ -173,12 +182,12 @@ class SentenceEncoder(object):
 class SimilarityRanker(object):
     def __init__(
         self,
-        model_args=SimilarityConfig.MODEL_ARGS,
+        model_name,
         transformers_path=LOCAL_TRANSFORMERS_DIR,
     ):
 
         self.sim_model = os.path.join(
-            transformers_path, model_args["model_name"])
+            transformers_path, model_name)
         self.similarity = Similarity(self.sim_model)
 
     def re_rank(self, query, texts, ids):
@@ -210,23 +219,32 @@ class SentenceSearcher(object):
 
     def __init__(
         self,
+        sim_model_name,
+        encoder_model_name,
+        n_returns,
+        encoder = None,
+        sim_model = None,
         index_path=SENT_INDEX_PATH,
-        transformers_path=LOCAL_TRANSFORMERS_DIR,
-        retriever_args=EmbedderConfig.MODEL_ARGS,
-        similarity_args=SimilarityConfig.MODEL_ARGS,
+        transformers_path=LOCAL_TRANSFORMERS_DIR
     ):
 
         self.embedder = Embeddings()
-        self.encoder_model = os.path.join(
-            transformers_path, retriever_args["model_name"]
+        if encoder:
+            self.encoder_model = encoder
+        else:
+            self.encoder_model = os.path.join(
+            transformers_path, encoder_model_name
         )
         self.embedder.load(index_path)
         # replace this with looking up ES
         self.data = pd.read_csv(
-            os.path.join(index_path, retriever_args["embeddings"]["dataframe"])
+            os.path.join(index_path, "data.csv")
         )
-        self.n_returns = retriever_args["retriever"]["n_returns"]
-        self.similarity = SimilarityRanker(similarity_args, transformers_path)
+        self.n_returns = n_returns
+        if sim_model:
+            self.similarity = sim_model
+        else:
+            self.similarity = SimilarityRanker(sim_model_name, transformers_path)
 
     def retrieve_topn(self, query):
 

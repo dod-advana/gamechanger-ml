@@ -12,6 +12,7 @@ from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
+from gamechangerml.src.utilities.test_utils import collect_evals
 
 router = APIRouter()
 MODELS = ModelLoader()
@@ -51,6 +52,9 @@ def get_downloaded_models_list():
                 if os.path.isfile(meta_path):
                     meta_file = open(meta_path)
                     qexp_list[f] = json.load(meta_file)
+                    qexp_list[f]["evaluation"] = {}
+                    qexp_list[f]["evaluation"] = collect_evals(os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR, f))
                     meta_file.close()
     except Exception as e:
         logger.error(e)
@@ -67,6 +71,9 @@ def get_downloaded_models_list():
                 if os.path.isfile(config_path):
                     config_file = open(config_path)
                     transformer_list[trans] = json.load(config_file)
+                    transformer_list[trans]["evaluation"] = {}
+                    transformer_list[trans]["evaluation"] = collect_evals(os.path.join(
+                        LOCAL_TRANSFORMERS_DIR.value, trans))
                     config_file.close()
     except Exception as e:
         logger.error(e)
@@ -83,6 +90,9 @@ def get_downloaded_models_list():
                 if os.path.isfile(meta_path):
                     meta_file = open(meta_path)
                     sent_index_list[f] = json.load(meta_file)
+                    sent_index_list[f]["evaluation"] = {}
+                    sent_index_list[f]["evaluation"] = collect_evals(os.path.join(
+                        LOCAL_TRANSFORMERS_DIR.value, f))
                     meta_file.close()
     except Exception as e:
         logger.error(e)

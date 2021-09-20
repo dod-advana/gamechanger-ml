@@ -96,12 +96,13 @@ class ModelLoader:
         logger.info(f"Loading Sentence Index from {index_path}")
         try:
             ModelLoader.__sentence_trans = SentenceSearcher(
+                sim_model_name=SimilarityConfig.MODEL_ARGS['sim_model_name'],
+                encoder_model_name=EmbedderConfig.MODEL_ARGS['encoder_model_name'],
+                n_returns=EmbedderConfig.MODEL_ARGS['n_returns'],
                 index_path=index_path,
-                transformers_path=LOCAL_TRANSFORMERS_DIR.value,
-                retriever_args=EmbedderConfig.MODEL_ARGS, 
-                similarity_args=SimilarityConfig.MODEL_ARGS
+                transformers_path=transformers_path,
+                
             )
-
             encoder_model = ModelLoader.__sentence_trans.encoder_model
             logger.info(f"Using {encoder_model} for sentence transformer")
             sim_model = ModelLoader.__sentence_trans.similarity
