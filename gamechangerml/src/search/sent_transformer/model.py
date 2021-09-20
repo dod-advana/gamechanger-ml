@@ -32,7 +32,7 @@ class SentenceEncoder(object):
 
     def __init__(
         self,
-        model_name,
+        encoder_model_name,
         overwrite,
         min_token_len,
         return_id, 
@@ -46,7 +46,7 @@ class SentenceEncoder(object):
             self.encoder_model = model
         else:
             self.encoder_model = os.path.join(
-            LOCAL_TRANSFORMERS_DIR, model_name
+            LOCAL_TRANSFORMERS_DIR, encoder_model_name
         )
         self.min_token_len = min_token_len
         self.return_id = return_id
@@ -182,12 +182,12 @@ class SentenceEncoder(object):
 class SimilarityRanker(object):
     def __init__(
         self,
-        model_name,
+        sim_model_name,
         transformers_path=LOCAL_TRANSFORMERS_DIR,
     ):
 
         self.sim_model = os.path.join(
-            transformers_path, model_name)
+            transformers_path, sim_model_name)
         self.similarity = Similarity(self.sim_model)
 
     def re_rank(self, query, texts, ids):
