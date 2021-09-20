@@ -281,7 +281,7 @@ class RetrieverEvaluator(TransformerEvaluator):
 
         return pd.read_csv(csv_filename)
         
-    def eval(self, data, index, retriever, data_name, eval_path):
+    def eval(self, data, index, retriever, data_name, eval_paths):
         
         df = self.predict(data, index, retriever)
 
@@ -303,7 +303,8 @@ class RetrieverEvaluator(TransformerEvaluator):
 
         file = "_".join(["retriever_eval", data_name])
         output_file = timestamp_filename(file, '.json')
-        save_json(output_file, eval_path, agg_results)
+        for path in eval_paths:
+            save_json(output_file, path, agg_results)
 
         return agg_results
 
@@ -343,7 +344,7 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
         else:
             self.retriever = SentenceSearcher(sim_model_name, encoder_model_name, n_returns, self.index_path, transformer_path)
         self.eval_path = check_directory(os.path.join(self.model_path, 'evals_msmarco'))
-        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path)
+        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_paths=[self.eval_path])
 
 class IndomainRetrieverEvaluator(RetrieverEvaluator):
 
@@ -381,8 +382,9 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             self.retriever=retriever
         else:
             self.retriever = SentenceSearcher(sim_model_name, encoder_model_name, n_returns, self.index_path, transformer_path)
-        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
-        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path)
+        self.model_eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
+        self.index_eval_path = check_directory(os.path.join(self.index_path, 'evals_gc'))
+        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_paths=[self.model_eval_path, self.index_eval_path])
 
 class SimilarityEvaluator(TransformerEvaluator):
 
