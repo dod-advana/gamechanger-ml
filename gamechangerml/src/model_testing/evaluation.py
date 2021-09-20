@@ -49,15 +49,11 @@ class QAEvaluator(TransformerEvaluator):
         super().__init__(transformer_path, use_gpu)
 
         self.model_name = model_name
-        self.qa_type = qa_type
-        self.nbest = nbest
-        self.null_threshold = null_threshold
-        self.transformer_path = transformer_path
-        self.model_path = os.path.join(transformer_path, self.model_name)
+        self.model_path = os.path.join(transformer_path, model_name)
         if model:
             self.model = model
         else:
-            self.model = QAReader(self.transformer_path, self.model_name, self.qa_type, self.nbest, self.null_threshold, self.use_gpu)
+            self.model = QAReader(transformer_path, model_name, qa_type, nbest, null_threshold, use_gpu)
         self.data_name=data_name
 
     def compare(self, prediction, query):
@@ -176,7 +172,7 @@ class SQuADQAEvaluator(QAEvaluator):
         data_name='squad'
         ):
 
-        super().__init__(model, model_name, qa_type, nbest, null_threshold, transformer_path, use_gpu, data_name)
+        super().__init__(model_name, qa_type, nbest, null_threshold, model, transformer_path, use_gpu, data_name)
 
         self.data = SQuADData(sample_limit)
         self.eval_path = check_directory(os.path.join(self.model_path, 'evals_squad'))
@@ -196,7 +192,7 @@ class IndomainQAEvaluator(QAEvaluator):
         data_name='domain'
         ):
 
-        super().__init__(model, model_name, qa_type, nbest, null_threshold, transformer_path, use_gpu, data_name)
+        super().__init__(model_name, qa_type, nbest, null_threshold, model, transformer_path, use_gpu, data_name)
 
         self.data = QADomainData()
         self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
@@ -294,7 +290,7 @@ class RetrieverEvaluator(TransformerEvaluator):
         agg_results = {
             "user": user,
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "model": self.model_name,
+            "model": self.encoder_model_name,
             "validation_data": data_name,
             "query_count": clean_nans(num_queries),
             "proportion_in_top_10": clean_nans(proportion_in_top_10),
@@ -393,7 +389,6 @@ class SimilarityEvaluator(TransformerEvaluator):
             sim_model_name,
             model=None,
             transformer_path=LOCAL_TRANSFORMERS_DIR,
-            sample_limit=None,
             use_gpu=False
         ):
 
@@ -405,8 +400,54 @@ class SimilarityEvaluator(TransformerEvaluator):
             self.model = SimilarityRanker(sim_model_name, transformer_path)
         self.model_name = sim_model_name
         self.model_path = os.path.join(transformer_path, sim_model_name)
+
+    def eval(self, predictions, eval_path):
+        '''Get summary stats of predicted vs. expected ranking for NLI'''
+
+        df = predictions
+        csv_filename = os.path.join(self.model_path, timestamp_filename('nli_eval', '.csv'))
+        df.to_csv(csv_filename)
+
+        # get overall stats
+        proportion_all_match = np.round(df['match'].value_counts(normalize = True)[True], 2)
+        proportion_top_match = np.round(df[df['expected_rank']==0]['match'].value_counts(normalize = True)[True], 2)
+        num_queries = df['promptID'].nunique()
+        num_sentence_pairs = df.shape[0]
+
+        user = get_user(logger)
+
+        agg_results = {
+            "user": user,
+            "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "model": self.model_name,
+            "validation_data": "NLI",
+            "query_count": clean_nans(num_queries),
+            "pairs_count": clean_nans(num_sentence_pairs),
+            "proportion_all_match": clean_nans(proportion_all_match),
+            "proportion_top_match": clean_nans(proportion_top_match)
+        }
+
+        output_file = timestamp_filename('sim_model_eval', '.json')
+        save_json(output_file, eval_path, agg_results)
+
+        return agg_results
+
+class NLIEvaluator(SimilarityEvaluator):
+
+    def __init__(
+        self, 
+        sim_model_name,
+        model=None,
+        transformer_path=LOCAL_TRANSFORMERS_DIR,
+        sample_limit=None,
+        use_gpu=False
+    ):
+
+        super().__init__(sim_model_name, model, transformer_path, use_gpu)
+
         self.data = NLIData(sample_limit)
-        self.results = self.eval_nli()
+        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_nli'))
+        self.results = self.eval(predictions=self.predict_nli(), eval_path=self.eval_path)
 
     def predict_nli(self):
         '''Get rank predictions from similarity model'''
@@ -436,37 +477,22 @@ class SimilarityEvaluator(TransformerEvaluator):
 
         return df
 
-    def eval_nli(self, eval_path):
-        '''Get summary stats of predicted vs. expected ranking for NLI'''
+class GCSimEvaluator(SimilarityEvaluator):
 
-        # create csv of predictions
-        df = self.predict_nli()
-        csv_filename = os.path.join(self.model_path, timestamp_filename('nli_eval', '.csv'))
-        df.to_csv(csv_filename)
+    def __init__(
+        self,
+        sim_model_name,
+        model=None,
+        transformer_path=LOCAL_TRANSFORMERS_DIR,
+        use_gpu=False
+    ):
+        ## TODO: add in-domain GC dataset for testing sim model (using pos/neg samples/ranking from search)
 
-        # get overall stats
-        proportion_all_match = np.round(df['match'].value_counts(normalize = True)[True], 2)
-        proportion_top_match = np.round(df[df['expected_rank']==0]['match'].value_counts(normalize = True)[True], 2)
-        num_queries = df['promptID'].nunique()
-        num_sentence_pairs = df.shape[0]
+        super().__init__(sim_model_name, model, transformer_path, use_gpu)
 
-        user = get_user(logger)
-
-        agg_results = {
-            "user": user,
-            "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "model": self.model_name,
-            "validation_data": "NLI",
-            "query_count": clean_nans(num_queries),
-            "pairs_count": clean_nans(num_sentence_pairs),
-            "proportion_all_match": clean_nans(proportion_all_match),
-            "proportion_top_match": clean_nans(proportion_top_match)
-        }
-
-        output_file = timestamp_filename('sim_model_eval', '.json')
-        save_json(output_file, eval_path, agg_results)
-
-        return agg_results
+        #self.data = NLIData(sample_limit)
+        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
+        #self.results = self.eval(predictions=self.predict_nli(), eval_path=self.eval_path)
 
 
 class QexpEvaluator():

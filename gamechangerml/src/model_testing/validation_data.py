@@ -116,7 +116,6 @@ class RetrieverGSData(ValidationData):
 
         ids = ['.'.join(i.strip('\n').split('.')[:-1]).strip().lstrip() for i in available_ids]
 
-
         self.samples['document'] = self.samples['document'].apply(lambda x: [i.strip().lstrip() for i in x.split(';')])
         self.samples = self.samples.explode('document')
         df = self.samples[self.samples['document'].isin(ids)] # check ids are in the index
