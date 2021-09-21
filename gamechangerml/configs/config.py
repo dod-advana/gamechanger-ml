@@ -104,7 +104,7 @@ class ValidationConfig:
     DATA_ARGS = {
         "validation_dir": "gamechangerml/data/validation", # need to have validation data in here
         "evaluation_dir": "gamechangerml/data/evaluation",
-        "test_corpus_dir": "gamechanger/data/test_corpus", # location with smaller set of corpus JSONs
+        "test_corpus_dir": "gamechangerml/data/test_corpus", # location with smaller set of corpus JSONs
         "squad": {
             "dev": "squad2.0/dev-v2.0.json",
             "train": "squad2.0/train-v2.0.json"

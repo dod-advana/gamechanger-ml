@@ -13,6 +13,7 @@ from gamechangerml.src.utilities.text_utils import normalize_answer, get_tokens
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData, QEXPDomainData
 from gamechangerml.api.utils.pathselect import get_model_paths
+from gamechangerml.scripts.make_test_corpus import main as make_test_corpus
 from gamechangerml.api.utils.logger import logger
 import signal
 import torch
@@ -332,13 +333,13 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
             if encoder:
                 self.encoder=encoder
             else:
-                self.encoder = SentenceEncoder(encoder_model_name, overwrite, min_token_len, return_id, verbose, self.index_path, use_gpu)
+                self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, overwrite=overwrite, min_token_len=min_token_len, return_id=return_id, verbose=verbose, sent_index=self.index_path, use_gpu=use_gpu)
             self.make_index(encoder=self.encoder, corpus_path=None)
         self.data = MSMarcoData()
         if retriever:
             self.retriever = retriever
         else:
-            self.retriever = SentenceSearcher(sim_model_name, encoder_model_name, n_returns, self.index_path, transformer_path)
+            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, encoder_model_name=encoder_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
         self.eval_path = check_directory(os.path.join(self.model_path, 'evals_msmarco'))
         self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_paths=[self.eval_path])
 
@@ -363,21 +364,24 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
 
         super().__init__(transformer_path, encoder_model_name, use_gpu)
 
-        self.index_path = index
-        if not os.path.exists(self.index_path):  
+        if not index:
+            self.index_path = os.path.join(os.path.dirname(transformer_path), 'test_sent_index')
             logger.info("Making new embeddings index at {}".format(str(self.index_path)))
-            os.makedirs(self.index_path)
+            if not os.path.exists(self.index_path):
+                os.makedirs(self.index_path)
             if encoder:
                 self.encoder=encoder
             else:
-                self.encoder = SentenceEncoder(encoder_model_name, overwrite, min_token_len, return_id, verbose, self.index_path, use_gpu)
+                self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, overwrite=overwrite, min_token_len=min_token_len, return_id=return_id, verbose=verbose, sent_index=self.index_path, use_gpu=use_gpu)
             self.make_index(encoder=self.encoder, corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'])
+        else:
+            self.index_path = os.path.join(os.path.dirname(transformer_path), index)
         self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
         self.data = RetrieverGSData(self.doc_ids)
         if retriever:
             self.retriever=retriever
         else:
-            self.retriever = SentenceSearcher(sim_model_name, encoder_model_name, n_returns, self.index_path, transformer_path)
+            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, encoder_model_name=encoder_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
         self.model_eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
         self.index_eval_path = check_directory(os.path.join(self.index_path, 'evals_gc'))
         self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_paths=[self.model_eval_path, self.index_eval_path])

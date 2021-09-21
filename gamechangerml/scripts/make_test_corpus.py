@@ -9,17 +9,16 @@ def main(test_size, corpus_directory, save_directory, include_ids=None, max_file
     '''Makes a small test corpus for checking validation'''
     all_files = [f.split('.json')[0] + '.json' for f in listdir(corpus_directory) if isfile(join(corpus_directory, f))]
     if include_ids:
+
+        print(include_ids)
         include_ids = [f.split('.json')[0] + '.json' for f in include_ids]
         subset = list(set(all_files).intersection(include_ids))
         other = [i for i in all_files if i not in include_ids]
-        limit = max(len(include_ids), test_size) # get the max size of test corpus
-        print(subset, limit)
     else:
         subset = []
-        limit = int(test_size)
         other = all_files
-        print(subset, limit)
-    for i in range(limit - len(subset)):
+    for i in range(int(test_size) - len(subset)):
+        print(i)
         filesize = 1000000
         while filesize > max_file_size: # filter out large files
             random_index = random.randint(0,len(other)-1)
@@ -42,7 +41,7 @@ if __name__ == "__main__":
     parser.add_argument("--test-size", "-ts", dest="test_size", required=True, help="size of test corpus to generate")
     parser.add_argument("--corpus-directory", "-c", dest="corpus_directory", required=True, help="path to full corpus")
     parser.add_argument("--save-directory", "-s", dest="save_directory", required=True, help="path for saving test corpus")
-    parser.add_argument("--include-ids", "-i", dest="include_ids", required=False, help="list of docids/filenames to include in the corpus")
+    parser.add_argument("--include-ids", "-i", dest="include_ids", nargs="+", required=False, help="list of docids/filenames to include in the corpus")
     parser.add_argument("--max-file-size", "-m", dest="max_file_size", required=False, help="max size (in bytes) of file to save to test_corpus")
 
     args = parser.parse_args()
