@@ -204,9 +204,9 @@ class Pipeline:
                 logger.info(
                     "-------------- Running Assessment Model Script --------------"
                 )
-                qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
-                evals = qxpeval.results
-                '''
+                #qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
+                #evals = qxpeval.results
+                
                 logger.info(
                     "-------------- Assessment is not available--------------")
                 """
@@ -222,7 +222,7 @@ class Pipeline:
                         mlflow.log_metric(
                             key=metric, value=results[metric])
                 """
-                '''
+                
                 logger.info(
                     "-------------- Finished Assessment --------------")
             else:
