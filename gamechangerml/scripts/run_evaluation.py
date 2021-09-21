@@ -6,7 +6,7 @@ if __name__ == '__main__':
 
     logger.info("\nStarting QA Evaluation...")
     logger.info("\nEvaluating QA with SQuAD Data...")
-    QAEval = SQuADQAEvaluator(model=None, sample_limit=20, **QAConfig.MODEL_ARGS)
+    QAEval = SQuADQAEvaluator(model=None, sample_limit=10, **QAConfig.MODEL_ARGS)
     logger.info(QAEval.results)
     logger.info("\nEvaluating QA with in-domain data...")
     GCEval = IndomainQAEvaluator(model=None, **QAConfig.MODEL_ARGS)
@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     logger.info("\nStarting Retriever Evaluation...")
     logger.info("\nEvaluating Retriever with MSMarco Data...")
-    MSMarcoEval = MSMarcoRetrieverEvaluator(encoder=None, retriever=None, **EmbedderConfig.MODEL_ARGS, **SimilarityConfig.MODEL_ARGS, index_path=)
+    MSMarcoEval = MSMarcoRetrieverEvaluator(encoder=None, retriever=None, **EmbedderConfig.MODEL_ARGS, **SimilarityConfig.MODEL_ARGS)
     logger.info(MSMarcoEval.results)
     logger.info("\nEvaluating Retriever with in-domain data...")
     GoldStandardRetrieverEval = IndomainRetrieverEvaluator(encoder=None, retriever=None, index='test_sent_index', **EmbedderConfig.MODEL_ARGS, **SimilarityConfig.MODEL_ARGS)
@@ -27,6 +27,6 @@ if __name__ == '__main__':
     print("Evaluating Similarity Model with in-domain data...")
 
     logger.info("\nLoading Query Expansion Evaluation...")
-    QEEval = QexpEvaluator(qe_model_dir = 'gamechangerml/models/qexp_20201217', **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
+    #QEEval = QexpEvaluator(qe_model_dir = 'gamechangerml/models/qexp_20201217', **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
     logger.info("\nEvaluating Query Expansion with GC data...")
-    logger.info(QEEval.results)
+    #logger.info(QEEval.results)
