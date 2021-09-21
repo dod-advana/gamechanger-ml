@@ -17,10 +17,10 @@ function setup_prod() {
     export REDIS_HOST="${REDIS_HOST:-localhost}"
     export REDIS_PORT="${REDIS_PORT:-6379}"
     export GC_ML_HOST="${GC_ML_HOST:-http://localhost}"
-    export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-raw-zone/gamechanger/models/transformers/v5/transformers.tar.gz}"
-    export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-raw-zone/gamechanger/models/sentence_index/v7/sent_index_20210715.tar.gz}"
-    export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-raw-zone/gamechanger/models/qexp_model/v3/qexp_20201217.tar.gz}"
-    export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-raw-zone/gamechanger/models/topic_model/v1/20210208.tar.gz}"
+    export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v5/transformers.tar.gz}"
+    export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v7/sent_index_20210715.tar.gz}"
+    export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-data-zone/bronze/gamechanger/models/qexp_model/v3/qexp_20201217.tar.gz}"
+    export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-data-zone/bronze/gamechanger/models/topic_model/v1/20210208.tar.gz}"
     
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-true}"
 
@@ -32,10 +32,10 @@ function setup_dev() {
     export REDIS_HOST="${REDIS_HOST:-gc-redis}"
     export REDIS_PORT="${REDIS_PORT:-6380}"
     export GC_ML_HOST="${GC_ML_HOST:-http://host.docker.internal}"
-    export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-raw-zone/gamechanger/models/transformers/v5/transformers.tar.gz}"
-    export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-raw-zone/gamechanger/models/sentence_index/v7/sent_index_20210715.tar.gz}"
-    export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-raw-zone/gamechanger/models/qexp_model/v3/qexp_20201217.tar.gz}"
-    export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-raw-zone/gamechanger/models/topic_model/v1/20210208.tar.gz}"
+    export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v5/transformers.tar.gz}"
+    export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v7/sent_index_20210715.tar.gz}"
+    export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-data-zone/bronze/gamechanger/models/qexp_model/v3/qexp_20201217.tar.gz}"
+    export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-data-zone/bronze/gamechanger/models/topic_model/v1/20210208.tar.gz}"
 
     export DEV_ENV="DEV"
     export PULL_MODELS="${PULL_MODELS:-latest}"
@@ -50,8 +50,8 @@ function setup_devlocal() {
   export REDIS_HOST="${REDIS_HOST:-localhost}"
   export REDIS_PORT="${REDIS_PORT:-6380}"
   export GC_ML_HOST="${GC_ML_HOST:-http://localhost}"
-  export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-raw-zone/gamechanger/models/transformers/v5/transformers.tar.gz}"
-  export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-raw-zone/gamechanger/models/sentence_index/v4/sent_index_20210422.tar.gz}"
+  export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v5/transformers.tar.gz}"
+  export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v4/sent_index_20210422.tar.gz}"
 
   export DEV_ENV="DEVLOCAL"
 }
