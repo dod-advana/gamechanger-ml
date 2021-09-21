@@ -29,7 +29,7 @@ from gamechangerml.src.search.query_expansion.build_ann_cli import (
     build_qe_model as bqe,
 )
 from gamechangerml.src.utilities import utils
-from gamechangerml.configs.config import DefaultConfig, D2VConfig, QexpConfig
+from gamechangerml.configs.config import DefaultConfig, D2VConfig, QexpConfig, EmbedderConfig, SimilarityConfig
 
 import pandas as pd
 import urllib3
@@ -295,7 +295,11 @@ class Pipeline:
             copy_tree(existing_embeds, local_sent_index_dir)
 
         try:
-            encoder = SentenceEncoder(use_gpu=use_gpu)
+            overwrite = EmbedderConfig.MODEL_ARGS["overwrite"]
+            min_token_len = EmbedderConfig.MODEL_ARGS["min_token_len"]
+            return_id = EmbedderConfig.MODEL_ARGS["return_id"]
+            verbose = EmbedderConfig.MODEL_ARGS["verbose"]
+            encoder = SentenceEncoder(encoder_model_name=encoder_model, overwrite=overwrite, min_token_len=min_token_len, verbose=verbose, return_id=return_id, sent_index=local_sent_index_dir, use_gpu=use_gpu)
             logger.info("Creating Document Embeddings...")
             encoder.index_documents(corpus)
             logger.info("-------------- Indexing Documents--------------")
@@ -325,7 +329,7 @@ class Pipeline:
             logger.info(
                 "-------------- Running Assessment Model Script --------------")
 
-            sentev = IndomainRetrieverEvaluator(encoder=encoder, index=local_sent_index_dir)
+            sentev = IndomainRetrieverEvaluator(encoder=encoder, retriever=None, index=model_name, **EmbedderConfig.MODEL_ARGS, **SimilarityConfig.MODEL_ARGS)
             evals = sentev.results
             logger.info("evals: {}".format(str(evals)))
             
