@@ -153,6 +153,15 @@ def update_dictionary(old_dict, new_additions, prefix):
         
     return {**old_dict, **new_dict}
 
+def map_ids(iddict, df, mapcol, idcol):
+    '''Map IDs back to df'''
+
+    reverse = {iddict[k]: k for k in iddict.keys()}
+    col = 'ID_' + idcol
+    df[col] = df[mapcol].map(reverse)
+
+    return df
+
 def update_meta_relations(metadata, df, query_col, return_col):
     '''Update dict with relations and metadata about each match'''
     
