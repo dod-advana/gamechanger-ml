@@ -238,7 +238,7 @@ class SentenceSearcher(object):
         self.embedder.load(index_path)
         # replace this with looking up ES
         self.data = pd.read_csv(
-            os.path.join(index_path, "data.csv")
+            os.path.join(index_path, "data.csv"), dtype={"paragraph_id": str}
         )
         self.n_returns = n_returns
         if sim_model:
@@ -256,7 +256,7 @@ class SentenceSearcher(object):
             doc_ids.append(doc_id)
             doc_scores.append(score)
             text = self.data[self.data["paragraph_id"]
-                             == doc_id].iloc[0]["text"]
+                             == str(doc_id)].iloc[0]["text"]
             doc_texts.append(text)
 
         return doc_texts, doc_ids, doc_scores
