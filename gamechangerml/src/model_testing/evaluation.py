@@ -68,9 +68,7 @@ class QAEvaluator(TransformerEvaluator):
 
         if prediction['text'] == '':
             if query['null_expected'] == True:
-                exact_match = 1
-                partial_match = 1
-                true_negative = 1
+                exact_match = partial_match = true_negative = 1
             else:
                 false_negative = 1
         elif query['null_expected'] == True:
@@ -79,8 +77,7 @@ class QAEvaluator(TransformerEvaluator):
             clean_pred = normalize_answer(prediction['text'])
             clean_answers = set([normalize_answer(i['text']) for i in query['expected']])
             if clean_pred in clean_answers:
-                exact_match = 1
-                partial_match = 1
+                exact_match = partial_match = 1
             else:
                 for i in clean_answers:
                     if i in clean_pred:
@@ -91,7 +88,7 @@ class QAEvaluator(TransformerEvaluator):
         
         return exact_match, partial_match, true_negative, false_negative, false_positive
 
-    def predict(self, data):
+    def predict(self, data, eval_path):
         '''Get answer predictions'''
 
         columns = [
@@ -108,7 +105,7 @@ class QAEvaluator(TransformerEvaluator):
 
         query_count = 0
 
-        csv_filename = os.path.join(self.model_path, timestamp_filename(self.data_name, '.csv'))
+        csv_filename = os.path.join(eval_path, timestamp_filename(self.data_name, '.csv'))
         with open(csv_filename, 'w') as csvfile: 
             csvwriter = csv.writer(csvfile)  
             csvwriter.writerow(columns)
@@ -149,7 +146,7 @@ class QAEvaluator(TransformerEvaluator):
     def eval(self, data, eval_path):
         '''Get evaluation stats across predicted/expected answer comparisons'''
 
-        df = self.predict(data)
+        df = self.predict(data, eval_path)
 
         num_queries = df['queries'].nunique()
         if num_queries > 0:
@@ -239,13 +236,13 @@ class RetrieverEvaluator(TransformerEvaluator):
         super().__init__(transformer_path, use_gpu)
 
         self.encoder_model_name = encoder_model_name
-        self.model_path = os.path.join(self.transformer_path, self.encoder_model_name)
+        self.model_path = os.path.join(encoder_model_name, transformer_path)
 
     def make_index(self, encoder, corpus_path):
 
         return encoder.index_documents(corpus_path)
 
-    def predict(self, data, index, retriever):
+    def predict(self, data, index, retriever, eval_path):
 
         columns = [
             'index',
@@ -257,7 +254,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             'false_positives'
         ]
         fname = index.split('/')[-1]
-        csv_filename = os.path.join(self.model_path, timestamp_filename(fname, '.csv'))
+        csv_filename = os.path.join(eval_path, timestamp_filename(fname, '.csv'))
         with open(csv_filename, 'w') as csvfile:
             csvwriter = csv.writer(csvfile)  
             csvwriter.writerow(columns) 
@@ -308,9 +305,9 @@ class RetrieverEvaluator(TransformerEvaluator):
 
         return pd.read_csv(csv_filename)
         
-    def eval(self, data, index, retriever, data_name, eval_paths):
+    def eval(self, data, index, retriever, data_name, eval_path, model_name):
         
-        df = self.predict(data, index, retriever)
+        df = self.predict(data, index, retriever, eval_path)
         num_queries = df['queries'].shape[0]
         if num_queries > 0:
             expected_positives = df['expected_positives'].map(int).sum()
@@ -327,7 +324,7 @@ class RetrieverEvaluator(TransformerEvaluator):
         agg_results = {
             "user": user,
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "model": self.encoder_model_name,
+            "model": model_name,
             "validation_data": data_name,
             "query_count": clean_nans(num_queries),
             "precision": clean_nans(precision),
@@ -337,8 +334,7 @@ class RetrieverEvaluator(TransformerEvaluator):
 
         file = "_".join(["retriever_eval", data_name])
         output_file = timestamp_filename(file, '.json')
-        for path in eval_paths:
-            save_json(output_file, path, agg_results)
+        save_json(output_file, eval_path, agg_results)
 
         return agg_results
 
@@ -362,7 +358,7 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
         ):
 
         super().__init__(transformer_path, encoder_model_name, use_gpu)
-
+        logger.info("Model path: {}".format(self.model_path))
         self.index_path = os.path.join(os.path.dirname(transformer_path), index)
         if not os.path.exists(self.index_path):  
             logger.info("Making new embeddings index at {}".format(str(self.index_path)))
@@ -378,7 +374,8 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
         else:
             self.retriever = SentenceSearcher(sim_model_name=sim_model_name, encoder_model_name=encoder_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
         self.eval_path = check_directory(os.path.join(self.model_path, 'evals_msmarco'))
-        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_paths=[self.eval_path])
+        logger.info("Evals path: {}".format(self.eval_path))
+        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path, model_name=encoder_model_name)
 
 class IndomainRetrieverEvaluator(RetrieverEvaluator):
 
@@ -401,6 +398,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
 
         super().__init__(transformer_path, encoder_model_name, use_gpu)
 
+        self.model_path = os.path.join(transformer_path, encoder_model_name)
         if not index:
             self.index_path = os.path.join(os.path.dirname(transformer_path), 'test_sent_index')
             logger.info("Making new embeddings index at {}".format(str(self.index_path)))
@@ -419,9 +417,8 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             self.retriever=retriever
         else:
             self.retriever = SentenceSearcher(sim_model_name=sim_model_name, encoder_model_name=encoder_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
-        self.model_eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
-        self.index_eval_path = check_directory(os.path.join(self.index_path, 'evals_gc'))
-        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_paths=[self.model_eval_path, self.index_eval_path])
+        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
+        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path, model_name=encoder_model_name)
 
 class SimilarityEvaluator(TransformerEvaluator):
 
@@ -439,14 +436,14 @@ class SimilarityEvaluator(TransformerEvaluator):
             self.model = model
         else:
             self.model = SimilarityRanker(sim_model_name, transformer_path)
-        self.model_name = sim_model_name
+        self.sim_model_name = sim_model_name
         self.model_path = os.path.join(transformer_path, sim_model_name)
 
     def eval(self, predictions, eval_path):
         '''Get summary stats of predicted vs. expected ranking for NLI'''
 
         df = predictions
-        csv_filename = os.path.join(self.model_path, timestamp_filename('nli_eval', '.csv'))
+        csv_filename = os.path.join(eval_path, timestamp_filename('nli_eval', '.csv'))
         df.to_csv(csv_filename)
 
         # get overall stats
@@ -460,7 +457,7 @@ class SimilarityEvaluator(TransformerEvaluator):
         agg_results = {
             "user": user,
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "model": self.model_name,
+            "model": self.sim_model_name,
             "validation_data": "NLI",
             "query_count": clean_nans(num_queries),
             "pairs_count": clean_nans(num_sentence_pairs),
