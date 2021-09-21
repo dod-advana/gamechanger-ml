@@ -61,12 +61,20 @@ class QAEvaluator(TransformerEvaluator):
         '''Compare predicted to expected answers'''
 
         exact_match = 0
-        partial_match = 0
+        partial_match = 0 # true positive
+        true_negative = 0
+        false_negative = 0
+        false_positive = 0
 
         if prediction['text'] == '':
             if query['null_expected'] == True:
                 exact_match = 1
                 partial_match = 1
+                true_negative = 1
+            else:
+                false_negative = 1
+        elif query['null_expected'] == True:
+            false_positive = 1
         else:
             clean_pred = normalize_answer(prediction['text'])
             clean_answers = set([normalize_answer(i['text']) for i in query['expected']])
@@ -79,8 +87,9 @@ class QAEvaluator(TransformerEvaluator):
                         partial_match = 1
                     elif clean_pred in i:
                         partial_match = 1
+            false_positive = 1 - partial_match
         
-        return exact_match, partial_match
+        return exact_match, partial_match, true_negative, false_negative, false_positive
 
     def predict(self, data):
         '''Get answer predictions'''
@@ -91,7 +100,10 @@ class QAEvaluator(TransformerEvaluator):
             'actual_answers',
             'predicted_answer',
             'exact_match',
-            'partial_match'
+            'partial_match',
+            'true_negative',
+            'false_negative',
+            'false_positive'
         ]
 
         query_count = 0
@@ -110,7 +122,7 @@ class QAEvaluator(TransformerEvaluator):
                     if type(context) == str:
                         context = [context]
                     prediction = self.model.answer(query['question'], context)[0]
-                    exact_match, partial_match = self.compare(prediction, query)
+                    exact_match, partial_match, true_negative, false_negative, false_positive = self.compare(prediction, query)
                 
                     row = [[
                             str(query_count),
@@ -118,7 +130,10 @@ class QAEvaluator(TransformerEvaluator):
                             str(actual),
                             str(prediction),
                             str(exact_match),
-                            str(partial_match)
+                            str(partial_match),
+                            str(true_negative),
+                            str(false_negative),
+                            str(false_positive)
                         ]]
                     csvwriter.writerows(row)
                     query_count += 1
@@ -137,9 +152,18 @@ class QAEvaluator(TransformerEvaluator):
         df = self.predict(data)
 
         num_queries = df['queries'].nunique()
-        exact_match = np.round(np.mean(df['exact_match'].to_list()), 2)
-        partial_match = np.round(np.mean(df['partial_match'].to_list()), 2)
-
+        if num_queries > 0:
+            exact_match = np.round(np.mean(df['exact_match'].to_list()), 2)
+            partial_match = np.round(np.mean(df['partial_match'].to_list()), 2)
+            true_positives = df['partial_match'].map(int).sum()
+            true_negatives = df['true_negative'].map(int).sum()
+            false_positives = df['false_positive'].map(int).sum()
+            false_negatives = df['false_negative'].map(int).sum()
+            precision = true_positives / (true_positives + false_positives)
+            recall = true_positives / (true_positives + false_negatives)
+            f1 = 2 * ((precision * recall) / (precision + recall))
+        else:
+            exact_match = partial_match = precision = recall = f1 = 0
         user = get_user(logger)
 
         agg_results = {
@@ -148,8 +172,11 @@ class QAEvaluator(TransformerEvaluator):
             "model": self.model_name,
             "validation_data": self.data_name,
             "query_count": clean_nans(num_queries),
-            "proportion_exact_match": clean_nans(exact_match),
-            "proportion_partial_match": clean_nans(partial_match),
+            "exact_match_accuracy": clean_nans(exact_match),
+            "partial_match_accuracy": clean_nans(partial_match),
+            "precision": precision,
+            "recall": recall,
+            "f1": f1
         }
 
         file = "_".join(["qa_eval", self.data_name])
@@ -225,8 +252,9 @@ class RetrieverEvaluator(TransformerEvaluator):
             'queries',
             'top_expected_ids',
             'hits',
-            'proportion_hits',
-            'any_hits'
+            'expected_positives',
+            'true_positives',
+            'false_positives'
         ]
         fname = index.split('/')[-1]
         csv_filename = os.path.join(self.model_path, timestamp_filename(fname, '.csv'))
@@ -245,7 +273,8 @@ class RetrieverEvaluator(TransformerEvaluator):
                     expected_ids = [expected_ids]
                     len_ids = len(expected_ids)
                 hits = []
-                total = 0
+                true_pos = 0
+                false_pos = 0
                 for eid in expected_ids:
                     hit = {}
                     if eid in doc_ids:
@@ -255,23 +284,24 @@ class RetrieverEvaluator(TransformerEvaluator):
                         hit['matching_text'] = data.collection[eid]
                         hit['score'] = doc_scores[rank]
                         hits.append(hit)
-                        total += 1
+                        true_pos += 1
                     else:
                         hit['match'] = 0
                         hit['rank'] = 'NA'
                         hit['matching_text'] = 'NA'
                         hit['score'] = 'NA'
                         hits.append(hit)
-                mean = total / len(expected_ids)
-                any_hits = math.ceil(mean)
+                        false_pos += 1
+                expected_positives = len(expected_ids)
 
                 row = [[
                     str(query_count),
                     str(query),
                     str(expected_ids),
                     str(hits),
-                    str(mean),
-                    str(any_hits)
+                    str(expected_positives),
+                    str(true_pos),
+                    str(false_pos)
                 ]]
                 csvwriter.writerows(row)
                 query_count += 1
@@ -281,10 +311,16 @@ class RetrieverEvaluator(TransformerEvaluator):
     def eval(self, data, index, retriever, data_name, eval_paths):
         
         df = self.predict(data, index, retriever)
-
         num_queries = df['queries'].shape[0]
-        proportion_in_top_10 = np.round(np.mean(df['proportion_hits'].to_list()), 2)
-        proportion_any_hits = np.round(np.mean(df['any_hits'].to_list()), 2)
+        if num_queries > 0:
+            expected_positives = df['expected_positives'].map(int).sum()
+            true_positives = df['true_positives'].map(int).sum()
+            false_positives = df['false_positives'].map(int).sum()
+            recall = true_positives / expected_positives
+            precision = true_positives / (true_positives + false_positives)
+            f1 = 2 * ((precision * recall) / (precision + recall))
+        else:
+            recall = precision = f1 = 0
 
         user = get_user(logger)
         
@@ -294,8 +330,9 @@ class RetrieverEvaluator(TransformerEvaluator):
             "model": self.encoder_model_name,
             "validation_data": data_name,
             "query_count": clean_nans(num_queries),
-            "proportion_in_top_10": clean_nans(proportion_in_top_10),
-            "proportion_any_hits": clean_nans(proportion_any_hits)
+            "precision": clean_nans(precision),
+            "recall": clean_nans(recall),
+            "f1_score": clean_nans(f1)
         }
 
         file = "_".join(["retriever_eval", data_name])
@@ -413,8 +450,8 @@ class SimilarityEvaluator(TransformerEvaluator):
         df.to_csv(csv_filename)
 
         # get overall stats
-        proportion_all_match = np.round(df['match'].value_counts(normalize = True)[True], 2)
-        proportion_top_match = np.round(df[df['expected_rank']==0]['match'].value_counts(normalize = True)[True], 2)
+        all_accuracy = np.round(df['match'].mean(), 2)
+        top_accuracy = np.round(df[df['expected_rank']==0]['match'].mean(), 2)
         num_queries = df['promptID'].nunique()
         num_sentence_pairs = df.shape[0]
 
@@ -427,8 +464,8 @@ class SimilarityEvaluator(TransformerEvaluator):
             "validation_data": "NLI",
             "query_count": clean_nans(num_queries),
             "pairs_count": clean_nans(num_sentence_pairs),
-            "proportion_all_match": clean_nans(proportion_all_match),
-            "proportion_top_match": clean_nans(proportion_top_match)
+            "all_accuracy": clean_nans(all_accuracy),
+            "top_accuracy": clean_nans(top_accuracy)
         }
 
         output_file = timestamp_filename('sim_model_eval', '.json')
@@ -477,7 +514,7 @@ class NLIEvaluator(SimilarityEvaluator):
         df['predicted_rank'] = df['pairID'].map(ranks)
         df.dropna(subset = ['predicted_rank'], inplace = True)
         df['predicted_rank'] = df['predicted_rank'].map(int)
-        df['match'] = np.where(df['predicted_rank']==df['expected_rank'], True, False)
+        df['match'] = np.where(df['predicted_rank']==df['expected_rank'], 1, 0)
 
         return df
 
