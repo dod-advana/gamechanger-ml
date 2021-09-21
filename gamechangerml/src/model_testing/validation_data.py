@@ -3,6 +3,9 @@ import numpy as np
 from gamechangerml.src.utilities.model_helper import *
 from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.api.utils.logger import logger
+from gamechangerml.src.utilities.es_search_utils import get_paragraph_results, connect_es
+
+ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
 
 class ValidationData():
 
@@ -109,12 +112,11 @@ class RetrieverGSData(ValidationData):
     
     def dictify_data(self, available_ids):
         '''
-        Filter out any validation queries whose documents areen't in the index. 
-        Forrmat gold standard csv examples into MSMarco format.
+        Filter out any validation queries whose documents aren't in the index. 
+        Format gold standard csv examples into MSMarco format.
         '''
 
         ids = ['.'.join(i.strip('\n').split('.')[:-1]).strip().lstrip() for i in available_ids]
-
 
         self.samples['document'] = self.samples['document'].apply(lambda x: [i.strip().lstrip() for i in x.split(';')])
         self.samples = self.samples.explode('document')
@@ -189,6 +191,173 @@ class NLIData(ValidationData):
         logger.info(("Created {} sample sentence pairs from {} unique queries:".format(sample.shape[0], sample_limit)))
 
         return sample[['genre', 'gold_label', 'pairID', 'promptID', 'sentence1', 'sentence2', 'expected_rank']]
+
+class MatamoFeedback():
+    
+    def __init__(self, matamo_feedback_path):
+        
+        self.matamo = pd.read_csv(matamo_feedback_path)
+        self.intel, self.qa = self.split_matamo()
+    
+    def split_matamo(self):
+        '''Split QA queries from intelligent search queries'''
+        
+        df = self.matamo
+        df['source'] = 'matamo'
+        df['correct'] = df['event_name'].apply(lambda x: ' '.join(x.split('_')[-2:])).map({'thumbs up': True, 'thumbs down': False})
+        df['type'] = df['event_name'].apply(lambda x: ' '.join(x.split('_')[:-2]))
+        intel = df[df['type']=='intelligent search'].copy()
+        qa = df[df['type']=='qa'].copy()
+    
+        def process_matamo(df):
+            '''Reformat Matamo feedback'''
+
+            queries = []
+            cols = [i for i in df.columns if i[:5]=='value']
+
+            def process_row(row, col_name):
+                '''Split the pre-colon text from rows'''
+
+                if ':' in row:
+                    row = row.split(':')
+                    key = row[0]
+                    vals = ':'.join(row[1:])
+                    return key, vals
+                else:
+                    return col_name, row
+
+            for i in df.index:
+                query = {}
+                query['date'] = df.loc[i, 'createdAt']
+                query['source'] = 'matamo'
+                query['correct_match'] = df.loc[i, 'correct']
+                for j in cols:
+                    row = df.loc[i, j]
+                    key, val = process_row(row, j)
+                    query[key] = val
+                    if key in ['question', 'search_text', 'QA answer']:
+                        clean_val = normalize_answer(val)
+                        clean_key = key + '_clean'
+                        query[clean_key] = clean_val
+                queries.append(query)
+
+            return pd.DataFrame(queries)
+
+        return process_matamo(intel), process_matamo(qa)
+
+class SearchHistory():
+    
+    def __init__(self, search_history_path):
+    
+        self.history = pd.read_csv(search_history_path)
+        self.intel = self.split_feedback()
+        
+    def split_feedback(self):
+        
+        df = self.history
+        
+        def clean_quot(string):
+            return string.replace('&quot;', "'").replace("&#039;", "'").lower()
+        
+        def clean_doc(string):
+            return string.strip('.pdf')
+
+        def is_question(string):
+            '''If we find a good way to use search history for QA validation (not used currently)'''
+
+            question_words = ['what', 'who', 'where', 'why', 'how', 'when']
+            if '?' in string:
+                return True
+            else:
+                return bool(set(string.lower().split()).intersection(question_words))
+        
+        df['source'] = 'user_history'
+        df['correct_match'] = True
+        #df['is_question'] = sh['search'].apply(lambda x: is_question(x))
+        df.rename(columns = {'documenttime': 'date', 'search': 'search_text', 'document': 'title_returned'}, inplace = True)
+        df['title_returned'] = df['title_returned'].apply(lambda x: clean_doc(x))
+        df['search_text'] = df['search_text'].apply(lambda x: clean_quot(x))
+        df['search_text_clean'] = df['search_text'].apply(lambda x: normalize_answer(x))
+        df.drop(columns = ['idvisit', 'idaction_name', 'search_cat', 'searchtime'], inplace = True)
+        
+        return df
+    
+class SearchValidationData(ValidationData):
+    
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+        
+        ##TODO: option to add new data to existing formatted data/add only new records
+        super().__init__(validation_config)
+        self.matamo_path = os.path.join(self.validation_dir, validation_config['matamo_feedback_file'])
+        self.history_path = os.path.join(self.validation_dir, validation_config['search_history_file'])
+        self.matamo_data = MatamoFeedback(self.matamo_path)
+        self.history_data = SearchHistory(self.history_path)
+    
+class QASearchData(SearchValidationData):
+    
+    ##TODO: add context relations attr for QASearchData
+    
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS, save=False):
+        
+        super().__init__(validation_config)
+        self.data = self.matamo_data.qa
+        self.queries, self.collection, self.all_relations, self.correct, self.incorrect = self.make_qa()
+        
+    def make_qa(self):
+        
+        qa = self.data
+        
+        # get set of queries + make unique query dict
+        qa_queries = set(qa['question_clean'])
+        qa_search_queries = update_dictionary(old_dict = {}, new_additions = qa_queries, prefix = 'Q')
+        
+        # get set of docs + make unique doc dict
+        qa_answers = set(qa['QA answer_clean'])
+        qa_search_results = update_dictionary(old_dict = {}, new_additions = qa_answers, prefix = 'A')
+        
+        # map IDs back to df
+        qa = map_ids(qa_search_queries, qa, 'question_clean', 'key')
+        qa = map_ids(qa_search_results, qa, 'QA answer_clean', 'value')
+        
+        # create new QA metadata rels
+        qa_metadata = {} # TODO: add option to add existing metadata
+        new_qa_metadata = update_meta_relations(qa_metadata, qa, 'question', 'QA answer')
+        
+        # filtere the metadata to only get relations we want to test against
+        correct, incorrect = filter_rels(new_qa_metadata, min_correct_matches=0)
+        
+        return qa_search_queries, qa_search_results, new_qa_metadata, correct, incorrect
+
+class IntelSearchData(SearchValidationData):
+    
+    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+        
+        super().__init__(validation_config)
+        self.data = pd.concat([self.matamo_data.intel, self.history_data.intel]).reset_index()
+        self.queries, self.collection, self.all_relations, self.correct, self.incorrect = self.make_intel()
+        
+    def make_intel(self):
+        
+        intel = self.data
+        
+        int_queries = set(intel['search_text_clean'])
+        intel_search_queries = update_dictionary(old_dict = {}, new_additions = int_queries, prefix ='S')
+        
+        int_docs = set(intel['title_returned'])
+        intel_search_results = update_dictionary(old_dict = {}, new_additions = int_docs, prefix ='R')
+        
+        # map IDS back to dfs
+        intel = map_ids(intel_search_queries, intel, 'search_text_clean', 'key')
+        intel = map_ids(intel_search_results, intel, 'title_returned', 'value')
+
+        # create new intel search metadata rels
+        intel_metadata = {} # TODO: add option to add existing metadata
+        new_intel_metadata = update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned')
+
+        # filtere the metadata to only get relations we want to test against
+        correct, incorrect = filter_rels(new_intel_metadata, min_correct_matches=2)
+        
+        return intel_search_queries, intel_search_results, new_intel_metadata, correct, incorrect
 
 class QEXPDomainData(ValidationData):
 

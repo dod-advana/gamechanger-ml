@@ -130,5 +130,13 @@ class ValidationConfig:
         "retriever_gc": {
             "gold_standard": "gold_standard.csv"
         },
+        "matamo_feedback_file": "matamo_feedback.csv",
+        "search_history_file": "SearchPdfMapping.csv",
         "qe_gc": "QE_domain.json"
+    }
+
+class TrainingConfig:
+    DATA_ARGS = {
+        "training_data_dir": "gamechangerml/data/training",
+        "train_test_split_ratio": 0.8
     }
