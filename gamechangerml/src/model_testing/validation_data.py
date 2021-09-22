@@ -121,6 +121,8 @@ class RetrieverGSData(ValidationData):
             all_ids = self.samples['document'].unique()
             missing_ids = [i for i in all_ids if i not in ids]
             logger.info("Validation IDs not in the index (removed from validation set): {}".format(missing_ids))
+            logger.info("Number of missing IDs: {}".format(str(len(missing_ids))))
+            logger.info("Number documents in the index to test: {}".format(str(len(all_ids) - len(missing_ids))))
 
         df = df.groupby('query').agg({'document': lambda x: x.tolist()}).reset_index()
         query_list = df['query'].to_list()

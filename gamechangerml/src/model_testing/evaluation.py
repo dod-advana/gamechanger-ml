@@ -13,10 +13,12 @@ from gamechangerml.src.utilities.text_utils import normalize_answer, get_tokens
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData, QEXPDomainData
 from gamechangerml.api.utils.pathselect import get_model_paths
-from gamechangerml.scripts.make_test_corpus import main as make_test_corpus
+from gamechangerml.src.model_testing.metrics import *
 from gamechangerml.api.utils.logger import logger
 import signal
 import torch
+
+retriever_k = EmbedderConfig.MODEL_ARGS['n_returns'] # k
 
 init_timer()
 model_path_dict = get_model_paths()
@@ -242,16 +244,21 @@ class RetrieverEvaluator(TransformerEvaluator):
 
         return encoder.index_documents(corpus_path)
 
-    def predict(self, data, index, retriever, eval_path):
+    def predict(self, data, index, retriever, eval_path, k):
 
         columns = [
             'index',
             'queries',
             'top_expected_ids',
             'hits',
-            'expected_positives',
             'true_positives',
-            'false_positives'
+            'false_positives',
+            'false_negatives',
+            'true_negatives',
+            'reciprocal_rank',
+            'average_precision',
+            'precision@{}'.format(k),
+            'recall@{}'.format(k)
         ]
         fname = index.split('/')[-1]
         csv_filename = os.path.join(eval_path, timestamp_filename(fname, '.csv'))
@@ -259,65 +266,82 @@ class RetrieverEvaluator(TransformerEvaluator):
             csvwriter = csv.writer(csvfile)  
             csvwriter.writerow(columns) 
 
+            ## collect metrics for each query made + results generated
             query_count = 0
+            tp = 0
+            tn = 0
+            fp = 0
+            fn = 0
+            total_expected = 0
             for idx, query in data.queries.items(): 
                 logger.info("Q-{}: {}".format(query_count, query))
-                doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query)
+                doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query) ## returns results ordered highest - lowest score
                 if index != 'msmarco_index':
                     doc_ids = ['.'.join(i.split('.')[:-1]) for i in doc_ids]
-                expected_ids = data.relations[idx]
+                expected_ids = data.relations[idx] # collect the expected results (ground truth)
                 if type(expected_ids) == str:
                     expected_ids = [expected_ids]
                     len_ids = len(expected_ids)
+
+                total_expected += len(expected_ids)
+                ## collect ordered metrics
+                recip_rank = reciprocal_rank(doc_ids, expected_ids)
+                avg_p = average_precision(doc_ids, expected_ids)
+                
+                ## collect non-ordered metrics
                 hits = []
                 true_pos = 0
-                false_pos = 0
-                for eid in expected_ids:
+                false_pos = 0 # no negative samples to test against
+                for eid in doc_ids:
                     hit = {}
-                    if eid in doc_ids:
-                        hit['match'] = 1
+                    if eid in expected_ids: ## we have a hit
                         rank = doc_ids.index(eid)
                         hit['rank'] = rank
                         hit['matching_text'] = data.collection[eid]
                         hit['score'] = doc_scores[rank]
                         hits.append(hit)
                         true_pos += 1
-                    else:
-                        hit['match'] = 0
-                        hit['rank'] = 'NA'
-                        hit['matching_text'] = 'NA'
-                        hit['score'] = 'NA'
-                        hits.append(hit)
-                        false_pos += 1
-                expected_positives = len(expected_ids)
-
+                if len(doc_ids) < k: # if there are not k predictions, there are pred negatives
+                    remainder = k - len(doc_ids)
+                    false_neg = np.min(len([i for i in expected_ids if i not in doc_ids], remainder))
+                    true_neg = np.min((k - len(expected_ids)), (k - len(doc_ids)))
+                else: # if there are k predictions, there are no predicted negatives
+                    false_neg = true_neg = 0
+                fn += false_neg
+                tn += true_neg
+                tp += true_pos
+                
+                ## save metrics to csv
                 row = [[
                     str(query_count),
                     str(query),
                     str(expected_ids),
                     str(hits),
-                    str(expected_positives),
                     str(true_pos),
-                    str(false_pos)
+                    str(false_pos),
+                    str(false_neg),
+                    str(true_neg),
+                    str(recip_rank), # reciprocal rank
+                    str(avg_p) # average precision
                 ]]
                 csvwriter.writerows(row)
                 query_count += 1
 
-        return pd.read_csv(csv_filename)
+        return pd.read_csv(csv_filename), tp, tn, fp, fn, total_expected
         
-    def eval(self, data, index, retriever, data_name, eval_path, model_name):
+    def eval(self, data, index, retriever, data_name, eval_path, model_name, k=retriever_k):
         
-        df = self.predict(data, index, retriever, eval_path)
+        df, tp, tn, fp, fn, total_expected = self.predict(data, index, retriever, eval_path, k)
         num_queries = df['queries'].shape[0]
         if num_queries > 0:
-            expected_positives = df['expected_positives'].map(int).sum()
-            true_positives = df['true_positives'].map(int).sum()
-            false_positives = df['false_positives'].map(int).sum()
-            recall = true_positives / expected_positives
-            precision = true_positives / (true_positives + false_positives)
-            f1 = 2 * ((precision * recall) / (precision + recall))
+            _mrr = get_MRR(list(df['reciprocal_rank'].map(float)))
+            _map = get_MAP(list(df['average_precision'].map(float)))
+            recall = get_recall(true_positives=tp, false_negatives=(total_expected - tp))
+            #precision = get_precision(true_positives=tp, false_positives=fp)
+            #f1 = get_f1(precision, recall)
+            #accuracy = get_accuracy(true_positives=tp, true_negatives=tn, total=total_expected)
         else:
-            recall = precision = f1 = 0
+            _mrr = _map = recall = 0
 
         user = get_user(logger)
         
@@ -326,10 +350,11 @@ class RetrieverEvaluator(TransformerEvaluator):
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": model_name,
             "validation_data": data_name,
-            "query_count": clean_nans(num_queries),
-            "precision": clean_nans(precision),
-            "recall": clean_nans(recall),
-            "f1_score": clean_nans(f1)
+            "query_count": num_queries,
+            "k": k,
+            "MRR": _mrr,
+            "mAP": _map,
+            "recall": recall
         }
 
         file = "_".join(["retriever_eval", data_name])
@@ -411,8 +436,10 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             self.make_index(encoder=self.encoder, corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'])
         else:
             self.index_path = os.path.join(os.path.dirname(transformer_path), index)
+            #self.index_path = 'gamechangerml/models/sent_index_20210715'
         self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
         self.data = RetrieverGSData(self.doc_ids)
+        logger.info("SENT INDEX PATH: {}".format(self.index_path))
         if retriever:
             self.retriever=retriever
         else:
