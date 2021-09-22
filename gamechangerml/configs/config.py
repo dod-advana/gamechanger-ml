@@ -86,6 +86,13 @@ class EmbedderConfig:
             "return_id": True,  # for creating LocalCorpus
         },
         "retriever": {"n_returns": 5},  # args for retrieving the vectors
+        "retriever": {"n_returns": 5},  # args for retrieving the vectors
+        "finetune": {
+            "shuffle": True,
+            "batch_size": 16,
+            "epochs": 1,
+            "warmup_steps": 100,
+        },
     }
 
 
@@ -134,5 +141,14 @@ class ValidationConfig:
         },
         "question_gc": {"queries": "QA_domain_data.json"},
         "retriever_gc": {"gold_standard": "gold_standard.csv"},
+        "matamo_feedback_file": "matamo_feedback.csv",
+        "search_history_file": "SearchPdfMapping.csv",
         "qe_gc": "QE_domain.json",
+    }
+
+
+class TrainingConfig:
+    DATA_ARGS = {
+        "training_data_dir": "gamechangerml/data/training",
+        "train_test_split_ratio": 0.8,
     }
