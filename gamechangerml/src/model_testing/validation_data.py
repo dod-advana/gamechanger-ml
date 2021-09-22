@@ -112,8 +112,8 @@ class RetrieverGSData(ValidationData):
     
     def dictify_data(self, available_ids):
         '''
-        Filter out any validation queries whose documents aren't in the index. 
-        Format gold standard csv examples into MSMarco format.
+        Filter out any validation queries whose documents areen't in the index. 
+        Forrmat gold standard csv examples into MSMarco format.
         '''
 
         ids = ['.'.join(i.strip('\n').split('.')[:-1]).strip().lstrip() for i in available_ids]

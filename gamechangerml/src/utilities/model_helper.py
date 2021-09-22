@@ -6,6 +6,7 @@ import numpy as np
 from datetime import date, datetime
 
 from gamechangerml.api.utils.logger import logger
+import torch
 
 # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
 class TimeoutException(Exception):   # Custom exception class
@@ -104,6 +105,29 @@ def get_tokens(s):
   if not s: return []
   return normalize_answer(s).split()
 
+# from sentence_transformers==2.0.0
+#https://github.com/UKPLab/sentence-transformers/blob/master/sentence_transformers/util.py
+def cos_sim(a, b):
+    """
+    Computes the cosine similarity cos_sim(a[i], b[j]) for all i and j.
+    :return: Matrix with res[i][j]  = cos_sim(a[i], b[j])
+    """
+    if not isinstance(a, torch.Tensor):
+        a = torch.tensor(a)
+
+    if not isinstance(b, torch.Tensor):
+        b = torch.tensor(b)
+
+    if len(a.shape) == 1:
+        a = a.unsqueeze(0)
+
+    if len(b.shape) == 1:
+        b = b.unsqueeze(0)
+
+    a_norm = torch.nn.functional.normalize(a, p=2, dim=1)
+    b_norm = torch.nn.functional.normalize(b, p=2, dim=1)
+    return torch.mm(a_norm, b_norm.transpose(0, 1))
+
 def update_dictionary(old_dict, new_additions, prefix):
     '''Update master dictionary of unique queries'''
 
@@ -120,22 +144,22 @@ def update_dictionary(old_dict, new_additions, prefix):
                 new_dict[myid] = i
 
         return new_dict
-    
+
     if old_dict != {}:
         last_count = [re.sub(r'[A-Z]', '', i) for i in old_dict.keys()][-1]
     else:
         last_count = -1
     new_dict = make_ids(new_additions, last_count, prefix)
-    
+        
     return {**old_dict, **new_dict}
 
 def map_ids(iddict, df, mapcol, idcol):
     '''Map IDs back to df'''
-    
+
     reverse = {iddict[k]: k for k in iddict.keys()}
     col = 'ID_' + idcol
     df[col] = df[mapcol].map(reverse)
-    
+
     return df
 
 def update_meta_relations(metadata, df, query_col, return_col):
