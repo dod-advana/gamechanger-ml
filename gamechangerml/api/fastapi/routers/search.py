@@ -147,7 +147,7 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
     """
 
     terms_string = " ".join(termsList["termsList"])
-    terms = preprocess(terms_string)
+    terms = preprocess(terms_string, remove_stopwords=True)
     expansion_dict = {}
     # logger.info("[{}] expanded: {}".format(user, termsList))
 
