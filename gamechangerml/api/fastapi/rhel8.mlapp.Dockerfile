@@ -37,6 +37,10 @@ RUN dnf install -y \
         libomp-devel \
         openblas \
         cairo \
+        vim-enhanced \
+        nano \
+        curl \
+        nmap-ncat \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
