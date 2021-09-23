@@ -110,9 +110,9 @@ function start_env_dev() {
         --graceful-timeout 1000 \
         --timeout 1200 \
         --keep-alive 30 \
-        --reload \
         -k uvicorn.workers.UvicornWorker \
         --log-level debug
+        --config gunicorn_config.py
   fi
 }
 
