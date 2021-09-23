@@ -1,7 +1,9 @@
+from gamechangerml.api.fastapi.settings import *
+logger.info("*** importing fastapi, fast utils, and os")
 from fastapi import APIRouter
 from fastapi_utils.tasks import repeat_every
 import os
-from gamechangerml.api.fastapi.settings import *
+logger.info("*** importing model loader")
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 router = APIRouter()
@@ -9,10 +11,12 @@ MODELS = ModelLoader()
 
 @router.on_event("startup")
 async def load_models():
+    logger.info("*** Loading Models")
     MODELS.initQA()
     MODELS.initQE()
     MODELS.initSentence()
     MODELS.initTrans()
+    logger.info("*** All Models Loaded")
 
 
 @router.on_event("startup")

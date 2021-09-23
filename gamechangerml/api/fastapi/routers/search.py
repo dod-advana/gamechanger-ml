@@ -1,20 +1,25 @@
+print("*** importing settings")
+from gamechangerml.api.fastapi.settings import *
 from fastapi import APIRouter, Response, status
 import time
+logger.info("*** importing qexp utils")
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
+logger.info("*** importing featurization extract keywords")
 from gamechangerml.src.featurization.keywords.extract_keywords import get_keywords
 from gamechangerml.api.fastapi.version import __version__
-
+logger.info("*** importing GensimSum")
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
 from gamechangerml.src.featurization.summary import GensimSumm
-from gamechangerml.api.fastapi.settings import *
+logger.info("*** importing ModelLoader")
 from gamechangerml.api.fastapi.model_loader import ModelLoader
-
+logger.info("*** importing QEConfig")
 from gamechangerml.configs.config import QEConfig
 
 router = APIRouter()
 MODELS = ModelLoader()
 
+logger.info("*** Search is all imported")
 @router.post("/transformerSearch", status_code=200)
 async def transformer_infer(query: dict, response: Response) -> dict:
     """transformer_infer - endpoint for transformer inference

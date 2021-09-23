@@ -1,21 +1,31 @@
+print("*** importing settings")
+from gamechangerml.api.fastapi.settings import *
+logger.info("*** importing fastapi")
 from fastapi import APIRouter, Response, status
+logger.info("*** importing subprocess, os, json, and datetime")
 import subprocess
 import os
 import json
 from datetime import datetime
+logger.info("*** importing GC utils, config, and version")
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
-from gamechangerml.api.fastapi.settings import *
+logger.info("*** importing startup functions")
 from gamechangerml.api.fastapi.routers.startup import *
+logger.info("*** importing thread driver")
 from gamechangerml.api.utils.threaddriver import MlThread
-from gamechangerml.train.pipeline import Pipeline
+logger.info("*** importing processmanager")
 from gamechangerml.api.utils import processmanager
+logger.info("*** importing pipeline")
+from gamechangerml.train.pipeline import Pipeline
+logger.info("*** importing modelloader")
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 router = APIRouter()
 MODELS = ModelLoader()
 
+logger.info("*** All Control dependencies imported")
 ## Get Methods ##
 
 
