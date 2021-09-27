@@ -1,31 +1,46 @@
 import numpy as np
 from typing import List
 
+def compute_f1(a_gold, a_pred):
+    gold_toks = get_tokens(a_gold)
+    pred_toks = get_tokens(a_pred)
+    common = collections.Counter(gold_toks) & collections.Counter(pred_toks)
+    num_same = sum(common.values())
+    if len(gold_toks) == 0 or len(pred_toks) == 0:
+        # If either is no-answer, then F1 is 1 if they agree, 0 otherwise
+        return int(gold_toks == pred_toks)
+    if num_same == 0:
+        return 0
+    precision = 1.0 * num_same / len(pred_toks)
+    recall = 1.0 * num_same / len(gold_toks)
+    f1 = (2 * precision * recall) / (precision + recall)
+    return f1
+
 ## Order Unaware Metrics ##
 def get_precision(true_positives: int, false_positives: int) -> float:
     '''To calculate precision@k, apply this formula to the top k results of a single query.'''
     try:
-        return true_positives / (true_positives + false_positives)
+        return np.round((true_positives / (true_positives + false_positives)), 3)
     except ZeroDivisionError:
         return 0
-
+        
 def get_recall(true_positives: int, false_negatives: int) -> float:
     '''To calculate recall@k, apply this formula to the top k results of a single query.'''
     try:
-        return true_positives / (true_positives + false_negatives)
+        return np.round((true_positives / (true_positives + false_negatives)), 3)
     except ZeroDivisionError:
         return 0
 
 def get_f1(precision: float, recall: float) -> float:
     '''To calculate f1@k, use precision@k and recall@k to the top k results of a single query.'''
     try:
-        return (2 * ((precision * recall) / (precision + recall)))
+        return np.round(((2 * ((precision * recall) / (precision + recall))), 3))
     except ZeroDivisionError:
         return 0
 
 def get_accuracy(true_positives: int, true_negatives: int, total: int) -> float:
     try:
-        return (true_positives + true_negatives) / total
+        return np.round(((true_positives + true_negatives) / total), 3)
     except ZeroDivisionError:
         return 0
 
@@ -34,7 +49,6 @@ def get_accuracy(true_positives: int, true_negatives: int, total: int) -> float:
 def reciprocal_rank(ranked_results: List[str], expected: List[str]) -> float:
     '''
     Calculates the reciprocal of the rank of the first correct relevant result (returns single value from 0 to 1).
-    Note: This algorithm assumes any result NOT in a pre-defined list of expected results is not useful.
     '''
     first_relevant_rank = 0 # if no relevant results show up, the RR will be 0
     count = 1
@@ -46,7 +60,7 @@ def reciprocal_rank(ranked_results: List[str], expected: List[str]) -> float:
             count += 1
     
     if first_relevant_rank > 0:
-        return (1 / first_relevant_rank)
+        return np.round((1 / first_relevant_rank), 3)
     else:
         return 0
 
@@ -57,7 +71,6 @@ def get_MRR(reciprocal_ranks: List[float]) -> float:
 def average_precision(ranked_results: List[str], expected: List[str]) -> float:
     '''
     Averages the precision@k for each value of k in a sample of results (returns single value from 0 to 1).
-    Note: This algorithm assumes any result NOT in a pre-defined list of expected results is not useful.
     '''
 
     true_positives = 0
@@ -76,7 +89,7 @@ def average_precision(ranked_results: List[str], expected: List[str]) -> float:
         precision_scores.append(get_precision(true_positives, false_positives))
     
     if true_positives > 0:
-        return (np.sum(precision_scores) / true_positives)
+        return np.round((np.sum(precision_scores) / true_positives), 3)
     else:
         return 0
 

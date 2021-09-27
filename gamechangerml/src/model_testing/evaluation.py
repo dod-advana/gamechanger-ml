@@ -283,7 +283,7 @@ class RetrieverEvaluator(TransformerEvaluator):
                     expected_ids = [expected_ids]
                     len_ids = len(expected_ids)
 
-                total_expected += len(expected_ids)
+                total_expected += np.min(len(expected_ids), k) # if we have more than k expected, set this to k
                 ## collect ordered metrics
                 recip_rank = reciprocal_rank(doc_ids, expected_ids)
                 avg_p = average_precision(doc_ids, expected_ids)
@@ -337,9 +337,6 @@ class RetrieverEvaluator(TransformerEvaluator):
             _mrr = get_MRR(list(df['reciprocal_rank'].map(float)))
             _map = get_MAP(list(df['average_precision'].map(float)))
             recall = get_recall(true_positives=tp, false_negatives=(total_expected - tp))
-            #precision = get_precision(true_positives=tp, false_positives=fp)
-            #f1 = get_f1(precision, recall)
-            #accuracy = get_accuracy(true_positives=tp, true_negatives=tn, total=total_expected)
         else:
             _mrr = _map = recall = 0
 
@@ -436,7 +433,6 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             self.make_index(encoder=self.encoder, corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'])
         else:
             self.index_path = os.path.join(os.path.dirname(transformer_path), index)
-            #self.index_path = 'gamechangerml/models/sent_index_20210715'
         self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
         self.data = RetrieverGSData(self.doc_ids)
         logger.info("SENT INDEX PATH: {}".format(self.index_path))
@@ -476,6 +472,12 @@ class SimilarityEvaluator(TransformerEvaluator):
         # get overall stats
         all_accuracy = np.round(df['match'].mean(), 2)
         top_accuracy = np.round(df[df['expected_rank']==0]['match'].mean(), 2)
+
+        # get MRR
+        top_only = df[df['expected_rank']==0].copy() # take only the expected top results
+        top_only['reciprocal_rank'] = top_only['predicted_rank'].apply(lambda x: 1 / (x + 1)) # add one because ranks are 0-indexed
+        _mrr = get_MRR(list(top_only['reciprocal_rank']))
+
         num_queries = df['promptID'].nunique()
         num_sentence_pairs = df.shape[0]
 
@@ -489,7 +491,8 @@ class SimilarityEvaluator(TransformerEvaluator):
             "query_count": clean_nans(num_queries),
             "pairs_count": clean_nans(num_sentence_pairs),
             "all_accuracy": clean_nans(all_accuracy),
-            "top_accuracy": clean_nans(top_accuracy)
+            "top_accuracy": clean_nans(top_accuracy),
+            "MRR": _mrr
         }
 
         output_file = timestamp_filename('sim_model_eval', '.json')
