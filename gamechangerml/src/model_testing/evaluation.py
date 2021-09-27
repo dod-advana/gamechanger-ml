@@ -168,11 +168,6 @@ class QAEvaluator(TransformerEvaluator):
             exact_match =  precision = recall = f1 = average_f1 = 0
         user = get_user(logger)
 
-        print("precision: {}".format(precision))
-        print("recall: {}".format(recall))
-        print("f1: {}".format(f1))
-        print("average f1: {}".format(average_f1))
-
         agg_results = {
             "user": user,
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
