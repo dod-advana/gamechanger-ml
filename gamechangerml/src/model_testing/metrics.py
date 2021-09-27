@@ -1,20 +1,8 @@
 import numpy as np
+import collections
 from typing import List
 
-def compute_f1(a_gold, a_pred):
-    gold_toks = get_tokens(a_gold)
-    pred_toks = get_tokens(a_pred)
-    common = collections.Counter(gold_toks) & collections.Counter(pred_toks)
-    num_same = sum(common.values())
-    if len(gold_toks) == 0 or len(pred_toks) == 0:
-        # If either is no-answer, then F1 is 1 if they agree, 0 otherwise
-        return int(gold_toks == pred_toks)
-    if num_same == 0:
-        return 0
-    precision = 1.0 * num_same / len(pred_toks)
-    recall = 1.0 * num_same / len(gold_toks)
-    f1 = (2 * precision * recall) / (precision + recall)
-    return f1
+from gamechangerml.src.utilities.text_utils import get_tokens
 
 ## Order Unaware Metrics ##
 def get_precision(true_positives: int, false_positives: int) -> float:
@@ -34,9 +22,29 @@ def get_recall(true_positives: int, false_negatives: int) -> float:
 def get_f1(precision: float, recall: float) -> float:
     '''To calculate f1@k, use precision@k and recall@k to the top k results of a single query.'''
     try:
-        return np.round(((2 * ((precision * recall) / (precision + recall))), 3))
+        result = 2 * (precision * recall) / (precision + recall)
+        return np.round(result, 3)
     except ZeroDivisionError:
         return 0
+
+def compute_QA_f1(a_gold, a_pred):
+    '''
+    Modified function from SQuAD evaluation to compute F1 on tokens of expected/predicted answers.
+    Original function: https://rajpurkar.github.io/SQuAD-explorer/
+    '''
+    gold_tokens = get_tokens(a_gold)
+    pred_tokens = get_tokens(a_pred)
+    common = collections.Counter(gold_tokens) & collections.Counter(pred_tokens)
+    num_same = sum(common.values())
+    if len(gold_tokens) == 0 or len(pred_tokens) == 0:
+        # If either is no-answer, then F1 is 1 if they agree, 0 otherwise
+        return int(gold_tokens == pred_tokens)
+    if num_same == 0:
+        return 0
+    precision = get_precision(true_positives=num_same, false_positives=len(pred_tokens))
+    recall = get_recall(true_positives=num_same, false_negatives=len(gold_tokens))
+    f1 = get_f1(precision, recall)
+    return f1
 
 def get_accuracy(true_positives: int, true_negatives: int, total: int) -> float:
     try:

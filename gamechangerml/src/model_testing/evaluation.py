@@ -67,6 +67,7 @@ class QAEvaluator(TransformerEvaluator):
         true_negative = 0
         false_negative = 0
         false_positive = 0
+        best_partial_f1 = 0
 
         if prediction['text'] == '':
             if query['null_expected'] == True:
@@ -79,16 +80,17 @@ class QAEvaluator(TransformerEvaluator):
             clean_pred = normalize_answer(prediction['text'])
             clean_answers = set([normalize_answer(i['text']) for i in query['expected']])
             if clean_pred in clean_answers:
-                exact_match = partial_match = 1
+                exact_match = best_partial_f1 = 1
             else:
+                partial_f1 = []
                 for i in clean_answers:
-                    if i in clean_pred:
-                        partial_match = 1
-                    elif clean_pred in i:
-                        partial_match = 1
+                    f1_score = compute_QA_f1(clean_pred, i)
+                    partial_f1.append(f1_score)
+                best_partial_f1 = max(partial_f1)
+            partial_match = math.ceil(best_partial_f1) # return 0 or 1
             false_positive = 1 - partial_match
         
-        return exact_match, partial_match, true_negative, false_negative, false_positive
+        return exact_match, partial_match, true_negative, false_negative, false_positive, best_partial_f1
 
     def predict(self, data, eval_path):
         '''Get answer predictions'''
@@ -100,6 +102,7 @@ class QAEvaluator(TransformerEvaluator):
             'predicted_answer',
             'exact_match',
             'partial_match',
+            'best_partial_f1',
             'true_negative',
             'false_negative',
             'false_positive'
@@ -121,7 +124,7 @@ class QAEvaluator(TransformerEvaluator):
                     if type(context) == str:
                         context = [context]
                     prediction = self.model.answer(query['question'], context)[0]
-                    exact_match, partial_match, true_negative, false_negative, false_positive = self.compare(prediction, query)
+                    exact_match, partial_match, true_negative, false_negative, false_positive, best_partial_f1 = self.compare(prediction, query)
                 
                     row = [[
                             str(query_count),
@@ -130,6 +133,7 @@ class QAEvaluator(TransformerEvaluator):
                             str(prediction),
                             str(exact_match),
                             str(partial_match),
+                            str(best_partial_f1),
                             str(true_negative),
                             str(false_negative),
                             str(false_positive)
@@ -153,17 +157,21 @@ class QAEvaluator(TransformerEvaluator):
         num_queries = df['queries'].nunique()
         if num_queries > 0:
             exact_match = np.round(np.mean(df['exact_match'].to_list()), 2)
-            partial_match = np.round(np.mean(df['partial_match'].to_list()), 2)
             true_positives = df['partial_match'].map(int).sum()
-            true_negatives = df['true_negative'].map(int).sum()
             false_positives = df['false_positive'].map(int).sum()
             false_negatives = df['false_negative'].map(int).sum()
-            precision = true_positives / (true_positives + false_positives)
-            recall = true_positives / (true_positives + false_negatives)
-            f1 = 2 * ((precision * recall) / (precision + recall))
+            precision = get_precision(true_positives, false_positives)
+            recall = get_recall(true_positives, false_negatives)
+            f1 = get_f1(precision, recall)
+            average_f1 = np.round(np.mean(df['best_partial_f1'].map(float).to_list()), 3)
         else:
-            exact_match = partial_match = precision = recall = f1 = 0
+            exact_match =  precision = recall = f1 = average_f1 = 0
         user = get_user(logger)
+
+        print("precision: {}".format(precision))
+        print("recall: {}".format(recall))
+        print("f1: {}".format(f1))
+        print("average f1: {}".format(average_f1))
 
         agg_results = {
             "user": user,
@@ -172,10 +180,10 @@ class QAEvaluator(TransformerEvaluator):
             "validation_data": self.data_name,
             "query_count": clean_nans(num_queries),
             "exact_match_accuracy": clean_nans(exact_match),
-            "partial_match_accuracy": clean_nans(partial_match),
             "precision": precision,
             "recall": recall,
-            "f1": f1
+            "f1": f1,
+            "average_f1": average_f1 # degree of matching-ness of answers, value from 0-1
         }
 
         file = "_".join(["qa_eval", self.data_name])
