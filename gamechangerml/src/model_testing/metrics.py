@@ -41,9 +41,9 @@ def compute_QA_f1(a_gold, a_pred):
         return int(gold_tokens == pred_tokens)
     if num_same == 0:
         return 0
-    precision = get_precision(true_positives=num_same, false_positives=len(pred_tokens))
-    recall = get_recall(true_positives=num_same, false_negatives=len(gold_tokens))
-    f1 = get_f1(precision, recall)
+    precision = get_precision(true_positives=num_same, false_positives=(len(pred_tokens) - num_same))
+    recall = get_recall(true_positives=num_same, false_negatives=(len(gold_tokens) - num_same))
+    f1 = get_f1(precision=precision, recall=recall)
     return f1
 
 def get_accuracy(true_positives: int, true_negatives: int, total: int) -> float:

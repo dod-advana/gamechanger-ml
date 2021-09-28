@@ -181,4 +181,4 @@ def normalize_answer(s):
 def get_tokens(s):
     '''Get tokens from normalized answer.'''
     if not s: return []
-    return normalize_answer(s).split()
+    return s.split()

@@ -9,7 +9,7 @@ from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig, ValidationConfig
-from gamechangerml.src.utilities.text_utils import normalize_answer, get_tokens
+from gamechangerml.src.utilities.text_utils import normalize_answer
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData, QEXPDomainData
 from gamechangerml.api.utils.pathselect import get_model_paths
@@ -80,7 +80,7 @@ class QAEvaluator(TransformerEvaluator):
             clean_pred = normalize_answer(prediction['text'])
             clean_answers = set([normalize_answer(i['text']) for i in query['expected']])
             if clean_pred in clean_answers:
-                exact_match = best_partial_f1 = 1
+                exact_match = partial_match = best_partial_f1 = 1
             else:
                 partial_f1 = []
                 for i in clean_answers:
@@ -173,8 +173,8 @@ class QAEvaluator(TransformerEvaluator):
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": self.model_name,
             "validation_data": self.data_name,
-            "query_count": clean_nans(num_queries),
-            "exact_match_accuracy": clean_nans(exact_match),
+            "query_count": num_queries,
+            "exact_match_accuracy": exact_match,
             "precision": precision,
             "recall": recall,
             "f1": f1,
@@ -284,9 +284,8 @@ class RetrieverEvaluator(TransformerEvaluator):
                 expected_ids = data.relations[idx] # collect the expected results (ground truth)
                 if type(expected_ids) == str:
                     expected_ids = [expected_ids]
-                    len_ids = len(expected_ids)
 
-                total_expected += np.min(len(expected_ids), k) # if we have more than k expected, set this to k
+                total_expected += min(len(expected_ids), k) # if we have more than k expected, set this to k
                 ## collect ordered metrics
                 recip_rank = reciprocal_rank(doc_ids, expected_ids)
                 avg_p = average_precision(doc_ids, expected_ids)
@@ -306,8 +305,8 @@ class RetrieverEvaluator(TransformerEvaluator):
                         true_pos += 1
                 if len(doc_ids) < k: # if there are not k predictions, there are pred negatives
                     remainder = k - len(doc_ids)
-                    false_neg = np.min(len([i for i in expected_ids if i not in doc_ids], remainder))
-                    true_neg = np.min((k - len(expected_ids)), (k - len(doc_ids)))
+                    false_neg = min(len([i for i in expected_ids if i not in doc_ids], remainder))
+                    true_neg = min((k - len(expected_ids)), (k - len(doc_ids)))
                 else: # if there are k predictions, there are no predicted negatives
                     false_neg = true_neg = 0
                 fn += false_neg
@@ -609,7 +608,7 @@ class QexpEvaluator():
                 results = remove_original_kw(results, query)
                 num_results += len(results)
                 num_matching += len(set(expected).intersection(results)) 
-                num_expected += np.min([len(results), self.topn])
+                num_expected += min(len(results), self.topn)
                 any_match = bool(num_matching)
                 row = [[
                         str(query),
