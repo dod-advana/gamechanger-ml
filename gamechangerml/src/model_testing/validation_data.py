@@ -4,6 +4,7 @@ from gamechangerml.src.utilities.model_helper import *
 from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.es_search_utils import get_paragraph_results, connect_es
+from gamechangerml.src.utilities.test_utils import filter_date_range
 
 ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
 
@@ -247,9 +248,11 @@ class MatamoFeedback():
 
 class SearchHistory():
     
-    def __init__(self, search_history_path):
+    def __init__(self, search_history_path, start_date=None, end_date=None):
     
-        self.history = pd.read_csv(search_history_path)
+        self.raw_df = pd.read_csv(search_history_path)
+        if start_date or end_date:
+            self.filtered_df = filter_date_range(self.raw_df, start_date, end_date)
         self.intel = self.split_feedback()
         
     def split_feedback(self):
@@ -284,20 +287,20 @@ class SearchHistory():
     
 class SearchValidationData(ValidationData):
     
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(self, start_date, end_date, validation_config=ValidationConfig.DATA_ARGS):
         
         ##TODO: option to add new data to existing formatted data/add only new records
         super().__init__(validation_config)
         self.matamo_path = os.path.join(self.validation_dir, validation_config['matamo_feedback_file'])
         self.history_path = os.path.join(self.validation_dir, validation_config['search_history_file'])
         self.matamo_data = MatamoFeedback(self.matamo_path)
-        self.history_data = SearchHistory(self.history_path)
+        self.history_data = SearchHistory(self.history_path, start_date=start_date, end_date=end_date)
     
 class QASearchData(SearchValidationData):
     
     ##TODO: add context relations attr for QASearchData
     
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS, save=False):
+    def __init__(self, start_date, end_date, validation_config=ValidationConfig.DATA_ARGS, save=False):
         
         super().__init__(validation_config)
         self.data = self.matamo_data.qa
@@ -330,10 +333,14 @@ class QASearchData(SearchValidationData):
 
 class IntelSearchData(SearchValidationData):
     
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(self, start_date, end_date, min_correct_matches, max_results, validation_config=ValidationConfig.DATA_ARGS):
         
         super().__init__(validation_config)
         self.data = pd.concat([self.matamo_data.intel, self.history_data.intel]).reset_index()
+        self.start_date = start_date
+        self.end_date = end_date
+        self.min_correct_matches = min_correct_matches
+        self.max_results - max_results
         self.queries, self.collection, self.all_relations, self.correct, self.incorrect = self.make_intel()
         
     def make_intel(self):
@@ -355,7 +362,7 @@ class IntelSearchData(SearchValidationData):
         new_intel_metadata = update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned')
 
         # filtere the metadata to only get relations we want to test against
-        correct, incorrect = filter_rels(new_intel_metadata, min_correct_matches=2)
+        correct, incorrect = filter_rels(new_intel_metadata, min_correct_matches=self.min_correct_matches, max_results=self.max_results)
         
         return intel_search_queries, intel_search_results, new_intel_metadata, correct, incorrect
 

@@ -43,23 +43,38 @@ class SentenceTransformerTD(TrainingData):
 
     def __init__(
         self, 
+        start_date,
+        end_date,
+        min_correct_matches,
+        max_results,
         base_dir=TrainingConfig.DATA_ARGS['training_data_dir'], 
         train_test_split_ratio=TrainingConfig.DATA_ARGS['train_test_split_ratio'], 
-        existing_data_dir=None):
+        #existing_data_dir=None
+        ):
 
         super().__init__(base_dir, train_test_split_ratio)
-        self.sub_dir = os.path.join(self.base_dir, 'sent_transformer')
-        if existing_data_dir:
-            self.data = open_json('training_data.json', existing_data_dir)
-            self.metadata = open_json('training_metadata.json', existing_data_dir)
-        else:
-            self.data, self.metadata = self.make_training_data()
+        #self.sub_dir = os.path.join(self.base_dir, 'sent_transformer')
+        self.sub_dir = os.path.join('gamechangerml/data/training', 'sent_transformer')
+        self.start_date = start_date
+        self.end_date = end_date
+        self.min_correct_matches = min_correct_matches
+        self.max_results = max_results
+        #if existing_data_dir:
+        #    self.data = open_json('training_data.json', existing_data_dir)
+        #    self.metadata = open_json('training_metadata.json', existing_data_dir)
+        #else:
+        self.data, self.metadata = self.make_training_data()
 
     def make_training_data(self):
         '''Make training data JSON for first time, if there isn't one'''
 
         save_dir = make_timestamp_directory(self.sub_dir)
-        intel = IntelSearchData()
+        intel = IntelSearchData(
+            start_date=self.start_date, 
+            end_date=self.end_date,
+            min_correct_matches=self.min_correct_matches, 
+            max_results=self.max_results, 
+            validation_config=ValidationConfig.DATA_ARGS)
 
         save_intel = {
             "queries": intel.queries, 

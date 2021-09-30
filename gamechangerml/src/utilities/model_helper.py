@@ -199,7 +199,7 @@ def update_meta_relations(metadata, df, query_col, return_col):
             
     return metadata
     
-def filter_rels(metadata, min_correct_matches):
+def filter_rels(metadata, min_correct_matches, max_results):
     '''Filter relations by criteria'''
     
     correct_rels = {}
@@ -207,6 +207,9 @@ def filter_rels(metadata, min_correct_matches):
     for key in metadata:
         acceptable_positive_results = []
         negative_results = []
+        if max_results and len(metadata[key]) > max_results: # if we have more than n max results, skip this match
+            logger.info(f"Skipping {key}: has {str(len(metadata[key]))} unique matches")
+            continue
         for match in metadata[key]:
             result = metadata[key][match]
             sources = [i['source'] for i in result['exact_matches']]
