@@ -108,7 +108,7 @@ class WordSimConfig:
 class QEConfig:
     MODEL_ARGS = {
         "init": {  # args for creating QE object
-            "qe_model_dir": "gamechangerml/models/qexp_20201217",
+            "qe_model_dir": "gamechangerml/models/qexp_20211001",
             "qe_files_dir": "gamechangerml/src/search/query_expansion",
             "method": "emb",
             "vocab_file": "word-freq-corpus-20201101.txt",
