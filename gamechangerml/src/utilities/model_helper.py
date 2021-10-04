@@ -204,6 +204,7 @@ def filter_rels(metadata, min_correct_matches, max_results):
     
     correct_rels = {}
     incorrect_rels = {}
+    logger.info(f"Generating data for {str(len(metadata))} queries with {str(max_results)} max results and {str(min_correct_matches)} min correct matches")
     for key in metadata:
         acceptable_positive_results = []
         negative_results = []
@@ -214,6 +215,7 @@ def filter_rels(metadata, min_correct_matches, max_results):
             result = metadata[key][match]
             sources = [i['source'] for i in result['exact_matches']]
             if result['correct_match'] == True:
+                logger.info(f"Times matched: {str(result['times_matched'])}")
                 if 'matamo' in sources: # we trust matamo data
                     acceptable_positive_results.append(match)
                 elif result['times_matched'] >= min_correct_matches: # only pull history matches occurring more than x times
@@ -225,5 +227,8 @@ def filter_rels(metadata, min_correct_matches, max_results):
             correct_rels[key] = acceptable_positive_results
         if negative_results != []:
             incorrect_rels[key] = negative_results
+
+    logger.info(f"Generated {str(len(correct_rels))} correct queries")
+    logger.info(f"Generated {str(len(incorrect_rels))} incorrect queries")
         
     return correct_rels, incorrect_rels
