@@ -138,22 +138,22 @@ class ValidationConfig:
         },
         "matamo_dir": "gamechangerml/data/validation/matamo",
         "search_hist_dir": "gamechangerml/data/validation/search_history",
-        "qe_gc": "QE_domain.json"
+        "qe_gc": "QE_domain.json",
+        "start_date": '2020-12-01', # earliest date to include search hist/feedback data from
+        "end_date": '2025-12-01', # last date to include search hist/feedback data from
+        "exclude_searches": ['pizza', 'shark'],
+        "gold_level": {
+            "min_correct_matches": 3,
+            "max_results": 7
+        },
+        "silver_level": {
+            "min_correct_matches": 2,
+            "max_results": 10
+        }
     }
 
 class TrainingConfig:
     DATA_ARGS = {
         "training_data_dir": "gamechangerml/data/training",
-        "train_test_split_ratio": 0.8,
-        "start_date": None, # earliest date to include search hist/feedback data from
-        "end_date": None, # last date to include search hist/feedback data from
-        "exclude_searches": ['pizza', 'shark'],
-        "gold_level": {
-            "min_correct_matches": 3,
-            "max_results": 5
-        },
-        "silver_level": {
-            "min_correct_matches": 2,
-            "max_results": 20
-        }
+        "train_test_split_ratio": 0.8
     }

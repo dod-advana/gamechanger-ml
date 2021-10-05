@@ -43,24 +43,26 @@ class SentenceTransformerTD(TrainingData):
 
     def __init__(
         self, 
-        trigger_es,
-        max_results,
-        min_correct_matches,
+        validation_dir,
         start_date,
         end_date,
+        min_correct_matches,
+        max_results,
         exclude_searches,
         base_dir, 
         train_test_split_ratio, 
+        query_es
         ):
 
         super().__init__(base_dir, train_test_split_ratio)
         #self.sub_dir = os.path.join(self.base_dir, 'sent_transformer')
         self.sub_dir = os.path.join('gamechangerml/data/training', 'sent_transformer')
+        self.validation_dir = validation_dir
         self.start_date = start_date
         self.end_date = end_date
         self.min_correct_matches = min_correct_matches
         self.max_results = max_results
-        self.trigger_es = trigger_es
+        self.query_es = query_es
         self.exclude_searches=exclude_searches
         self.gold_data, self.gold_metadata = self.make_training_data(level='gold')
         self.silver_data, self.silver_metadata = self.make_training_data(level='silver')
@@ -78,14 +80,11 @@ class SentenceTransformerTD(TrainingData):
             max_results=TrainingConfig.DATA_ARGS['silver_level']['min_correct_matches']
 
         intel = IntelSearchData(
-            validation_dir=ValidationConfig.DATA_ARGS['validation_dir'],
-            matamo_dir=ValidationConfig.DATA_ARGS['matamo_dir'],
-            search_hist_dir=ValidationConfig.DATA_ARGS['search_hist_dir'],
             start_date=self.start_date, 
             end_date=self.end_date,
             exclude_searches=self.exclude_searches,
             min_correct_matches=min_correct_matches, 
-            max_results=max_results, 
+            max_results=max_results
             )
 
         save_intel = {
@@ -103,7 +102,7 @@ class SentenceTransformerTD(TrainingData):
         ## TODO: Meka eval data
 
         ## get data from ES
-        if self.trigger_es:
+        if self.query_es:
             es = connect_es(ES_URL)
             correct_found, correct_notfound = collect_results(relations=intel.correct, queries=intel.queries, collection=intel.collection, es=es, label=1)
             incorrect_found, incorrect_notfound = collect_results(relations=intel.incorrect, queries=intel.queries, collection=intel.collection, es=es, label=0)

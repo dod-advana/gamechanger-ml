@@ -226,11 +226,10 @@ class MatamoFeedback():
         self,
         start_date, 
         end_date,
-        exclude_searches,
-        matamo_feedback_dir
+        exclude_searches
         ):
-        
-        self.matamo = concat_csvs(matamo_feedback_dir)
+    
+        self.matamo = concat_matamo()        
         self.start_date = start_date
         self.end_date = end_date
         self.exclude_searches=exclude_searches
@@ -240,7 +239,8 @@ class MatamoFeedback():
         '''Split QA queries from intelligent search queries'''
         
         df = self.matamo
-        df = filter_date_range(df, self.start_date, self.end_date)
+        if self.start_date or self.end_date:
+            df = filter_date_range(df, self.start_date, self.end_date)
         df.drop_duplicates(subset = ['user_id', 'createdAt', 'value_1', 'value_2'], inplace = True)
         df['source'] = 'matamo'
         df['correct'] = df['event_name'].apply(lambda x: ' '.join(x.split('_')[-2:])).map({'thumbs up': True, 'thumbs down': False})
@@ -295,11 +295,10 @@ class SearchHistory():
         self, 
         start_date,
         end_date,
-        exclude_searches,
-        search_history_dir
+        exclude_searches
         ):
     
-        self.history = concat_csvs(search_history_dir)
+        self.history = concat_search_hist()
         self.start_date = start_date
         self.end_date = end_date
         self.exclude_searches=exclude_searches
@@ -308,10 +307,11 @@ class SearchHistory():
     def split_feedback(self):
         
         df = self.history
-        df = filter_date_range(df, self.start_date, self.end_date)
+        if self.start_date or self.end_date:
+            df = filter_date_range(df, self.start_date, self.end_date)
         df.dropna(subset = ['search'], inplace = True) # drop all rows where is no search
         if self.exclude_searches:
-            logger.info(f"exclude searches: {str(self.exclude_searches)}, {str(type(self.exclude_searches))}")
+            logger.info(f"Excluding searches: {str(self.exclude_searches)}")
             df = df[~df['search'].isin(self.exclude_searches)] # remove searches we don't want to use
         df.drop_duplicates(subset = ['idvisit', 'document', 'search'], inplace = True) # drop duplicates
         df['source'] = 'user_history'
@@ -347,44 +347,34 @@ class SearchHistory():
         
         return matched, unmatched
     
-class SearchValidationData(ValidationData):
+class SearchValidationData():
     
     def __init__(
         self, 
         start_date,
         end_date,
-        exclude_searches,
-        validation_dir,
-        matamo_dir,
-        search_hist_dir
+        exclude_searches
         ):
         
-        ##TODO: option to add new data to existing formatted data/add only new records
-        super().__init__(validation_dir)
-        self.matamo_path = matamo_dir
-        self.history_path = search_hist_dir
         self.start_date = start_date
         self.end_date = end_date
         self.exclude_searches=exclude_searches
-        self.matamo_data = MatamoFeedback(self.matamo_path, self.start_date, self.end_date, self.exclude_searches)
-        self.history_data = SearchHistory(self.history_path, self.start_date, self.end_date, self.exclude_searches)
+        self.matamo_data = MatamoFeedback(self.start_date, self.end_date, self.exclude_searches)
+        self.history_data = SearchHistory(self.start_date, self.end_date, self.exclude_searches)
     
 class QASearchData(SearchValidationData):
     
     ##TODO: add context relations attr for QASearchData
     def __init__(
         self,
-        max_results,
-        min_correct_matches, 
         start_date, 
         end_date,
         exclude_searches,
-        validation_dir, 
-        matamo_dir, 
-        search_hist_dir, 
+        min_correct_matches, 
+        max_results
         ):
         
-        super().__init__(validation_dir, matamo_dir, search_hist_dir, start_date, end_date, exclude_searches)
+        super().__init__(start_date, end_date, exclude_searches)
         self.data = self.matamo_data.qa
         self.min_correct_matches = min_correct_matches
         self.max_results = max_results
@@ -419,17 +409,14 @@ class IntelSearchData(SearchValidationData):
     
     def __init__(
         self, 
-        max_results,
-        min_correct_matches,
         start_date, 
         end_date,
         exclude_searches,
-        validation_dir, 
-        matamo_dir, 
-        search_hist_dir, 
+        min_correct_matches,
+        max_results
         ):
         
-        super().__init__(validation_dir, matamo_dir, search_hist_dir, start_date, end_date, exclude_searches)
+        super().__init__(start_date, end_date, exclude_searches)
         self.data = pd.concat([self.matamo_data.intel, self.history_data.intel_matched]).reset_index()
         self.min_correct_matches = min_correct_matches
         self.max_results = max_results

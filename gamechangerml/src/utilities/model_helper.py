@@ -215,11 +215,12 @@ def filter_rels(metadata, min_correct_matches, max_results):
             result = metadata[key][match]
             sources = [i['source'] for i in result['exact_matches']]
             if result['correct_match'] == True:
-                logger.info(f"Times matched: {str(result['times_matched'])}")
                 if 'matamo' in sources: # we trust matamo data
                     acceptable_positive_results.append(match)
                 elif result['times_matched'] >= min_correct_matches: # only pull history matches occurring more than x times
                     acceptable_positive_results.append(match)
+                else:
+                    logger.info(f"Skipping {key}, {match}: matched {str(result['times_matched'])} times")
             elif result['correct_match'] == False:
                 negative_results.append(match)
 
