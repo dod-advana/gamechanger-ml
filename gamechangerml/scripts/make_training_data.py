@@ -1,6 +1,5 @@
 import argparse
 import random
-from gamechangerml.src.model_testing.training_data import SentenceTransformerTD
 from gamechangerml.configs.config import TrainingConfig, ValidationConfig, EmbedderConfig, SimilarityConfig
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder, SentenceSearcher
 from gamechangerml.src.utilities.es_search_utils import connect_es, collect_results
@@ -10,7 +9,7 @@ from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.pathselect import get_model_paths
 
 model_path_dict = get_model_paths()
-
+random.seed(42)
 
 ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]

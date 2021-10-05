@@ -372,6 +372,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         data.collection = gs.collection.update(intel['collection'])
         data.relations = gs.relations.update(intel['correct'])
 
+        return data
 
 class SimilarityEvaluator(TransformerEvaluator):
 
