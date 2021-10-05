@@ -28,27 +28,6 @@ def get_model_paths():
         logger.error(e)
         logger.info("Cannot get QEXP model path")
         QEXP_MODEL_PATH = "gamechangerml/models/"
-    # wiki vectors MODEL
-    try:
-        qexp_names = [
-            f
-            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if ("qexp_" in f) and ("tar" not in f)
-        ]
-        qexp_names.sort(reverse=True)
-        if len(qexp_names) > 0:
-            QEXP_MODEL_PATH = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, qexp_names[0]
-            )
-        else:
-            print("defaulting INDEX_PATH to qexp")
-            QEXP_MODEL_PATH = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, "qexp_20201217"
-            )
-    except Exception as e:
-        logger.error(e)
-        logger.info("Cannot get QEXP model path")
-        QEXP_MODEL_PATH = "gamechangerml/models/"
 
     # TRANSFORMER MODEL PATH
     try:
