@@ -188,8 +188,6 @@ class UpdatedGCRetrieverData(RetrieverGSData):
         self.collection.update(self.new_collection)
         self.relations.update(self.new_relations)
 
-        logger.info(f"relations: {str(self.relations)}")
-
         return
 
 class NLIData(ValidationData):
