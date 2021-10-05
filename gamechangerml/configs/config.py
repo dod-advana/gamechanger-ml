@@ -3,11 +3,13 @@ from os import environ
 import os
 from gamechangerml import REPO_PATH
 
+
 class DefaultConfig:
 
     DATA_DIR = os.path.join(REPO_PATH, "common/data/processed")
     LOCAL_MODEL_DIR = os.path.join(REPO_PATH, "gamechangerml/models")
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
+
 
 class S3Config:
     STORE_S3 = True
@@ -29,20 +31,21 @@ class D2VConfig:
         # 'workers': multiprocessing.cpu_count() // 2 # to allow some portion of the cores to perform generator tasks
     }
 
+
 # for Bert Extractive Summarizer (https://pypi.org/project/bert-extractive-summarizer/)
 class BertSummConfig:
     MODEL_ARGS = {
         "initialize": {
             # This gets used by the hugging face bert library to load the model, you can supply a custom trained model here
-            "model": 'bert-base-uncased',
+            "model": "bert-base-uncased",
             # If you have a pre-trained model, you can add the model class here.
             "custom_model": None,
             # If you have a custom tokenizer, you can add the tokenizer here.
-            "custom_tokenizer":  None,
+            "custom_tokenizer": None,
             # Needs to be negative, but allows you to pick which layer you want the embeddings to come from.
             "hidden": -2,
             # It can be 'mean', 'median', or 'max'. This reduces the embedding layer for pooling.
-            "reduce_option": 'mean'
+            "reduce_option": "mean",
         },
         "fit": {
             "ratio": None,  # The ratio of sentences that you want for the final summary
@@ -50,23 +53,25 @@ class BertSummConfig:
             "min_length": 40,
             "max_length": 600,  # Parameter to specify to remove sentences greater than the max length
             # Number of sentences to use. Overrides ratio if supplied.
-            "num_sentences": 2
+            "num_sentences": 2,
         },
-        "coreference": {
-            "greedyness": 0.4
-        },
-        "doc_limit": 100000
+        "coreference": {"greedyness": 0.4},
+        "doc_limit": 100000,
     }
+
 
 class QAConfig:
     MODEL_ARGS = {
         "model_name": "bert-base-cased-squad2",
-        "qa_type": 'scored_answer', # options are: ['scored_answer', 'simple_answer']
-        "nbest": 1, # number of answers to retrieve from each context for comparison
-        "null_threshold": -3 # if diff between the answer score and null answer score is greater than this threshold, don't return answer
+        # options are: ['scored_answer', 'simple_answer']
+        "qa_type": "scored_answer",
+        "nbest": 1,  # number of answers to retrieve from each context for comparison
+        # if diff between the answer score and null answer score is greater than this threshold, don't return answer
+        "null_threshold": -3,
     }
 
-class EmbedderConfig: 
+
+class EmbedderConfig:
     MODEL_ARGS = {
         "encoder_model_name": "msmarco-distilbert-base-v2", 
         "min_token_len": 10,
@@ -82,7 +87,12 @@ class EmbedderConfig:
         "warmup_steps": 100
     }
 
+
 class SimilarityConfig:
+    MODEL_ARGS = {"model_name": "distilbart-mnli-12-3"}  # SOURCE
+
+
+class WordSimConfig:
     MODEL_ARGS = {
         "sim_model_name": "distilbart-mnli-12-3" # SOURCE
     }
@@ -99,25 +109,20 @@ class QexpConfig:
             "ngram": (1, 2),
             "abbrv_file": None
         },
-        "expansion": { # configs for getting expanded terms
-            "topn": 2, 
-            "threshold": 0.2, 
-            "min_tokens": 3
-        }
     }
+
 
 class ValidationConfig:
     DATA_ARGS = {
-        "validation_dir": "gamechangerml/data/validation", # need to have validation data in here
+        # need to have validation data in here
+        "validation_dir": "gamechangerml/data/validation",
         "evaluation_dir": "gamechangerml/data/evaluation",
-        "test_corpus_dir": "gamechangerml/data/test_corpus", # location with smaller set of corpus JSONs
-        "squad": {
-            "dev": "squad2.0/dev-v2.0.json",
-            "train": "squad2.0/train-v2.0.json"
-        },
+        # location with smaller set of corpus JSONs
+        "test_corpus_dir": "gamechanger/data/test_corpus",
+        "squad": {"dev": "squad2.0/dev-v2.0.json", "train": "squad2.0/train-v2.0.json"},
         "nli": {
             "matched": "multinli_1.0/multinli_1.0_dev_matched.jsonl",
-            "mismatched": "multinli_1.0/multinli_1.0_dev_mismatched.jsonl"
+            "mismatched": "multinli_1.0/multinli_1.0_dev_mismatched.jsonl",
         },
         "msmarco": {
             "collection": "msmarco_1k/collection.json",
@@ -125,19 +130,16 @@ class ValidationConfig:
             "relations": "msmarco_1k/relations.json",
             "metadata": "msmarco_1k/metadata.json",
         },
-        "question_gc": {
-            "queries": "QA_domain_data.json"
-        },
-        "retriever_gc": {
-            "gold_standard": "gold_standard.csv"
-        },
+        "question_gc": {"queries": "QA_domain_data.json"},
+        "retriever_gc": {"gold_standard": "gold_standard.csv"},
         "matamo_feedback_file": "matamo_feedback.csv",
         "search_history_file": "SearchPdfMapping.csv",
-        "qe_gc": "QE_domain.json"
+        "qe_gc": "QE_domain.json",
     }
+
 
 class TrainingConfig:
     DATA_ARGS = {
         "training_data_dir": "gamechangerml/data/training",
-        "train_test_split_ratio": 0.8
+        "train_test_split_ratio": 0.8,
     }

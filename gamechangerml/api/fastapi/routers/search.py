@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Response, status
 import time
+
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.src.featurization.keywords.extract_keywords import get_keywords
+from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.fastapi.version import __version__
 
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
@@ -14,6 +16,7 @@ from gamechangerml.configs.config import QexpConfig
 
 router = APIRouter()
 MODELS = ModelLoader()
+
 
 @router.post("/transformerSearch", status_code=200)
 async def transformer_infer(query: dict, response: Response) -> dict:
@@ -132,6 +135,7 @@ async def qa_infer(query: dict, response: Response) -> dict:
         raise
     return results
 
+
 @router.post("/expandTerms", status_code=200)
 async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
     """post_expand_query_terms - endpoint for expand query terms
@@ -141,25 +145,58 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
     Returns:
         expansion_dict: dict; expanded dictionary of terms
     """
-    termsList = termsList["termsList"]
+
+    terms_string = " ".join(termsList["termsList"])
+    terms = preprocess(terms_string, remove_stopwords=True)
     expansion_dict = {}
     # logger.info("[{}] expanded: {}".format(user, termsList))
 
     logger.info(f"Expanding: {termsList}")
     try:
-        for term in termsList:
+        for term in terms:
             term = unquoted(term)
-            expansion_list = MODELS.query_expander.expand(term, **QexpConfig.MODEL_ARGS['expansion'])
+            expansion_list = MODELS.query_expander.expand(
+                term, **QexpConfig.MODEL_ARGS["expansion"]
+            )
             # turn word pairs into search phrases since otherwise it will just search for pages with both words on them
             # removing original word from the return terms unless it is combined with another word
             logger.info(f"original expanded terms: {expansion_list}")
             finalTerms = remove_original_kw(expansion_list, term)
             expansion_dict[term] = ['"{}"'.format(exp) for exp in finalTerms]
             logger.info(f"-- Expanded {term} to \n {finalTerms}")
-        return expansion_dict
+        terms = " ".join(terms)
+        logger.info(f"Finding similiar words for: {terms}")
+        sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms)
+        logger.info(f"-- Expanded {terms} to \n {sim_words_dict}")
+        expanded_words = {}
+        expanded_words["qexp"] = expansion_dict
+        expanded_words["wordsim"] = sim_words_dict
+        return expanded_words
     except:
         logger.error(f"Error with query expansion on {termsList}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+@router.post("/wordSimilarity", status_code=200)
+async def post_word_sim(termsDict: dict, response: Response) -> dict:
+    """post_word_sim - endpoint for getting similar words
+    Args:
+        termsList: dict;
+        Response: Response class; for status codes(apart of fastapi do not need to pass param)
+    Returns:
+        expansion_dict: dict; expanded dictionary of terms
+    """
+    # logger.info("[{}] expanded: {}".format(user, termsList))
+    terms = termsDict["text"]
+    logger.info(f"Finding similiar words for: {terms}")
+    try:
+        sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms)
+        logger.info(f"-- Expanded {terms} to \n {sim_words_dict}")
+        return sim_words_dict
+    except:
+        logger.error(f"Error with query expansion on {terms}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
 
 def unquoted(term):
     """unquoted - unquotes string

@@ -20,16 +20,19 @@ latest_intel_model_trans = CacheVariable("latest_intel_model_trans")
 LOCAL_TRANSFORMERS_DIR = CacheVariable("LOCAL_TRANSFORMERS_DIR")
 SENT_INDEX_PATH = CacheVariable("SENT_INDEX_PATH")
 QEXP_MODEL_NAME = CacheVariable("QEXP_MODEL_NAME")
+WORD_SIM_MODEL = CacheVariable("QEXP_MODEL_NAME")
 
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]
 SENT_INDEX_PATH.value = model_path_dict["sentence"]
 QEXP_MODEL_NAME.value = model_path_dict["qexp"]
+WORD_SIM_MODEL.value = model_path_dict["word_sim"]
 
 t_list = []
 try:
-    t_list = [trans for trans in os.listdir(
-        LOCAL_TRANSFORMERS_DIR.value) if "." not in trans]
+    t_list = [
+        trans for trans in os.listdir(LOCAL_TRANSFORMERS_DIR.value) if "." not in trans
+    ]
 except Exception as e:
     logger.warning("No transformers folder")
     logger.warning(e)
