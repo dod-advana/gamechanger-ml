@@ -8,6 +8,7 @@ from gamechangerml.src.utilities.es_search_utils import get_paragraph_results, c
 from gamechangerml.src.utilities.test_utils import filter_date_range
 
 ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
+NEW_EVAL_DATA = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS['validation_dir'], 'sent_transformer'))
 
 class ValidationData():
 
@@ -124,9 +125,9 @@ class RetrieverGSData(ValidationData):
 
     def __init__(
         self, 
-        available_ids, 
-        validation_dir=ValidationConfig.DATA_ARGS['validation_dir'],
-        gold_standard=ValidationConfig.DATA_ARGS['retriever_gc']['gold_standard']):
+        validation_dir,
+        available_ids,
+        gold_standard):
 
         super().__init__(validation_dir)
         self.samples = pd.read_csv(os.path.join(self.validation_dir, gold_standard), names=['query', 'document'])
@@ -159,6 +160,37 @@ class RetrieverGSData(ValidationData):
         logger.info("Generated {} test queries of gold standard data".format(len(query_list)))
 
         return queries, collection, relations
+
+class UpdatedGCRetrieverData(RetrieverGSData):
+
+    def __init__(self, 
+        available_ids, 
+        validation_dir=ValidationConfig.DATA_ARGS['validation_dir'],
+        gold_standard=ValidationConfig.DATA_ARGS['retriever_gc']['gold_standard'],
+        new_data_path=NEW_EVAL_DATA,
+        new_data_level='gold'):
+
+        super().__init__(validation_dir, available_ids, gold_standard)
+        self.new_data_path = os.path.join(new_data_path, new_data_level)
+        self.new_queries, self.new_collection, self.new_relations = self.load_new_data()
+        self.combine_in_domain()
+
+    def load_new_data(self):
+
+        f = open_json('intelligent_search_data.json', self.new_data_path)
+        intel = json.loads(f)
+        logger.info(f"Added {str(len(intel['correct']))} correct query/sent pairs from updated GC retriever data.")
+        return intel['queries'], intel['collection'], intel['correct']
+
+    def combine_in_domain(self):
+
+        self.queries.update({k:v for (k, v) in self.new_queries.items() if k in self.new_relations.keys()})
+        self.collection.update(self.new_collection)
+        self.relations.update(self.new_relations)
+
+        logger.info(f"relations: {str(self.relations)}")
+
+        return
 
 class NLIData(ValidationData):
 
@@ -355,7 +387,7 @@ class SearchValidationData():
         end_date,
         exclude_searches
         ):
-        
+
         self.start_date = start_date
         self.end_date = end_date
         self.exclude_searches=exclude_searches

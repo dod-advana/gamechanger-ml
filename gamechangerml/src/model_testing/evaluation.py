@@ -11,7 +11,7 @@ from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QEConfig, ValidationConfig
 from gamechangerml.src.utilities.model_helper import *
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData, QEXPDomainData
+from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData, UpdatedGCRetrieverData, QEXPDomainData
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
 import signal
@@ -22,7 +22,6 @@ signal.signal(signal.SIGALRM, timeout_handler)
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SENT_INDEX_PATH = model_path_dict["sentence"]
-NEW_EVAL_DATA = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS['validation_dir'], 'sent_transformer'))
 
 class TransformerEvaluator():
 
@@ -354,25 +353,12 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                 self.encoder = SentenceEncoder(encoder_config, self.index_path, use_gpu)
             self.make_index(encoder=self.encoder, corpus_path=corpus_path)
         self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
-        #self.data = RetrieverGSData(self.doc_ids)
-        self.data = self.combine_in_domain()
+        self.data = UpdatedGCRetrieverData(self.doc_ids)
         if retriever:
             self.retriever=retriever
         else:
             self.retriever = SentenceSearcher(self.index_path, transformer_path, encoder_config, similarity_config)
         self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name)
-
-    def combine_in_domain(self):
-        gs = RetrieverGSData(self.doc_ids)
-        directory = os.path.join(NEW_EVAL_DATA, 'gold')
-        f = open_json('intelligent_search_data.json', directory)
-        intel = json.loads(f)
-        data = gs
-        data.queries = gs.queries.update(intel['queries'])
-        data.collection = gs.collection.update(intel['collection'])
-        data.relations = gs.relations.update(intel['correct'])
-
-        return data
 
 class SimilarityEvaluator(TransformerEvaluator):
 
