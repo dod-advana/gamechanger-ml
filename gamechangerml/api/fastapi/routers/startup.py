@@ -7,12 +7,14 @@ from gamechangerml.api.fastapi.model_loader import ModelLoader
 router = APIRouter()
 MODELS = ModelLoader()
 
+
 @router.on_event("startup")
 async def load_models():
     MODELS.initQA()
     MODELS.initQE()
     MODELS.initSentence()
     MODELS.initTrans()
+    MODELS.initWordSim()
 
 
 @router.on_event("startup")
@@ -24,9 +26,7 @@ async def check_health():
     """
     logger.info("API Health Check")
     try:
-        new_trans_model_name = str(
-            latest_intel_model_trans.value
-        )
+        new_trans_model_name = str(latest_intel_model_trans.value)
         new_sent_model_name = str(latest_intel_model_sent.value)
         new_qa_model_name = str(latest_qa_model.value)
     except Exception as e:
@@ -39,7 +39,7 @@ async def check_health():
         if (MODELS.sparse_reader != None) and (
             MODELS.sparse_reader.model_name != new_trans_model_name
         ):
-            MODELS.initSparse(new_trans_model_name)   
+            MODELS.initSparse(new_trans_model_name)
             good_health = False
     except Exception as e:
         logger.info("Model Health: POOR")
@@ -60,6 +60,7 @@ async def check_health():
     logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
     logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")
+
 
 def check_dep_exist():
     healthy = True
