@@ -138,7 +138,7 @@ class ModelLoader:
         logger.info(f"Loading Sentence Index from {index_path}")
         try:
             ModelLoader.__sentence_trans = SentenceSearcher(
-                sim_model_name=SimilarityConfig.MODEL_ARGS["sim_model_name"],
+                sim_model_name=SimilarityConfig.MODEL_ARGS["model_name"],
                 encoder_model_name=EmbedderConfig.MODEL_ARGS["encoder_model_name"],
                 n_returns=EmbedderConfig.MODEL_ARGS["n_returns"],
                 index_path=index_path,

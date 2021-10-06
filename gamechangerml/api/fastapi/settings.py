@@ -20,7 +20,7 @@ latest_intel_model_trans = CacheVariable("latest_intel_model_trans")
 LOCAL_TRANSFORMERS_DIR = CacheVariable("LOCAL_TRANSFORMERS_DIR")
 SENT_INDEX_PATH = CacheVariable("SENT_INDEX_PATH")
 QEXP_MODEL_NAME = CacheVariable("QEXP_MODEL_NAME")
-WORD_SIM_MODEL = CacheVariable("QEXP_MODEL_NAME")
+WORD_SIM_MODEL = CacheVariable("WORD_SIM_MODEL")
 
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]

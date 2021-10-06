@@ -73,19 +73,15 @@ class QAConfig:
 
 class EmbedderConfig:
     MODEL_ARGS = {
-        "encoder_model_name": "msmarco-distilbert-base-v2", 
+        "encoder_model_name": "msmarco-distilbert-base-v2",
         "min_token_len": 10,
         "overwrite": False,
-        "verbose": True, # for creating LocalCorpus
-        "return_id": True, # for creating LocalCorpus
-        "n_returns": 5
+        "verbose": True,  # for creating LocalCorpus
+        "return_id": True,  # for creating LocalCorpus
+        "n_returns": 5,
     }
-    FINETUNE = {
-        "shuffle": True,
-        "batch_size": 16,
-        "epochs": 1,
-        "warmup_steps": 100
-    }
+    FINETUNE = {"shuffle": True, "batch_size": 16,
+                "epochs": 1, "warmup_steps": 100}
 
 
 class SimilarityConfig:
@@ -94,15 +90,20 @@ class SimilarityConfig:
 
 class QexpConfig:
     MODEL_ARGS = {
-        "init": { # args for creating QE object
+        "init": {  # args for creating QE object
             "qe_files_dir": "gamechangerml/src/search/query_expansion",
-            "method": "emb"
+            "method": "emb",
+        },
+        "expansion": {  # configs for getting expanded terms
+            "topn": 2,
+            "threshold": 0.2,
+            "min_tokens": 3,
         },
         "bqe": {
             "num_trees": 125,
             "num_keywords": 2,
             "ngram": (1, 2),
-            "abbrv_file": None
+            "abbrv_file": None,
         },
     }
 

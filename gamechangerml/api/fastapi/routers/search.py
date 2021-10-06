@@ -172,8 +172,9 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
         expanded_words["qexp"] = expansion_dict
         expanded_words["wordsim"] = sim_words_dict
         return expanded_words
-    except:
+    except Exception as e:
         logger.error(f"Error with query expansion on {termsList}")
+        logger.error(e)
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
