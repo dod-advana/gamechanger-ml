@@ -35,6 +35,7 @@ import gamechangerml.src.search.query_expansion.build_ann_cli.version_ as v
 from gamechangerml.src.featurization.keywords.rake import Rake
 from gamechangerml.src.search.query_expansion.sif_alg import sif_embedding
 from gamechangerml.src.search.query_expansion.utils import QEConfig
+from gamechangerml.configs.config import QexpConfig
 from gamechangerml.src.search.query_expansion.word_wt import get_word_weight
 from gamechangerml.src.utilities.np_utils import is_zero_vector
 from gamechangerml.src.utilities.spacy_model import (
@@ -101,7 +102,7 @@ def main(
     num_trees=125,
     num_keywords=2,
     ngram=(1, 2),
-    word_wt_file=None,
+    weight_file=None,
     abbrv_file=None,
 ):
     """
@@ -133,14 +134,14 @@ def main(
     logger.info("{} version {}".format(__name__, v.__version__))
     if not os.path.isdir(index_dir):
         raise FileNotFoundError(
-            "directory not found; got {}".format(index_dir)
+            "directory not found; got {}".format(str(index_dir))
         )
     if not os.path.isdir(corpus_dir):
         raise FileNotFoundError(
-            "directory not found; got {}".format(corpus_dir)
+            "directory not found; got {}".format(str(corpus_dir))
         )
 
-    word_wt = get_word_weight(weight_file=word_wt_file, a=1e-03)
+    word_wt = get_word_weight(weight_file="enwiki_vocab_min200.txt", a=1e-03)
 
     if ngram[0] < 1:
         raise ValueError("minimum ngram must be > 0; got {}".format(ngram))
@@ -245,7 +246,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-w",
         "--word-wt",
-        dest="word_wt_file",
+        dest="weight_file",
         required=True,
         help="path + name of the word weight file in aux_data/",
     )

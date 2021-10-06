@@ -4,7 +4,7 @@ from gamechangerml.configs.config import (
     QAConfig,
     EmbedderConfig,
     SimilarityConfig,
-    QEConfig,
+    QexpConfig,
     WordSimConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
@@ -100,7 +100,9 @@ class ModelLoader:
         """
         logger.info(f"Loading Pretrained Vector from {qexp_model_path}")
         try:
-            ModelLoader.__query_expander = qe.QE(**QEConfig.MODEL_ARGS["init"])
+            ModelLoader.__query_expander = qe.QE(qexp_model_path,
+                **QexpConfig.MODEL_ARGS['init']
+            )
             logger.info("** Loaded Query Expansion Model")
         except Exception as e:
             logger.warning("** Could not load QE model")
@@ -123,7 +125,7 @@ class ModelLoader:
 
     @staticmethod
     def initSentence(
-        index_path=SENT_INDEX_PATH.value, transformer_path=LOCAL_TRANSFORMERS_DIR.value
+        index_path=SENT_INDEX_PATH.value, transformers_path=LOCAL_TRANSFORMERS_DIR.value
     ):
         """
         initQE - loads Sentence Transformers on start
@@ -138,12 +140,12 @@ class ModelLoader:
         logger.info(f"Loading Sentence Index from {index_path}")
         try:
             ModelLoader.__sentence_trans = SentenceSearcher(
+                sim_model_name=SimilarityConfig.MODEL_ARGS['sim_model_name'],
+                encoder_model_name=EmbedderConfig.MODEL_ARGS['encoder_model_name'],
+                n_returns=EmbedderConfig.MODEL_ARGS['n_returns'],
                 index_path=index_path,
-                transformers_path=LOCAL_TRANSFORMERS_DIR.value,
-                retriever_args=EmbedderConfig.MODEL_ARGS,
-                similarity_args=SimilarityConfig.MODEL_ARGS,
+                transformers_path=transformers_path
             )
-
             encoder_model = ModelLoader.__sentence_trans.encoder_model
             logger.info(f"Using {encoder_model} for sentence transformer")
             sim_model = ModelLoader.__sentence_trans.similarity

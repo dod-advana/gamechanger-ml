@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class QE(object):
     __version__ = v.__version__
 
-    def __init__(self, qe_model_dir, qe_files_dir, method, vocab_file):
+    def __init__(self, qe_model_dir, qe_files_dir, method):
         """
          Query expansion via smoothed inverse frequency weighted word embeddings
          and approximate nearest neighbor search.
@@ -68,23 +68,22 @@ class QE(object):
                 # )
             elif self.method == "emb":
                 logger.info("loading models for {}".format(self.method))
-                self._setup_emb(qe_model_dir, vocab_file)
+                self._setup_emb(qe_model_dir)
             else:
                 raise ValueError("unknown method: {}".format(self.method))
 
         except (OSError, FileNotFoundError) as e:
             logger.exception("{}: {}".format(type(e), str(e)), exc_info=True)
 
-    def _setup_emb(self, qe_model_dir, vocab_file):
+    def _setup_emb(self, qe_model_dir):
         cfg = QEConfig()
         #here = os.path.dirname(os.path.realpath(__file__))
-        wt_path = os.path.join(self.qe_files_dir, "aux_data", vocab_file)
-        print("wt_path: ", wt_path)
+        #wt_path = os.path.join(self.qe_files_dir, "aux_data", vocab_file)
 
         try:
             ann_file, vocab_file = find_ann_indexes(qe_model_dir)
             self._nlp = get_lg_vectors()
-            self.word_wt = get_word_weight(weight_file_path=wt_path, a=self._alpha)
+            self.word_wt = get_word_weight(a=self._alpha)
 
             logger.info("loading QE indexes")
             vector_dim = spacy_vector_width(self._nlp)

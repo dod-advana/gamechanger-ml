@@ -12,7 +12,7 @@ from gamechangerml.src.featurization.summary import GensimSumm
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
-from gamechangerml.configs.config import QEConfig
+from gamechangerml.configs.config import QexpConfig
 
 router = APIRouter()
 MODELS = ModelLoader()
@@ -156,7 +156,7 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
         for term in terms:
             term = unquoted(term)
             expansion_list = MODELS.query_expander.expand(
-                term, **QEConfig.MODEL_ARGS["expansion"]
+                term, **QexpConfig.MODEL_ARGS["expansion"]
             )
             # turn word pairs into search phrases since otherwise it will just search for pages with both words on them
             # removing original word from the return terms unless it is combined with another word

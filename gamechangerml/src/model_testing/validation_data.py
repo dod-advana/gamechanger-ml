@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from gamechangerml.src.utilities.model_helper import *
+from gamechangerml.src.utilities.text_utils import normalize_answer, get_tokens
+from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.es_search_utils import get_paragraph_results, connect_es
@@ -115,9 +116,7 @@ class RetrieverGSData(ValidationData):
         Filter out any validation queries whose documents areen't in the index. 
         Forrmat gold standard csv examples into MSMarco format.
         '''
-
         ids = ['.'.join(i.strip('\n').split('.')[:-1]).strip().lstrip() for i in available_ids]
-
         self.samples['document'] = self.samples['document'].apply(lambda x: [i.strip().lstrip() for i in x.split(';')])
         self.samples = self.samples.explode('document')
         df = self.samples[self.samples['document'].isin(ids)] # check ids are in the index
@@ -125,6 +124,8 @@ class RetrieverGSData(ValidationData):
             all_ids = self.samples['document'].unique()
             missing_ids = [i for i in all_ids if i not in ids]
             logger.info("Validation IDs not in the index (removed from validation set): {}".format(missing_ids))
+            logger.info("Number of missing IDs: {}".format(str(len(missing_ids))))
+            logger.info("Number documents in the index to test: {}".format(str(len(all_ids) - len(missing_ids))))
 
         df = df.groupby('query').agg({'document': lambda x: x.tolist()}).reset_index()
         query_list = df['query'].to_list()

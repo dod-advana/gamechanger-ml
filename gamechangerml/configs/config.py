@@ -73,26 +73,18 @@ class QAConfig:
 
 class EmbedderConfig:
     MODEL_ARGS = {
-        "model_name": "msmarco-distilbert-base-v2",  # SOURCE
-        "embeddings": {
-            "embeddings": "embeddings.npy",
-            "dataframe": "data.csv",
-            "ids": "doc_ids.txt",
-        },
-        "encoder": {  # args for making the embeddings index
-            "min_token_len": 10,
-            "overwrite": False,
-            "verbose": True,  # for creating LocalCorpus
-            "return_id": True,  # for creating LocalCorpus
-        },
-        "retriever": {"n_returns": 5},  # args for retrieving the vectors
-        "retriever": {"n_returns": 5},  # args for retrieving the vectors
-        "finetune": {
-            "shuffle": True,
-            "batch_size": 16,
-            "epochs": 1,
-            "warmup_steps": 100,
-        },
+        "encoder_model_name": "msmarco-distilbert-base-v2", 
+        "min_token_len": 10,
+        "overwrite": False,
+        "verbose": True, # for creating LocalCorpus
+        "return_id": True, # for creating LocalCorpus
+        "n_returns": 5
+    }
+    FINETUNE = {
+        "shuffle": True,
+        "batch_size": 16,
+        "epochs": 1,
+        "warmup_steps": 100
     }
 
 
@@ -102,21 +94,20 @@ class SimilarityConfig:
 
 class WordSimConfig:
     MODEL_ARGS = {
-        "model_name": "gamechangerml/models/wiki-news-300d-1M.vec"}  # SOURCE
+        "sim_model_name": "distilbart-mnli-12-3" # SOURCE
+    }
 
-
-class QEConfig:
+class QexpConfig:
     MODEL_ARGS = {
-        "init": {  # args for creating QE object
-            "qe_model_dir": "gamechangerml/models/qexp_20211001",
+        "init": { # args for creating QE object
             "qe_files_dir": "gamechangerml/src/search/query_expansion",
-            "method": "emb",
-            "vocab_file": "word-freq-corpus-20201101.txt",
+            "method": "emb"
         },
-        "expansion": {  # configs for getting expanded terms
-            "topn": 2,
-            "threshold": 0.2,
-            "min_tokens": 3,
+        "bqe": {
+            "num_trees": 125,
+            "num_keywords": 2,
+            "ngram": (1, 2),
+            "abbrv_file": None
         },
     }
 
