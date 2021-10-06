@@ -92,11 +92,6 @@ class SimilarityConfig:
     MODEL_ARGS = {"model_name": "distilbart-mnli-12-3"}  # SOURCE
 
 
-class WordSimConfig:
-    MODEL_ARGS = {
-        "sim_model_name": "distilbart-mnli-12-3" # SOURCE
-    }
-
 class QexpConfig:
     MODEL_ARGS = {
         "init": { # args for creating QE object
