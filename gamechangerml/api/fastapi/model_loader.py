@@ -5,7 +5,6 @@ from gamechangerml.configs.config import (
     EmbedderConfig,
     SimilarityConfig,
     QexpConfig,
-    WordSimConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
@@ -100,8 +99,8 @@ class ModelLoader:
         """
         logger.info(f"Loading Pretrained Vector from {qexp_model_path}")
         try:
-            ModelLoader.__query_expander = qe.QE(qexp_model_path,
-                **QexpConfig.MODEL_ARGS['init']
+            ModelLoader.__query_expander = qe.QE(
+                qexp_model_path, **QexpConfig.MODEL_ARGS["init"]
             )
             logger.info("** Loaded Query Expansion Model")
         except Exception as e:
@@ -116,8 +115,7 @@ class ModelLoader:
         """
         logger.info(f"Loading Query Expansion Model from {model_path}")
         try:
-            ModelLoader.__word_sim = WordSim(
-                WordSimConfig.MODEL_ARGS["model_name"])
+            ModelLoader.__word_sim = WordSim(model_path)
             logger.info("** Loaded Word Sim Model")
         except Exception as e:
             logger.warning("** Could not load Word Sim model")
@@ -140,11 +138,11 @@ class ModelLoader:
         logger.info(f"Loading Sentence Index from {index_path}")
         try:
             ModelLoader.__sentence_trans = SentenceSearcher(
-                sim_model_name=SimilarityConfig.MODEL_ARGS['sim_model_name'],
-                encoder_model_name=EmbedderConfig.MODEL_ARGS['encoder_model_name'],
-                n_returns=EmbedderConfig.MODEL_ARGS['n_returns'],
+                sim_model_name=SimilarityConfig.MODEL_ARGS["model_name"],
+                encoder_model_name=EmbedderConfig.MODEL_ARGS["encoder_model_name"],
+                n_returns=EmbedderConfig.MODEL_ARGS["n_returns"],
                 index_path=index_path,
-                transformers_path=transformers_path
+                transformers_path=transformers_path,
             )
             encoder_model = ModelLoader.__sentence_trans.encoder_model
             logger.info(f"Using {encoder_model} for sentence transformer")
