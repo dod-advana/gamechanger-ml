@@ -44,3 +44,10 @@ def print_content(s3_path):
     except Exception as e:
         logger.debug(f"could not print path for {s3_path}")
         logger.debug(e)
+
+def list_folders(bucket, prefix):
+
+	client = boto3.client('s3')
+	result = client.list_objects(Bucket=bucket, Prefix=prefix, Delimiter='/')
+	for o in result.get('CommonPrefixes'):
+		print('sub folder : ', o.get('Prefix'))

@@ -5,11 +5,14 @@ from datetime import datetime, date
 
 # import wikipedia
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
+from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.utilities.arg_parser import LocalParser
-from gamechangerml.src.model_testing.evaluation import IndomainRetrieverEvaluator
+from gamechangerml.src.model_testing.evaluation import IndomainRetrieverEvaluator, QexpEvaluator
+
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
+from gamechangerml.src.utilities.test_utils import get_user
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils import processmanager
 from distutils.dir_util import copy_tree
@@ -26,9 +29,8 @@ from gamechangerml.src.search.query_expansion.build_ann_cli import (
     build_qe_model as bqe,
 )
 from gamechangerml.src.utilities import utils
-from gamechangerml.configs.config import DefaultConfig, D2VConfig
+from gamechangerml.configs.config import DefaultConfig, D2VConfig, QexpConfig, EmbedderConfig, SimilarityConfig
 
-# from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 import pandas as pd
 import urllib3
 
@@ -175,6 +177,7 @@ class Pipeline:
 
         if not model_id:
             model_id = datetime.now().strftime("%Y%m%d")
+        
         # get model name schema
         model_name = "qexp_" + model_id
         model_path = utils.create_model_schema(model_dir, model_name)
@@ -183,15 +186,7 @@ class Pipeline:
         try:
             # build ANN indices
             index_dir = os.path.join(model_dest, model_path)
-            bqe.main(
-                corpus,
-                index_dir,
-                num_trees=125,
-                num_keywords=2,
-                ngram=(1, 2),
-                word_wt_file="word-freq-corpus-20201101.txt",
-                abbrv_file=None,
-            )
+            bqe.main(corpus, index_dir, **QexpConfig.MODEL_ARGS['bqe'])
             logger.info(
                 "-------------- Model Training Complete --------------")
             # Create .tgz file
@@ -209,7 +204,9 @@ class Pipeline:
                 logger.info(
                     "-------------- Running Assessment Model Script --------------"
                 )
-
+                #qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
+                #evals = qxpeval.results
+                
                 logger.info(
                     "-------------- Assessment is not available--------------")
                 """
@@ -225,6 +222,7 @@ class Pipeline:
                         mlflow.log_metric(
                             key=metric, value=results[metric])
                 """
+                
                 logger.info(
                     "-------------- Finished Assessment --------------")
             else:
@@ -297,18 +295,15 @@ class Pipeline:
             copy_tree(existing_embeds, local_sent_index_dir)
 
         try:
-            encoder = SentenceEncoder(use_gpu=use_gpu)
+            overwrite = EmbedderConfig.MODEL_ARGS["overwrite"]
+            min_token_len = EmbedderConfig.MODEL_ARGS["min_token_len"]
+            return_id = EmbedderConfig.MODEL_ARGS["return_id"]
+            verbose = EmbedderConfig.MODEL_ARGS["verbose"]
+            encoder = SentenceEncoder(encoder_model_name=encoder_model, overwrite=overwrite, min_token_len=min_token_len, verbose=verbose, return_id=return_id, sent_index=local_sent_index_dir, use_gpu=use_gpu)
             logger.info("Creating Document Embeddings...")
             encoder.index_documents(corpus)
             logger.info("-------------- Indexing Documents--------------")
-            try:
-                user = os.environ.get("GC_USER", default="root")
-                if user == "root":
-                    user = str(os.getlogin())
-            except Exception as e:
-                user = "unknown"
-                logger.info("Could not get system user")
-                logger.info(e)
+            user = get_user(logger)
 
             # Generating process metadata
             metadata = {
@@ -334,7 +329,9 @@ class Pipeline:
             logger.info(
                 "-------------- Running Assessment Model Script --------------")
 
-            sent_eval = IndomainRetrieverEvaluator(index=local_sent_index_dir)
+            sentev = IndomainRetrieverEvaluator(encoder=encoder, retriever=None, index=model_name, **EmbedderConfig.MODEL_ARGS, **SimilarityConfig.MODEL_ARGS)
+            evals = sentev.results
+            logger.info("evals: {}".format(str(evals)))
             
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")
@@ -346,7 +343,7 @@ class Pipeline:
             S3_MODELS_PATH = "bronze/gamechanger/models"
             s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
             self.upload(s3_path, dst_path, "sentence_index", model_id, version)
-        return metadata, sent_eval.results
+        return metadata, evals
 
     def upload(self, s3_path, local_path, model_prefix, model_name, version):
         # Loop through each file and upload to S3
