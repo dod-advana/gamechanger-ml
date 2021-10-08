@@ -1,4 +1,5 @@
 import gensim
+import traceback
 from gensim.parsing.porter import PorterStemmer
 from gensim.parsing.preprocessing import remove_stopwords
 
@@ -19,14 +20,23 @@ class WordSim:
         text = remove_stopwords(text)
         return list(gensim.utils.tokenize(text))
 
-    def most_similiar_tokens(self, text: str, sim_thresh=0.65):
+    def most_similiar_tokens(self, text: str, sim_thresh=0.65, top_n=2):
         tokens = self.tokenize(text)
         similar_tokens = {}
         for word in tokens:
-            sim_words = self.model.most_similar(word)
-            sim_word_thresh = [x[0] for x in sim_words if x[1] > sim_thresh]
-            cleaned = self.clean_tokens(word, sim_word_thresh)
-            similar_tokens[word] = cleaned
+            try:
+                max_count = 0
+                if word.isalpha():
+                    word = word.lower()
+                    sim_words = self.model.most_similar(word)
+                    sim_word_thresh = [x[0]
+                                       for x in sim_words if x[1] > sim_thresh]
+                    cleaned = self.clean_tokens(word, sim_word_thresh)
+                    # get top 2 even after threshold
+                    similar_tokens[word] = cleaned[:top_n]
+            except Exception as e:
+                print("Could not get similar token for ", word)
+                print(traceback.format_exc())
         return similar_tokens
 
     def clean_tokens(self, orig, tokens):
