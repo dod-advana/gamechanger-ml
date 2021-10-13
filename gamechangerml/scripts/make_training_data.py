@@ -4,7 +4,7 @@ import pandas as pd
 from gamechangerml.configs.config import TrainingConfig, ValidationConfig, EmbedderConfig, SimilarityConfig
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder, SentenceSearcher
 from gamechangerml.src.utilities.es_search_utils import connect_es, collect_results
-from gamechangerml.src.utilities.text_utils import normalize_answer
+from gamechangerml.src.utilities.text_utils import normalize_query
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.pathselect import get_model_paths
@@ -87,7 +87,7 @@ def lookup_negative_samples(
 def add_gold_standard(intel, gold_standard_path):
     '''Adds original gold standard data to the intel training data.'''
     gold = pd.read_csv(gold_standard_path, names=['query', 'document'])
-    gold['query_clean'] = gold['query'].apply(lambda x: normalize_answer(x))
+    gold['query_clean'] = gold['query'].apply(lambda x: normalize_query(x))
     gold['docs_split'] = gold['document'].apply(lambda x: x.split(';'))
     all_docs = list(set([a for b in gold['docs_split'].tolist() for a in b]))
 

@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from gamechangerml.src.utilities.text_utils import normalize_answer, get_tokens
+from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, get_tokens
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.configs.config import ValidationConfig, TrainingConfig
 from gamechangerml.api.utils.logger import logger
@@ -86,7 +86,7 @@ class QADomainData(ValidationData):
 
         checked = []
         for test in self.all_queries['test_queries']:
-            alltext = normalize_answer(' '.join(test['search_context']))
+            alltext = normalize_query(' '.join(test['search_context']))
             checked_answers = [i for i in test['expected'] if normalize_answer(i['text']) in alltext]
             test['expected'] = checked_answers
             if test['expected'] != []:
@@ -310,7 +310,7 @@ class MatamoFeedback():
                         key, val = process_row(row, j)
                         query[key] = val
                         if key in ['question', 'search_text', 'QA answer']:
-                            clean_val = normalize_answer(val)
+                            clean_val = normalize_query(val)
                             clean_key = key + '_clean'
                             query[clean_key] = clean_val
                 queries.append(query)
@@ -363,7 +363,7 @@ class SearchHistory():
 
         df.rename(columns = {'documenttime': 'date', 'search': 'search_text', 'document': 'title_returned'}, inplace = True)
         df['search_text'] = df['search_text'].apply(lambda x: clean_quot(x))
-        df['search_text_clean'] = df['search_text'].apply(lambda x: normalize_answer(x))
+        df['search_text_clean'] = df['search_text'].apply(lambda x: normalize_query(x))
         df = df[df['search_text_clean'] != ''].copy()
         df.drop(columns = ['idvisit', 'idaction_name', 'search_cat', 'searchtime'], inplace = True)
         
@@ -447,6 +447,7 @@ class IntelSearchData(SearchValidationData):
         ):
         
         super().__init__(start_date, end_date, exclude_searches)
+        self.exclude_searches = exclude_searches
         self.data = pd.concat([self.matamo_data.intel, self.history_data.intel_matched]).reset_index()
         self.min_correct_matches = min_correct_matches
         self.max_results = max_results
@@ -455,6 +456,7 @@ class IntelSearchData(SearchValidationData):
     def make_intel(self):
         
         intel = self.data
+        intel = intel[~intel['search_text'].isin(self.exclude_searches)]
         
         int_queries = set(intel['search_text_clean'])
         intel_search_queries = update_dictionary(old_dict = {}, new_additions = int_queries, prefix ='S')
