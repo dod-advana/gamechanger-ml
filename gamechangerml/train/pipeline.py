@@ -8,13 +8,14 @@ from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.utilities.arg_parser import LocalParser
 from gamechangerml.src.model_testing.evaluation import IndomainRetrieverEvaluator, QexpEvaluator
-
+from gamechangerml.scripts.finetune_sentence_retriever import STFinetuner
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
-from gamechangerml.src.utilities.test_utils import get_user
+from gamechangerml.src.utilities.test_utils import get_user, get_most_recent_dir
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils import processmanager
+from gamechangerml.api.utils.pathselect import get_model_paths
 from distutils.dir_util import copy_tree
 
 import torch
@@ -48,10 +49,13 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 modelname = datetime.now().strftime("%Y%m%d")
+model_path_dict = get_model_paths()
 
 SEARCH_MAPPINGS_FILE = "gamechangerml/data/SearchPdfMapping.csv"
 TOPICS_FILE = "gamechangerml/data/topics_wiki.csv"
 ORGS_FILE = "gamechangerml/data/agencies/agencies_in_corpus.csv"
+LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
+
 data_path = "gamechangerml/data"
 try:
     import mlflow
@@ -98,6 +102,10 @@ class Pipeline:
         """
         for step in self.steps:
             logger.info("Running step %s in pipeline." % step)
+            if step == "sent_finetune":
+                self.run(
+                    build_type="sent_finetune", run_name=str(date.today()), params=params
+                )
             if step == "sentence":
                 self.run(
                     build_type="sentence", run_name=str(date.today()), params=params
@@ -154,6 +162,33 @@ class Pipeline:
                     "index": "doc"}, inplace=True)
         return data
 
+    def finetune_sent(
+        self,
+        shuffle, 
+        batch_size, 
+        epochs, 
+        warmup_steps,
+        data_path=None,
+        model=None,
+        model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.MODEL_ARGS['model_name'])
+    ):
+        """
+        finetune_sent: finetunes the sentence transformer - saves new model, a csv file of old/new cos sim scores,
+        and a metadata file.
+        Args:
+            params and directories for finetuning the sentence transformer
+        Returns:
+            metadata: meta information on finetuning
+        """
+        model_save_path = model_load_path + '_' + str(date.today())
+        if not data_path: # if no path to data, get most recent one
+            data_parent = 'gamechangerml/data/training/sent_transformer'
+            data_path = os.path.join(get_most_recent_dir(data_parent), 'training_data.json')
+        finetuner = STFinetuner(
+            model=model, model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.MODEL_ARGS['finetune']
+            )
+        return finetuner.retrain(data_path)
+    
     def create_qexp(
         self,
         model_id=None,
@@ -369,7 +404,9 @@ class Pipeline:
             logger.warning("Could not create experiment")
         try:
             with mlflow.start_run(run_name=run_name) as run:
-                if build_type == "sentence":
+                if build_type == "sent_finetune": 
+                    metadata, evals = self.finetune_sent(**params)
+                elif build_type == "sentence":
                     metadata, evals = self.create_embedding(**params)
                 elif build_type == "qexp":
                     metadata, evals = self.create_qexp(**params)
