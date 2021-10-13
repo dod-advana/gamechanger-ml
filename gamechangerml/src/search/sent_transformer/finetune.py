@@ -5,13 +5,8 @@ from datetime import date
 import os
 import json
 
-from gamechangerml.src.utilities.model_helper import open_json, timestamp_filename, cos_sim
+from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename, cos_sim
 from gamechangerml.api.utils.logger import logger
-
-score_map = {
-    1.0: 0.95,
-    0.0: 0.05
-}
 
 def fix_model_config(model_load_path):
     '''Workaround for error with sentence_transformers==0.4.1 (vs. version 2.0.0 which our model was trained on)'''
@@ -49,7 +44,7 @@ def format_inputs(train, test):
     count = 0
     for i in train.keys():
         texts = [train[i]['query'], train[i]['paragraph']]
-        score = score_map[float(train[i]['label'])]
+        score = float(train[i]['label'])
         inputex = InputExample(str(count), texts, score)
         train_samples.append(inputex)
         all_data.append([i, texts, score, 'train'])
@@ -57,7 +52,7 @@ def format_inputs(train, test):
     
     for x in test.keys():
         texts = [test[x]['query'], test[x]['paragraph']]
-        score = score_map[float(test[x]['label'])]
+        score = float(test[x]['label'])
         all_data.append([x, texts, score, 'test'])
 
     df = pd.DataFrame(all_data, columns = ['key', 'pair', 'score', 'label'])
@@ -85,10 +80,11 @@ class STFinetuner():
         data = open_json('training_data.json', data_dir)
         train = data['train']
         test = data['test']
-        # make formatted training data
+        
+        ## make formatted training data
         train_samples, df = format_inputs(train, test)
         
-        # get cosine sim before finetuning
+        ## get cosine sim before finetuning
         df['original_cos_sim'] = df['pair'].apply(lambda x: get_cos_sim(self.model, x))
 
         ## finetune on samples
@@ -104,23 +100,29 @@ class STFinetuner():
         df['new_cos_sim'] = df['pair'].apply(lambda x: get_cos_sim(self.model, x))
         df['change_cos_sim'] = df['new_cos_sim'] - df['original_cos_sim']
 
+        ## save all results to CSV
         df.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
 
         ## create training metadata
-        positive_change_train = df[(df['score']==0.95) & (df['label']=='train')]['change_cos_sim'].median()
-        negative_change_train = df[(df['score']==0.05) & (df['label']=='train')]['change_cos_sim'].median()
-        positive_change_test = df[(df['score']==0.95) & (df['label']=='test')]['change_cos_sim'].median()
-        negative_change_test = df[(df['score']==0.05) & (df['label']=='test')]['change_cos_sim'].median()
+        positive_change_train = df[(df['score']==1.0) & (df['label']=='train')]['change_cos_sim'].median()
+        negative_change_train = df[(df['score']==-1.0) & (df['label']=='train')]['change_cos_sim'].median()
+        neutral_change_train = df[(df['score']==0.0) & (df['label']=='train')]['change_cos_sim'].median() 
+        positive_change_test = df[(df['score']==1.0) & (df['label']=='test')]['change_cos_sim'].median()
+        negative_change_test = df[(df['score']==-1.0) & (df['label']=='test')]['change_cos_sim'].median()
+        neutral_change_test = df[(df['score']==0.0) & (df['label']=='test')]['change_cos_sim'].median() 
 
         ft_metadata = {
             "date_finetuned": str(date.today()),
             "data_dir": str(data_dir),
             "positive_change_train": positive_change_train,
             "negative_change_train": negative_change_train,
+            "neutral_change_train": neutral_change_train,
             "positive_change_test": positive_change_test,
-            "negative_change_test": negative_change_test
+            "negative_change_test": negative_change_test,
+            "neutral_change_test": neutral_change_test
         }
 
+        ## save metadata file
         ft_metadata_path = os.path.join(data_dir, timestamp_filename("finetuning_metadata", ".json"))
         with open(ft_metadata_path, "w") as outfile:
             json.dump(ft_metadata, outfile)
@@ -128,4 +130,4 @@ class STFinetuner():
         logger.info("Metadata saved to {}".format(ft_metadata_path))
         logger.info(str(ft_metadata))
 
-        return 
+        return ft_metadata
