@@ -26,7 +26,7 @@ def init_timer():
     signal.signal(signal.SIGALRM, timeout_handler)
     logger.info("Created timer.")
 
-    return 
+    return
 
 def check_file_size(filename, path):
     '''Returns the filesize (in bytes) of a file'''
