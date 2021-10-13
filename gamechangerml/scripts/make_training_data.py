@@ -74,7 +74,7 @@ def lookup_negative_samples(
     
     ## add negative samples to intel search training data
     #intel['incorrect'].update(final_dict)
-    intel['negative'] = final_dict
+    intel['neutral'] = final_dict
 
     return
 
@@ -95,27 +95,29 @@ def make_training_data(base_dir, tts_ratio):
     ## query ES
     es = connect_es(ES_URL)
     correct_found, correct_notfound = collect_results(relations=intel['correct'], queries=intel['queries'], collection=intel['collection'], es=es, label=1)
-    neg_found, neg_notfound = collect_results(relations=intel['negative'], queries=intel['queries'], collection=intel['collection'], es=es, label=0)
+    neutral_found, neutral_notfound = collect_results(relations=intel['neutral'], queries=intel['queries'], collection=intel['collection'], es=es, label=0)
     incorrect_found, incorrect_notfound = collect_results(relations=intel['incorrect'], queries=intel['queries'], collection=intel['collection'], es=es, label=-1)
 
     ## save a df of the query-doc pairs that did not retrieve an ES paragraph for training data
-    notfound = {**correct_notfound, **neg_notfound, **incorrect_notfound}
+    notfound = {**correct_notfound, **neutral_notfound, **incorrect_notfound}
+    logger.info(f"Number of query/result pairs that were not found in ES: {str(len(notfound))}")
     notfound_path = os.path.join(save_dir, timestamp_filename('not_found_search_pairs', '.json'))
     with open(notfound_path, "w") as outfile:
         json.dump(notfound, outfile)
 
     ## train/test split (separate on correct/incorrect for balance)
     correct_train, correct_test = train_test_split(correct_found, tts_ratio)
-    neg_found_train, neg_found_test = train_test_split(neg_found, tts_ratio)
+    neutral_found_train, neutral_found_test = train_test_split(neutral_found, tts_ratio)
     incorrect_train, incorrect_test = train_test_split(incorrect_found, tts_ratio)
-    train = {**correct_train, **neg_found_train, **incorrect_train}
-    test = {**correct_test, **neg_found_test, **incorrect_test}
+    train = {**correct_train, **neutral_found_train, **incorrect_train}
+    test = {**correct_test, **neutral_found_test, **incorrect_test}
 
     data = {"train": train, "test": test}
     metadata = {
         "date_created": str(date.today()),
         "n_positive_samples": len(correct_found),
         "n_negative_samples": len(incorrect_found),
+        "n_neutral_samples": len(neutral_found),
         "train_size": len(train),
         "test_size": len(test),
         "split_ratio": tts_ratio
