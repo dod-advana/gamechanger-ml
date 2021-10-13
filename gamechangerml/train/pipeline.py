@@ -405,7 +405,7 @@ class Pipeline:
         try:
             with mlflow.start_run(run_name=run_name) as run:
                 if build_type == "sent_finetune": 
-                    metadata, evals = self.finetune_sent(**params)
+                    metadata = self.finetune_sent(**params)
                 elif build_type == "sentence":
                     metadata, evals = self.create_embedding(**params)
                 elif build_type == "qexp":
