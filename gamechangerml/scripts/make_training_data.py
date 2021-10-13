@@ -1,8 +1,10 @@
 import argparse
 import random
+import pandas as pd
 from gamechangerml.configs.config import TrainingConfig, ValidationConfig, EmbedderConfig, SimilarityConfig
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder, SentenceSearcher
 from gamechangerml.src.utilities.es_search_utils import connect_es, collect_results
+from gamechangerml.src.utilities.text_utils import normalize_answer
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.pathselect import get_model_paths
@@ -12,11 +14,15 @@ random.seed(42)
 
 ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-BASE_MODEL_NAME = EmbedderConfig.MODEL_ARGS['model_name']
-VALIDATION_DIR = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS['validation_dir'], 'sent_transformer'))
+BASE_MODEL_NAME = EmbedderConfig.MODEL_ARGS["model_name"]
+VALIDATION_DIR = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS["validation_dir"], "sent_transformer"))
 SENT_INDEX = model_path_dict["sentence"]
-base_dir=TrainingConfig.DATA_ARGS['training_data_dir']
-tts_ratio=TrainingConfig.DATA_ARGS['train_test_split_ratio']
+base_dir=TrainingConfig.DATA_ARGS["training_data_dir"]
+tts_ratio=TrainingConfig.DATA_ARGS["train_test_split_ratio"]
+gold_standard_path = os.path.join(
+    ValidationConfig.DATA_ARGS["validation_dir"], ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"]
+    )
+
 
 def train_test_split(data, tts_ratio):
     '''Splits a dictionary into train/test set based on split ratio'''
@@ -78,12 +84,72 @@ def lookup_negative_samples(
 
     return
 
+def add_gold_standard(intel, gold_standard_path):
+    '''Adds original gold standard data to the intel training data.'''
+    gold = pd.read_csv(gold_standard_path, names=['query', 'document'])
+    gold['query_clean'] = gold['query'].apply(lambda x: normalize_answer(x))
+    gold['docs_split'] = gold['document'].apply(lambda x: x.split(';'))
+    all_docs = list(set([a for b in gold['docs_split'].tolist() for a in b]))
+
+    def add_key(mydict):
+        '''Adds new key to queries/collections dictionaries'''
+        last_key = sorted([*mydict.keys()])[-1]
+        key_len = len(last_key) - 1
+        last_prefix = last_key[0]
+        last_num = int(last_key[1:])
+        new_num = str(last_num + 1)
+        
+        return last_prefix + str(str(0)*(key_len - len(new_num)) + new_num)
+
+    # check if queries already in dict, if not add
+    for i in gold['query_clean']:
+        if i in intel['queries'].values():
+            logger.info(f"'{i}' already in intel queries")
+            continue
+        else:
+            logger.info(f"adding '{i}' to intel queries")
+            new_key = add_key(intel['queries'])
+            intel['queries'][new_key] = i
+    
+    # check if docs already in dict, if not add
+    for i in all_docs:
+        if i in intel['collection'].values():
+            logger.info(f"'{i}' already in intel collection")
+            continue
+        else:
+            logger.info(f"adding '{i}' to intel collection")
+            new_key = add_key(intel['collection'])
+            intel['collection'][new_key] = i
+
+    # check if rels already in intel, if not add
+    reverse_q = {v:k for k,v in intel['queries'].items()}
+    reverse_d = {v:k for k,v in intel['collection'].items()}
+    for i in gold.index:
+        q = gold.loc[i, 'query_clean']
+        docs = gold.loc[i, 'docs_split']
+        for j in docs:
+            q_id = reverse_q[q]
+            d_id = reverse_d[j]
+            if q_id in intel['correct']: # if query in rels, add new docs
+                if d_id in intel['correct'][q_id]:
+                    continue
+                else:
+                    intel['correct'][q_id] += [d_id]
+            else:
+                intel['correct'][q_id] = [d_id]
+    
+    return intel
+
 def make_training_data(base_dir, tts_ratio):
 
     ## open json files
-    directory = os.path.join(VALIDATION_DIR, 'any')
+    parent_dir =  os.path.join(VALIDATION_DIR, "sent_transformer")
+    directory = os.path.join(get_most_recent_dir(parent_dir), 'any')
     f = open_json('intelligent_search_data.json', directory)
     intel = json.loads(f)
+
+    ## add gold standard samples
+    intel = add_gold_standard(intel, gold_standard_path)
 
     ## collect negative samples
     lookup_negative_samples(intel)
