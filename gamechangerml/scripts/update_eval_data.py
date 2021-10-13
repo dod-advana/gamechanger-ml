@@ -2,7 +2,7 @@ import argparse
 import os
 from gamechangerml.src.model_testing.validation_data import IntelSearchData
 from gamechangerml.configs.config import ValidationConfig
-from gamechangerml.src.utilities.model_helper import *
+from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.logger import logger
 
 exclude_searches=ValidationConfig.DATA_ARGS['exclude_searches']
