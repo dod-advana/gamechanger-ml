@@ -4,7 +4,6 @@ from gamechangerml.configs.config import TrainingConfig, ValidationConfig, Embed
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder, SentenceSearcher
 from gamechangerml.src.utilities.es_search_utils import connect_es, collect_results
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.src.utilities.model_helper import *
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.pathselect import get_model_paths
 
@@ -73,7 +72,9 @@ def lookup_negative_samples(
             answers.append(res)
         final_dict[query] = answers
     
-    intel['incorrect'].update(final_dict)
+    ## add negative samples to intel search training data
+    #intel['incorrect'].update(final_dict)
+    intel['negative'] = final_dict
 
     return
 
@@ -94,19 +95,21 @@ def make_training_data(base_dir, tts_ratio):
     ## query ES
     es = connect_es(ES_URL)
     correct_found, correct_notfound = collect_results(relations=intel['correct'], queries=intel['queries'], collection=intel['collection'], es=es, label=1)
-    incorrect_found, incorrect_notfound = collect_results(relations=intel['incorrect'], queries=intel['queries'], collection=intel['collection'], es=es, label=0)
+    neg_found, neg_notfound = collect_results(relations=intel['negative'], queries=intel['queries'], collection=intel['collection'], es=es, label=0)
+    incorrect_found, incorrect_notfound = collect_results(relations=intel['incorrect'], queries=intel['queries'], collection=intel['collection'], es=es, label=-1)
 
     ## save a df of the query-doc pairs that did not retrieve an ES paragraph for training data
-    notfound = {**correct_notfound, **incorrect_notfound}
+    notfound = {**correct_notfound, **neg_notfound, **incorrect_notfound}
     notfound_path = os.path.join(save_dir, timestamp_filename('not_found_search_pairs', '.json'))
     with open(notfound_path, "w") as outfile:
         json.dump(notfound, outfile)
 
     ## train/test split (separate on correct/incorrect for balance)
     correct_train, correct_test = train_test_split(correct_found, tts_ratio)
+    neg_found_train, neg_found_test = train_test_split(neg_found, tts_ratio)
     incorrect_train, incorrect_test = train_test_split(incorrect_found, tts_ratio)
-    train = {**correct_train, **incorrect_train}
-    test = {**correct_test, **incorrect_test}
+    train = {**correct_train, **neg_found_train, **incorrect_train}
+    test = {**correct_test, **neg_found_test, **incorrect_test}
 
     data = {"train": train, "test": test}
     metadata = {
