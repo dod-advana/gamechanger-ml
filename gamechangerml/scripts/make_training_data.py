@@ -14,7 +14,7 @@ random.seed(42)
 
 ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-BASE_MODEL_NAME = EmbedderConfig.MODEL_ARGS["model_name"]
+
 VALIDATION_DIR = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS["validation_dir"], "sent_transformer"))
 SENT_INDEX = model_path_dict["sentence"]
 base_dir=TrainingConfig.DATA_ARGS["training_data_dir"]
@@ -39,11 +39,16 @@ def train_test_split(data, tts_ratio):
 def lookup_negative_samples(
     intel, 
     index_path=SENT_INDEX, 
-    transformer_path=LOCAL_TRANSFORMERS_DIR, 
-    encoder_config=EmbedderConfig.MODEL_ARGS, 
-    similarity_config=SimilarityConfig.MODEL_ARGS, 
-    use_gpu=False
+    transformers_path=LOCAL_TRANSFORMERS_DIR, 
+    sim_model_name=SimilarityConfig.MODEL_ARGS['model_name'], 
+    encoder_model_name=EmbedderConfig.MODEL_ARGS['encoder_model_name'], 
+    n_returns=EmbedderConfig.MODEL_ARGS['n_returns'], 
+    encoder=None, 
+    sim_model=None
     ):
+
+    def normalize_docs(doc):
+        return doc.split('.pdf')[0]
     
     ## get query to collections dict
     newdict = {}
@@ -57,26 +62,42 @@ def lookup_negative_samples(
         for j in res:
             ans = intel['collection'][j]
             reverse_r[ans] = j
-            answers.append(ans)
+            answers.append(normalize_docs(ans))
         newdict[query] = answers
     
     ## look up queries against index
     neg_samples = {}
-    encoder = SentenceEncoder(encoder_config, index_path, use_gpu)
-    retriever = SentenceSearcher(index_path, transformer_path, encoder_config, similarity_config)
+    retriever = SentenceSearcher(
+        index_path=index_path, 
+        transformers_path=transformers_path, 
+        sim_model_name=sim_model_name, 
+        encoder_model_name=encoder_model_name, 
+        n_returns=n_returns, 
+        encoder=encoder, 
+        sim_model=sim_model
+        )
     for key in newdict:
         doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(key)
-        neg_samples[key] = [d for d in doc_ids if d not in newdict[key]]
+        clean_ids = [normalize_docs(i) for i in doc_ids]
+        neg_samples[key] = [d for d in clean_ids if d not in newdict[key]]
+        logger.info(f"Found {str(len(neg_samples[key]))} out of {str(len(clean_ids))} negative samples for {key}")
 
     ## reverse lookup queries to collections
     final_dict = {}
     for i in newdict.keys():
-        query = reverse_q[i]
-        answers = []
-        for j in newdict[i]:
-            res = reverse_r[j]
-            answers.append(res)
-        final_dict[query] = answers
+        try:
+            query = reverse_q[i]
+            answers = []
+            for j in newdict[i]:
+                try:
+                    res = reverse_r[j]
+                    answers.append(res)
+                except KeyError as e:
+                    logger.error(e)
+            final_dict[query] = answers
+        except KeyError as e:
+            logger.error(e)
+            raise
     
     ## add negative samples to intel search training data
     #intel['incorrect'].update(final_dict)
@@ -140,11 +161,10 @@ def add_gold_standard(intel, gold_standard_path):
     
     return intel
 
-def make_training_data(base_dir, tts_ratio):
+def make_training_data(base_dir, tts_ratio, gold_standard_path):
 
     ## open json files
-    parent_dir =  os.path.join(VALIDATION_DIR, "sent_transformer")
-    directory = os.path.join(get_most_recent_dir(parent_dir), 'any')
+    directory = os.path.join(VALIDATION_DIR, 'any')
     f = open_json('intelligent_search_data.json', directory)
     intel = json.loads(f)
 
@@ -161,12 +181,15 @@ def make_training_data(base_dir, tts_ratio):
     ## query ES
     es = connect_es(ES_URL)
     correct_found, correct_notfound = collect_results(relations=intel['correct'], queries=intel['queries'], collection=intel['collection'], es=es, label=1)
+    logger.info(f"---Number of correct query/result pairs that were not found in ES: {str(len(correct_notfound))}")
     neutral_found, neutral_notfound = collect_results(relations=intel['neutral'], queries=intel['queries'], collection=intel['collection'], es=es, label=0)
+    logger.info(f"---Number of neutral query/result pairs that were not found in ES: {str(len(neutral_notfound))}")
     incorrect_found, incorrect_notfound = collect_results(relations=intel['incorrect'], queries=intel['queries'], collection=intel['collection'], es=es, label=-1)
+    logger.info(f"---Number of incorrect query/result pairs that were not found in ES: {str(len(incorrect_notfound))}")
 
     ## save a df of the query-doc pairs that did not retrieve an ES paragraph for training data
     notfound = {**correct_notfound, **neutral_notfound, **incorrect_notfound}
-    logger.info(f"Number of query/result pairs that were not found in ES: {str(len(notfound))}")
+    logger.info(f"---Number of total query/result pairs that were not found in ES: {str(len(notfound))}")
     notfound_path = os.path.join(save_dir, timestamp_filename('not_found_search_pairs', '.json'))
     with open(notfound_path, "w") as outfile:
         json.dump(notfound, outfile)
@@ -203,4 +226,4 @@ def make_training_data(base_dir, tts_ratio):
 
 if __name__ == '__main__':
 
-    make_training_data(base_dir=base_dir, tts_ratio=tts_ratio)
+    make_training_data(base_dir=base_dir, tts_ratio=tts_ratio, gold_standard_path=gold_standard_path)
