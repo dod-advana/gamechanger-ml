@@ -164,10 +164,6 @@ class Pipeline:
 
     def finetune_sent(
         self,
-        shuffle, 
-        batch_size, 
-        epochs, 
-        warmup_steps,
         data_path=None,
         model=None,
         model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.MODEL_ARGS['model_name'])
