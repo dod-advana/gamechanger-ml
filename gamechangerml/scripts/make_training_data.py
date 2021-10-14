@@ -50,23 +50,8 @@ def lookup_negative_samples(
     def normalize_docs(doc):
         return doc.split('.pdf')[0]
     
-    ## get query to collections dict
-    newdict = {}
-    reverse_q = {}
-    reverse_r = {}
-    for i in intel['correct'].keys():
-        query = intel['queries'][i]
-        reverse_q[query] = i
-        res = intel['correct'][i]
-        answers = []
-        for j in res:
-            ans = intel['collection'][j]
-            reverse_r[ans] = j
-            answers.append(normalize_docs(ans))
-        newdict[query] = answers
-    
     ## look up queries against index
-    neg_samples = {}
+    
     retriever = SentenceSearcher(
         index_path=index_path, 
         transformers_path=transformers_path, 
@@ -76,34 +61,38 @@ def lookup_negative_samples(
         encoder=encoder, 
         sim_model=sim_model
         )
-    for key in newdict:
-        doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(key)
-        clean_ids = [normalize_docs(i) for i in doc_ids]
-        neg_samples[key] = [d for d in clean_ids if d not in newdict[key]]
-        logger.info(f"Found {str(len(neg_samples[key]))} out of {str(len(clean_ids))} negative samples for {key}")
 
-    ## reverse lookup queries to collections
-    final_dict = {}
-    for i in newdict.keys():
+    reverse_docs = {v.upper():k for (k, v) in intel['collection'].items()}
+    neutral_samples = {}
+    for key in intel['correct'].keys():
+        query = intel['queries'][key]
+        docs = intel['correct'][key]
+        doc_names = [intel['collection'][val] for val in docs]
         try:
-            query = reverse_q[i]
-            answers = []
-            for j in newdict[i]:
+            doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query)
+            clean_ids = [normalize_docs(i) for i in doc_ids]
+            dedup = []
+            for d in clean_ids:
                 try:
-                    res = reverse_r[j]
-                    answers.append(res)
-                except KeyError as e:
-                    logger.error(e)
-            final_dict[query] = answers
-        except KeyError as e:
-            logger.error(e)
-            raise
-    
-    ## add negative samples to intel search training data
-    #intel['incorrect'].update(final_dict)
-    intel['neutral'] = final_dict
+                    if d not in doc_names:
+                        dedup.append(d)
+                    else:
+                        continue
+                except:
+                    logger.info(f"------Error finding doc_id for {d}")
 
-    return
+            dedup = [d.upper() for d in clean_ids if d not in doc_names]
+            diff = len(clean_ids) - len(dedup)
+            if diff > 0:
+                logger.info(f"Removed {str(diff)} (correct) duplicates")
+            neutral_samples[key] = [reverse_docs[d] for d in dedup]
+            logger.info(f"Found {str(len(dedup))} negative samples for {key}")
+        except:
+            logger.info(f"------Error retrieving sent index results for {query}")
+
+    intel['neutral'] = neutral_samples
+
+    return intel
 
 def add_gold_standard(intel, gold_standard_path):
     '''Adds original gold standard data to the intel training data.'''
@@ -172,7 +161,7 @@ def make_training_data(base_dir, tts_ratio, gold_standard_path):
     intel = add_gold_standard(intel, gold_standard_path)
 
     ## collect negative samples
-    lookup_negative_samples(intel)
+    intel = lookup_negative_samples(intel)
     
     ## set up save dir
     sub_dir = os.path.join(base_dir, 'sent_transformer')
@@ -187,10 +176,14 @@ def make_training_data(base_dir, tts_ratio, gold_standard_path):
     incorrect_found, incorrect_notfound = collect_results(relations=intel['incorrect'], queries=intel['queries'], collection=intel['collection'], es=es, label=-1)
     logger.info(f"---Number of incorrect query/result pairs that were not found in ES: {str(len(incorrect_notfound))}")
 
-    ## save a df of the query-doc pairs that did not retrieve an ES paragraph for training data
+    ## make sure no dups
+    neutral_found = {k:v for (k, v) in neutral_found.items() if k not in correct_found.keys()}
+    neutral_notfound = {k:v for (k, v) in neutral_notfound.items() if k not in correct_notfound.keys()}
+
+    ## save a json of the query-doc pairs that did not retrieve an ES paragraph for training data
     notfound = {**correct_notfound, **neutral_notfound, **incorrect_notfound}
     logger.info(f"---Number of total query/result pairs that were not found in ES: {str(len(notfound))}")
-    notfound_path = os.path.join(save_dir, timestamp_filename('not_found_search_pairs', '.json'))
+    notfound_path = os.path.join(save_dir, 'not_found_search_pairs.json')
     with open(notfound_path, "w") as outfile:
         json.dump(notfound, outfile)
 
@@ -198,8 +191,8 @@ def make_training_data(base_dir, tts_ratio, gold_standard_path):
     correct_train, correct_test = train_test_split(correct_found, tts_ratio)
     neutral_found_train, neutral_found_test = train_test_split(neutral_found, tts_ratio)
     incorrect_train, incorrect_test = train_test_split(incorrect_found, tts_ratio)
-    train = {**correct_train, **neutral_found_train, **incorrect_train}
-    test = {**correct_test, **neutral_found_test, **incorrect_test}
+    train = {**neutral_found_train, **correct_train, **incorrect_train}
+    test = {**neutral_found_test, **correct_test, **incorrect_test}
 
     data = {"train": train, "test": test}
     metadata = {
