@@ -88,7 +88,7 @@ case "$ENV_TYPE" in
   K8S_TEST)
     setup_k8s_test
     ;;
-  K8s_PROD)
+  K8S_PROD)
     setup_k8s_prod
     ;;
   *)
