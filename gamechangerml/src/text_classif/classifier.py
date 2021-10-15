@@ -423,6 +423,7 @@ class Classifier(object):
         pred_flat = list()
         labels_flat = list()
         logits_score = list()
+        logits_list = list()
 
         # change modes
         self.model.eval()
@@ -441,6 +442,7 @@ class Classifier(object):
             pred_flat_, lbl_flat = cu.flatten_labels(logits, label_ids)
 
             # accumulate the results across batches
+            logits_list.append(logits)
             pred_flat.extend(pred_flat_)
             labels_flat.extend(lbl_flat)
             logits_score.extend(logits_score)
@@ -462,7 +464,14 @@ class Classifier(object):
 
         mcc = clf_metrics.mcc_val(self.true_val, self.predicted_val)
 
-        auc_val = clf_metrics.auc_val(self.true_val, self.predicted_val)
+        # for multiclass classification, pass logits through softmax and use probability matrix in AUC computation
+        if self.cfg.num_labels>2:
+            softmax_layer = torch.nn.Softmax(dim=1)
+            predicted_probas = softmax_layer(torch.Tensor(np.concatenate(logits_list)))
+            auc_val = clf_metrics.auc_val(self.true_val, predicted_probas, binary_classif=False)
+        else:
+            auc_val = clf_metrics.auc_val(self.true_val, self.predicted_val, binary_classif=True)
+
         acc_score = clf_metrics.accuracy_score(
             self.true_val, self.predicted_val
         )
@@ -471,7 +480,8 @@ class Classifier(object):
         logger.info("confusion matrix\n\n\t{}\n".format(cm_matrix))
         logger.info("\tvalidation loss : {:>0.3f}".format(avg_val_loss))
         logger.info("\t            MCC : {:>0.3f}".format(mcc))
-        logger.info("\t            AUC : {:>0.3f}".format(auc_val))
+        if self.cfg.num_labels <= 2:
+            logger.info("\t            AUC : {:>0.3f}".format(auc_val))
         logger.info("\t accuracy score : {:>0.3f}".format(acc_score))
         logger.info("\tvalidation time : {:}".format(validation_time))
 
