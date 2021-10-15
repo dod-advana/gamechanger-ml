@@ -166,7 +166,7 @@ class Pipeline:
         self,
         data_path=None,
         model=None,
-        model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.MODEL_ARGS['model_name'])
+        model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.MODEL_ARGS['encoder_model_name'])
     ):
         """
         finetune_sent: finetunes the sentence transformer - saves new model, a csv file of old/new cos sim scores,
@@ -181,7 +181,7 @@ class Pipeline:
             data_parent = 'gamechangerml/data/training/sent_transformer'
             data_path = os.path.join(get_most_recent_dir(data_parent), 'training_data.json')
         finetuner = STFinetuner(
-            model=model, model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.MODEL_ARGS['finetune']
+            model=model, model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE
             )
         return finetuner.retrain(data_path)
     
