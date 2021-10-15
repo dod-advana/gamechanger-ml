@@ -7,7 +7,7 @@ import os
 
 ROOT_PATH = Path(os.path.dirname(os.path.abspath(__file__))).resolve()
 REQUIREMENTS_PATH = Path(ROOT_PATH, "requirements.txt")
-DEV_REQUIREMENTS_PATH = Path(ROOT_PATH, "dev-requirements.txt")
+DEV_REQUIREMENTS_PATH = Path(ROOT_PATH, "k8s.requirements.txt")
 README_PATH = Path(ROOT_PATH, "README.md")
 
 
