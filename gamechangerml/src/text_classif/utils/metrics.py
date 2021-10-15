@@ -14,8 +14,8 @@ def logit_score(logits):
     return score.tolist()
 
 
-def auc_val(y_true, y_logits):
-    auc = metrics.roc_auc_score(y_true, y_logits)
+def auc_val(y_true, y_logits, binary_classif=True):
+    auc = metrics.roc_auc_score(y_true, y_logits, multi_class="raise" if binary_classif else "ovr")
     return auc
 
 
