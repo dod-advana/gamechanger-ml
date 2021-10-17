@@ -12,7 +12,7 @@ Automat==20.2.0
 azure-core==1.8.2
 azure-storage-blob==12.5.0
 beautifulsoup4==4.9.1
-bert-extractive-summarizer==0.5.1
+#bert-extractive-summarizer==0.5.1
 blis==0.4.1
 boto==2.49.0
 boto3==1.13.2
@@ -58,8 +58,8 @@ entrypoints==0.3
 etelemetry==0.2.1
 faiss-cpu==1.6.3
 #faiss-gpu==1.6.3
-farm==0.6.2
-farm-haystack==0.7.0
+#farm==0.6.2
+#farm-haystack==0.7.0
 fastapi==0.61.1
 fastapi-utils==0.2.1
 fasteners==0.16
@@ -131,7 +131,7 @@ numpy==1.19.5
 oauthlib==3.1.0
 ocrmypdf==11.3.2
 opt-einsum==3.3.0
-packaging==20.4
+packaging>=20.4
 pandas==1.0.4
 pansi==2020.7.3
 parsel==1.6.0
@@ -192,7 +192,8 @@ scikit-learn==0.23.1
 scipy==1.4.1
 Scrapy==2.1.0
 selenium==3.141.0
-sentence-transformers==0.4.1.2
+sentence-transformers==2.0.0
+#0.4.1.2
 sentencepiece==0.1.94
 seqeval==1.2.2
 service-identity==18.1.0
@@ -222,7 +223,7 @@ textblob==0.15.3
 thinc==8.0.4
 threadpoolctl==2.1.0
 tika==1.24
-tokenizers==0.9.4
+tokenizers>=0.9.4
 toml==0.10.2
 toolz==0.10.0
 torch==1.7.1
@@ -230,7 +231,7 @@ torchvision==0.8.2
 tox==3.20.1
 tqdm==4.46.1
 traits==6.1.0
-transformers==4.1.1
+transformers>=4.1.1
 Twisted==20.3.0
 txtai==2.0.0
 typed-ast==1.4.1

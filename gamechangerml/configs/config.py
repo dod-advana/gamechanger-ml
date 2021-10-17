@@ -81,7 +81,7 @@ class EmbedderConfig:
         "n_returns": 5,
     }
     FINETUNE = {"shuffle": True, "batch_size": 16,
-                "epochs": 1, "warmup_steps": 100}
+                "epochs": 10, "warmup_steps": 100}
 
 
 class SimilarityConfig:

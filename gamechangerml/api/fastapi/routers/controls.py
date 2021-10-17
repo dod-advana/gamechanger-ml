@@ -2,7 +2,7 @@ from fastapi import APIRouter, Response, status
 import subprocess
 import os
 import json
-from datetime import datetime
+from datetime import datetime, date
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
@@ -13,6 +13,10 @@ from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.src.utilities.test_utils import collect_evals
+
+from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
+from gamechangerml.configs.config import EmbedderConfig
+from gamechangerml.src.utilities.test_utils import get_most_recent_dir
 
 router = APIRouter()
 MODELS = ModelLoader()
@@ -92,7 +96,7 @@ def get_downloaded_models_list():
                     sent_index_list[f] = json.load(meta_file)
                     sent_index_list[f]["evaluation"] = {}
                     sent_index_list[f]["evaluation"] = collect_evals(os.path.join(
-                        LOCAL_TRANSFORMERS_DIR.value, f))
+                        Config.LOCAL_PACKAGED_MODELS_DIR, f))
                     meta_file.close()
     except Exception as e:
         logger.error(e)
@@ -260,6 +264,21 @@ async def download_corpus(corpus_dict: dict, response: Response):
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return await get_process_status()
 
+@router.post("/quickFinetuneST", status_code=200)
+async def finetune_ST(response: Response):
+    '''Finetune the model with the latest saved configs'''
+    try:
+        logger.info("Starting to finetune the sentence transformer model")
+        model_load_path = "gamechangerml/models/transformers/msmarco-distilbert-base-v2"
+        model_save_path = model_load_path + '_' + str(date.today())
+        data_parent = 'gamechangerml/data/training/sent_transformer'
+        data_path = os.path.join(get_most_recent_dir(data_parent), 'training_data.json')
+        finetuner = STFinetuner(
+            model=None, model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE
+            )
+        return finetuner.retrain(data_path)
+    except:
+        logger.info("Could not quick finetune the sentence transformer")
 
 @router.post("/trainModel", status_code=200)
 async def train_model(model_dict: dict, response: Response):
@@ -272,6 +291,15 @@ async def train_model(model_dict: dict, response: Response):
     """
     try:
         # Methods for all the different models we can train
+        def finetune_sentence(model_dict = model_dict):
+            logger.info("Attempting to finetune the sentence transformer")
+            pipeline = Pipeline()
+            args = {
+                "data_path": model_dict["data_path"],
+                "model_load_path": model_dict["model_load_path"]
+            }
+            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
+
         def train_sentence(model_dict = model_dict):
             logger.info("Attempting to start sentence pipeline")
             pipeline = Pipeline()
@@ -301,7 +329,8 @@ async def train_model(model_dict: dict, response: Response):
         # Create a mapping between the training methods and input from the api
         training_switch ={
             "sentence":train_sentence,
-            "qexp":train_qexp
+            "qexp":train_qexp,
+            "sent_finetune": finetune_sentence
         }
         # Set the training method to be loaded onto the thread
         traing_method = training_switch["sentence"]

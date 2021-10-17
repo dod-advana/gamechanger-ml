@@ -61,14 +61,10 @@ def format_inputs(train, test):
 
 class STFinetuner():
 
-    def __init__(self, model, model_load_path, model_save_path, shuffle, batch_size, epochs, warmup_steps):
+    def __init__(self, model_load_path, model_save_path, shuffle, batch_size, epochs, warmup_steps):
 
         fix_model_config(model_load_path)
-        if model:
-            self.model = model
-        else:
-            self.model = SentenceTransformer(model_load_path)
-
+        self.model = SentenceTransformer(model_load_path)
         self.model_save_path = model_save_path
         self.shuffle = shuffle
         self.batch_size = batch_size

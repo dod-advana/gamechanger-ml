@@ -165,7 +165,6 @@ class Pipeline:
     def finetune_sent(
         self,
         data_path=None,
-        model=None,
         model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.MODEL_ARGS['encoder_model_name'])
     ):
         """
@@ -177,12 +176,15 @@ class Pipeline:
             metadata: meta information on finetuning
         """
         model_save_path = model_load_path + '_' + str(date.today())
+        logger.info(f"Setting {str(model_save_path)} as save path for new model")
         if not data_path: # if no path to data, get most recent one
             data_parent = 'gamechangerml/data/training/sent_transformer'
             data_path = os.path.join(get_most_recent_dir(data_parent), 'training_data.json')
+        logger.info(f"Loading in domain data to finetune from {data_path}")
         finetuner = STFinetuner(
-            model=model, model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE
+            model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE
             )
+        logger.info("Loaded finetuner class...")
         return finetuner.retrain(data_path)
     
     def create_qexp(
@@ -394,6 +396,12 @@ class Pipeline:
         Returns:
         """
         try:
+            import mlflow
+            from mlflow.tracking import MlflowClient
+        except Exception as e:
+            logger.warning(e)
+            logger.warning("MLFLOW may not be installed")
+        try:
             mlflow.create_experiment(str(date.today()))
         except Exception as e:
             logger.warning(e)
@@ -401,7 +409,7 @@ class Pipeline:
         try:
             with mlflow.start_run(run_name=run_name) as run:
                 if build_type == "sent_finetune": 
-                    metadata = self.finetune_sent(**params)
+                    metadata, evals = self.finetune_sent(**params), {}
                 elif build_type == "sentence":
                     metadata, evals = self.create_embedding(**params)
                 elif build_type == "qexp":
@@ -416,10 +424,14 @@ class Pipeline:
             logger.warning(e)
             logger.warning(f"Trying without MLFlow")
             try:
-                if build_type == "sentence":
+                if build_type == "sent_finetune": 
+                    metadata, evals = self.finetune_sent(**params), {}
+                elif build_type == "sentence":
                     metadata, evals = self.create_embedding(**params)
                 elif build_type == "qexp":
                     metadata, evals = self.create_qexp(**params)
+                else:
+                    logger.info(f"Started pipeline with unknown build_type: {build_type}")
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
                 processmanager.update_status(

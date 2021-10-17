@@ -13,7 +13,7 @@ BASE_MODEL_NAME = EmbedderConfig.MODEL_ARGS['encoder_model_name']
 
 def main(data_path, model_load_path, model_save_path):
 
-    tuner = STFinetuner(model=None, model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE)
+    tuner = STFinetuner(model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE)
     return tuner.retrain(data_path)
 
 if __name__ == "__main__":
