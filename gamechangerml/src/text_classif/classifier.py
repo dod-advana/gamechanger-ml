@@ -468,7 +468,12 @@ class Classifier(object):
         if self.cfg.num_labels>2:
             softmax_layer = torch.nn.Softmax(dim=1)
             predicted_probas = softmax_layer(torch.Tensor(np.concatenate(logits_list)))
-            auc_val = clf_metrics.auc_val(self.true_val, predicted_probas, binary_classif=False)
+            try:
+                auc_val = clf_metrics.auc_val(self.true_val, predicted_probas, binary_classif=False)
+            except Exception as e:
+                logger.warning(f"Unable to calcuate AUC for multiclass example, setting AUC to 0, due to following "
+                               f"exception: {e}")
+                auc_val=0.0
         else:
             auc_val = clf_metrics.auc_val(self.true_val, self.predicted_val, binary_classif=True)
 
