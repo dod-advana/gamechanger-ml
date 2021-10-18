@@ -76,11 +76,10 @@ RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     } \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}"
 
-COPY . "${APP_DIR}"
-RUN chown -R $APP_UID:$APP_GID "${APP_DIR}"
-
-USER $APP_UID:$APP_GID
 # thou shall not root
+USER $APP_UID:$APP_GID
+
+COPY --chown="${APP_UID}:${APP_GID}" ./ "${APP_DIR}"
 
 ENV MLAPP_VENV_DIR="${APP_VENV}"
 WORKDIR "$APP_DIR"
