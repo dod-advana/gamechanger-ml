@@ -332,7 +332,7 @@ class Pipeline:
             return_id = EmbedderConfig.MODEL_ARGS["return_id"]
             verbose = EmbedderConfig.MODEL_ARGS["verbose"]
             encoder = SentenceEncoder(encoder_model_name=encoder_model, overwrite=overwrite, min_token_len=min_token_len, verbose=verbose, return_id=return_id, sent_index=local_sent_index_dir, use_gpu=use_gpu)
-            logger.info("Creating Document Embeddings...")
+            logger.info(f"Creating Document Embeddings with {encoder_model}")
             encoder.index_documents(corpus)
             logger.info("-------------- Indexing Documents--------------")
             user = get_user(logger)
