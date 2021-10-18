@@ -245,7 +245,7 @@ class Pipeline:
         self,
         corpus,
         existing_embeds=None,
-        encoder_model="msmarco-distilbert-base-v2",
+        encoder_model="msmarco-distilbert-base-v2_2021-10-17",
         gpu=True,
         upload=False,
         version="v4",
