@@ -28,7 +28,7 @@ class D2VConfig:
         "epochs": 20,
         "alpha": 0.020,
         "min_alpha": 0.005,
-        # 'workers': multiprocessing.cpu_count() // 2 # to allow some portion of the cores to perform generator tasks
+        # "workers": multiprocessing.cpu_count() // 2 # to allow some portion of the cores to perform generator tasks
     }
 
 
@@ -44,7 +44,7 @@ class BertSummConfig:
             "custom_tokenizer": None,
             # Needs to be negative, but allows you to pick which layer you want the embeddings to come from.
             "hidden": -2,
-            # It can be 'mean', 'median', or 'max'. This reduces the embedding layer for pooling.
+            # It can be "mean", "median", or "max". This reduces the embedding layer for pooling.
             "reduce_option": "mean",
         },
         "fit": {
@@ -63,10 +63,10 @@ class BertSummConfig:
 class QAConfig:
     MODEL_ARGS = {
         "model_name": "bert-base-cased-squad2",
-        # options are: ['scored_answer', 'simple_answer']
+        # options are: ["scored_answer", "simple_answer"]
         "qa_type": "scored_answer",
         "nbest": 1,  # number of answers to retrieve from each context for comparison
-        # if diff between the answer score and null answer score is greater than this threshold, don't return answer
+        # if diff between the answer score and null answer score is greater than this threshold, don"t return answer
         "null_threshold": -3,
     }
 
@@ -131,9 +131,9 @@ class ValidationConfig:
         "matamo_dir": "gamechangerml/data/validation/matamo",
         "search_hist_dir": "gamechangerml/data/validation/search_history",
         "qe_gc": "QE_domain.json",
-        "start_date": '2020-12-01', # earliest date to include search hist/feedback data from
-        "end_date": '2025-12-01', # last date to include search hist/feedback data from
-        "exclude_searches": ['pizza', 'shark'],
+        "start_date": "2020-12-01", # earliest date to include search hist/feedback data from
+        "end_date": "2025-12-01", # last date to include search hist/feedback data from
+        "exclude_searches": ["pizza", "shark"],
         "gold_level": {
             "min_correct_matches": 3,
             "max_results": 7

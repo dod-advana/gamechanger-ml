@@ -165,7 +165,7 @@ class Pipeline:
     def finetune_sent(
         self,
         data_path=None,
-        model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.MODEL_ARGS['encoder_model_name'])
+        model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.MODEL_ARGS["encoder_model_name"])
     ):
         """
         finetune_sent: finetunes the sentence transformer - saves new model, a csv file of old/new cos sim scores,
@@ -175,10 +175,10 @@ class Pipeline:
         Returns:
             metadata: meta information on finetuning
         """
-        model_save_path = model_load_path + '_' + str(date.today())
+        model_save_path = model_load_path + "_" + str(date.today())
         logger.info(f"Setting {str(model_save_path)} as save path for new model")
         if not data_path: # if no path to data, get most recent one
-            data_path = get_most_recent_dir('gamechangerml/data/training/sent_transformer')
+            data_path = get_most_recent_dir("gamechangerml/data/training/sent_transformer")
         logger.info(f"Loading in domain data to finetune from {data_path}")
         finetuner = STFinetuner(
             model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE
@@ -218,7 +218,7 @@ class Pipeline:
         try:
             # build ANN indices
             index_dir = os.path.join(model_dest, model_path)
-            bqe.main(corpus, index_dir, **QexpConfig.MODEL_ARGS['bqe'])
+            bqe.main(corpus, index_dir, **QexpConfig.MODEL_ARGS["bqe"])
             logger.info(
                 "-------------- Model Training Complete --------------")
             # Create .tgz file

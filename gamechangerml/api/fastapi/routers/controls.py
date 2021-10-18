@@ -264,22 +264,6 @@ async def download_corpus(corpus_dict: dict, response: Response):
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return await get_process_status()
 
-@router.post("/quickFinetuneST", status_code=200)
-async def finetune_ST(response: Response):
-    '''Finetune the model with the latest saved configs'''
-    try:
-        logger.info("Starting to finetune the sentence transformer model")
-        model_load_path = "gamechangerml/models/transformers/msmarco-distilbert-base-v2"
-        model_save_path = model_load_path + '_' + str(date.today())
-        data_parent = 'gamechangerml/data/training/sent_transformer'
-        data_path = os.path.join(get_most_recent_dir(data_parent), 'training_data.json')
-        finetuner = STFinetuner(
-            model=None, model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE
-            )
-        return finetuner.retrain(data_path)
-    except:
-        logger.info("Could not quick finetune the sentence transformer")
-
 @router.post("/trainModel", status_code=200)
 async def train_model(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
