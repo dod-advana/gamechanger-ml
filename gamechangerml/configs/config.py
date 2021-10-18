@@ -80,8 +80,8 @@ class EmbedderConfig:
         "return_id": True,  # for creating LocalCorpus
         "n_returns": 5,
     }
-    FINETUNE = {"shuffle": True, "batch_size": 16,
-                "epochs": 10, "warmup_steps": 100}
+    FINETUNE = {"shuffle": True, "batch_size": 32,
+                "epochs": 3, "warmup_steps": 100}
 
 
 class SimilarityConfig:

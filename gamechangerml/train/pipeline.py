@@ -277,7 +277,7 @@ class Pipeline:
         self,
         corpus,
         existing_embeds=None,
-        encoder_model="msmarco-distilbert-base-v2",
+        encoder_model="msmarco-distilbert-base-v2_2021-10-17",
         gpu=True,
         upload=False,
         version="v4",
@@ -394,12 +394,6 @@ class Pipeline:
         Args:
         Returns:
         """
-        try:
-            import mlflow
-            from mlflow.tracking import MlflowClient
-        except Exception as e:
-            logger.warning(e)
-            logger.warning("MLFLOW may not be installed")
         try:
             mlflow.create_experiment(str(date.today()))
         except Exception as e:
