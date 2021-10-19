@@ -223,7 +223,7 @@ textblob==0.15.3
 thinc==8.0.4
 threadpoolctl==2.1.0
 tika==1.24
-tokenizerss==0.10.3
+tokenizers==0.10.3
 toml==0.10.2
 toolz==0.10.0
 torch==1.7.1
