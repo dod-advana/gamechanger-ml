@@ -131,7 +131,7 @@ numpy==1.19.5
 oauthlib==3.1.0
 ocrmypdf==11.3.2
 opt-einsum==3.3.0
-packaging>=20.4
+packaging==21.0
 pandas==1.0.4
 pansi==2020.7.3
 parsel==1.6.0
@@ -223,7 +223,7 @@ textblob==0.15.3
 thinc==8.0.4
 threadpoolctl==2.1.0
 tika==1.24
-tokenizers>=0.9.4
+tokenizerss==0.10.3
 toml==0.10.2
 toolz==0.10.0
 torch==1.7.1
@@ -231,7 +231,7 @@ torchvision==0.8.2
 tox==3.20.1
 tqdm==4.46.1
 traits==6.1.0
-transformers>=4.1.1
+transformers==4.11.3
 Twisted==20.3.0
 txtai==2.0.0
 typed-ast==1.4.1
