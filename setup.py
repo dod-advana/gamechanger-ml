@@ -42,7 +42,7 @@ def parse_readme(readme: Path) -> str:
 
 setuptools.setup(
     name="gamechangerml",
-    version="0.2.0",
+    version="1.0.0",
     author="Booz Allen Hamilton",
     author_email="ha_robert@example.com",
     description="Package for GAMECHANGER ML modules",
@@ -55,7 +55,7 @@ setuptools.setup(
         "License :: ",
         "Operating System :: OS Independent",
     ],
-    python_requires="==3.6.*",
+    python_requires=">=3.6.*",
     install_requires=parse_requirements(REQUIREMENTS_PATH),
     include_package_data=True,
     extras_require={"dev": parse_requirements(DEV_REQUIREMENTS_PATH)},
