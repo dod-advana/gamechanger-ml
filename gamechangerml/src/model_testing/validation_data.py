@@ -8,7 +8,6 @@ from gamechangerml.src.utilities.es_search_utils import get_paragraph_results, c
 from gamechangerml.src.utilities.test_utils import filter_date_range
 
 ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
-NEW_EVAL_DATA = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS['validation_dir'], 'sent_transformer'))
 
 class ValidationData():
 
@@ -166,18 +165,21 @@ class UpdatedGCRetrieverData(RetrieverGSData):
     def __init__(self, 
         available_ids, 
         validation_dir=ValidationConfig.DATA_ARGS['validation_dir'],
-        gold_standard=ValidationConfig.DATA_ARGS['retriever_gc']['gold_standard'],
-        new_data_path=NEW_EVAL_DATA,
-        new_data_level='gold'):
+        gold_standard=ValidationConfig.DATA_ARGS['retriever_gc']['gold_standard']
+        ):
 
         super().__init__(validation_dir, available_ids, gold_standard)
-        self.new_data_path = os.path.join(new_data_path, new_data_level)
-        self.new_queries, self.new_collection, self.new_relations = self.load_new_data()
-        self.combine_in_domain()
+        try:
+            new_data = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS['validation_dir'], 'sent_transformer'))
+            self.data_path = os.path.join(new_data, 'gold')
+            self.new_queries, self.new_collection, self.new_relations = self.load_new_data()
+            self.combine_in_domain()
+        except:
+            logger.info(f"Error getting data from {new_data}. Could not create UpdatedGCRetrieverData object.")
 
     def load_new_data(self):
 
-        f = open_json('intelligent_search_data.json', self.new_data_path)
+        f = open_json('intelligent_search_data.json', self.data_path)
         intel = json.loads(f)
         logger.info(f"Added {str(len(intel['correct']))} correct query/sent pairs from updated GC retriever data.")
         return intel['queries'], intel['collection'], intel['correct']
