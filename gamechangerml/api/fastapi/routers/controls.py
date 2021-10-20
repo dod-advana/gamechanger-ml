@@ -297,7 +297,7 @@ async def train_model(model_dict: dict, response: Response):
                 "upload": bool(model_dict["upload"]),
                 "version": model_dict["version"],
             }
-            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
+            pipeline.run(build_type = "sentence", run_name = datetime.now().strftime("%Y%m%d"), params = args)
 
         def train_qexp(model_dict = model_dict):
             logger.info("Attempting to start qexp pipeline")
