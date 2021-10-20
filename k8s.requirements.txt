@@ -1,8 +1,7 @@
 annoy~=1.17.0
 bert-extractive-summarizer~=0.5.2
-boto3~=1.16.63
-botocore~=1.19.63
-elasticsearch==7.9.1
+boto3~=1.15.18
+elasticsearch==7.13.4
 en-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.0.0/en_core_web_lg-3.0.0.tar.gz
 en-core-web-md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.0.0/en_core_web_md-3.0.0.tar.gz
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0.tar.gz
@@ -24,7 +23,7 @@ psycopg2~=2.8.6
 pytest~=6.2.5
 PyYAML~=5.4.1
 redis~=3.5.3
-requests~=2.18.4
+requests~=2.26.0
 scikit-learn~=0.24.2
 sentence-transformers~=2.0.0
 spacy~=3.0.7
