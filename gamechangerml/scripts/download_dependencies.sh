@@ -26,6 +26,7 @@ aws s3 cp "$S3_TOPICS_PATH" $PWD/gamechangerml/models/topic_models/
 echo "Uncompressing all tar files in models"
 for f in ./gamechangerml/models/*.tar.gz; do
   tar kxvfz "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C ./gamechangerml/models/;
+done 
 
 echo "Uncompressing all tar files in data"
 for f in ./gamechangerml/data/*.tar.gz; do
