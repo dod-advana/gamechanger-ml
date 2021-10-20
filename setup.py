@@ -55,7 +55,7 @@ setuptools.setup(
         "License :: ",
         "Operating System :: OS Independent",
     ],
-    python_requires="~=3.6.*,<3.9.*",
+    python_requires=">=3.6.*,<3.9.*",
     install_requires=parse_requirements(REQUIREMENTS_PATH),
     include_package_data=True,
     extras_require={"dev": parse_requirements(DEV_REQUIREMENTS_PATH)},
