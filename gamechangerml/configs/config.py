@@ -78,7 +78,7 @@ class EmbedderConfig:
         "overwrite": False,
         "verbose": True,  # for creating LocalCorpus
         "return_id": True,  # for creating LocalCorpus
-        "n_returns": 5,
+        "n_returns": 5, #this will be unused after this point, but the model default will be 5
     }
     FINETUNE = {"shuffle": True, "batch_size": 32,
                 "epochs": 3, "warmup_steps": 100}
