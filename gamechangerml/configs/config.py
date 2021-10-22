@@ -85,7 +85,7 @@ class EmbedderConfig:
 
 
 class SimilarityConfig:
-    MODEL_ARGS = {"sim_model_name": "distilbart-mnli-12-3"}  # SOURCE
+    MODEL_ARGS = {"model_name": "distilbart-mnli-12-3"}  # SOURCE
 
 
 class QexpConfig:
