@@ -220,21 +220,13 @@ class SentenceSearcher(object):
     def __init__(
         self,
         sim_model_name,
-        encoder_model_name,
         n_returns=5,
-        encoder = None,
         sim_model = None,
         index_path=SENT_INDEX_PATH,
         transformers_path=LOCAL_TRANSFORMERS_DIR
     ):
 
         self.embedder = Embeddings()
-        if encoder:
-            self.encoder_model = encoder
-        else:
-            self.encoder_model = os.path.join(
-            transformers_path, encoder_model_name
-        )
         self.embedder.load(index_path)
         # replace this with looking up ES
         self.data = pd.read_csv(
