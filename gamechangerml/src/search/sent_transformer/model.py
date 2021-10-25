@@ -220,7 +220,6 @@ class SentenceSearcher(object):
     def __init__(
         self,
         sim_model_name,
-        n_returns=5,
         sim_model = None,
         index_path=SENT_INDEX_PATH,
         transformers_path=LOCAL_TRANSFORMERS_DIR
@@ -232,7 +231,6 @@ class SentenceSearcher(object):
         self.data = pd.read_csv(
             os.path.join(index_path, "data.csv"), dtype={"paragraph_id": str}
         )
-        self.n_returns = n_returns
         if sim_model:
             self.similarity = sim_model
         else:
@@ -253,7 +251,7 @@ class SentenceSearcher(object):
 
         return doc_texts, doc_ids, doc_scores
 
-    def search(self, query, num_results):
+    def search(self, query, num_results=5):
         """
         Search the index and perform a similarity scoring reranker at
         the topn returned documents

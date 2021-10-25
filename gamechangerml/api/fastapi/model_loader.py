@@ -157,7 +157,6 @@ class ModelLoader:
 
             ModelLoader.__sentence_searcher = SentenceSearcher(
                 sim_model_name=SimilarityConfig.BASE_MODEL,
-                n_returns=EmbedderConfig.MODEL_ARGS["n_returns"],
                 index_path=index_path,
                 transformers_path=transformers_path,
             )

@@ -18,7 +18,7 @@ from gamechangerml.api.utils.logger import logger
 import signal
 import torch
 
-retriever_k = EmbedderConfig.MODEL_ARGS['n_returns'] # k
+retriever_k = 5
 
 init_timer()
 model_path_dict = get_model_paths()
