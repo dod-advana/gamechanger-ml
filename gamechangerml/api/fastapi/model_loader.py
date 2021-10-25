@@ -152,7 +152,7 @@ class ModelLoader:
                 sent_index=index_path,
                 **EmbedderConfig.MODEL_ARGS
             )
-            encoder_model = ModelLoader.__sentence_searcher.encoder_model
+            encoder_model = ModelLoader.__sentence_encoder.encoder_model
             logger.info(f"Loading encoder model from {encoder_model}")
 
             ModelLoader.__sentence_searcher = SentenceSearcher(
