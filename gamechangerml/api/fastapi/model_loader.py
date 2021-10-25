@@ -7,7 +7,7 @@ from gamechangerml.configs.config import (
     QexpConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
-from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
+from gamechangerml.src.search.sent_transformer.model import SentenceSearcher, SentenceEncoder
 from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.src.featurization.word_sim import WordSim
@@ -50,13 +50,21 @@ class ModelLoader:
             ModelLoader.initWordSim()
         return ModelLoader.__word_sim
 
-    def getSentence_trans(self):
-        if ModelLoader.__sentence_trans == None:
+    def getSentence_searcher(self):
+        if ModelLoader.__sentence_searcher == None:
             logger.warning(
-                "sentence_trans was not set and was attempted to be used. Running init"
+                "sentence_searcher was not set and was attempted to be used. Running init"
             )
             ModelLoader.initSentence()
-        return ModelLoader.__sentence_trans
+        return ModelLoader.__sentence_searcher
+
+    def getSentence_encoder(self):
+        if ModelLoader.__sentence_encoder == None:
+            logger.warning(
+                "sentence_encoder was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initSentence()
+        return ModelLoader.__sentence_encoder
 
     def getSparse(self):
         return ModelLoader.__sparse_reader
@@ -69,7 +77,8 @@ class ModelLoader:
     qa_model = property(getQA, set_error)
     query_expander = property(getQE, set_error)
     sparse_reader = property(getSparse, set_error)
-    sentence_trans = property(getSentence_trans, set_error)
+    sentence_searcher = property(getSentence_searcher, set_error)
+    sentence_encoder = property(getSentence_encoder, set_error)
     word_sim = property(getWordSim, set_error)
 
     @staticmethod
@@ -138,17 +147,25 @@ class ModelLoader:
 
         logger.info(f"Loading Sentence Index from {index_path}")
         try:
-            ModelLoader.__sentence_trans = SentenceSearcher(
+            ModelLoader.__sentence_encoder = SentenceEncoder(
+                encoder_model_name=EmbedderConfig.BASE_MODEL, 
+                sent_index=index_path,
+                **EmbedderConfig.MODEL_ARGS
+            )
+            encoder_model = ModelLoader.__sentence_searcher.encoder_model
+            logger.info(f"Loading encoder model from {encoder_model}")
+
+            ModelLoader.__sentence_searcher = SentenceSearcher(
                 sim_model_name=SimilarityConfig.BASE_MODEL,
                 n_returns=EmbedderConfig.MODEL_ARGS["n_returns"],
                 index_path=index_path,
                 transformers_path=transformers_path,
             )
-            encoder_model = ModelLoader.__sentence_trans.encoder_model
-            logger.info(f"Using {encoder_model} for sentence transformer")
-            sim_model = ModelLoader.__sentence_trans.similarity
+
+            sim_model = ModelLoader.__sentence_searcher.similarity
             logger.info(
-                f"Loading Sentence Transformer from {sim_model.sim_model}")
+                f"Loading similarity model from {sim_model.sim_model}")
+           
             # set cache variable defined in settings.py
             latest_intel_model_sent.value = {
                 "encoder": encoder_model,
@@ -156,7 +173,7 @@ class ModelLoader:
             }
             logger.info("** Loaded Sentence Transformers")
         except Exception as e:
-            logger.warning("** Could not load Sentence Transformer model")
+            logger.warning("** Could not load Sentence Transformer models")
             logger.warning(e)
 
     @staticmethod
