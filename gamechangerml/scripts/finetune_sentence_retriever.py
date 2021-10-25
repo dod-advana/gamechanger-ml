@@ -9,7 +9,7 @@ from datetime import date
 model_path_dict = get_model_paths()
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-BASE_MODEL_NAME = EmbedderConfig.MODEL_ARGS['encoder_model_name']
+BASE_MODEL_NAME = EmbedderConfig.BASE_MODEL
 
 def main(data_path, model_load_path, model_save_path):
 

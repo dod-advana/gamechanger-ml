@@ -72,6 +72,11 @@ def open_txt(filepath):
     with open(filepath, "r") as fp:
         return fp.readlines()
 
+def get_index_size(sent_index_path):
+    '''Checks the size of a sentence index by # of doc ids.'''
+    doc_ids = open_txt(os.path.join(sent_index_path, 'doc_ids.txt'))
+    return len(doc_ids)
+
 def timestamp_filename(filename, extension):
     '''Makes a filename that include a %Y-%m-%d timestamp'''
     today = date.today()

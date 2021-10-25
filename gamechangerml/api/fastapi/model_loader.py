@@ -140,7 +140,6 @@ class ModelLoader:
         try:
             ModelLoader.__sentence_trans = SentenceSearcher(
                 sim_model_name=SimilarityConfig.BASE_MODEL,
-                encoder_model_name=EmbedderConfig.BASE_MODEL,
                 n_returns=EmbedderConfig.MODEL_ARGS["n_returns"],
                 index_path=index_path,
                 transformers_path=transformers_path,
