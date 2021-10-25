@@ -171,7 +171,7 @@ class UpdatedGCRetrieverData(RetrieverGSData):
         super().__init__(validation_dir, available_ids, gold_standard)
         try:
             new_data = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS['validation_dir'], 'sent_transformer'))
-            self.data_path = os.path.join(new_data, 'gold')
+            self.data_path = os.path.join(new_data, 'silver')
             self.new_queries, self.new_collection, self.new_relations = self.load_new_data()
             self.combine_in_domain()
         except:

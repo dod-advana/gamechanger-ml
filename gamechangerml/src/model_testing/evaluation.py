@@ -270,54 +270,51 @@ class RetrieverEvaluator(TransformerEvaluator):
             csvwriter.writerow(columns) 
 
             ## collect metrics for each query made + results generated
-            query_count = 0
-            tp = 0
-            tn = 0
-            fp = 0
-            fn = 0
-            total_expected = 0
+            query_count = tp = tn = fp = fn = total_expected = 0
             for idx, query in data.queries.items(): 
-                logger.info("Q-{}: {}".format(query_count, query))
-                doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query) ## returns results ordered highest - lowest score
+                logger.info("\n\nQ-{}: {}".format(query_count, query))
+                doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query, num_results=k) ## returns results ordered highest - lowest score
                 if index != 'msmarco_index':
                     doc_ids = ['.'.join(i.split('.')[:-1]) for i in doc_ids]
+                logger.info(f"retrieved: {str(doc_texts)}, {str(doc_ids)}, {str(doc_scores)}")
                 expected_ids = data.relations[idx] # collect the expected results (ground truth)
                 if type(expected_ids) == str:
                     expected_ids = [expected_ids]
-
-                total_expected += min(len(expected_ids), k) # if we have more than k expected, set this to k
+                expected_docs = [data.collection[x] for x in expected_ids]
+                expected_docs = list(set([i.split('.pdf')[0] for i in expected_docs]))
+                logger.info(f"expected: {str(expected_docs)}")
+                total_expected += min(len(expected_docs), k) # if we have more than k expected, set this to k
                 ## collect ordered metrics
-                recip_rank = reciprocal_rank(doc_ids, expected_ids)
-                avg_p = average_precision(doc_ids, expected_ids)
+                recip_rank = reciprocal_rank(doc_ids, expected_docs)
+                avg_p = average_precision(doc_ids, expected_docs)
                 
                 ## collect non-ordered metrics
                 hits = []
-                true_pos = 0
-                false_pos = 0 # no negative samples to test against
-                for eid in doc_ids:
+                true_pos = false_pos = 0 # no negative samples to test against
+                for eid in set(doc_ids):
                     hit = {}
-                    if eid in expected_ids: ## we have a hit
+                    if eid in expected_docs: ## we have a hit
                         rank = doc_ids.index(eid)
                         hit['rank'] = rank
-                        hit['matching_text'] = data.collection[eid]
+                        hit['match'] = eid
                         hit['score'] = doc_scores[rank]
                         hits.append(hit)
                         true_pos += 1
                 if len(doc_ids) < k: # if there are not k predictions, there are pred negatives
                     remainder = k - len(doc_ids)
-                    false_neg = min(len([i for i in expected_ids if i not in doc_ids], remainder))
-                    true_neg = min((k - len(expected_ids)), (k - len(doc_ids)))
+                    false_neg = min(len([i for i in expected_docs if i not in doc_ids], remainder))
+                    true_neg = min((k - len(expected_docs)), (k - len(doc_ids)))
                 else: # if there are k predictions, there are no predicted negatives
                     false_neg = true_neg = 0
                 fn += false_neg
                 tn += true_neg
                 tp += true_pos
-                
+                logger.info(f"Metrics: fn: {str(fn)}, tn: {str(tn)}, tp: {str(tp)}")
                 ## save metrics to csv
                 row = [[
                     str(query_count),
                     str(query),
-                    str(expected_ids),
+                    str(expected_docs),
                     str(hits),
                     str(true_pos),
                     str(false_pos),
@@ -348,6 +345,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             "user": user,
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": model_name,
+            "index": index,
             "validation_data": data_name,
             "query_count": num_queries,
             "k": k,
@@ -396,7 +394,7 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
         if retriever:
             self.retriever = retriever
         else:
-            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, encoder_model_name=encoder_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
+            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
         self.eval_path = check_directory(os.path.join(self.model_path, 'evals_msmarco'))
         logger.info("Evals path: {}".format(self.eval_path))
         self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path, model_name=encoder_model_name)
@@ -440,7 +438,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         if retriever:
             self.retriever=retriever
         else:
-            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, encoder_model_name=encoder_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
+            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
         self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
         self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path, model_name=encoder_model_name)
 

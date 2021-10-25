@@ -12,7 +12,7 @@ from gamechangerml.scripts.finetune_sentence_retriever import STFinetuner
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
-from gamechangerml.src.utilities.test_utils import get_user, get_most_recent_dir
+from gamechangerml.src.utilities.test_utils import get_user, get_most_recent_dir, get_index_size
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.pathselect import get_model_paths
@@ -165,7 +165,7 @@ class Pipeline:
     def finetune_sent(
         self,
         data_path=None,
-        model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.MODEL_ARGS["encoder_model_name"])
+        model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL)
     ):
         """
         finetune_sent: finetunes the sentence transformer - saves new model, a csv file of old/new cos sim scores,
@@ -326,21 +326,35 @@ class Pipeline:
         if existing_embeds is not None:
             copy_tree(existing_embeds, local_sent_index_dir)
 
+        # Building the Index
         try:
-            overwrite = EmbedderConfig.MODEL_ARGS["overwrite"]
-            min_token_len = EmbedderConfig.MODEL_ARGS["min_token_len"]
-            return_id = EmbedderConfig.MODEL_ARGS["return_id"]
-            verbose = EmbedderConfig.MODEL_ARGS["verbose"]
-            encoder = SentenceEncoder(encoder_model_name=encoder_model, overwrite=overwrite, min_token_len=min_token_len, verbose=verbose, return_id=return_id, sent_index=local_sent_index_dir, use_gpu=use_gpu)
-            logger.info(f"Creating Document Embeddings with {encoder_model}")
-            encoder.index_documents(corpus)
+            encoder = SentenceEncoder(encoder_model_name=encoder_model, sent_index=local_sent_index_dir, use_gpu=use_gpu, **EmbedderConfig.MODEL_ARGS)
+            logger.info(f"Creating Document Embeddings with {encoder_model} on {corpus}")
             logger.info("-------------- Indexing Documents--------------")
+            start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            encoder.index_documents(corpus)
+            ## ADD PROGRESS BAR??
+            end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            logger.info("-------------- Completed Indexing --------------")
             user = get_user(logger)
+
+            # Checking length of IDs 
+            try:
+                SENT_INDEX_PATH = model_path_dict["sentence"]
+                old_index_len = get_index_size(SENT_INDEX_PATH)
+                new_index_len = len(encoder.embedder.config["ids"])
+                if new_index_len < old_index_len:
+                    logger.warning(f"Length of index ({str(new_index_len)}) is shorter than previous index ({str(old_index_len)})")
+                    logger.info(f"Old index location: {str(SENT_INDEX_PATH)}")
+            except Exception as e:
+                logger.warning(f"Could not compare length to old index: {str(SENT_INDEX_PATH)}")
+                logger.error(e)
 
             # Generating process metadata
             metadata = {
                 "user": user,
-                "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "date_started": start_time,
+                "date_finished": end_time,
                 "doc_id_count": len(encoder.embedder.config["ids"]),
                 "corpus_name": corpus,
                 "encoder_model": encoder_model,
@@ -358,12 +372,15 @@ class Pipeline:
                 src_dir=local_sent_index_dir, dst_archive=dst_path)
 
             logger.info(f"Created tgz file and saved to {dst_path}")
-            logger.info(
-                "-------------- Running Assessment Model Script --------------")
+            logger.info("-------------- Running Evaluation --------------")
 
-            sentev = IndomainRetrieverEvaluator(encoder=encoder, retriever=None, index=model_name, **EmbedderConfig.MODEL_ARGS, **SimilarityConfig.MODEL_ARGS)
-            evals = sentev.results
-            logger.info("evals: {}".format(str(evals)))
+            try:
+                sentev = IndomainRetrieverEvaluator(encoder=encoder, retriever=None, index=model_name, **EmbedderConfig.MODEL_ARGS, **SimilarityConfig.MODEL_ARGS)
+                evals = sentev.results
+                logger.info("evals: {}".format(str(evals)))
+            except Exception as e:
+                logger.warning("Could not create evaluations for the new sentence index")
+                logger.error(e)
             
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")

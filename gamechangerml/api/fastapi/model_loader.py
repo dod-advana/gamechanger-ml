@@ -83,6 +83,7 @@ class ModelLoader:
             ModelLoader.__qa_model = QAReader(
                 transformer_path=LOCAL_TRANSFORMERS_DIR.value,
                 use_gpu=True,
+                model_name=QAConfig.BASE_MODEL,
                 **QAConfig.MODEL_ARGS,
             )
             # set cache variable defined in settings.py
@@ -138,8 +139,8 @@ class ModelLoader:
         logger.info(f"Loading Sentence Index from {index_path}")
         try:
             ModelLoader.__sentence_trans = SentenceSearcher(
-                sim_model_name=SimilarityConfig.MODEL_ARGS["model_name"],
-                encoder_model_name=EmbedderConfig.MODEL_ARGS["encoder_model_name"],
+                sim_model_name=SimilarityConfig.BASE_MODEL,
+                encoder_model_name=EmbedderConfig.BASE_MODEL,
                 n_returns=EmbedderConfig.MODEL_ARGS["n_returns"],
                 index_path=index_path,
                 transformers_path=transformers_path,

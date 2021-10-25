@@ -15,7 +15,8 @@ from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.src.utilities.test_utils import collect_evals
 
 from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
-from gamechangerml.configs.config import EmbedderConfig
+from gamechangerml.src.model_testing.evaluation import SQuADQAEvaluator, IndomainQAEvaluator, IndomainRetrieverEvaluator, MSMarcoRetrieverEvaluator, NLIEvaluator, QexpEvaluator
+from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig
 from gamechangerml.src.utilities.test_utils import get_most_recent_dir
 
 router = APIRouter()
@@ -183,6 +184,7 @@ async def s3_func(function, response: Response):
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return models
 
+### SHOW WHAT DATA IS AVAILABLE for training/evaluating
 
 ## Post Methods ##
 
@@ -320,7 +322,6 @@ async def train_model(model_dict: dict, response: Response):
         traing_method = training_switch["sentence"]
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             traing_method = training_switch[model_dict["build_type"]]
-            
 
         training_thread = MlThread(traing_method)
         training_thread.start()   
@@ -330,3 +331,66 @@ async def train_model(model_dict: dict, response: Response):
         logger.warning(f"Could not train the model")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return await get_process_status()
+
+### NEW ENDPOINTS
+'''
+@router.post("/makeTrainingData", status_code=200)
+async def make_training_data(dict: dict, response: Response):
+
+    ## add query webapp for data
+    ## 
+
+@router.post("/evaluate", status_code=200)
+async def evaluate_ml(model_name, dataset, in_domain: bool, original: bool, response: Response):
+
+    try:
+        ## WHICH MODEL
+        if "bert-base-cased-squad2" in model_name: ## it's a QA modek
+            if in_domain:
+                logger.info(f"\nEvaluating {model_name} on GAMECHANGER validation data")
+                QADomainEval = IndomainQAEvaluator(model=None, model_name=model_name, **QAConfig.MODEL_ARGS)
+                logger.info(QADomainEval.results)
+            if original:
+                logger.info(f"\nEvaluating {model_name} on SQuAD validation data")
+                QAOrigEval = SQuADQAEvaluator(model=None, model_name=model_name, sample_limit=15000, **QAConfig.MODEL_ARGS)
+                logger.info(QAOrigEval.results)
+        elif "msmarco-distilbert-base-v2" in model_name:
+            if in_domain:
+                if dataset:
+                    data = dataset
+                else:
+                    data = get
+                logger.info(f"\nEvaluating {model_name} on latest sentence_index: {str(SENT_INDEX_PATH.value)}")
+            if original:
+                logger.info(f"\nEvaluating {model_name} on MSMARCO data")
+
+        elif 'sent_index' in model_name: ## it's a sentence index
+        
+        elif 'qexp' in model_name:
+        
+        else:
+            logger.info("There is currently no evaluation pipeline for this type of model.")
+
+        
+    except:
+        logger.warning(f"Could not evaluate {model_name}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    return await get_process_status()
+
+    ## --> if already has an eval for original data, only in-domain
+    
+    ## check-box - in-domain and original dataset  (up to 15K)
+    ## --> pick the in-domain data
+    # evaluate qa model - pick data, 
+    logger.info("\nEvaluating QA...")
+    QAEval = SQuADQAEvaluator(model=None, sample_limit=limit, **QAConfig.MODEL_ARGS)
+    logger.info(QAEval.results)
+
+    GCEval = IndomainQAEvaluator(model=None, **QAConfig.MODEL_ARGS)
+    logger.info(GCEval.results)
+
+    # evaluate sent index
+
+    # evaluate sim model
+
+'''

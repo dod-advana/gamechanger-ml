@@ -61,8 +61,9 @@ class BertSummConfig:
 
 
 class QAConfig:
+    BASE_MODEL = "bert-base-cased-squad2"
     MODEL_ARGS = {
-        "model_name": "bert-base-cased-squad2",
+        #"model_name": "bert-base-cased-squad2"
         # options are: ["scored_answer", "simple_answer"]
         "qa_type": "scored_answer",
         "nbest": 1,  # number of answers to retrieve from each context for comparison
@@ -72,8 +73,9 @@ class QAConfig:
 
 
 class EmbedderConfig:
+    BASE_MODEL = "msmarco-distilbert-base-v2"
     MODEL_ARGS = {
-        "encoder_model_name": "msmarco-distilbert-base-v2",
+        #"encoder_model_name": "msmarco-distilbert-base-v2",
         "min_token_len": 10,
         "overwrite": False,
         "verbose": True,  # for creating LocalCorpus
@@ -85,7 +87,7 @@ class EmbedderConfig:
 
 
 class SimilarityConfig:
-    MODEL_ARGS = {"model_name": "distilbart-mnli-12-3"}  # SOURCE
+    BASE_MODEL = "distilbart-mnli-12-3" 
 
 
 class QexpConfig:
