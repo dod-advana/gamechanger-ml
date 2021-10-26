@@ -133,6 +133,19 @@ class Classifier(object):
             self.config_yaml,
         )
 
+    def retrieve_model_name_path(self):
+        """
+        This function is used for supplying either the model name, or the saved model directory, when instantiating
+        *ForSequenceClassification() objects. If no load_saved_model_dir is supplied, use the OOTB model from HF, otherwise
+        load in the saved pytorch_model.bin from the load_saved_model_dir specified
+        Returns: (str) model name, or model path, for the HF model
+        """
+        if self.cfg.load_saved_model_dir:
+            model_name_or_path = self.cfg.load_saved_model_dir
+        else:
+            model_name_or_path = self.cfg.model_name
+        return model_name_or_path
+
     def train_test_ds(self, texts, labels):
         """
         Split into training and validation subsets; create `TensorDataset`s

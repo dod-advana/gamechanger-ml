@@ -15,8 +15,9 @@ class BertClassifier(Classifier):
         super(BertClassifier, self).__init__(config_yaml)
 
     def load_model_tokenizer(self):
+        model_name_or_path = self.retrieve_model_name_path()
         self.model = BertForSequenceClassification.from_pretrained(
-            self.cfg.model_name,
+            model_name_or_path,
             num_labels=self.cfg.num_labels,
             output_attentions=False,
             output_hidden_states=False,

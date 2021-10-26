@@ -22,12 +22,13 @@ class DistilBertClassifier(Classifier):
             None
 
         """
+        model_name_or_path = self.retrieve_model_name_path()
         self.model = DistilBertForSequenceClassification.from_pretrained(
-            self.cfg.model_name,
+            model_name_or_path,
             num_labels=self.cfg.num_labels,
             output_attentions=False,
             output_hidden_states=False,
-            return_dict=True,
+            return_dict=True
         )
         self.tokenizer = DistilBertTokenizer.from_pretrained(
             self.cfg.model_name, do_lower_case=True
