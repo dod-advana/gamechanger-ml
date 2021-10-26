@@ -16,6 +16,7 @@ cfg_schema = {
     "epochs": int,
     "batch_size": int,
     "random_state": int,
+    "load_saved_model_dir": (str, type_none),
     "checkpoint_path": (str, type_none),
     "tensorboard_path": (str, type_none),
     "num_labels": int,
