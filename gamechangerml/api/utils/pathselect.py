@@ -59,7 +59,7 @@ def get_model_paths():
             if ("sent_index" in f) and ("tar" not in f)
         ]
         sent_index_name = [
-            f for f in sent_index_name if os.isfile(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f, 'config'))
+            f for f in sent_index_name if os.path.isfile(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f, 'config'))
         ]
         sent_index_name.sort(reverse=True)
         if len(sent_index_name) > 0:

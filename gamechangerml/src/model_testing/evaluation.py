@@ -366,15 +366,13 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
             self, 
             encoder_model_name,
             sim_model_name,
-            overwrite,
             min_token_len,
             return_id,
             verbose,
-            n_returns,
             encoder=None,
             retriever=None,
             transformer_path=LOCAL_TRANSFORMERS_DIR,
-            index='msmarco_index',
+            index='sent_index_MSMARCO',
             use_gpu=False,
             data_name='msmarco'
         ):
@@ -383,19 +381,20 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
         logger.info("Model path: {}".format(self.model_path))
         self.index_path = os.path.join(os.path.dirname(transformer_path), index)
         if not os.path.exists(self.index_path):  
+            logger.info("MSMARCO index path doesn't exist.")
             logger.info("Making new embeddings index at {}".format(str(self.index_path)))
             os.makedirs(self.index_path)
             if encoder:
                 self.encoder=encoder
             else:
-                self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, overwrite=overwrite, min_token_len=min_token_len, return_id=return_id, verbose=verbose, sent_index=self.index_path, use_gpu=use_gpu)
-            self.make_index(encoder=self.encoder, corpus_path=None)
+                self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, min_token_len=min_token_len, return_id=return_id, verbose=verbose, use_gpu=use_gpu)
+            self.make_index(encoder=self.encoder, corpus_path=None, index_path=self.index_path)
         self.data = MSMarcoData()
         if retriever:
             self.retriever = retriever
         else:
-            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
-        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_msmarco'))
+            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, index_path=self.index_path, transformers_path=transformer_path)
+        self.eval_path = check_directory(os.path.join(self.index_path, 'evals_msmarco'))
         logger.info("Evals path: {}".format(self.eval_path))
         self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path, model_name=encoder_model_name)
 
@@ -405,14 +404,12 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             self,
             encoder_model_name,
             sim_model_name,
-            overwrite,
             min_token_len,
             return_id,
             verbose,
-            n_returns,
+            data_level,
             encoder=None,
             retriever=None,
-            data_name='gold_standard',
             transformer_path=LOCAL_TRANSFORMERS_DIR,
             index=SENT_INDEX_PATH,
             use_gpu=False
@@ -422,25 +419,31 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
 
         self.model_path = os.path.join(transformer_path, encoder_model_name)
         if not index:
-            self.index_path = os.path.join(os.path.dirname(transformer_path), 'test_sent_index')
+            self.index_path = os.path.join(os.path.dirname(transformer_path), 'sent_index_TEST')
+            logger.info("No index provided, creating test sentence index")
             logger.info("Making new embeddings index at {}".format(str(self.index_path)))
             if not os.path.exists(self.index_path):
                 os.makedirs(self.index_path)
             if encoder:
                 self.encoder=encoder
             else:
-                self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, overwrite=overwrite, min_token_len=min_token_len, return_id=return_id, verbose=verbose, sent_index=self.index_path, use_gpu=use_gpu)
-            self.make_index(encoder=self.encoder, corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'])
+                self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, min_token_len=min_token_len, return_id=return_id, verbose=verbose, use_gpu=use_gpu)
+            self.make_index(encoder=self.encoder, corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'], index_path=self.index_path)
         else:
             self.index_path = os.path.join(os.path.dirname(transformer_path), index)
         self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
-        self.data = UpdatedGCRetrieverData(self.doc_ids)
         if retriever:
             self.retriever=retriever
         else:
-            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
+            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, index_path=self.index_path, transformers_path=transformer_path)
         self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
-        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path, model_name=encoder_model_name)
+        ## do this for gold and silver
+        logger.info("Evaluating model on GC gold standard data")
+        self.gold_data = UpdatedGCRetrieverData(available_ids=self.doc_ids, level='gold')
+        self.gold_results = self.eval(data=self.gold_data, index=index, retriever=self.retriever, data_name='gold', eval_path=self.eval_path, model_name=encoder_model_name)
+        logger.info("Evaluating model on GC silver standard data")
+        self.silver_data = UpdatedGCRetrieverData(available_ids=self.doc_ids, level='silver')
+        self.silver_results = self.eval(data=self.silver_data, index=index, retriever=self.retriever, data_name='gold', eval_path=self.eval_path, model_name=encoder_model_name)
 
 class SimilarityEvaluator(TransformerEvaluator):
 

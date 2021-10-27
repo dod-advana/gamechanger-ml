@@ -14,10 +14,10 @@ from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
-model_path_dict = get_model_paths()
-LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-SENT_INDEX_PATH = model_path_dict["sentence"]
-
+try:
+    import tqdm
+except Exception as e:
+    logger.warning("COuld not import tqdm, it may not be installed")
 
 class SentenceEncoder(object):
     """
@@ -33,12 +33,11 @@ class SentenceEncoder(object):
     def __init__(
         self,
         encoder_model_name,
-        overwrite,
         min_token_len,
         return_id, 
         verbose,
-        model = None,
-        sent_index=SENT_INDEX_PATH,
+        transformer_path,
+        model=None,
         use_gpu=False,
     ):
 
@@ -46,13 +45,11 @@ class SentenceEncoder(object):
             self.encoder_model = model
         else:
             self.encoder_model = os.path.join(
-            LOCAL_TRANSFORMERS_DIR, encoder_model_name
+            transformer_path, encoder_model_name
         )
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
-        self.overwrite = overwrite
-        self.index_path = sent_index
 
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = use_gpu
@@ -63,7 +60,7 @@ class SentenceEncoder(object):
             {"method": "transformers", "path": self.encoder_model, "gpu": self.use_gpu}
         )
 
-    def _index(self, corpus):
+    def _index(self, corpus, index_path, overwrite=False):
         """
         Builds an embeddings index.
         Args:
@@ -75,17 +72,26 @@ class SentenceEncoder(object):
         """
 
         # Transform documents to embeddings vectors
+        logger.info("Getting ids, dimensions, stream")
         ids, dimensions, stream = self.embedder.model.index(corpus)
 
+        logger.info("Loading embeddings into memory")
         # Load streamed embeddings back to memory
         embeddings = np.empty((len(ids), dimensions), dtype=np.float32)
         with open(stream, "rb") as queue:
-            for x in range(embeddings.shape[0]):
-                embeddings[x] = pickle.load(queue)
-
+            try:
+                for x in tqdm(range(embeddings.shape[0])):
+                    embeddings[x] = pickle.load(queue)
+            except Exception as e:
+                logger.warning("Could not make embeddings with tqdm, trying without")
+                logger.warning(e)
+                for x in range(embeddings.shape[0]):
+                    embeddings[x] = pickle.load(queue)
+                
         # Remove temporary file
+        logger.info("Removing temporary file")
         os.remove(stream)
-
+        logger.info("Making dataframe")
         all_text = []
         for para_id, text, _ in corpus:
             all_text.append([text, para_id])
@@ -93,13 +99,13 @@ class SentenceEncoder(object):
         df = pd.DataFrame(all_text, columns=["text", "paragraph_id"])
 
         embedding_path = os.path.join(
-            self.index_path, "embeddings.npy")
+            index_path, "embeddings.npy")
         dataframe_path = os.path.join(
-            self.index_path, "data.csv")
+            index_path, "data.csv")
         ids_path = os.path.join(self.index_path, "doc_ids.txt")
 
         # Load new data
-        if os.path.isfile(embedding_path) and (self.overwrite is False):
+        if os.path.isfile(embedding_path) and (overwrite is False):
             logger.info(f"Loading new data from {embedding_path}")
 
             # Load existing embeddings
@@ -145,7 +151,7 @@ class SentenceEncoder(object):
         self.embedder.embeddings.index(embeddings)
         logger.info(f"Built the embeddings index")
 
-    def index_documents(self, corpus_path):
+    def index_documents(self, corpus_path, index_path):
         """
         Create the index and accompanying dataframe to perform text
         and paragraph id search
@@ -175,19 +181,19 @@ class SentenceEncoder(object):
 
         self._index(corpus)
 
-        self.embedder.save(self.index_path)
-        logger.info(f"Saved embedder to {self.index_path}")
+        self.embedder.save(index_path)
+        logger.info(f"Saved embedder to {index_path}")
 
 
 class SimilarityRanker(object):
     def __init__(
         self,
         sim_model_name,
-        transformers_path=LOCAL_TRANSFORMERS_DIR,
+        transformer_path,
     ):
 
         self.sim_model = os.path.join(
-            transformers_path, sim_model_name)
+            transformer_path, sim_model_name)
         self.similarity = Similarity(self.sim_model)
 
     def re_rank(self, query, texts, ids):
@@ -220,9 +226,9 @@ class SentenceSearcher(object):
     def __init__(
         self,
         sim_model_name,
-        sim_model = None,
-        index_path=SENT_INDEX_PATH,
-        transformers_path=LOCAL_TRANSFORMERS_DIR
+        index_path,
+        transformer_path,
+        sim_model=None
     ):
 
         self.embedder = Embeddings()
@@ -234,7 +240,7 @@ class SentenceSearcher(object):
         if sim_model:
             self.similarity = sim_model
         else:
-            self.similarity = SimilarityRanker(sim_model_name, transformers_path)
+            self.similarity = SimilarityRanker(sim_model_name, transformer_path)
 
     def retrieve_topn(self, query, num_results):
 

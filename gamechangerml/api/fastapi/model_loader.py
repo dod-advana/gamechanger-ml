@@ -16,11 +16,13 @@ from gamechangerml.src.featurization.word_sim import WordSim
 # All variables and methods are static so you
 # reference them by ModelLoader().example_method()
 
+SENT_INDEX_PATH.value = 'gamechangerml/models/sent_index_TEST'
 
 class ModelLoader:
     # private model variables
     __qa_model = None
-    __sentence_trans = None
+    __sentence_searcher = None
+    __sentence_encoder = None
     __query_expander = None
     __word_sim = None
     __sparse_reader = None
@@ -132,47 +134,58 @@ class ModelLoader:
             logger.warning(e)
 
     @staticmethod
-    def initSentence(
-        index_path=SENT_INDEX_PATH.value, transformers_path=LOCAL_TRANSFORMERS_DIR.value
+    def initSentenceSearcher(
+        index_path=SENT_INDEX_PATH.value, transformer_path=LOCAL_TRANSFORMERS_DIR.value
     ):
         """
-        initQE - loads Sentence Transformers on start
+        initSentenceSearcher - loads SentenceSearcher class on start
         Args:
         Returns:
         """
-        # load defaults
-        # encoder_model = os.path.join(
-        #    transformer_path, "msmarco-distilbert-base-v2")
-        # sim_model = os.path.join(transformer_path, "distilbart-mnli-12-3")
+        try:
+            ModelLoader.__sentence_searcher = SentenceSearcher(
+                sim_model_name=SimilarityConfig.BASE_MODEL,
+                index_path=index_path,
+                transformer_path=transformer_path,
+            )
 
+            sim_model = ModelLoader.__sentence_searcher.similarity
+            logger.info(
+                f"Loading similarity model from {sim_model.sim_model}")
+             # set cache variable defined in settings.py
+            latest_intel_model_sent.value.sim = sim_model.sim_model
+            logger.info("** Loaded Similarity Model")
+
+        except Exception as e:
+            logger.warning("** Could not load Similarity model")
+            logger.warning(e)
+
+    @staticmethod
+    def initSentenceEncoder(
+        index_path=SENT_INDEX_PATH.value, transformer_path=LOCAL_TRANSFORMERS_DIR.value
+    ):
+        """
+        initSentenceEncoder - loads Sentence Encoder on start
+        Args:
+        Returns:
+        """
         logger.info(f"Loading Sentence Index from {index_path}")
         try:
             ModelLoader.__sentence_encoder = SentenceEncoder(
-                encoder_model_name=EmbedderConfig.BASE_MODEL, 
+                encoder_model_name=EmbedderConfig.BASE_MODEL,
+                transformer_path=transformer_path,
                 sent_index=index_path,
                 **EmbedderConfig.MODEL_ARGS
             )
             encoder_model = ModelLoader.__sentence_encoder.encoder_model
             logger.info(f"Loading encoder model from {encoder_model}")
 
-            ModelLoader.__sentence_searcher = SentenceSearcher(
-                sim_model_name=SimilarityConfig.BASE_MODEL,
-                index_path=index_path,
-                transformers_path=transformers_path,
-            )
-
-            sim_model = ModelLoader.__sentence_searcher.similarity
-            logger.info(
-                f"Loading similarity model from {sim_model.sim_model}")
-           
             # set cache variable defined in settings.py
-            latest_intel_model_sent.value = {
-                "encoder": encoder_model,
-                "sim": sim_model.sim_model,
-            }
-            logger.info("** Loaded Sentence Transformers")
+            latest_intel_model_sent.value.encoder = encoder_model
+            logger.info("** Loaded Encoder Model")
+
         except Exception as e:
-            logger.warning("** Could not load Sentence Transformer models")
+            logger.warning("** Could not load Encoder model")
             logger.warning(e)
 
     @staticmethod
