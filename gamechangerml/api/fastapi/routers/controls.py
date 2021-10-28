@@ -321,7 +321,7 @@ async def train_model(model_dict: dict, response: Response):
             "sent_finetune": finetune_sentence
         }
         # Set the training method to be loaded onto the thread
-        training_method = training_switch["sentence"] ## TODO: KATE HARDCODED THIS, FIX
+        #training_method = training_switch["sentence"] ## TODO: KATE HARDCODED THIS, FIX
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
 
@@ -354,6 +354,7 @@ async def evaluate_model(model_dict: dict, response: Response):
     def eval_sent(model_name, skip_original=True, validation_data=None):
         metadata = open_json('metadata.json', os.path.join('gamechangerml/models', model_name))
         encoder = metadata['encoder_model']
+        logger.info(f"Evaluating {model_name} created with {encoder}")
         if validation_data:
             data_path = os.path.join('gamechangerml/data/validation/sent_transformer', validation_data)
         else:

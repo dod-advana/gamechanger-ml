@@ -328,11 +328,11 @@ class Pipeline:
 
         # Building the Index
         try:
-            encoder = SentenceEncoder(encoder_model_name=encoder_model, sent_index=local_sent_index_dir, use_gpu=use_gpu, **EmbedderConfig.MODEL_ARGS)
+            encoder = SentenceEncoder(encoder_model_name=encoder_model, use_gpu=use_gpu, transformer_path=LOCAL_TRANSFORMERS_DIR, **EmbedderConfig.MODEL_ARGS)
             logger.info(f"Creating Document Embeddings with {encoder_model} on {corpus}")
             logger.info("-------------- Indexing Documents--------------")
             start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            encoder.index_documents(corpus)
+            encoder.index_documents(corpus_path=corpus, index_path=local_sent_index_dir)
             ## ADD PROGRESS BAR??
             end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             logger.info("-------------- Completed Indexing --------------")
@@ -375,9 +375,11 @@ class Pipeline:
             logger.info("-------------- Running Evaluation --------------")
 
             try:
-                sentev = IndomainRetrieverEvaluator(encoder=encoder, retriever=None, index=model_name, **EmbedderConfig.MODEL_ARGS, **SimilarityConfig.MODEL_ARGS)
-                evals = sentev.results
-                logger.info("evals: {}".format(str(evals)))
+                evals = {}
+                for level in ['gold', 'silver']:
+                    sentev = IndomainRetrieverEvaluator(encoder=encoder, index=model_name, data_level=level, encoder_model_name=EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
+                    evals[level] = sentev.results
+                    logger.info(f"Evals for {level} standard validation: {(str(sentev.results))}")
             except Exception as e:
                 logger.warning("Could not create evaluations for the new sentence index")
                 logger.error(e)

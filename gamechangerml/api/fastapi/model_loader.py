@@ -16,7 +16,7 @@ from gamechangerml.src.featurization.word_sim import WordSim
 # All variables and methods are static so you
 # reference them by ModelLoader().example_method()
 
-SENT_INDEX_PATH.value = 'gamechangerml/models/sent_index_TEST'
+#SENT_INDEX_PATH.value = 'gamechangerml/models/sent_index_TEST'
 
 class ModelLoader:
     # private model variables
@@ -151,9 +151,9 @@ class ModelLoader:
             )
 
             sim_model = ModelLoader.__sentence_searcher.similarity
-             # set cache variable defined in settings.py
+            # set cache variable defined in settings.py
             latest_intel_model_sim.value = sim_model.sim_model
-            logger.info(f"** Loaded Similarity Model from {sim_model} and sent index from {index_path}")
+            logger.info(f"** Loaded Similarity Model from {sim_model.sim_model} and sent index from {index_path}")
 
         except Exception as e:
             logger.warning("** Could not load Similarity model")

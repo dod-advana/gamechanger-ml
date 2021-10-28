@@ -102,7 +102,7 @@ class SentenceEncoder(object):
             index_path, "embeddings.npy")
         dataframe_path = os.path.join(
             index_path, "data.csv")
-        ids_path = os.path.join(self.index_path, "doc_ids.txt")
+        ids_path = os.path.join(index_path, "doc_ids.txt")
 
         # Load new data
         if os.path.isfile(embedding_path) and (overwrite is False):

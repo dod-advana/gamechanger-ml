@@ -449,7 +449,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                 self.retriever = SentenceSearcher(sim_model_name=sim_model_name, index_path=self.index_path, transformer_path=transformer_path)
             self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
             self.data = UpdatedGCRetrieverData(available_ids=self.doc_ids, level=data_level, data_path=data_path)
-            self.results = self.eval(data=self.gold_data, index=index, retriever=self.retriever, data_name=data_level, eval_path=self.eval_path, model_name=encoder_model_name)
+            self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_level, eval_path=self.eval_path, model_name=encoder_model_name)
 
 class SimilarityEvaluator(TransformerEvaluator):
 
