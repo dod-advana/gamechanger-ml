@@ -13,7 +13,9 @@ ignore_files = ["._.DS_Store", ".DS_Store", "index"]
 CORPUS_DIR = "gamechangerml/corpus/"
 
 # Redis Cache Variables
-latest_intel_model_sent = CacheVariable("latest_intel_model_sent", True)
+#latest_intel_model_sent = CacheVariable("latest_intel_model_sent", True)
+latest_intel_model_sim = CacheVariable("latest sentence searcher (similarity model + sent index)", True)
+latest_intel_model_encoder = CacheVariable("latest encoder model", True)
 latest_qa_model = CacheVariable("latest_qa_model")
 latest_intel_model_trans = CacheVariable("latest_intel_model_trans")
 
