@@ -25,7 +25,10 @@ class SQuADData(ValidationData):
         ):
 
         super().__init__(validation_dir)
-        self.dev = open_json(squad_path, self.validation_dir)
+        logger.info(f"Pulling validation data from {str(os.path.join(validation_dir, squad_path))}")
+        if not os.path.exists(os.path.join(validation_dir, squad_path)):
+            logger.warning("No directory exists for this validation data.")
+        self.dev = open_json(squad_path, validation_dir)
         self.queries = self.get_squad_sample(sample_limit)
     
     def get_squad_sample(self, sample_limit):
@@ -165,14 +168,18 @@ class UpdatedGCRetrieverData(RetrieverGSData):
     def __init__(self, 
         available_ids, 
         level=['gold', 'silver'],
+        data_path=None,
         validation_dir=ValidationConfig.DATA_ARGS['validation_dir'],
         gold_standard=ValidationConfig.DATA_ARGS['retriever_gc']['gold_standard']
         ):
 
         super().__init__(validation_dir, available_ids, gold_standard)
         try:
-            new_data = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS['validation_dir'], 'sent_transformer'))
-            self.data_path = os.path.join(new_data, level)
+            if data_path: # if there is a path for data, use that
+                self.data_path = os.path.join(data_path, level)
+            else:
+                new_data = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS['validation_dir'], 'sent_transformer'))
+                self.data_path = os.path.join(new_data, level)
             self.new_queries, self.new_collection, self.new_relations = self.load_new_data()
             self.combine_in_domain()
         except:

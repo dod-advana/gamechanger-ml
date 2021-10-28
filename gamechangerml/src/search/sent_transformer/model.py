@@ -179,7 +179,7 @@ class SentenceEncoder(object):
             data = MSMarcoData()
             corpus = data.corpus
 
-        self._index(corpus)
+        self._index(corpus, index_path)
 
         self.embedder.save(index_path)
         logger.info(f"Saved embedder to {index_path}")

@@ -53,6 +53,9 @@ class QAEvaluator(TransformerEvaluator):
 
         self.model_name = model_name
         self.model_path = os.path.join(transformer_path, model_name)
+        logger.info(f"model path: {str(self.model_path)}")
+        if not os.path.exists(self.model_path):
+            logger.warning("Model directory provided does not exist.")
         if model:
             self.model = model
         else:
@@ -184,6 +187,7 @@ class QAEvaluator(TransformerEvaluator):
         file = "_".join(["qa_eval", self.data_name])
         output_file = timestamp_filename(file, '.json')
         save_json(output_file, eval_path, agg_results)
+        logger.info(f"Saved evaluation to {output_file}")
 
         return agg_results
 
@@ -354,9 +358,11 @@ class RetrieverEvaluator(TransformerEvaluator):
             "recall": recall
         }
 
+        logger.info(f"** Eval Results: {str(agg_results)}")
         file = "_".join(["retriever_eval", data_name])
         output_file = timestamp_filename(file, '.json')
         save_json(output_file, eval_path, agg_results)
+        logger.info(f"Saved evaluation to {str(os.path.join(eval_path, output_file))}")
 
         return agg_results
 
@@ -393,7 +399,7 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
         if retriever:
             self.retriever = retriever
         else:
-            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, index_path=self.index_path, transformers_path=transformer_path)
+            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, index_path=self.index_path, transformer_path=transformer_path)
         self.eval_path = check_directory(os.path.join(self.index_path, 'evals_msmarco'))
         logger.info("Evals path: {}".format(self.eval_path))
         self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path, model_name=encoder_model_name)
@@ -408,6 +414,8 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             return_id,
             verbose,
             data_level,
+            create_index=True,
+            data_path=None,
             encoder=None,
             retriever=None,
             transformer_path=LOCAL_TRANSFORMERS_DIR,
@@ -419,31 +427,29 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
 
         self.model_path = os.path.join(transformer_path, encoder_model_name)
         if not index:
-            self.index_path = os.path.join(os.path.dirname(transformer_path), 'sent_index_TEST')
-            logger.info("No index provided, creating test sentence index")
-            logger.info("Making new embeddings index at {}".format(str(self.index_path)))
-            if not os.path.exists(self.index_path):
-                os.makedirs(self.index_path)
-            if encoder:
-                self.encoder=encoder
-            else:
-                self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, min_token_len=min_token_len, return_id=return_id, verbose=verbose, use_gpu=use_gpu)
-            self.make_index(encoder=self.encoder, corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'], index_path=self.index_path)
+            logger.info("No index provided for evaluating.")
+            if create_index:
+                self.index_path = os.path.join(os.path.dirname(transformer_path), 'sent_index_TEST')
+                logger.info("Making new embeddings index at {}".format(str(self.index_path)))
+                if not os.path.exists(self.index_path):
+                    os.makedirs(self.index_path)
+                if encoder:
+                    self.encoder=encoder
+                else:
+                    self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, min_token_len=min_token_len, return_id=return_id, verbose=verbose, use_gpu=use_gpu)
+                self.make_index(encoder=self.encoder, corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'], index_path=self.index_path)
         else:
             self.index_path = os.path.join(os.path.dirname(transformer_path), index)
-        self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
-        if retriever:
-            self.retriever=retriever
-        else:
-            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, index_path=self.index_path, transformers_path=transformer_path)
-        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
-        ## do this for gold and silver
-        logger.info("Evaluating model on GC gold standard data")
-        self.gold_data = UpdatedGCRetrieverData(available_ids=self.doc_ids, level='gold')
-        self.gold_results = self.eval(data=self.gold_data, index=index, retriever=self.retriever, data_name='gold', eval_path=self.eval_path, model_name=encoder_model_name)
-        logger.info("Evaluating model on GC silver standard data")
-        self.silver_data = UpdatedGCRetrieverData(available_ids=self.doc_ids, level='silver')
-        self.silver_results = self.eval(data=self.silver_data, index=index, retriever=self.retriever, data_name='gold', eval_path=self.eval_path, model_name=encoder_model_name)
+        
+        if self.index_path:
+            self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
+            if retriever:
+                self.retriever=retriever
+            else:
+                self.retriever = SentenceSearcher(sim_model_name=sim_model_name, index_path=self.index_path, transformer_path=transformer_path)
+            self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
+            self.data = UpdatedGCRetrieverData(available_ids=self.doc_ids, level=data_level, data_path=data_path)
+            self.results = self.eval(data=self.gold_data, index=index, retriever=self.retriever, data_name=data_level, eval_path=self.eval_path, model_name=encoder_model_name)
 
 class SimilarityEvaluator(TransformerEvaluator):
 
@@ -499,6 +505,7 @@ class SimilarityEvaluator(TransformerEvaluator):
 
         output_file = timestamp_filename('sim_model_eval', '.json')
         save_json(output_file, eval_path, agg_results)
+        logger.info(f"Saved evaluation to {str(os.path.join(eval_path, output_file))}")
 
         return agg_results
 
@@ -645,5 +652,6 @@ class QexpEvaluator():
 
         output_file = timestamp_filename('qe_model_eval', '.json')
         save_json(output_file, self.model_path, agg_results)
+        logger.info(f"Saved evaluation to {str(os.path.join(self.model_path, output_file))}")
 
         return agg_results
