@@ -57,7 +57,7 @@ class ModelLoader:
             logger.warning(
                 "sentence_searcher was not set and was attempted to be used. Running init"
             )
-            ModelLoader.initSentence()
+            ModelLoader.initSentenceSearcher()
         return ModelLoader.__sentence_searcher
 
     def getSentence_encoder(self):
@@ -65,7 +65,7 @@ class ModelLoader:
             logger.warning(
                 "sentence_encoder was not set and was attempted to be used. Running init"
             )
-            ModelLoader.initSentence()
+            ModelLoader.initSentenceEncoder()
         return ModelLoader.__sentence_encoder
 
     def getSparse(self):
@@ -142,6 +142,7 @@ class ModelLoader:
         Args:
         Returns:
         """
+        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
             ModelLoader.__sentence_searcher = SentenceSearcher(
                 sim_model_name=SimilarityConfig.BASE_MODEL,
@@ -150,39 +151,32 @@ class ModelLoader:
             )
 
             sim_model = ModelLoader.__sentence_searcher.similarity
-            logger.info(
-                f"Loading similarity model from {sim_model.sim_model}")
              # set cache variable defined in settings.py
-            latest_intel_model_sent.value.sim = sim_model.sim_model
-            logger.info("** Loaded Similarity Model")
+            latest_intel_model_sim.value = sim_model.sim_model
+            logger.info(f"** Loaded Similarity Model from {sim_model} and sent index from {index_path}")
 
         except Exception as e:
             logger.warning("** Could not load Similarity model")
             logger.warning(e)
 
     @staticmethod
-    def initSentenceEncoder(
-        index_path=SENT_INDEX_PATH.value, transformer_path=LOCAL_TRANSFORMERS_DIR.value
-    ):
+    def initSentenceEncoder(transformer_path=LOCAL_TRANSFORMERS_DIR.value):
         """
         initSentenceEncoder - loads Sentence Encoder on start
         Args:
         Returns:
         """
-        logger.info(f"Loading Sentence Index from {index_path}")
+        logger.info(f"Loading encoder model")
         try:
             ModelLoader.__sentence_encoder = SentenceEncoder(
                 encoder_model_name=EmbedderConfig.BASE_MODEL,
                 transformer_path=transformer_path,
-                sent_index=index_path,
                 **EmbedderConfig.MODEL_ARGS
             )
             encoder_model = ModelLoader.__sentence_encoder.encoder_model
-            logger.info(f"Loading encoder model from {encoder_model}")
-
             # set cache variable defined in settings.py
-            latest_intel_model_sent.value.encoder = encoder_model
-            logger.info("** Loaded Encoder Model")
+            latest_intel_model_encoder.value = encoder_model
+            logger.info(f"** Loaded Encoder Model from {encoder_model}")
 
         except Exception as e:
             logger.warning("** Could not load Encoder model")
