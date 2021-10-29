@@ -127,7 +127,6 @@ class LTR:
         print("processing logs")
         for entries in ltr_log:
             if len(entries) > 0:
-                print(entries)
                 # loop through entry logs (num of features)
                 fts = []
                 for entry in entries[0]["fields"]["_ltrlog"][0]["log_entry1"]:
@@ -251,7 +250,7 @@ class LTR:
             }
         }
 
-    def normalize(self, arr, start=1, end=4):
+    def normalize(self, arr, start=0, end=4):
         width = end - start
         res = (arr - arr.min()) / (arr.max() - arr.min()) * width + start
         return res
