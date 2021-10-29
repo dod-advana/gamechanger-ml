@@ -221,7 +221,7 @@ class SentenceSearcher(object):
         self,
         sim_model_name,
         encoder_model_name,
-        n_returns,
+        n_returns=5,
         encoder = None,
         sim_model = None,
         index_path=SENT_INDEX_PATH,
@@ -246,9 +246,9 @@ class SentenceSearcher(object):
         else:
             self.similarity = SimilarityRanker(sim_model_name, transformers_path)
 
-    def retrieve_topn(self, query):
+    def retrieve_topn(self, query, num_results):
 
-        retrieved = self.embedder.search(query, limit=self.n_returns)
+        retrieved = self.embedder.search(query, limit=num_results)
         doc_ids = []
         doc_texts = []
         doc_scores = []
@@ -261,7 +261,7 @@ class SentenceSearcher(object):
 
         return doc_texts, doc_ids, doc_scores
 
-    def search(self, query):
+    def search(self, query, num_results):
         """
         Search the index and perform a similarity scoring reranker at
         the topn returned documents
@@ -271,5 +271,5 @@ class SentenceSearcher(object):
             rerank (list): List of tuples following a (score, paragraph_id,
                 paragraph_text) format ranked based on similarity with query
         """
-        top_texts, top_ids, top_scores = self.retrieve_topn(query)
+        top_texts, top_ids, top_scores = self.retrieve_topn(query, num_results)
         return self.similarity.re_rank(query, top_texts, top_ids)
