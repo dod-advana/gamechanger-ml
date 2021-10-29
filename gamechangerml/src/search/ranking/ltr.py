@@ -18,14 +18,13 @@ import graphviz
 import matplotlib
 import math
 import requests
+from sklearn.preprocessing import LabelEncoder
 
 
 ES_HOST = "https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com"
 
 client = Elasticsearch([ES_HOST])
 logger = logging.getLogger("gamechanger")
-
-df = pd.read_csv("gamechangerml/data/SearchPdfMapping.csv")
 
 
 class LTR:
@@ -63,7 +62,7 @@ class LTR:
         return self.mappings
 
     def train(self, write=True):
-        bst = xgb.train(self.params, self.data, 5)
+        bst = xgb.train(self.params, self.data)
         model = bst.get_dump(fmap="featmap.txt", dump_format="json")
         if write:
             self.write_model(model)
@@ -106,6 +105,9 @@ class LTR:
         count_df["ranking"] = self.normalize(arr)
         count_df.ranking = count_df.ranking.apply(np.ceil)
         count_df.ranking = count_df.ranking.astype(int)
+        le = LabelEncoder()
+        count_df["qid"] = le.fit_transform(count_df.keyword)
+
         return count_df
 
     def query_es_fts(self, df):
@@ -147,14 +149,13 @@ class LTR:
         df = pd.concat([df, ft_df], axis=1)
 
         print("generating txt file")
-        count = 0
         for kw in tqdm(df.keyword.unique()):
             rows = df[df.keyword == kw]
             for i in rows.itertuples():
                 new_row = (
                     str(int(i.ranking))
                     + " qid:"
-                    + str(count)
+                    + str(i.qid)
                     + " 1:"
                     + str(i.title)
                     + " 2:"
@@ -169,7 +170,6 @@ class LTR:
                     + str(i.document)
                     + "\n"
                 )
-                count += 1
                 with open("xgboost.txt", "a") as f:
                     f.writelines(new_row)
         return df
