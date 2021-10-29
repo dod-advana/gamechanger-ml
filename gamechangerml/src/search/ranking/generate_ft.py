@@ -1,5 +1,4 @@
 # from gamechangerml.src.search.ranking import matamo as mt
-import spacy
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
@@ -12,11 +11,7 @@ from tqdm import tqdm
 import argparse
 import logging
 import os
-from elasticsearch import Elasticsearch
 
-ES_HOST = "https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com"
-
-client = Elasticsearch([ES_HOST])
 """
 Usage:
     example:
@@ -105,7 +100,6 @@ def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_
     ) / (corp_df["kw_in_doc_score"].max() - corp_df["kw_in_doc_score"].min())
     corp_df.kw_in_doc_score.loc[corp_df.kw_in_doc_score == 0] = 0.00001
     corp_df.to_csv(os.path.join(out_dir, "corpus_meta.csv"))
-
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ import xgboost as xgb
 import graphviz
 import matplotlib
 import math
+import requests
 
 
 ES_HOST = "https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com"
@@ -24,39 +25,63 @@ ES_HOST = "https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.e
 client = Elasticsearch([ES_HOST])
 logger = logging.getLogger("gamechanger")
 
+df = pd.read_csv("gamechangerml/data/SearchPdfMapping.csv")
+
 
 class LTR:
     def __init__(
         self,
-        data="xgboost.txt",
         params={
-            "max_depth": 6,
+            "max_depth": 10,
             "eta": 0.3,
             "silent": 0,
-            "objective": "rank:pairwise",
+            "objective": "rank:map",
             "num_round": 10,
         },
-        num_round=5,
     ):
-        self.data = xgb.DMatrix(data)
+        self.data = self.read_xg_data()
         self.params = params
-        self.num_round = num_round
+        self.mappings = self.read_mappings()
 
     def write_model(self, model):
         with open("xgb-model.json", "w") as output:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
+    def read_xg_data(self, path="xgboost.txt"):
+        try:
+            self.data = xgb.DMatrix(path)
+            return self.data
+        except Exception as e:
+            logger.error("Could not read in data for training")
+
+    def read_mappings(self, path="gamechangerml/data/SearchPdfMapping.csv"):
+        try:
+            self.mappings = pd.read_csv(path)
+        except Exception as e:
+            logger.error("Could not read in mappings to make judgement list")
+        return self.mappings
+
     def train(self, write=True):
-        bst = xgb.train(self.params, self.data, self.num_round)
+        bst = xgb.train(self.params, self.data, 5)
         model = bst.get_dump(fmap="featmap.txt", dump_format="json")
         if write:
             self.write_model(model)
         return bst, model
 
-    def generate_judgement(self):
-        df = pd.read_csv("gamechangerml/data/SearchPdfMapping.csv")
-        searches = df[["search", "document"]]
+    def post_model(self, model, model_name):
+        query = {
+            "model": {
+                "name": model_name,
+                "model": {"type": "model/xgboost+json", "definition": model},
+            }
+        }
+        endpoint = ES_HOST + "/_ltr/_featureset/doc_features/_createmodel?pretty"
+        r = requests.post(endpoint, data=query)
+        return r
+
+    def generate_judgement(self, mappings):
+        searches = mappings[["search", "document"]]
         searches.dropna(inplace=True)
         searches.search.replace("&quot;", "", regex=True, inplace=True)
         word_tuples = []
@@ -78,9 +103,9 @@ class LTR:
             count_df = count_df.append(tmp_df)
         count_df.sort_values("search")
         arr = count_df.search.copy()
-        count_df["norm"] = self.normalize(arr)
-        count_df.norm = count_df.norm.apply(np.ceil)
-        count_df.sort_values("norm")
+        count_df["ranking"] = self.normalize(arr)
+        count_df.ranking = count_df.ranking.apply(np.ceil)
+        count_df.ranking = count_df.ranking.astype(int)
         return count_df
 
     def query_es_fts(self, df):
@@ -95,32 +120,31 @@ class LTR:
                 ltr_log.append(r["hits"]["hits"])
         return ltr_log
 
-    def process_ltr_log(self, ltr_log):
-        text_vals = []
-        title_vals = []
+    def process_ltr_log(self, ltr_log, num_fts=4):
+        all_vals = []
         print("processing logs")
-        for x in ltr_log:
-            if len(x) > 0:
-                text_log = x[0]["fields"]["_ltrlog"][0]["log_entry1"][1]
-                title_log = x[0]["fields"]["_ltrlog"][0]["log_entry1"][0]
-                if "value" in text_log:
-                    text_vals.append(text_log["value"])
-                else:
-                    text_vals.append(0)
-                if "value" in title_log:
-                    title_vals.append(title_log["value"])
-                else:
-                    title_vals.append(0)
+        for entries in ltr_log:
+            if len(entries) > 0:
+                print(entries)
+                # loop through entry logs (num of features)
+                fts = []
+                for entry in entries[0]["fields"]["_ltrlog"][0]["log_entry1"]:
+                    if "value" in entry:
+                        fts.append(entry["value"])
+                    else:
+                        fts.append(0)
+                all_vals.append(fts)
             else:
-                text_vals.append(0)
-                title_vals.append(0)
-        return title_vals, text_vals
+                all_vals.append(np.zeros(num_fts))
+        return all_vals
 
     def generate_ft_txt_file(self, df):
-        ltr_log = query_es_fts(df)
-        title_vals, text_vals = self.process_ltr_log(ltr_log)
-        df["title_vals"] = title_vals
-        df["text_vals"] = text_vals
+        ltr_log = self.query_es_fts(df)
+        vals = self.process_ltr_log(ltr_log)
+        ft_df = pd.DataFrame(
+            vals, columns=["title", "kw", "textlength", "paragraph"])
+        df.reset_index(inplace=True)
+        df = pd.concat([df, ft_df], axis=1)
 
         print("generating txt file")
         count = 0
@@ -128,17 +152,21 @@ class LTR:
             rows = df[df.keyword == kw]
             for i in rows.itertuples():
                 new_row = (
-                    str(int(i.norm))
+                    str(int(i.ranking))
                     + " qid:"
                     + str(count)
                     + " 1:"
-                    + str(i.title_vals)
+                    + str(i.title)
                     + " 2:"
-                    + str(i.text_vals)
+                    + str(i.paragraph)
+                    + " 3:"
+                    + str(i.kw)
+                    + " 4:"
+                    + str(i.textlength)
                     + " # "
                     + kw
                     + " "
-                    + i.Index
+                    + str(i.document)
                     + "\n"
                 )
                 count += 1
@@ -173,6 +201,55 @@ class LTR:
             },
         }
         return query
+
+    def post_features(self):
+        query = {
+            "featureset": {
+                "name": "doc_features",
+                "features": [
+                    {
+                        "name": "1",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {
+                            "wildcard": {
+                                "display_title_s.search": {
+                                    "value": "*{{keywords}}*",
+                                    "boost": 2,
+                                }
+                            }
+                        },
+                    },
+                    {
+                        "name": "2",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {
+                            "nested": {
+                                "path": "paragraphs",
+                                "inner_hits": {},
+                                "query": {
+                                    "bool": {
+                                        "should": [
+                                            {
+                                                "query_string": {
+                                                    "query": "{{keywords}}",
+                                                    "default_field": "paragraphs.par_raw_text_t.gc_english",
+                                                    "default_operator": "AND",
+                                                    "fuzzy_max_expansions": 1000,
+                                                    "fuzziness": "AUTO",
+                                                    "analyzer": "gc_english",
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                            }
+                        },
+                    },
+                ],
+            }
+        }
 
     def normalize(self, arr, start=1, end=4):
         width = end - start
