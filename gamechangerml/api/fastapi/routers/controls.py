@@ -12,12 +12,11 @@ from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
-from gamechangerml.src.utilities.test_utils import collect_evals, open_json
+from gamechangerml.src.utilities.test_utils import collect_evals, open_json, get_most_recent_dir, collect_sent_evals_gc
 
 from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
 from gamechangerml.src.model_testing.evaluation import SQuADQAEvaluator, IndomainQAEvaluator, IndomainRetrieverEvaluator, MSMarcoRetrieverEvaluator, NLIEvaluator, QexpEvaluator
 from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig
-from gamechangerml.src.utilities.test_utils import get_most_recent_dir
 
 router = APIRouter()
 MODELS = ModelLoader()
@@ -96,7 +95,7 @@ def get_downloaded_models_list():
                     meta_file = open(meta_path)
                     sent_index_list[f] = json.load(meta_file)
                     sent_index_list[f]["evaluation"] = {}
-                    sent_index_list[f]["evaluation"] = collect_evals(os.path.join(
+                    sent_index_list[f]["evaluation"] = collect_sent_evals_gc(os.path.join(
                         Config.LOCAL_PACKAGED_MODELS_DIR, f))
                     meta_file.close()
     except Exception as e:
@@ -279,14 +278,16 @@ async def train_model(model_dict: dict, response: Response):
     """
     try:
         # Methods for all the different models we can train
-        def finetune_sentence(model_dict = model_dict):
+        def finetune_sentence():
             logger.info("Attempting to finetune the sentence transformer")
             pipeline = Pipeline()
-            args = {
-                "data_path": model_dict["data_path"],
-                "model_load_path": model_dict["model_load_path"]
-            }
-            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
+            #data_path = model_dict['data_path'] if model_dict['data_path'] else None
+            #model_load_path = model_dict['model_load_path'] if model_dict['model_load_path'] else os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL)
+            #args = {
+            #    "data_path": data_path,
+            #    "model_load_path": model_load_path
+            #}
+            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params={})#, params = args)
 
         def train_sentence(model_dict = model_dict):
             logger.info("Attempting to start sentence pipeline")
@@ -314,11 +315,23 @@ async def train_model(model_dict: dict, response: Response):
             }
             pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
         
+        def run_evals(model_dict = model_dict):
+            logger.info("Attempting to run evaluation")
+            pipeline = Pipeline()
+            args = {
+                "model_name": model_dict["model_name"],
+                "skip_original": model_dict["skip_original"],
+                "sample_limit": model_dict["sample_limit"],
+                "validation_data": model_dict["validation_data"]
+            }
+            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
+            
         # Create a mapping between the training methods and input from the api
         training_switch ={
             "sentence":train_sentence,
             "qexp":train_qexp,
-            "sent_finetune": finetune_sentence
+            "sent_finetune": finetune_sentence,
+            "eval": run_evals
         }
         # Set the training method to be loaded onto the thread
         #training_method = training_switch["sentence"] ## TODO: KATE HARDCODED THIS, FIX
@@ -329,83 +342,6 @@ async def train_model(model_dict: dict, response: Response):
         training_thread.start()
 
     except:
-        logger.warning(f"Could not train the model")
+        logger.warning(f"Could not train/evaluate the model")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return await get_process_status()
-
-### New endpoints
-
-@router.post("/evaluate", status_code=200)
-async def evaluate_model(model_dict: dict, response: Response):
-    '''model_dict: {
-        "model_name": [REQUIRED],
-        "skip_original": False,
-        "validation_data": None,
-        "sample_limit": 15000
-        }
-    '''
-    def eval_qa(model_name, sample_limit=15, skip_original=False):
-        logger.info("No in-domain evaluation available for the QA model.")
-        if not skip_original:
-            logger.info(f"Evaluating QA model on SQuAD dataset with sample limit of {str(sample_limit)}.")
-            originalEval = SQuADQAEvaluator(model_name=model_name, sample_limit=sample_limit, **QAConfig.MODEL_ARGS)
-            logger.info(f"Evals: {str(originalEval.results)}")
-    
-    def eval_sent(model_name, skip_original=True, validation_data=None):
-        metadata = open_json('metadata.json', os.path.join('gamechangerml/models', model_name))
-        encoder = metadata['encoder_model']
-        logger.info(f"Evaluating {model_name} created with {encoder}")
-        if validation_data:
-            data_path = os.path.join('gamechangerml/data/validation/sent_transformer', validation_data)
-        else:
-            data_path = None
-        for level in ['gold', 'silver']:
-            domainEval = IndomainRetrieverEvaluator(index=model_name, data_path=data_path, data_level=level, encoder_model_name=encoder, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
-            logger.info(f"Evals for {level}: {str(domainEval.results)}")
-        if not skip_original:
-            originalEval = MSMarcoRetrieverEvaluator(**EmbedderConfig.MODEL_ARGS, encoder_model_name=EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL)
-            logger.info(f"Evals: {str(originalEval.results)}")
-
-    def eval_sim(model_name, sample_limit=10, skip_original=False):
-        logger.info("No in-domain evaluation available for the sim model.")
-        if not skip_original:
-            logger.info(f"Evaluating sim model on NLI dataset with sample limit of {str(sample_limit)}.")
-            originalEval= NLIEvaluator(sample_limit=sample_limit, sim_model_name=model_name)
-            logger.info(f"Evals: {str(originalEval.results)}")
-
-    def eval_qe(model_name):
-        domainEval = QexpEvaluator(qe_model_dir=os.path.join('gamechangerml/models', model_name), **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
-        logger.info(f"Evals: {str(domainEval.results)}")
-    
-    try:
-        model_name = model_dict['model_name']
-        logger.info(f"Attempting to evaluate model {model_name}")
-        if "bert-base-cased-squad2" in model_name:
-            eval_method = eval_qa
-        elif "sent_index" in model_name:
-            eval_method = eval_sent
-        elif "distilbart-mnli-12-3" in model_name:
-            eval_method = eval_sim
-        elif 'qexp' in model_name:
-            eval_method = eval_qe
-        else:
-            logger.warning("There is currently no evaluation pipeline for this type of model.")
-            raise Exception("No evaluation pipeline available")
-
-        eval_thread = MlThread(eval_method, args=model_dict)
-        eval_thread.start()
-
-    except Exception as e:
-        logger.warning(f"Could not evaluate {model_name}")
-        logger.warning(e)
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    
-    return await get_process_status()
-
-'''
-@router.post("/makeTrainingData", status_code=200)
-async def make_training_data(dict: dict, response: Response):
-
-    ## add query webapp for data
-    ## 
-'''

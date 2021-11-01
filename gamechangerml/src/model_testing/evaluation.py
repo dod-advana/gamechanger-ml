@@ -359,8 +359,7 @@ class RetrieverEvaluator(TransformerEvaluator):
         }
 
         logger.info(f"** Eval Results: {str(agg_results)}")
-        file = "_".join(["retriever_eval", data_name])
-        output_file = timestamp_filename(file, '.json')
+        output_file = timestamp_filename("retriever_eval", '.json')
         save_json(output_file, eval_path, agg_results)
         logger.info(f"Saved evaluation to {str(os.path.join(eval_path, output_file))}")
 
@@ -447,7 +446,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                 self.retriever=retriever
             else:
                 self.retriever = SentenceSearcher(sim_model_name=sim_model_name, index_path=self.index_path, transformer_path=transformer_path)
-            self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
+            self.eval_path = check_directory(os.path.join(self.index_path, 'evals_gc', data_level))
             self.data = UpdatedGCRetrieverData(available_ids=self.doc_ids, level=data_level, data_path=data_path)
             self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_level, eval_path=self.eval_path, model_name=encoder_model_name)
 

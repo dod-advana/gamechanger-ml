@@ -7,17 +7,13 @@ import numpy as np
 import pandas as pd
 import pickle
 import torch
+import time
 
 from gamechangerml.src.text_handling.corpus import LocalCorpus
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
-
-try:
-    import tqdm
-except Exception as e:
-    logger.warning("COuld not import tqdm, it may not be installed")
 
 class SentenceEncoder(object):
     """
@@ -70,7 +66,6 @@ class SentenceEncoder(object):
             overwrite: Boolean check to predict whether if an
                 existing index will be overwritten
         """
-
         # Transform documents to embeddings vectors
         logger.info("Getting ids, dimensions, stream")
         ids, dimensions, stream = self.embedder.model.index(corpus)
@@ -79,15 +74,9 @@ class SentenceEncoder(object):
         # Load streamed embeddings back to memory
         embeddings = np.empty((len(ids), dimensions), dtype=np.float32)
         with open(stream, "rb") as queue:
-            try:
-                for x in tqdm(range(embeddings.shape[0])):
-                    embeddings[x] = pickle.load(queue)
-            except Exception as e:
-                logger.warning("Could not make embeddings with tqdm, trying without")
-                logger.warning(e)
-                for x in range(embeddings.shape[0]):
-                    embeddings[x] = pickle.load(queue)
-                
+            for x in range(embeddings.shape[0]):
+                embeddings[x] = pickle.load(queue)
+        
         # Remove temporary file
         logger.info("Removing temporary file")
         os.remove(stream)
@@ -133,6 +122,7 @@ class SentenceEncoder(object):
             fp.writelines([i + "\n" for i in ids])
 
         # Save data csv
+        logger.info(f"Saving data.csv to {str(dataframe_path)}")
         df.to_csv(dataframe_path, index=False)
 
         # Normalize embeddings

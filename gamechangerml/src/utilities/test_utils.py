@@ -146,6 +146,20 @@ def collect_evals(directory):
                 evaldict[name] = {}
         return evaldict
 
+def collect_sent_evals_gc(index_path):
+    '''gets evals for index'''
+    eval_dict = {}
+    evals_path = os.path.join(index_path, 'evals_gc')
+    for level in ['gold', 'silver']:
+        fullpath = os.path.join(evals_path, level)
+        file = get_most_recent_eval(fullpath)
+        if file != '':
+            eval_dict['gc'][level] = open_json(file, fullpath)
+        else:
+            eval_dict['gc'][level] = ''
+    
+    return eval_dict
+
 # from sentence_transformers==2.0.0
 #https://github.com/UKPLab/sentence-transformers/blob/master/sentence_transformers/util.py
 def cos_sim(a, b):

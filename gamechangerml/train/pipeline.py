@@ -2,17 +2,18 @@ import argparse
 import logging
 import os
 from datetime import datetime, date
+import time
 
 # import wikipedia
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.utilities.arg_parser import LocalParser
-from gamechangerml.src.model_testing.evaluation import IndomainRetrieverEvaluator, QexpEvaluator
+from gamechangerml.src.model_testing.evaluation import SQuADQAEvaluator, IndomainQAEvaluator, IndomainRetrieverEvaluator, MSMarcoRetrieverEvaluator, NLIEvaluator, QexpEvaluator
 from gamechangerml.scripts.finetune_sentence_retriever import STFinetuner
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
-from gamechangerml.src.utilities.test_utils import get_user, get_most_recent_dir, get_index_size
+from gamechangerml.src.utilities.test_utils import get_user, get_most_recent_dir, get_index_size, collect_evals, open_json
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.pathselect import get_model_paths
@@ -30,7 +31,7 @@ from gamechangerml.src.search.query_expansion.build_ann_cli import (
     build_qe_model as bqe,
 )
 from gamechangerml.src.utilities import utils
-from gamechangerml.configs.config import DefaultConfig, D2VConfig, QexpConfig, EmbedderConfig, SimilarityConfig
+from gamechangerml.configs.config import DefaultConfig, D2VConfig, QexpConfig, QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig
 
 import pandas as pd
 import urllib3
@@ -113,8 +114,13 @@ class Pipeline:
             if step == "meta":
                 self.create_metadata()
             if step == "qexp":
-                self.run(build_type="qexp", run_name=str(
-                    date.today()), params=params)
+                self.run(
+                    build_type="qexp", run_name=str(date.today()), params=params
+                )
+            if step == "eval":
+                self.run(
+                    build_type="eval", run_name=str(date.today()), params=params
+                )
 
     def create_metadata(
         self,
@@ -163,9 +169,7 @@ class Pipeline:
         return data
 
     def finetune_sent(
-        self,
-        data_path=None,
-        model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL)
+        self
     ):
         """
         finetune_sent: finetunes the sentence transformer - saves new model, a csv file of old/new cos sim scores,
@@ -175,16 +179,90 @@ class Pipeline:
         Returns:
             metadata: meta information on finetuning
         """
+        model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL)
         model_save_path = model_load_path + "_" + str(date.today())
         logger.info(f"Setting {str(model_save_path)} as save path for new model")
-        if not data_path: # if no path to data, get most recent one
-            data_path = get_most_recent_dir("gamechangerml/data/training/sent_transformer")
+        data_path = get_most_recent_dir("gamechangerml/data/training/sent_transformer")
         logger.info(f"Loading in domain data to finetune from {data_path}")
         finetuner = STFinetuner(
             model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE
             )
         logger.info("Loaded finetuner class...")
         return finetuner.retrain(data_path)
+
+    def evaluate(
+        self,
+        model_name,
+        skip_original,
+        sample_limit,
+        validation_data="latest"
+    ):
+        '''model_dict: {
+        "model_name": [REQUIRED],
+        "skip_original": False,
+        "sample_limit": 15000,
+        "validation_data": "latest"
+        }
+        '''
+
+        def eval_qa(model_name, sample_limit, skip_original=False):
+            logger.info("No in-domain evaluation available for the QA model.")
+            if not skip_original:
+                logger.info(f"Evaluating QA model on SQuAD dataset with sample limit of {str(sample_limit)}.")
+                originalEval = SQuADQAEvaluator(model_name=model_name, sample_limit=sample_limit, **QAConfig.MODEL_ARGS)
+                return originalEval.results
+        
+        def eval_sent(model_name, validation_data, skip_original=True):
+            metadata = open_json('metadata.json', os.path.join('gamechangerml/models', model_name))
+            encoder = metadata['encoder_model']
+            logger.info(f"Evaluating {model_name} created with {encoder}")
+            if validation_data != "latest":
+                data_path = os.path.join('gamechangerml/data/validation/sent_transformer', validation_data)
+            else:
+                data_path = None
+            for level in ['gold', 'silver']:
+                domainEval = IndomainRetrieverEvaluator(index=model_name, data_path=data_path, data_level=level, encoder_model_name=encoder, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
+                domain_results = domainEval.results
+            if not skip_original:
+                originalEval = MSMarcoRetrieverEvaluator(**EmbedderConfig.MODEL_ARGS, encoder_model_name=EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL)
+                original_results = originalEval.results
+            else:
+                original_results = {}
+            
+            return {"original": original_results, "domain": domain_results}
+
+        def eval_sim(model_name, sample_limit, skip_original=False):
+            logger.info("No in-domain evaluation available for the sim model.")
+            if not skip_original:
+                logger.info(f"Evaluating sim model on NLI dataset with sample limit of {str(sample_limit)}.")
+                originalEval = NLIEvaluator(sample_limit=sample_limit, sim_model_name=model_name)
+                logger.info(f"Evals: {str(originalEval.results)}")
+
+        def eval_qe(model_name):
+            domainEval = QexpEvaluator(qe_model_dir=os.path.join('gamechangerml/models', model_name), **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
+            logger.info(f"Evals: {str(domainEval.results)}")
+        
+        results = {"original": {}, "domain": {}}
+        try:
+            logger.info(f"Attempting to evaluate model {model_name}")
+            
+            if "bert-base-cased-squad2" in model_name:
+                results['original'] = eval_qa(model_name, sample_limit, skip_original)
+            elif "sent_index" in model_name:
+                results = eval_sent(model_name, validation_data, skip_original)
+            elif "distilbart-mnli-12-3" in model_name:
+                results['original'] = eval_sim(model_name, sample_limit, skip_original)
+            elif 'qexp' in model_name:
+                results['domain'] = eval_qe(model_name)
+            else:
+                logger.warning("There is currently no evaluation pipeline for this type of model.")
+                raise Exception("No evaluation pipeline available")
+
+        except Exception as e:
+            logger.warning(f"Could not evaluate {model_name}")
+            logger.warning(e)
+        
+        return results
     
     def create_qexp(
         self,
@@ -328,12 +406,13 @@ class Pipeline:
 
         # Building the Index
         try:
+            process = os.getpid()
+            logger.info(f"The PID for creating the sent index is {process}")
             encoder = SentenceEncoder(encoder_model_name=encoder_model, use_gpu=use_gpu, transformer_path=LOCAL_TRANSFORMERS_DIR, **EmbedderConfig.MODEL_ARGS)
             logger.info(f"Creating Document Embeddings with {encoder_model} on {corpus}")
             logger.info("-------------- Indexing Documents--------------")
             start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             encoder.index_documents(corpus_path=corpus, index_path=local_sent_index_dir)
-            ## ADD PROGRESS BAR??
             end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             logger.info("-------------- Completed Indexing --------------")
             user = get_user(logger)
@@ -426,6 +505,8 @@ class Pipeline:
                     metadata, evals = self.create_embedding(**params)
                 elif build_type == "qexp":
                     metadata, evals = self.create_qexp(**params)
+                elif build_type == "eval":
+                    metadata, evals = {}, self.evaluate(**params)
                 self.mlflow_record(metadata, evals)
                 processmanager.update_status(processmanager.training, 0, 1, "training" + build_type + " model")
 
@@ -442,6 +523,8 @@ class Pipeline:
                     metadata, evals = self.create_embedding(**params)
                 elif build_type == "qexp":
                     metadata, evals = self.create_qexp(**params)
+                elif build_type == "eval":
+                    metadata, evals = {}, self.evaluate(**params)
                 else:
                     logger.info(f"Started pipeline with unknown build_type: {build_type}")
             except Exception as err:
