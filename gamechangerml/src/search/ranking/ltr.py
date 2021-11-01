@@ -43,6 +43,7 @@ class LTR:
         self.mappings = self.read_mappings()
 
     def write_model(self, model):
+        # write model to json for LTR
         with open("xgb-model.json", "w") as output:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
@@ -62,6 +63,10 @@ class LTR:
         return self.mappings
 
     def train(self, write=True):
+        """train - train a xgboost model with parameters
+        params:
+        returns:
+        """
         bst = xgb.train(self.params, self.data)
         model = bst.get_dump(fmap="featmap.txt", dump_format="json")
         if write:
@@ -69,17 +74,101 @@ class LTR:
         return bst, model
 
     def post_model(self, model, model_name):
+        """post model - train a xgboost model with parameters
+        params:
+        returns:
+        """
         query = {
             "model": {
                 "name": model_name,
                 "model": {"type": "model/xgboost+json", "definition": model},
             }
         }
-        endpoint = ES_HOST + "/_ltr/_featureset/doc_features/_createmodel?pretty"
+        endpoint = ES_HOST + "/_ltr/_featureset/doc_features/_createmodel"
         r = requests.post(endpoint, data=query)
         return r
 
+    def search(self, terms, rescore=True):
+
+        query = {
+            "_source": {"includes": ["pagerank_r", "kw_doc_score_r"]},
+            "stored_fields": ["filename", "title"],
+            "from": 0,
+            "size": 15,
+            "query": {
+                "bool": {
+                    "must": [],
+                    "should": [
+                        {
+                            "nested": {
+                                "path": "paragraphs",
+                                "inner_hits": {},
+                                "query": {
+                                    "bool": {
+                                        "should": [
+                                            {
+                                                "query_string": {
+                                                    "query": f"{terms}",
+                                                    "default_field": "paragraphs.par_raw_text_t.gc_english",
+                                                    "default_operator": "AND",
+                                                    "fuzzy_max_expansions": 1000,
+                                                    "fuzziness": "AUTO",
+                                                    "analyzer": "gc_english",
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                            }
+                        },
+                        {
+                            "multi_match": {
+                                "query": f"{terms}",
+                                "fields": ["display_title_s.search"],
+                                "type": "phrase",
+                                "operator": "and",
+                                "boost": 4,
+                            }
+                        },
+                        {"wildcard": {"keyw_5": {"value": f"*{terms}*"}}},
+                        {
+                            "wildcard": {
+                                "display_title_s.search": {
+                                    "value": f"*{terms}*",
+                                    "boost": 6,
+                                }
+                            }
+                        },
+                    ],
+                    "minimum_should_match": 1,
+                    "filter": [{"term": {"is_revoked_b": "false"}}],
+                }
+            },
+            "highlight": {
+                "fields": {"display_title_s.search": {}, "keyw_5": {}, "id": {}},
+                "fragmenter": "simple",
+            },
+            "sort": [{"_score": {"order": "desc"}}],
+        }
+        if rescore:
+            query["rescore"] = {
+                "query": {
+                    "rescore_query": {
+                        "sltr": {
+                            "params": {"keywords": f"{terms}"},
+                            "model": "lambda_rank1",
+                        }
+                    }
+                }
+            }
+        r = client.search(index="gamechanger", body=dict(query))
+        return r
+
     def generate_judgement(self, mappings):
+        """generate judgement - generates judgement list from user mapping data
+        params:
+        returns:
+        """
         searches = mappings[["search", "document"]]
         searches.dropna(inplace=True)
         searches.search.replace("&quot;", "", regex=True, inplace=True)
@@ -112,7 +201,7 @@ class LTR:
 
     def query_es_fts(self, df):
         ltr_log = []
-        print("querying es ltr logs")
+        logger.info("querying es ltr logs")
         for kw in tqdm(df.keyword.unique()):
             tmp = df[df.keyword == kw]
             for docs in tmp.itertuples():
@@ -124,7 +213,7 @@ class LTR:
 
     def process_ltr_log(self, ltr_log, num_fts=4):
         all_vals = []
-        print("processing logs")
+        logger.info("processing logs")
         for entries in ltr_log:
             if len(entries) > 0:
                 # loop through entry logs (num of features)
@@ -147,7 +236,7 @@ class LTR:
         df.reset_index(inplace=True)
         df = pd.concat([df, ft_df], axis=1)
 
-        print("generating txt file")
+        logger.info("generating txt file")
         for kw in tqdm(df.keyword.unique()):
             rows = df[df.keyword == kw]
             for i in rows.itertuples():
@@ -207,7 +296,7 @@ class LTR:
                 "name": "doc_features",
                 "features": [
                     {
-                        "name": "1",
+                        "name": "title",
                         "params": ["keywords"],
                         "template_language": "mustache",
                         "template": {
@@ -220,7 +309,31 @@ class LTR:
                         },
                     },
                     {
-                        "name": "2",
+                        "name": "keyw_5",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match": {"keyw_5": "{{keywords}}"}},
+                    },
+                    {
+                        "name": "textlength",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {
+                            "function_score": {
+                                "functions": [
+                                    {
+                                        "field_value_factor": {
+                                            "field": "page_count",
+                                            "missing": 0,
+                                        }
+                                    }
+                                ],
+                                "query": {"match_all": {}},
+                            }
+                        },
+                    },
+                    {
+                        "name": "paragraph",
                         "params": ["keywords"],
                         "template_language": "mustache",
                         "template": {
