@@ -12,7 +12,7 @@ from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
-from gamechangerml.src.utilities.test_utils import collect_evals, open_json, get_most_recent_dir, collect_sent_evals_gc
+from gamechangerml.src.utilities.test_utils import collect_evals, open_json, get_most_recent_dir, collect_sent_evals_gc, handle_sent_evals
 
 from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
 from gamechangerml.src.model_testing.evaluation import SQuADQAEvaluator, IndomainQAEvaluator, IndomainRetrieverEvaluator, MSMarcoRetrieverEvaluator, NLIEvaluator, QexpEvaluator
@@ -87,6 +87,7 @@ def get_downloaded_models_list():
     try:
         for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
             if ("sent_index" in f) and ("tar" not in f):
+                logger.info(f"sent indices: {str(f)}")
                 sent_index_list[f] = {}
                 meta_path = os.path.join(
                     Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json"
@@ -95,7 +96,7 @@ def get_downloaded_models_list():
                     meta_file = open(meta_path)
                     sent_index_list[f] = json.load(meta_file)
                     sent_index_list[f]["evaluation"] = {}
-                    sent_index_list[f]["evaluation"] = collect_sent_evals_gc(os.path.join(
+                    sent_index_list[f]["evaluation"] = handle_sent_evals(os.path.join(
                         Config.LOCAL_PACKAGED_MODELS_DIR, f))
                     meta_file.close()
     except Exception as e:
@@ -140,7 +141,6 @@ async def get_trans_model():
     """
     #sent_model = latest_intel_model_sent.value
     return {
-        #"sentence_models": sent_model,
         "sim_model": latest_intel_model_sim.value,
         "encoder_model": latest_intel_model_encoder.value,
         "sentence_index": SENT_INDEX_PATH.value,
@@ -278,16 +278,15 @@ async def train_model(model_dict: dict, response: Response):
     """
     try:
         # Methods for all the different models we can train
-        def finetune_sentence():
+        def finetune_sentence(model_dict = model_dict):
             logger.info("Attempting to finetune the sentence transformer")
             pipeline = Pipeline()
-            #data_path = model_dict['data_path'] if model_dict['data_path'] else None
-            #model_load_path = model_dict['model_load_path'] if model_dict['model_load_path'] else os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL)
-            #args = {
-            #    "data_path": data_path,
-            #    "model_load_path": model_load_path
-            #}
-            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params={})#, params = args)
+            args = {
+                "batch_size": model_dict["batch_size"],
+                "epochs": model_dict["epochs"],
+                "warmup_steps": model_dict["warmup_steps"]
+            }
+            pipeline.run(build_type = "sent_finetune", run_name = datetime.now().strftime("%Y%m%d"), params = args)
 
         def train_sentence(model_dict = model_dict):
             logger.info("Attempting to start sentence pipeline")
@@ -302,7 +301,7 @@ async def train_model(model_dict: dict, response: Response):
                 "upload": bool(model_dict["upload"]),
                 "version": model_dict["version"],
             }
-            pipeline.run(build_type = "sentence", run_name = datetime.now().strftime("%Y%m%d"), params = args)
+            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
 
         def train_qexp(model_dict = model_dict):
             logger.info("Attempting to start qexp pipeline")

@@ -169,7 +169,10 @@ class Pipeline:
         return data
 
     def finetune_sent(
-        self
+        self,
+        batch_size=32,
+        epochs=3,
+        warmup_steps=100
     ):
         """
         finetune_sent: finetunes the sentence transformer - saves new model, a csv file of old/new cos sim scores,
@@ -185,7 +188,7 @@ class Pipeline:
         data_path = get_most_recent_dir("gamechangerml/data/training/sent_transformer")
         logger.info(f"Loading in domain data to finetune from {data_path}")
         finetuner = STFinetuner(
-            model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE
+            model_load_path=model_load_path, model_save_path=model_save_path, shuffle=True, batch_size=batch_size, epochs=epochs, warmup_steps=warmup_steps
             )
         logger.info("Loaded finetuner class...")
         return finetuner.retrain(data_path)
