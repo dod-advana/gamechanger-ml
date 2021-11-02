@@ -43,12 +43,20 @@ class LTR:
         self.mappings = self.read_mappings()
 
     def write_model(self, model):
+        """write model: writes model to file
+        params: model in json form
+        returns:
+        """
         # write model to json for LTR
         with open("xgb-model.json", "w") as output:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
     def read_xg_data(self, path="xgboost.txt"):
+        """read xg data: reads LTR formatted data
+        params: path to file
+        returns:
+        """
         try:
             self.data = xgb.DMatrix(path)
             return self.data
@@ -56,6 +64,11 @@ class LTR:
             logger.error("Could not read in data for training")
 
     def read_mappings(self, path="gamechangerml/data/SearchPdfMapping.csv"):
+        """read mappings: reads search pdf mappings
+        params: path to file
+        returns:
+            mappings file
+        """
         try:
             self.mappings = pd.read_csv(path)
         except Exception as e:
@@ -65,7 +78,10 @@ class LTR:
     def train(self, write=True):
         """train - train a xgboost model with parameters
         params:
+            write: boolean to write to file
         returns:
+            bst: xgboost object
+            model: model json
         """
         bst = xgb.train(self.params, self.data)
         model = bst.get_dump(fmap="featmap.txt", dump_format="json")
@@ -74,9 +90,12 @@ class LTR:
         return bst, model
 
     def post_model(self, model, model_name):
-        """post model - train a xgboost model with parameters
+        """post model - post a model to ES
         params:
+            model: model in json form
+            model_name: model name for ES
         returns:
+            r: results
         """
         query = {
             "model": {
@@ -89,7 +108,13 @@ class LTR:
         return r
 
     def search(self, terms, rescore=True):
-
+        """search: searches with a rescore with ltr option
+        params:
+            terms: search terms
+            rescore: boolean
+        returns:
+            r: results
+        """
         query = {
             "_source": {"includes": ["pagerank_r", "kw_doc_score_r"]},
             "stored_fields": ["filename", "title"],
@@ -167,7 +192,9 @@ class LTR:
     def generate_judgement(self, mappings):
         """generate judgement - generates judgement list from user mapping data
         params:
+            mappings: dataframe of user data extracted from pdf mapping table
         returns:
+            count_df: cleaned dataframe with search mapped data
         """
         searches = mappings[["search", "document"]]
         searches.dropna(inplace=True)
@@ -200,10 +227,19 @@ class LTR:
         return count_df
 
     def query_es_fts(self, df):
+        """query ES features: gets ES feature logs from judgement list
+        params:
+            df: dataframe of judgement list and keyword
+        returns:
+            ltr_log: logs of from ES
+        """
         ltr_log = []
         logger.info("querying es ltr logs")
+        # loop through all unique keywords
         for kw in tqdm(df.keyword.unique()):
+            # get frame of all of the keyword rows
             tmp = df[df.keyword == kw]
+            # get logged feature
             for docs in tmp.itertuples():
                 doc = docs.Index
                 q = self.construct_query(doc, kw)
@@ -212,6 +248,13 @@ class LTR:
         return ltr_log
 
     def process_ltr_log(self, ltr_log, num_fts=4):
+        """process ltr log: extracts features from ES logs for judgement list
+        params:
+            ltr_log: results from ES
+            num_fts: number of features
+        returns:
+            all_vals: all logged features in matrix
+        """
         all_vals = []
         logger.info("processing logs")
         for entries in ltr_log:
@@ -219,16 +262,24 @@ class LTR:
                 # loop through entry logs (num of features)
                 fts = []
                 for entry in entries[0]["fields"]["_ltrlog"][0]["log_entry1"]:
+                    # checks if entry is empty
                     if "value" in entry:
                         fts.append(entry["value"])
                     else:
                         fts.append(0)
                 all_vals.append(fts)
+            # if the doc doesnt exist then add all 0s
             else:
                 all_vals.append(np.zeros(num_fts))
         return all_vals
 
     def generate_ft_txt_file(self, df):
+        """generate feature text file: creates the LTR formatted training data
+        params:
+            df: dataframe of the judgement list with features
+        returns:
+            outputs a file
+        """
         ltr_log = self.query_es_fts(df)
         vals = self.process_ltr_log(ltr_log)
         ft_df = pd.DataFrame(
@@ -263,6 +314,12 @@ class LTR:
         return df
 
     def construct_query(self, doc, kw):
+        """construct query: constructs query for logging features from es
+        params:
+            doc: document name that is in corpus
+            kw: keyword to search on
+        returns: query
+        """
         query = {
             "_source": ["filename", "fields"],
             "query": {
@@ -291,6 +348,7 @@ class LTR:
         return query
 
     def post_features(self):
+        """post features: post features to es"""
         query = {
             "featureset": {
                 "name": "doc_features",
@@ -364,6 +422,13 @@ class LTR:
         }
 
     def normalize(self, arr, start=0, end=4):
+        """normalize: basic normalize between two numbers function
+        params:
+            arr: array to normalize
+            start: beginning number integer
+            end: ending number integer
+        returns: normalized array
+        """
         width = end - start
         res = (arr - arr.min()) / (arr.max() - arr.min()) * width + start
         return res
