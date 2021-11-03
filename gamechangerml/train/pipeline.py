@@ -409,8 +409,6 @@ class Pipeline:
 
         # Building the Index
         try:
-            process = os.getpid()
-            logger.info(f"The PID for creating the sent index is {process}")
             encoder = SentenceEncoder(encoder_model_name=encoder_model, use_gpu=use_gpu, transformer_path=LOCAL_TRANSFORMERS_DIR, **EmbedderConfig.MODEL_ARGS)
             logger.info(f"Creating Document Embeddings with {encoder_model} on {corpus}")
             logger.info("-------------- Indexing Documents--------------")
