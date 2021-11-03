@@ -332,6 +332,7 @@ async def train_model(model_dict: dict, response: Response):
             "eval": run_evals
         }
         # Set the training method to be loaded onto the thread
+        model_dict["build_type"] = "sentence"
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
         else: # PLACEHOLDER
