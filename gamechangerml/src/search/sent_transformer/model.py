@@ -10,6 +10,7 @@ import torch
 import time
 
 from gamechangerml.src.text_handling.corpus import LocalCorpus
+from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.pathselect import get_model_paths
@@ -169,7 +170,10 @@ class SentenceEncoder(object):
             data = MSMarcoData()
             corpus = data.corpus
 
+        processmanager.update_status(processmanager.training, 0, 1, "building sent index")
+
         self._index(corpus, index_path)
+        processmanager.update_status(processmanager.training, 1, 1, "finished building sent index")
 
         self.embedder.save(index_path)
         logger.info(f"Saved embedder to {index_path}")

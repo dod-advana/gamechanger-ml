@@ -530,11 +530,14 @@ class Pipeline:
                     metadata, evals = {}, self.evaluate(**params)
                 else:
                     logger.info(f"Started pipeline with unknown build_type: {build_type}")
+                processmanager.update_status(processmanager.training, 0, 1, "training" + build_type + " model")
+                processmanager.update_status(processmanager.training, 1, 1, "trained" + build_type + " model")
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
                 processmanager.update_status(
                     processmanager.loading_corpus, message="failed to load corpus", failed=True)
-                processmanager.update_status(processmanager.training, message="failed to train " + build_type + " model", failed=True)
+                processmanager.update_status(
+                    processmanager.training, message="failed to train " + build_type + " model", failed=True)
 
     def mlflow_record(self, metadata, evals):
         """

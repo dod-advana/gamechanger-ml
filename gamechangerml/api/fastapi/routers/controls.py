@@ -185,7 +185,6 @@ async def s3_func(function, response: Response):
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return models
 
-### SHOW WHAT DATA IS AVAILABLE for training/evaluating
 
 ## Post Methods ##
 
@@ -333,7 +332,6 @@ async def train_model(model_dict: dict, response: Response):
             "eval": run_evals
         }
         # Set the training method to be loaded onto the thread
-        #training_method = training_switch["sentence"] ## TODO: KATE HARDCODED THIS, FIX
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
 
