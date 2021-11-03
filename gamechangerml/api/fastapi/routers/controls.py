@@ -10,6 +10,7 @@ from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.routers.startup import *
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
+from gamechangerml.src.search.ranking.ltr import LTR
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.src.utilities.test_utils import collect_evals
@@ -53,8 +54,9 @@ def get_downloaded_models_list():
                     meta_file = open(meta_path)
                     qexp_list[f] = json.load(meta_file)
                     qexp_list[f]["evaluation"] = {}
-                    qexp_list[f]["evaluation"] = collect_evals(os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, f))
+                    qexp_list[f]["evaluation"] = collect_evals(
+                        os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
+                    )
                     meta_file.close()
     except Exception as e:
         logger.error(e)
@@ -72,8 +74,9 @@ def get_downloaded_models_list():
                     config_file = open(config_path)
                     transformer_list[trans] = json.load(config_file)
                     transformer_list[trans]["evaluation"] = {}
-                    transformer_list[trans]["evaluation"] = collect_evals(os.path.join(
-                        LOCAL_TRANSFORMERS_DIR.value, trans))
+                    transformer_list[trans]["evaluation"] = collect_evals(
+                        os.path.join(LOCAL_TRANSFORMERS_DIR.value, trans)
+                    )
                     config_file.close()
     except Exception as e:
         logger.error(e)
@@ -91,8 +94,9 @@ def get_downloaded_models_list():
                     meta_file = open(meta_path)
                     sent_index_list[f] = json.load(meta_file)
                     sent_index_list[f]["evaluation"] = {}
-                    sent_index_list[f]["evaluation"] = collect_evals(os.path.join(
-                        LOCAL_TRANSFORMERS_DIR.value, f))
+                    sent_index_list[f]["evaluation"] = collect_evals(
+                        os.path.join(LOCAL_TRANSFORMERS_DIR.value, f)
+                    )
                     meta_file.close()
     except Exception as e:
         logger.error(e)
@@ -103,6 +107,30 @@ def get_downloaded_models_list():
         "qexp": qexp_list,
     }
     return model_list
+
+
+@router.get("/createLTR", status_code=200)
+async def generate_judgmenet(response: Response):
+    """generate judgement - checks how many files are in the corpus directory
+    Args:
+    Returns: integer
+    """
+    number_files = 0
+    try:
+
+        ltr = LTR()
+        logger.info("Attempting to create judgement list")
+        judgements = ltr.generate_judgement(ltr.mappings)
+        fts = ltr.generate_ft_txt_file(judgements)
+        ltr.data = ltr.read_xg_data()
+        bst, model = ltr.train()
+        r = ltr.post_model(model)
+        number_files = len(judgements)
+    except Exception as e:
+        logger.warning(e)
+        logger.warning(f"Could not create judgement list")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    return r
 
 
 @router.get("/getFilesInCorpus", status_code=200)
@@ -272,7 +300,7 @@ async def train_model(model_dict: dict, response: Response):
     """
     try:
         # Methods for all the different models we can train
-        def train_sentence(model_dict = model_dict):
+        def train_sentence(model_dict=model_dict):
             logger.info("Attempting to start sentence pipeline")
             pipeline = Pipeline()
             if not os.path.exists(CORPUS_DIR):
@@ -285,9 +313,13 @@ async def train_model(model_dict: dict, response: Response):
                 "upload": bool(model_dict["upload"]),
                 "version": model_dict["version"],
             }
-            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
+            pipeline.run(
+                build_type=model_dict["build_type"],
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
 
-        def train_qexp(model_dict = model_dict):
+        def train_qexp(model_dict=model_dict):
             logger.info("Attempting to start qexp pipeline")
             pipeline = Pipeline()
             args = {
@@ -296,22 +328,21 @@ async def train_model(model_dict: dict, response: Response):
                 "upload": bool(model_dict["upload"]),
                 "version": model_dict["version"],
             }
-            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
-        
+            pipeline.run(
+                build_type=model_dict["build_type"],
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
+
         # Create a mapping between the training methods and input from the api
-        training_switch ={
-            "sentence":train_sentence,
-            "qexp":train_qexp
-        }
+        training_switch = {"sentence": train_sentence, "qexp": train_qexp}
         # Set the training method to be loaded onto the thread
         traing_method = training_switch["sentence"]
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             traing_method = training_switch[model_dict["build_type"]]
-            
 
         training_thread = MlThread(traing_method)
-        training_thread.start()   
-                    
+        training_thread.start()
 
     except:
         logger.warning(f"Could not train the model")

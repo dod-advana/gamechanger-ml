@@ -14,7 +14,6 @@ import os
 from elasticsearch import Elasticsearch
 import pickle
 import xgboost as xgb
-import graphviz
 import matplotlib
 import math
 import requests
@@ -25,6 +24,8 @@ ES_HOST = "https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.e
 
 client = Elasticsearch([ES_HOST])
 logger = logging.getLogger("gamechanger")
+GC_MODEL_PATH = "gamechangerml/models/ltr"
+GC_DATA_PATH = "gamechangerml/ltr/data"
 
 
 class LTR:
@@ -41,6 +42,7 @@ class LTR:
         self.data = self.read_xg_data()
         self.params = params
         self.mappings = self.read_mappings()
+        self.judgement = None
 
     def write_model(self, model):
         """write model: writes model to file
@@ -48,11 +50,12 @@ class LTR:
         returns:
         """
         # write model to json for LTR
+        path = os.path.join(GC_MODEL_PATH, "xgb-model.json")
         with open("xgb-model.json", "w") as output:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
-    def read_xg_data(self, path="xgboost.txt"):
+    def read_xg_data(self, path=os.path.join(GC_DATA_PATH, "xgboost.txt")):
         """read xg data: reads LTR formatted data
         params: path to file
         returns:
@@ -84,7 +87,9 @@ class LTR:
             model: model json
         """
         bst = xgb.train(self.params, self.data)
-        model = bst.get_dump(fmap="featmap.txt", dump_format="json")
+        model = bst.get_dump(
+            fmap=os.path.join(GC_DATA_PATH, "featmap.txt"), dump_format="json"
+        )
         if write:
             self.write_model(model)
         return bst, model
@@ -223,6 +228,7 @@ class LTR:
         count_df.ranking = count_df.ranking.astype(int)
         le = LabelEncoder()
         count_df["qid"] = le.fit_transform(count_df.keyword)
+        self.judgement = count_df
 
         return count_df
 

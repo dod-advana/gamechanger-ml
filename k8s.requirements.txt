@@ -35,3 +35,4 @@ tqdm
 transformers
 txtai==2.0.0
 wikipedia
+xgboost

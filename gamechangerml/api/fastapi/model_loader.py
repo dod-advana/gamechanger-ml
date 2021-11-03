@@ -9,6 +9,7 @@ from gamechangerml.configs.config import (
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.search.embed_reader import sparse
+from gamechangerml.src.search.ranking import ltr
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.src.featurization.word_sim import WordSim
 
@@ -24,6 +25,7 @@ class ModelLoader:
     __query_expander = None
     __word_sim = None
     __sparse_reader = None
+    __ltr_model = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -61,6 +63,9 @@ class ModelLoader:
     def getSparse(self):
         return ModelLoader.__sparse_reader
 
+    def getLTR(self):
+        return ModelLoader.__ltr_model
+
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
 
@@ -71,6 +76,7 @@ class ModelLoader:
     sparse_reader = property(getSparse, set_error)
     sentence_trans = property(getSentence_trans, set_error)
     word_sim = property(getWordSim, set_error)
+    ltr_model = property(getLTR, set_error)
 
     @staticmethod
     def initQA():
@@ -115,7 +121,7 @@ class ModelLoader:
         """
         logger.info(f"Loading Query Expansion Model from {model_path}")
         try:
-            ModelLoader.__word_sim = WordSim(model_path)
+            # ModelLoader.__word_sim = WordSim(model_path)
             logger.info("** Loaded Word Sim Model")
         except Exception as e:
             logger.warning("** Could not load Word Sim model")
@@ -167,6 +173,15 @@ class ModelLoader:
             logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
+            logger.warning(e)
+
+    @staticmethod
+    def initLTR():
+        try:
+            ModelLoader.__ltr_model = ltr.LTR()
+            logger.info(f"LTR loaded")
+        except Exception as e:
+            logger.warning("** Could not load LTR")
             logger.warning(e)
 
     # Currently deprecated
