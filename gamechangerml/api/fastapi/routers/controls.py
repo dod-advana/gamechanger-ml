@@ -335,7 +335,7 @@ async def train_model(model_dict: dict, response: Response):
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
         else: # PLACEHOLDER
-            training_method = "sentence"
+            training_method = training_switch["sentence"]
 
         training_thread = MlThread(training_method)
         training_thread.start()
