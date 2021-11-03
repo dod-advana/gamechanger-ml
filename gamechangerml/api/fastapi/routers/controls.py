@@ -334,6 +334,8 @@ async def train_model(model_dict: dict, response: Response):
         # Set the training method to be loaded onto the thread
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
+        else: # PLACEHOLDER
+            training_method = "sentence"
 
         training_thread = MlThread(training_method)
         training_thread.start()
