@@ -116,21 +116,22 @@ async def generate_judgmenet(response: Response):
     Returns: integer
     """
     number_files = 0
+    resp = None
     try:
 
         ltr = LTR()
         logger.info("Attempting to create judgement list")
         judgements = ltr.generate_judgement(ltr.mappings)
-        fts = ltr.generate_ft_txt_file(judgements)
+        # fts = ltr.generate_ft_txt_file(judgements)
         ltr.data = ltr.read_xg_data()
         bst, model = ltr.train()
-        r = ltr.post_model(model)
+        resp = ltr.post_model(model)
         number_files = len(judgements)
     except Exception as e:
         logger.warning(e)
         logger.warning(f"Could not create judgement list")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return r
+    return resp
 
 
 @router.get("/getFilesInCorpus", status_code=200)
