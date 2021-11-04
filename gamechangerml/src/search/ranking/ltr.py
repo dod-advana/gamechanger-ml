@@ -25,7 +25,7 @@ ES_HOST = "https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.e
 client = Elasticsearch([ES_HOST])
 logger = logging.getLogger("gamechanger")
 GC_MODEL_PATH = "gamechangerml/models/ltr"
-GC_DATA_PATH = "gamechangerml/ltr/data"
+GC_DATA_PATH = "gamechangerml/data/ltr"
 
 
 class LTR:
