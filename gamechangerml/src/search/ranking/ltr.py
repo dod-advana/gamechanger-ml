@@ -20,7 +20,7 @@ import requests
 from sklearn.preprocessing import LabelEncoder
 
 
-ES_HOST = "https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com"
+ES_HOST = os.environ.get("ES_HOST", default="localhost")
 
 client = Elasticsearch([ES_HOST])
 logger = logging.getLogger("gamechanger")
