@@ -51,7 +51,9 @@ class LTR:
         """
         # write model to json for LTR
         path = os.path.join(GC_MODEL_PATH, "xgb-model.json")
-        with open("xgb-model.json", "w") as output:
+        if not os.path.exists(GC_MODEL_PATH):
+            os.mkdir(GC_MODEL_PATH)
+        with open(path, "w") as output:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
