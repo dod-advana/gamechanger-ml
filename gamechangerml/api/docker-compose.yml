@@ -17,13 +17,6 @@ services:
     build:
       context: ../../.
       dockerfile: gamechangerml/api/fastapi/rhel8.mlapp.Dockerfile
-    deploy:
-      resources:
-        reservations:
-          devices:
-          - capabilities: [gpu]
-            #runtime: nvidia
-            #command: nvidia-smi
     ports:
       - "5000:5000"
     env_file:
