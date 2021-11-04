@@ -125,11 +125,11 @@ async def generate_judgmenet(response: Response):
         # fts = ltr.generate_ft_txt_file(judgements)
         ltr.data = ltr.read_xg_data()
         bst, model = ltr.train()
-        resp = ltr.post_model(model)
+        resp = ltr.post_model(model, model_name="ltr_model")
         number_files = len(judgements)
     except Exception as e:
         logger.warning(e)
-        logger.warning(f"Could not create judgement list")
+        logger.warning(f"There is an issue with LTR creation")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return resp
 
