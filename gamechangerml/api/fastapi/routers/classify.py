@@ -1,3 +1,4 @@
+import pandas as pd
 from fastapi import APIRouter, Response, status
 import time
 
@@ -19,7 +20,7 @@ MODELS = ModelLoader()
 
 
 @router.post("/transformerClassify", status_code=200)
-async def transformer_infer(text: dict, response: Response) -> dict:
+async def transformer_infer(corpus: dict, response: Response) -> dict:
     """transformer_infer - endpoint for transformer inference
    Args:
         query: dict; format of query
@@ -35,182 +36,32 @@ async def transformer_infer(text: dict, response: Response) -> dict:
     logger.debug("TRANSFORMER - predicting text: " + str(query))
     results = {}
     try:
-        results = MODELS.sparse_reader.predict(text)
+        pdocs = []
+        rdocs = []
+        classification_list = []
+    #TODO unravel json
+        #docs= {json element containing documents}
+    # TODO Determine if pdoc or rdoc    (number of columns? or tagging?)
+        #if number of keys in doc dict ==
+            #pdocs.append(doc)
+        #pd.read_json(docs)
+
+
+        #TODO clean text
+        # call clean_text() from utils
+        # call encoder()
+
+        # pass data through classifier model
+
+        #for record in corpus:
+            #.predict(record)
+        # construct return payload
+
+
+        #results = MODELS.{model_predictor}.predict(text)
         logger.info(results)
     except Exception:
         logger.error(f"Unable to get results from transformer for {query}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise
     return results
-
-
-@router.post("/textExtractions", status_code=200)
-async def textExtract_infer(query: dict, extractType: str, response: Response) -> dict:
-    """textExtract_infer - endpoint for sentence transformer inference
-    Args:
-        query: dict; format of query
-            {"text": "i am text"}
-        Response: Response class; for status codes(apart of fastapi do not need to pass param)
-        extractType: topics, keywords, or summary
-    Returns:
-        results: dict; results of inference
-    """
-    results = {}
-    try:
-        query_text = query["text"]
-        results["extractType"] = extractType
-        if extractType == "topics":
-            logger.debug("TOPICS - predicting query: " + str(query))
-            # topics = tfidf_model.get_topics(
-            #    topic_processing(query_text, bigrams), topn=5
-            # )
-            # logger.info(topics)
-            # results["extracted"] = topics
-        elif extractType == "summary":
-            summary = GensimSumm(
-                query_text, long_doc=False, word_count=30
-            ).make_summary()
-            results["extracted"] = summary
-        elif extractType == "keywords":
-            logger.debug("keywords - predicting query: " + str(query))
-            results["extracted"] = get_keywords(query_text)
-
-    except Exception:
-        logger.error(f"Unable to get extract text for {query}")
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        raise
-    return results
-
-
-@router.post("/transSentenceSearch", status_code=200)
-async def trans_sentence_infer(
-    query: dict, response: Response, num_results: int = 5
-) -> dict:
-    """trans_sentence_infer - endpoint for sentence transformer inference
-    Args:
-        query: dict; format of query
-            {"text": "i am text"}
-        Response: Response class; for status codes(apart of fastapi do not need to pass param)
-    Returns:
-        results: dict; results of inference
-    """
-    logger.debug("SENTENCE TRANSFORMER - predicting query: " + str(query))
-    results = {}
-    try:
-        query_text = query["text"]
-        results = MODELS.sentence_trans.search(query_text)
-        logger.info(results)
-    except Exception:
-        logger.error(
-            f"Unable to get results from sentence transformer for {query}")
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        raise
-    return results
-
-
-@router.post("/questionAnswer", status_code=200)
-async def qa_infer(query: dict, response: Response) -> dict:
-    """qa_infer - endpoint for sentence transformer inference
-    Args:
-        query: dict; format of query, text must be concatenated string
-            {"query": "what is the navy",
-            "search_context":["pargraph 1", "xyz"]}
-        Response: Response class; for status codes(apart of fastapi do not need to pass param)
-    Returns:
-        results: dict; results of inference
-    """
-    logger.debug("QUESTION ANSWER - predicting query: " + str(query["query"]))
-    results = {}
-
-    try:
-        query_text = query["query"]
-        query_context = query["search_context"]
-        start = time.perf_counter()
-        answers = MODELS.qa_model.answer(query_text, query_context)
-        end = time.perf_counter()
-        logger.info(answers)
-        logger.info(f"time: {end - start:0.4f} seconds")
-        results["answers"] = answers
-        results["question"] = query_text
-
-    except Exception:
-        logger.error(f"Unable to get results from QA model for {query}")
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        raise
-    return results
-
-
-@router.post("/expandTerms", status_code=200)
-async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
-    """post_expand_query_terms - endpoint for expand query terms
-    Args:
-        termsList: dict;
-        Response: Response class; for status codes(apart of fastapi do not need to pass param)
-    Returns:
-        expansion_dict: dict; expanded dictionary of terms
-    """
-
-    terms_string = " ".join(termsList["termsList"])
-    terms = preprocess(terms_string, remove_stopwords=True)
-    expansion_dict = {}
-    # logger.info("[{}] expanded: {}".format(user, termsList))
-
-    logger.info(f"Expanding: {termsList}")
-    try:
-        for term in terms:
-            term = unquoted(term)
-            expansion_list = MODELS.query_expander.expand(
-                term, **QexpConfig.MODEL_ARGS["expansion"]
-            )
-            # turn word pairs into search phrases since otherwise it will just search for pages with both words on them
-            # removing original word from the return terms unless it is combined with another word
-            logger.info(f"original expanded terms: {expansion_list}")
-            finalTerms = remove_original_kw(expansion_list, term)
-            expansion_dict[term] = ['"{}"'.format(exp) for exp in finalTerms]
-            logger.info(f"-- Expanded {term} to \n {finalTerms}")
-        terms = " ".join(terms)
-        logger.info(f"Finding similiar words for: {terms}")
-        sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms)
-        logger.info(f"-- Expanded {terms} to \n {sim_words_dict}")
-        expanded_words = {}
-        expanded_words["qexp"] = expansion_dict
-        expanded_words["wordsim"] = sim_words_dict
-        return expanded_words
-    except Exception as e:
-        logger.error(f"Error with query expansion on {termsList}")
-        logger.error(e)
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-
-
-@router.post("/wordSimilarity", status_code=200)
-async def post_word_sim(termsDict: dict, response: Response) -> dict:
-    """post_word_sim - endpoint for getting similar words
-    Args:
-        termsList: dict;
-        Response: Response class; for status codes(apart of fastapi do not need to pass param)
-    Returns:
-        expansion_dict: dict; expanded dictionary of terms
-    """
-    # logger.info("[{}] expanded: {}".format(user, termsList))
-    terms = termsDict["text"]
-    logger.info(f"Finding similiar words for: {terms}")
-    try:
-        sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms)
-        logger.info(f"-- Expanded {terms} to \n {sim_words_dict}")
-        return sim_words_dict
-    except:
-        logger.error(f"Error with query expansion on {terms}")
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-
-
-def unquoted(term):
-    """unquoted - unquotes string
-    Args:
-        term: string
-    Returns:
-        term: without quotes
-    """
-    if term[0] in ["'", '"'] and term[-1] in ["'", '"']:
-        return term[1:-1]
-    else:
-        return term

@@ -61,6 +61,15 @@ class ModelLoader:
     def getSparse(self):
         return ModelLoader.__sparse_reader
 
+    #TODO getClassify
+    def getClassify_trans(self):
+        if ModelLoader.__sentence_trans == None:
+            logger.warning(
+                "sentence_trans was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initSentence()
+        return ModelLoader.__sentence_trans
+
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
 

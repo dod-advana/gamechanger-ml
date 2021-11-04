@@ -18,3 +18,7 @@ app.include_router(
     controls.router,
     tags=["API Controls"]
 )
+app.include_router(
+    classify.router,
+    tags=["Clossify"]
+)
