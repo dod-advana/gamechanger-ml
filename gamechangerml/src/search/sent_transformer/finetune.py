@@ -71,12 +71,18 @@ class STFinetuner():
         self.epochs = epochs
         self.warmup_steps = warmup_steps
     
-    def retrain(self, data_dir):
+    def retrain(self, data_dir, testing_only=False):
 
         data = open_json("training_data.json", data_dir)
         train = data["train"]
         test = data["test"]
-        
+
+        if testing_only:
+            train_keys = list(train.keys())[:3]
+            test_keys = list(test.keys())[:3]
+            train = {k:train[k] for k in train_keys}
+            test = {k:test[k] for k in test_keys}
+
         ## make formatted training data
         train_samples, df = format_inputs(train, test)
         

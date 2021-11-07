@@ -172,7 +172,8 @@ class Pipeline:
         self,
         batch_size=32,
         epochs=3,
-        warmup_steps=100
+        warmup_steps=100,
+        testing_only=False
     ):
         """
         finetune_sent: finetunes the sentence transformer - saves new model, a csv file of old/new cos sim scores,
@@ -191,7 +192,7 @@ class Pipeline:
             model_load_path=model_load_path, model_save_path=model_save_path, shuffle=True, batch_size=batch_size, epochs=epochs, warmup_steps=warmup_steps
             )
         logger.info("Loaded finetuner class...")
-        return finetuner.retrain(data_path)
+        return finetuner.retrain(data_path, testing_only)
 
     def evaluate(
         self,

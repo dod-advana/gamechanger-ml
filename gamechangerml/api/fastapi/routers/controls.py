@@ -283,7 +283,8 @@ async def train_model(model_dict: dict, response: Response):
             args = {
                 "batch_size": model_dict["batch_size"],
                 "epochs": model_dict["epochs"],
-                "warmup_steps": model_dict["warmup_steps"]
+                "warmup_steps": model_dict["warmup_steps"],
+                "testing_only": False
             }
             pipeline.run(build_type = "sent_finetune", run_name = datetime.now().strftime("%Y%m%d"), params = args)
 
@@ -332,11 +333,11 @@ async def train_model(model_dict: dict, response: Response):
             "eval": run_evals
         }
         # Set the training method to be loaded onto the thread
-        model_dict["build_type"] = "sentence"
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
         else: # PLACEHOLDER
-            training_method = training_switch["sentence"]
+            model_dict["build_type"] = "sentence"
+            training_method = training_switch[model_dict["build_type"]]
 
         training_thread = MlThread(training_method)
         training_thread.start()
