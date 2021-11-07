@@ -15,7 +15,7 @@ async def load_models():
     MODELS.initSentenceEncoder()
     MODELS.initSentenceSearcher()
     MODELS.initTrans()
-    #MODELS.initWordSim()
+    MODELS.initWordSim()
 
 
 @router.on_event("startup")
