@@ -280,22 +280,30 @@ async def train_model(model_dict: dict, response: Response):
         def finetune_sentence(model_dict = model_dict):
             logger.info("Attempting to finetune the sentence transformer")
             pipeline = Pipeline()
+            try:
+                testing_only = model_dict["testing_only"]
+            except:
+                testing_only = False
             args = {
                 "batch_size": model_dict["batch_size"],
                 "epochs": model_dict["epochs"],
                 "warmup_steps": model_dict["warmup_steps"],
-                "testing_only": False
+                "testing_only": testing_only
             }
             pipeline.run(build_type = "sent_finetune", run_name = datetime.now().strftime("%Y%m%d"), params = args)
 
         def train_sentence(model_dict = model_dict):
             logger.info("Attempting to start sentence pipeline")
             pipeline = Pipeline()
-            if not os.path.exists(CORPUS_DIR):
-                logger.warning(f"Corpus is not in local directory")
+            try:
+                corpus_dir = model_dict["corpus_dir"]
+            except:
+                corpus_dir = CORPUS_DIR
+            if not os.path.exists(corpus_dir):
+                logger.warning(f"Corpus is not in local directory {str(corpus_dir)}")
                 raise Exception("Corpus is not in local directory")
             args = {
-                "corpus": CORPUS_DIR,
+                "corpus": corpus_dir,
                 "encoder_model": model_dict["encoder_model"],
                 "gpu": bool(model_dict["gpu"]),
                 "upload": bool(model_dict["upload"]),
@@ -319,7 +327,7 @@ async def train_model(model_dict: dict, response: Response):
             pipeline = Pipeline()
             args = {
                 "model_name": model_dict["model_name"],
-                "skip_original": model_dict["skip_original"],
+                "eval_type": model_dict["eval_type"],
                 "sample_limit": model_dict["sample_limit"],
                 "validation_data": model_dict["validation_data"]
             }

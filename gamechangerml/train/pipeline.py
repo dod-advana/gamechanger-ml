@@ -192,70 +192,83 @@ class Pipeline:
             model_load_path=model_load_path, model_save_path=model_save_path, shuffle=True, batch_size=batch_size, epochs=epochs, warmup_steps=warmup_steps
             )
         logger.info("Loaded finetuner class...")
+        logger.info(f"Testing only is set to: {testing_only}")
         return finetuner.retrain(data_path, testing_only)
 
     def evaluate(
         self,
         model_name,
-        skip_original,
         sample_limit,
-        validation_data="latest"
+        validation_data="latest",
+        eval_type="original"
     ):
         '''model_dict: {
         "model_name": [REQUIRED],
-        "skip_original": False,
+        "eval_type": ["original", "domain"],
         "sample_limit": 15000,
         "validation_data": "latest"
         }
         '''
 
-        def eval_qa(model_name, sample_limit, skip_original=False):
-            logger.info("No in-domain evaluation available for the QA model.")
-            if not skip_original:
+        def eval_qa(model_name, sample_limit, eval_type="original"):
+            if eval_type=="original":
                 logger.info(f"Evaluating QA model on SQuAD dataset with sample limit of {str(sample_limit)}.")
                 originalEval = SQuADQAEvaluator(model_name=model_name, sample_limit=sample_limit, **QAConfig.MODEL_ARGS)
                 return originalEval.results
+            elif eval_type == "domain":
+                logger.info("No in-domain gamechanger evaluation available for the QA model.")
+            else:
+                logger.info("No eval_type selected. Options: ['original', 'gamechanger'].")
         
-        def eval_sent(model_name, validation_data, skip_original=True):
+        def eval_sent(model_name, validation_data, eval_type="domain"):
             metadata = open_json('metadata.json', os.path.join('gamechangerml/models', model_name))
             encoder = metadata['encoder_model']
             logger.info(f"Evaluating {model_name} created with {encoder}")
-            if validation_data != "latest":
-                data_path = os.path.join('gamechangerml/data/validation/sent_transformer', validation_data)
-            else:
-                data_path = None
-            for level in ['gold', 'silver']:
-                domainEval = IndomainRetrieverEvaluator(index=model_name, data_path=data_path, data_level=level, encoder_model_name=encoder, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
-                domain_results = domainEval.results
-            if not skip_original:
+            if eval_type == "domain":
+                if validation_data != "latest":
+                    data_path = os.path.join('gamechangerml/data/validation/sent_transformer', validation_data)
+                else:
+                    data_path = None
+                results = {}
+                for level in ['gold', 'silver']:
+                    domainEval = IndomainRetrieverEvaluator(index=model_name, data_path=data_path, data_level=level, encoder_model_name=encoder, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
+                    results[level] = domainEval.results
+            elif eval_type == "original":
                 originalEval = MSMarcoRetrieverEvaluator(**EmbedderConfig.MODEL_ARGS, encoder_model_name=EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL)
-                original_results = originalEval.results
+                results = originalEval.results
             else:
-                original_results = {}
-            
-            return {"original": original_results, "domain": domain_results}
+                logger.info("No eval_type selected. Options: ['original', 'domain'].")
+                
+            return results
 
-        def eval_sim(model_name, sample_limit, skip_original=False):
-            logger.info("No in-domain evaluation available for the sim model.")
-            if not skip_original:
+        def eval_sim(model_name, sample_limit, eval_type="original"):
+            if eval_type=="original":
                 logger.info(f"Evaluating sim model on NLI dataset with sample limit of {str(sample_limit)}.")
                 originalEval = NLIEvaluator(sample_limit=sample_limit, sim_model_name=model_name)
-                logger.info(f"Evals: {str(originalEval.results)}")
+                results = originalEval.results
+                logger.info(f"Evals: {str(results)}")
+                return results
+            elif eval_type == "domain":
+                logger.info("No in-domain evaluation available for the sim model.")
+            else:
+                logger.info("No eval_type selected. Options: ['original', 'domain'].")
 
         def eval_qe(model_name):
             domainEval = QexpEvaluator(qe_model_dir=os.path.join('gamechangerml/models', model_name), **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
-            logger.info(f"Evals: {str(domainEval.results)}")
+            results = domainEval.results
+            logger.info(f"Evals: {str(results)}")
+            return results
         
         results = {"original": {}, "domain": {}}
         try:
             logger.info(f"Attempting to evaluate model {model_name}")
             
             if "bert-base-cased-squad2" in model_name:
-                results['original'] = eval_qa(model_name, sample_limit, skip_original)
+                results[eval_type] = eval_qa(model_name, sample_limit, eval_type)
             elif "sent_index" in model_name:
-                results = eval_sent(model_name, validation_data, skip_original)
+                results[eval_type] = eval_sent(model_name, validation_data, eval_type)
             elif "distilbart-mnli-12-3" in model_name:
-                results['original'] = eval_sim(model_name, sample_limit, skip_original)
+                results[eval_type] = eval_sim(model_name, sample_limit, eval_type)
             elif 'qexp' in model_name:
                 results['domain'] = eval_qe(model_name)
             else:
@@ -363,7 +376,7 @@ class Pipeline:
         gpu=True,
         upload=False,
         version="v4",
-        validate=True,
+        validate=True
     ):
         """
         create_embedding: creates a sentence embedding
