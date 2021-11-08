@@ -265,8 +265,10 @@ class Pipeline:
             
             if "bert-base-cased-squad2" in model_name:
                 results[eval_type] = eval_qa(model_name, sample_limit, eval_type)
+            elif "msmarco-distilbert-base-v2" in model_name:
+                results["original"] = eval_sent(model_name, validation_data, eval_type="original")
             elif "sent_index" in model_name:
-                results[eval_type] = eval_sent(model_name, validation_data, eval_type)
+                results["domain"] = eval_sent(model_name, validation_data, eval_type="domain")
             elif "distilbart-mnli-12-3" in model_name:
                 results[eval_type] = eval_sim(model_name, sample_limit, eval_type)
             elif 'qexp' in model_name:
