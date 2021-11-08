@@ -15,6 +15,7 @@ from gamechangerml.src.featurization.word_sim import WordSim
 # A singleton class that loads all of the models.
 # All variables and methods are static so you
 # reference them by ModelLoader().example_method()
+from gamechangerml.src.text_classif.predictor import Predictor
 
 
 class ModelLoader:
@@ -24,6 +25,8 @@ class ModelLoader:
     __query_expander = None
     __word_sim = None
     __sparse_reader = None
+    __classify_trans = None
+
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -63,12 +66,12 @@ class ModelLoader:
 
     #TODO getClassify
     def getClassify_trans(self):
-        if ModelLoader.__sentence_trans == None:
+        if ModelLoader.__classify_trans == None:
             logger.warning(
                 "sentence_trans was not set and was attempted to be used. Running init"
             )
-            ModelLoader.initSentence()
-        return ModelLoader.__sentence_trans
+            ModelLoader.initClassify()
+        return ModelLoader.__classify_trans
 
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
@@ -177,6 +180,30 @@ class ModelLoader:
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
             logger.warning(e)
+
+    @staticmethod
+    def initClassify(model_path=CLASSIFY_MODEL_PATH.value, transformers_path=LOCAL_TRANSFORMERS_DIR.value
+    ):
+        """
+        initQE - loads classification Transformers on start
+        Args:
+        Returns:
+        """
+        # load defaults
+        # encoder_model = os.path.join(
+        #    transformer_path, "msmarco-distilbert-base-v2")
+        try:
+
+            ModelLoader.__classify_trans = Predictor(model_path)
+
+            #encoder_model = ModelLoader.__classify_trans.encoder_model
+            #logger.info(f"Using {encoder_model} for classification transformer")
+
+            logger.info("** Loaded Classification model")
+        except Exception as e:
+            logger.warning("** Could not load Classification model")
+            logger.warning(e)
+
 
     # Currently deprecated
     @staticmethod

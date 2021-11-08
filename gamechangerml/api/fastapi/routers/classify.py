@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 from fastapi import APIRouter, Response, status
 import time
@@ -12,6 +14,8 @@ from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.src.featurization.summary import GensimSumm
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.model_loader import ModelLoader
+from gamechangerml.src.text_classif.predictor import Predictor
+
 
 from gamechangerml.configs.config import QexpConfig
 
@@ -20,14 +24,13 @@ MODELS = ModelLoader()
 
 
 @router.post("/transformerClassify", status_code=200)
-async def transformer_infer(corpus: dict, response: Response) -> dict:
+async def transformer_infer(payload: dict, response: Response) -> dict:
     """transformer_infer - endpoint for transformer inference
    Args:
-        query: dict; format of query
+        corpus: dict; format of query
             {"text": "i am text"}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
 
-        #TODO update extra arguments (model type?)
         extractType: topics, keywords, or summary
 
     Returns:
@@ -35,30 +38,72 @@ async def transformer_infer(corpus: dict, response: Response) -> dict:
     """
     logger.debug("TRANSFORMER - predicting text: " + str(query))
     results = {}
+
+    #TODO RAC update to table columns
+    text_col_dict = {
+        "pdoc": ["Program_Description", "Budget_Justification"],
+        "rdoc": ["Project_Mission_Description", "PE_Mission_Description_and_Budget_Justification", "Project_Title",
+                 "Program_Element_Title",
+                 "Project_Notes", "Project_Aquisition_Strategy", "Project_Perfromance_Metircs",
+                 "Other_program_funding_summary_remarks"]
+    }
+
+    label_mapping = {
+        0: "Not AI",
+        1: "AI Enabled",
+        2: "Core AI",
+        3: "AI Enabling"
+    }
+
     try:
-        pdocs = []
-        rdocs = []
-        classification_list = []
+        text_list=[]
     #TODO unravel json
-        #docs= {json element containing documents}
-    # TODO Determine if pdoc or rdoc    (number of columns? or tagging?)
-        #if number of keys in doc dict ==
-            #pdocs.append(doc)
-        #pd.read_json(docs)
+    #TODO Determine if pdoc or rdoc    (number of columns? or tagging?)
+
+        #how does this separate for each record?
+        for concat_col in text_col_dict[record['budget_type']]:
+            for doc in payload:
+                combined_text += doc[concat_col]
+            # aggregate text columns
+            text_list.append(combined_text)
+
+
 
 
         #TODO clean text
-        # call clean_text() from utils
+        def clean_text(text):
+            """
+            Performs the following transformation on a string that is passed in:
+            1. Lowercase the text
+            2. Replaces /(){}\[\]\|@,;#+_ characters with spaces
+            3. Removes any non numeric or lowercase alphabetical characters
+            4. Removes stopwords (from nltk)
+            :param text: (str) Text to be cleaned
+            :return: (str) Cleaned text
+            """
+            import re
+            from nltk.corpus import stopwords
+            REPLACE_BY_SPACE_RE = re.compile('[/(){}\[\]\|@,;#+_]')
+            BAD_SYMBOLS_RE = re.compile('[^0-9a-z ]')
+            STOPWORDS = set(stopwords.words('english'))
+            text = text.lower()  # lowercase text
+            text = REPLACE_BY_SPACE_RE.sub(' ', text)  # replace REPLACE_BY_SPACE_RE symbols by space in text
+            text = BAD_SYMBOLS_RE.sub('', text)  # delete symbols which are in BAD_SYMBOLS_RE from text
+            text = ' '.join(word for word in text.split() if word not in STOPWORDS)  # delete stopwords from text
+            return text
+
+        text_list.map(lambda text: clean_text(text))
         # call encoder()
 
+
         # pass data through classifier model
+            # results = MODELS.classify_trans.predict(text)   #What does predictor return?
 
-        #for record in corpus:
-            #.predict(record)
+
         # construct return payload
+            #results.map(lambda num_class: label_mapping[num_class])
 
 
-        #results = MODELS.{model_predictor}.predict(text)
         logger.info(results)
     except Exception:
         logger.error(f"Unable to get results from transformer for {query}")

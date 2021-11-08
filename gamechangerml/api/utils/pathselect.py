@@ -67,6 +67,15 @@ def get_model_paths():
             print("defaulting INDEX_PATH to sent_index")
             INDEX_PATH = os.path.join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
+        try:
+            CLASSIFY_MODEL_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, "classification"
+            )
+            logger.info("Cannot get Classification model path")
+        except Exception as e:
+            logger.error(e)
+
+            logger.info("Cannot get word sim model path")
     except Exception as e:
         logger.error(e)
         INDEX_PATH = "gamechangerml/models/"
@@ -76,5 +85,6 @@ def get_model_paths():
         "sentence": INDEX_PATH,
         "qexp": QEXP_MODEL_PATH,
         "word_sim": WORD_SIM_MODEL_PATH,
+        "classification": CLASSIFY_MODEL_PATH
     }
     return model_dict
