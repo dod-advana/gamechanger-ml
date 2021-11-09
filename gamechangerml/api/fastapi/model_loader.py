@@ -22,6 +22,7 @@ class ModelLoader:
     __qa_model = None
     __sentence_trans = None
     __query_expander = None
+    __query_expander_jbook = None
     __word_sim = None
     __sparse_reader = None
 
@@ -41,6 +42,14 @@ class ModelLoader:
             )
             ModelLoader.initQE()
         return ModelLoader.__query_expander
+
+    def getQEJbook(self):
+        if ModelLoader.__query_expander_jbook == None:
+            logger.warning(
+                "query_expander was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initQEJBook()
+        return ModelLoader.__query_expander_jbook
 
     def getWordSim(self):
         if ModelLoader.__word_sim == None:
@@ -105,6 +114,22 @@ class ModelLoader:
             logger.info("** Loaded Query Expansion Model")
         except Exception as e:
             logger.warning("** Could not load QE model")
+            logger.warning(e)
+
+    @staticmethod
+    def initQEJBook(qexp_jbook_model_path=QEXP_JBOOK_MODEL_NAME.value):
+        """initQE - loads JBOOK QE model on start
+        Args:
+        Returns:
+        """
+        logger.info(f"Loading Pretrained Vector from {qexp_jbook_model_path}")
+        try:
+            ModelLoader.__query_expander_jbook = qe.QE(
+                qexp_jbook_model_path, **QexpConfig.MODEL_ARGS["init"]
+            )
+            logger.info("** Loaded JBOOK Query Expansion Model")
+        except Exception as e:
+            logger.warning("** Could not load JBOOK QE model")
             logger.warning(e)
 
     @staticmethod
