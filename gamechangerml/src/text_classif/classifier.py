@@ -133,6 +133,19 @@ class Classifier(object):
             self.config_yaml,
         )
 
+    def retrieve_model_name_path(self):
+        """
+        This function is used for supplying either the model name, or the saved model directory, when instantiating
+        *ForSequenceClassification() objects. If no load_saved_model_dir is supplied, use the OOTB model from HF, otherwise
+        load in the saved pytorch_model.bin from the load_saved_model_dir specified
+        Returns: (str) model name, or model path, for the HF model
+        """
+        if self.cfg.load_saved_model_dir:
+            model_name_or_path = self.cfg.load_saved_model_dir
+        else:
+            model_name_or_path = self.cfg.model_name
+        return model_name_or_path
+
     def train_test_ds(self, texts, labels):
         """
         Split into training and validation subsets; create `TensorDataset`s
@@ -423,6 +436,7 @@ class Classifier(object):
         pred_flat = list()
         labels_flat = list()
         logits_score = list()
+        logits_list = list()
 
         # change modes
         self.model.eval()
@@ -441,6 +455,7 @@ class Classifier(object):
             pred_flat_, lbl_flat = cu.flatten_labels(logits, label_ids)
 
             # accumulate the results across batches
+            logits_list.append(logits)
             pred_flat.extend(pred_flat_)
             labels_flat.extend(lbl_flat)
             logits_score.extend(logits_score)
@@ -462,7 +477,19 @@ class Classifier(object):
 
         mcc = clf_metrics.mcc_val(self.true_val, self.predicted_val)
 
-        auc_val = clf_metrics.auc_val(self.true_val, self.predicted_val)
+        # for multiclass classification, pass logits through softmax and use probability matrix in AUC computation
+        if self.cfg.num_labels>2:
+            softmax_layer = torch.nn.Softmax(dim=1)
+            predicted_probas = softmax_layer(torch.Tensor(np.concatenate(logits_list)))
+            try:
+                auc_val = clf_metrics.auc_val(self.true_val, predicted_probas, binary_classif=False)
+            except Exception as e:
+                logger.warning(f"Unable to calcuate AUC for multiclass example, setting AUC to 0, due to following "
+                               f"exception: {e}")
+                auc_val=0.0
+        else:
+            auc_val = clf_metrics.auc_val(self.true_val, self.predicted_val, binary_classif=True)
+
         acc_score = clf_metrics.accuracy_score(
             self.true_val, self.predicted_val
         )
