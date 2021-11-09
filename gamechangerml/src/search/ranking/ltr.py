@@ -17,6 +17,7 @@ import xgboost as xgb
 import matplotlib
 import math
 import requests
+import json
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -25,7 +26,11 @@ ES_HOST = os.environ.get("ES_HOST", default="localhost")
 client = Elasticsearch([ES_HOST])
 logger = logging.getLogger("gamechanger")
 GC_MODEL_PATH = "gamechangerml/models/ltr"
+if not os.path.exists(GC_MODEL_PATH):
+    os.mkdir(GC_MODEL_PATH)
 GC_DATA_PATH = "gamechangerml/data/ltr"
+if not os.path.exists(GC_DATA_PATH):
+    os.mkdir(GC_DATA_PATH)
 
 
 class LTR:
@@ -34,9 +39,7 @@ class LTR:
         params={
             "max_depth": 10,
             "eta": 0.3,
-            "silent": 0,
             "objective": "rank:map",
-            "num_round": 10,
         },
     ):
         self.data = self.read_xg_data()
@@ -51,8 +54,6 @@ class LTR:
         """
         # write model to json for LTR
         path = os.path.join(GC_MODEL_PATH, "xgb-model.json")
-        if not os.path.exists(GC_MODEL_PATH):
-            os.mkdir(GC_MODEL_PATH)
         with open(path, "w") as output:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
@@ -104,6 +105,7 @@ class LTR:
         returns:
             r: results
         """
+        headers = {"Content-Type": "application/json"}
         query = {
             "model": {
                 "name": model_name,
@@ -111,8 +113,8 @@ class LTR:
             }
         }
         endpoint = ES_HOST + "/_ltr/_featureset/doc_features/_createmodel"
-        r = requests.post(endpoint, data=query)
-        return r
+        r = requests.post(endpoint, data=json.dumps(query), headers=headers)
+        return r.content
 
     def search(self, terms, rescore=True):
         """search: searches with a rescore with ltr option
@@ -317,7 +319,7 @@ class LTR:
                     + str(i.document)
                     + "\n"
                 )
-                with open("xgboost.txt", "a") as f:
+                with open(os.path.join(GC_DATA_PATH, "xgboost.txt"), "a") as f:
                     f.writelines(new_row)
         return df
 
@@ -428,6 +430,16 @@ class LTR:
                 ],
             }
         }
+
+        headers = {"Content-Type": "application/json"}
+        endpoint = ES_HOST + "/_ltr/_featureset/doc_features"
+        r = requests.post(endpoint, data=json.dumps(query), headers=headers)
+        return r.content
+
+    def post_init_ltr(self):
+        endpoint = ES_HOST + "/_ltr"
+        r = requests.put(endpoint)
+        return r.content
 
     def normalize(self, arr, start=0, end=4):
         """normalize: basic normalize between two numbers function

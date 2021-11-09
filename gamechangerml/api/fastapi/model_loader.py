@@ -20,12 +20,14 @@ from gamechangerml.src.featurization.word_sim import WordSim
 
 class ModelLoader:
     # private model variables
+    def __init__(self):
+        self.ltr_model = ltr.LTR()
+
     __qa_model = None
     __sentence_trans = None
     __query_expander = None
     __word_sim = None
     __sparse_reader = None
-    __ltr_model = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -63,9 +65,6 @@ class ModelLoader:
     def getSparse(self):
         return ModelLoader.__sparse_reader
 
-    def getLTR(self):
-        return ModelLoader.__ltr_model
-
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
 
@@ -76,7 +75,6 @@ class ModelLoader:
     sparse_reader = property(getSparse, set_error)
     sentence_trans = property(getSentence_trans, set_error)
     word_sim = property(getWordSim, set_error)
-    ltr_model = property(getLTR, set_error)
 
     @staticmethod
     def initQA():
@@ -174,40 +172,3 @@ class ModelLoader:
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
             logger.warning(e)
-
-    @staticmethod
-    def initLTR():
-        try:
-            ModelLoader.__ltr_model = ltr.LTR()
-            logger.info(f"LTR loaded")
-        except Exception as e:
-            logger.warning("** Could not load LTR")
-            logger.warning(e)
-
-    # Currently deprecated
-    @staticmethod
-    def initTrans():
-        """initTrans - loads transformer model on start
-        Args:
-        Returns:
-        """
-        try:
-            model_name = os.path.join(
-                LOCAL_TRANSFORMERS_DIR.value, "distilbert-base-uncased-distilled-squad"
-            )
-            # not loading due to ram and deprecation
-            # logger.info(f"Attempting to load in BERT model default: {model_name}")
-            logger.info(
-                f"SKIPPING LOADING OF TRANSFORMER MODEL FOR INTELLIGENT SEARCH: {model_name}"
-            )
-            # ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
-            # logger.info(
-            #    f" ** Successfully loaded BERT model default: {model_name}")
-            logger.info(f" ** Setting Redis model to {model_name}")
-            # set cache variable defined in settings.py
-            latest_intel_model_trans.value = model_name
-        except OSError:
-            logger.error(f"Could not load BERT Model {model_name}")
-            logger.error(
-                "Check if BERT cache is in correct location: tranformer_cache/ above root directory."
-            )

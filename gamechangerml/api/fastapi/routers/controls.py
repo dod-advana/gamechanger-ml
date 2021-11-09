@@ -17,7 +17,7 @@ from gamechangerml.src.utilities.test_utils import collect_evals
 
 router = APIRouter()
 MODELS = ModelLoader()
-
+ltr = MODELS.ltr_model
 ## Get Methods ##
 
 
@@ -109,8 +109,8 @@ def get_downloaded_models_list():
     return model_list
 
 
-@router.get("/createLTR", status_code=200)
-async def generate_judgmenet(response: Response):
+@router.get("/LTR/initLTR", status_code=200)
+async def initLTR(response: Response):
     """generate judgement - checks how many files are in the corpus directory
     Args:
     Returns: integer
@@ -119,11 +119,33 @@ async def generate_judgmenet(response: Response):
     resp = None
     try:
 
-        ltr = LTR()
+        logger.info("Attempting to initialize LTR")
+        resp = ltr.post_init_ltr()
+        logger.info(resp)
+        logger.info("Attempting to post features to LTR")
+        resp = ltr.post_features()
+        logger.info(resp)
+    except Exception as e:
+        logger.warning("Could not init LTR")
+
+
+@router.get("/LTR/createModel", status_code=200)
+async def create_LTR_model(response: Response):
+    """generate judgement - checks how many files are in the corpus directory
+    Args:
+    Returns: integer
+    """
+    number_files = 0
+    resp = None
+    try:
+
         logger.info("Attempting to create judgement list")
         judgements = ltr.generate_judgement(ltr.mappings)
+        logger.info("Attempting to get features")
         # fts = ltr.generate_ft_txt_file(judgements)
+        logger.info("Attempting to read in data")
         ltr.data = ltr.read_xg_data()
+        logger.info("Attempting to train LTR model")
         bst, model = ltr.train()
         resp = ltr.post_model(model, model_name="ltr_model")
         number_files = len(judgements)

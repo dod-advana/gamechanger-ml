@@ -13,7 +13,6 @@ async def load_models():
     MODELS.initQA()
     MODELS.initQE()
     MODELS.initSentence()
-    MODELS.initTrans()
     MODELS.initWordSim()
 
 
