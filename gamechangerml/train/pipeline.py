@@ -374,8 +374,6 @@ class Pipeline:
         self,
         corpus,
         encoder_model,
-        batch_size=0,
-        n_batches=20,
         existing_embeds=None,
         gpu=True,
         upload=False,
@@ -427,7 +425,7 @@ class Pipeline:
 
         # Building the Index
         try:
-            encoder = SentenceEncoder(encoder_model_name=encoder_model, use_gpu=use_gpu, n_batches=n_batches, batch_size=batch_size, transformer_path=LOCAL_TRANSFORMERS_DIR, **EmbedderConfig.MODEL_ARGS)
+            encoder = SentenceEncoder(encoder_model_name=encoder_model, use_gpu=use_gpu, transformer_path=LOCAL_TRANSFORMERS_DIR, **EmbedderConfig.MODEL_ARGS)
             logger.info(f"Creating Document Embeddings with {encoder_model} on {corpus}")
             logger.info("-------------- Indexing Documents--------------")
             start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
