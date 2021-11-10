@@ -7,8 +7,6 @@
 ARG BASE_IMAGE="nvidia/cuda:11.2.2-cudnn8-runtime-ubi8"
 FROM $BASE_IMAGE
 
-SHELL ["/bin/bash", "-c"]
-
 # tmp switch to root for sys pkg setup
 USER root
 
@@ -51,7 +49,7 @@ ARG APP_UID=1001
 ARG APP_GID=1001
 
 # ensure user/group exists, formally
-RUN ((getent group $APP_GID &> /dev/null) \
+RUN ( (getent group $APP_GID &> /dev/null) \
         || groupadd --system --gid $APP_GID app_default \
     ) && ((getent passwd $APP_UID &> /dev/null) \
         || useradd --system --shell /sbin/nologin --gid $APP_GID --uid $APP_UID app_default \
@@ -78,11 +76,10 @@ RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     } \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}"
 
-COPY . "${APP_DIR}"
-RUN chown -R $APP_UID:$APP_GID "${APP_DIR}"
-
-USER $APP_UID:$APP_GID
 # thou shall not root
+USER $APP_UID:$APP_GID
+
+COPY --chown="${APP_UID}:${APP_GID}" ./ "${APP_DIR}"
 
 ENV MLAPP_VENV_DIR="${APP_VENV}"
 WORKDIR "$APP_DIR"
