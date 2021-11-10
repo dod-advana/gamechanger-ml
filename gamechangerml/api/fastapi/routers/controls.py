@@ -308,8 +308,8 @@ async def train_model(model_dict: dict, response: Response):
                 "gpu": bool(model_dict["gpu"]),
                 "upload": bool(model_dict["upload"]),
                 "version": model_dict["version"],
-                "n_batches": model_dict["n_batches"],
-                "batch_size": model_dict["batch_size"]
+                #"n_batches": model_dict["n_batches"],
+                #"batch_size": model_dict["batch_size"]
             }
             pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
 
