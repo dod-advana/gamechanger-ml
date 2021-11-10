@@ -21,7 +21,7 @@ click==7.1.2
 contextvars==2.4
 cycler==0.10.0
 cymem==2.0.5
-dataclasses==0.8
+dataclasses==0.6
 decorator==4.4.2
 elasticsearch==7.13.4
 en-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.0.0/en_core_web_lg-3.0.0.tar.gz

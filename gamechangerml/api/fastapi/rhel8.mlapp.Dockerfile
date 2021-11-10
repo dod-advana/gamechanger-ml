@@ -22,8 +22,8 @@ RUN dnf install -y \
         gcc \
         gcc-c++ \
         glibc-langpack-en \
-        python36 \
-        python36-devel \
+        python38 \
+        python38-devel \
         git \
         zip \
         unzip \
