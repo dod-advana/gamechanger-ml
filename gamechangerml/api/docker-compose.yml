@@ -31,6 +31,7 @@ services:
     volumes:
       - "../../gamechangerml/models:/opt/app-root/src/gamechangerml/models"
       - "../../gamechangerml/corpus:/opt/app-root/src/gamechangerml/corpus"
+      - "../../gamechangerml/data:/opt/app-root/src/gamechangerml/data"
       - ~/.aws/:/.aws
     depends_on:
       - gc-redis

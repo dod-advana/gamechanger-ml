@@ -5,31 +5,31 @@ import argparse
 
 def _squad(limit):
     logger.info("\nEvaluating QA with SQuAD Data...")
-    QAEval = SQuADQAEvaluator(model=None, sample_limit=limit, **QAConfig.MODEL_ARGS)
+    QAEval = SQuADQAEvaluator(model=None, sample_limit=limit, model_name=QAConfig.BASE_MODEL, **QAConfig.MODEL_ARGS)
     logger.info(QAEval.results)
     return
 
 def _gc_qa(limit):
     logger.info("\nEvaluating QA with in-domain data...")
-    GCEval = IndomainQAEvaluator(model=None, **QAConfig.MODEL_ARGS)
+    GCEval = IndomainQAEvaluator(model=None, model_name=QAConfig.BASE_MODEL, **QAConfig.MODEL_ARGS)
     logger.info(GCEval.results)
     return
 
 def _gc_retriever(limit):
     logger.info("\nEvaluating Retriever with in-domain data...")
-    GoldStandardRetrieverEval = IndomainRetrieverEvaluator(encoder=None, retriever=None, index='sent_index_20210715', **EmbedderConfig.MODEL_ARGS, **SimilarityConfig.MODEL_ARGS)
+    GoldStandardRetrieverEval = IndomainRetrieverEvaluator(encoder=None, retriever=None, index='sent_index_20211020', **EmbedderConfig.MODEL_ARGS, encoder_model_name= EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL)
     logger.info(GoldStandardRetrieverEval.results)
     return
 
 def _msmarco(limit):
     logger.info("\nEvaluating Retriever with MSMarco Data...")
-    MSMarcoEval = MSMarcoRetrieverEvaluator(encoder=None, retriever=None, **EmbedderConfig.MODEL_ARGS, **SimilarityConfig.MODEL_ARGS)
+    MSMarcoEval = MSMarcoRetrieverEvaluator(encoder=None, retriever=None, **EmbedderConfig.MODEL_ARGS, encoder_model_name=EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL)
     logger.info(MSMarcoEval.results)
     return
 
 def _nli(limit):
     logger.info("\nEvaluating Similarity Model with NLI Data...")
-    SimilarityEval = NLIEvaluator(model=None, sample_limit=limit, **SimilarityConfig.MODEL_ARGS)
+    SimilarityEval = NLIEvaluator(model=None, sample_limit=limit, sim_model_name=SimilarityConfig.BASE_MODEL)
     logger.info(SimilarityEval.results)
     return
 
@@ -76,7 +76,7 @@ if __name__ == '__main__':
         dest="evals", 
         nargs="+", 
         required=False, 
-        help="list of evals to run. Options: '_msmarco', '_squad', '_nli', '_gc_retriever', '_gc_qa'")
+        help="list of evals to run. Options: 'msmarco', 'squad', 'nli', 'gc_retriever', 'gc_qa'")
 
     parser.add_argument(
         "--all-gc", 

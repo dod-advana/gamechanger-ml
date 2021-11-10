@@ -178,6 +178,17 @@ def normalize_answer(s):
         return text.lower()
     return white_space_fix(remove_articles(remove_punc(lower(s))))
 
+def normalize_query(s):
+    """
+    Normalize queries.
+    Lower text and remove extra whitespace.
+    """
+    def white_space_fix(text):
+        return ' '.join(text.split())
+    def lower(text):
+        return text.lower()
+    return white_space_fix(lower(s))
+
 def get_tokens(s):
     '''Get tokens from normalized answer.'''
     if not s: return []
