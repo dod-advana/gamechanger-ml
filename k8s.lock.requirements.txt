@@ -139,4 +139,4 @@ wrapt==1.12.1
 xxhash==2.0.2
 yarl==1.6.3
 zipp==3.5.0
-xgboost
+xgboost==1.1.0
