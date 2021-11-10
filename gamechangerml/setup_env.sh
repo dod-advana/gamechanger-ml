@@ -34,7 +34,7 @@ function setup_dev() {
     export REDIS_PORT="${REDIS_PORT:-6380}"
     export GC_ML_HOST="${GC_ML_HOST:-http://host.docker.internal}"
     export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v5/transformers.tar.gz}"
-    export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v7/sent_index_20210715.tar.gz}"
+    export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v7/sent_index_20210716.tar.gz}"
     export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-data-zone/bronze/gamechanger/models/qexp_model/v4/qexp_20211001.tar.gz}"
     export S3_QEXP_JBOOK_PATH="${S3_QEXP_JBOOK_PATH:-s3://advana-data-zone/bronze/gamechanger/models/jbook_qexp_model/v1/jbook_qexp_20211029.tar.gz}"
     export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-data-zone/bronze/gamechanger/models/topic_model/v1/20210208.tar.gz}"
@@ -90,7 +90,7 @@ case "$ENV_TYPE" in
   K8S_TEST)
     setup_k8s_test
     ;;
-  K8s_PROD)
+  K8S_PROD)
     setup_k8s_prod
     ;;
   *)
