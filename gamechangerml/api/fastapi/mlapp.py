@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 import faulthandler
 
-from gamechangerml.api.fastapi.routers import startup, search, controls
+from gamechangerml.api.fastapi.routers import startup, search, controls, classify
 
 # start API
 app = FastAPI()
@@ -17,8 +17,8 @@ app.include_router(
 app.include_router(
     controls.router,
     tags=["API Controls"]
-)
-app.include_router(
-    classify.router,
-    tags=["Clossify"]
-)
+ )
+# app.include_router(
+#     classify.router,
+#     tags=["Classify"]
+# )

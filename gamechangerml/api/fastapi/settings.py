@@ -28,7 +28,7 @@ LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]
 SENT_INDEX_PATH.value = model_path_dict["sentence"]
 QEXP_MODEL_NAME.value = model_path_dict["qexp"]
 WORD_SIM_MODEL.value = model_path_dict["word_sim"]
-CLASSIFY_MODEL_PATH.value = model_path_dict["classify"]
+CLASSIFY_MODEL_PATH.value = model_path_dict["classification"]
 
 t_list = []
 try:

@@ -182,8 +182,7 @@ class ModelLoader:
             logger.warning(e)
 
     @staticmethod
-    def initClassify(model_path=CLASSIFY_MODEL_PATH.value, transformers_path=LOCAL_TRANSFORMERS_DIR.value
-    ):
+    def initClassify(model_path=CLASSIFY_MODEL_PATH.value):
         """
         initQE - loads classification Transformers on start
         Args:

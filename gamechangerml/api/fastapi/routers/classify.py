@@ -24,7 +24,7 @@ MODELS = ModelLoader()
 
 
 @router.post("/transformerClassify", status_code=200)
-async def transformer_infer(payload: dict, response: Response) -> dict:
+async def transformer_classify(payload: dict, response: Response) -> dict:
     """transformer_infer - endpoint for transformer inference
    Args:
         corpus: dict; format of query
@@ -55,58 +55,64 @@ async def transformer_infer(payload: dict, response: Response) -> dict:
         3: "AI Enabling"
     }
 
-    try:
-        text_list=[]
-    #TODO unravel json
-    #TODO Determine if pdoc or rdoc    (number of columns? or tagging?)
+    if not dict:
+        return results
+    else:
+        return results
 
-        #how does this separate for each record?
-        for concat_col in text_col_dict[record['budget_type']]:
-            for doc in payload:
-                combined_text += doc[concat_col]
-            # aggregate text columns
-            text_list.append(combined_text)
-
-
-
-
-        #TODO clean text
-        def clean_text(text):
-            """
-            Performs the following transformation on a string that is passed in:
-            1. Lowercase the text
-            2. Replaces /(){}\[\]\|@,;#+_ characters with spaces
-            3. Removes any non numeric or lowercase alphabetical characters
-            4. Removes stopwords (from nltk)
-            :param text: (str) Text to be cleaned
-            :return: (str) Cleaned text
-            """
-            import re
-            from nltk.corpus import stopwords
-            REPLACE_BY_SPACE_RE = re.compile('[/(){}\[\]\|@,;#+_]')
-            BAD_SYMBOLS_RE = re.compile('[^0-9a-z ]')
-            STOPWORDS = set(stopwords.words('english'))
-            text = text.lower()  # lowercase text
-            text = REPLACE_BY_SPACE_RE.sub(' ', text)  # replace REPLACE_BY_SPACE_RE symbols by space in text
-            text = BAD_SYMBOLS_RE.sub('', text)  # delete symbols which are in BAD_SYMBOLS_RE from text
-            text = ' '.join(word for word in text.split() if word not in STOPWORDS)  # delete stopwords from text
-            return text
-
-        text_list.map(lambda text: clean_text(text))
-        # call encoder()
-
-
-        # pass data through classifier model
-            # results = MODELS.classify_trans.predict(text)   #What does predictor return?
-
-
-        # construct return payload
-            #results.map(lambda num_class: label_mapping[num_class])
-
-
-        logger.info(results)
-    except Exception:
-        logger.error(f"Unable to get results from transformer for {query}")
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        raise
+    # try:
+    #     text_list=[]
+    # #TODO unravel json
+    # #TODO Determine if pdoc or rdoc    (number of columns? or tagging?)
+    #
+    #     #how does this separate for each record?
+    #     for concat_col in text_col_dict[payload['budget_type']]:
+    #         combined_text=[]
+    #         for doc in payload:
+    #             combined_text += doc[concat_col]
+    #         # aggregate text columns
+    #         text_list.append(combined_text)
+    #
+    #
+    #
+    #
+    #     #TODO clean text
+    #     def clean_text(text):
+    #         """
+    #         Performs the following transformation on a string that is passed in:
+    #         1. Lowercase the text
+    #         2. Replaces /(){}\[\]\|@,;#+_ characters with spaces
+    #         3. Removes any non numeric or lowercase alphabetical characters
+    #         4. Removes stopwords (from nltk)
+    #         :param text: (str) Text to be cleaned
+    #         :return: (str) Cleaned text
+    #         """
+    #         import re
+    #         from nltk.corpus import stopwords
+    #         REPLACE_BY_SPACE_RE = re.compile('[/(){}\[\]\|@,;#+_]')
+    #         BAD_SYMBOLS_RE = re.compile('[^0-9a-z ]')
+    #         STOPWORDS = set(stopwords.words('english'))
+    #         text = text.lower()  # lowercase text
+    #         text = REPLACE_BY_SPACE_RE.sub(' ', text)  # replace REPLACE_BY_SPACE_RE symbols by space in text
+    #         text = BAD_SYMBOLS_RE.sub('', text)  # delete symbols which are in BAD_SYMBOLS_RE from text
+    #         text = ' '.join(word for word in text.split() if word not in STOPWORDS)  # delete stopwords from text
+    #         return text
+    #
+    #     text_list.map(lambda text: clean_text(text))
+    #     # call encoder()
+    #
+    #
+    #     # pass data through classifier model
+    #         # results = MODELS.classify_trans.predict(text)   #What does predictor return?
+    #
+    #
+    #     # construct return payload
+    #         #results.map(lambda num_class: label_mapping[num_class])
+    #
+    #
+    #     logger.info(results)
+    # except Exception:
+    #     logger.error(f"Unable to get results from transformer for {query}")
+    #     response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     raise
     return results
