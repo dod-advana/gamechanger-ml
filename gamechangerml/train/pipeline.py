@@ -374,7 +374,7 @@ class Pipeline:
         self,
         corpus,
         encoder_model,
-        batch_size=512,
+        batch_size=0,
         n_batches=20,
         existing_embeds=None,
         gpu=True,
