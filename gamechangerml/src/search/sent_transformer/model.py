@@ -142,7 +142,7 @@ class SentenceEncoder(object):
         self.embedder.embeddings.index(embeddings)
         logger.info(f"Built the embeddings index")
 
-    def index_documents(self, corpus_path, index_path, n_batches=0, batch_size=32):
+    def index_documents(self, corpus_path, index_path, n_batches, batch_size):
         """
         Create the index and accompanying dataframe to perform text
         and paragraph id search

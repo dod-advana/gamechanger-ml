@@ -373,8 +373,10 @@ class Pipeline:
     def create_embedding(
         self,
         corpus,
+        encoder_model,
+        batch_size=512,
+        n_batches=20,
         existing_embeds=None,
-        encoder_model="msmarco-distilbert-base-v2_2021-10-17",
         gpu=True,
         upload=False,
         version="v4",
@@ -425,7 +427,7 @@ class Pipeline:
 
         # Building the Index
         try:
-            encoder = SentenceEncoder(encoder_model_name=encoder_model, use_gpu=use_gpu, transformer_path=LOCAL_TRANSFORMERS_DIR, **EmbedderConfig.MODEL_ARGS)
+            encoder = SentenceEncoder(encoder_model_name=encoder_model, use_gpu=use_gpu, n_batches=n_batches, batch_size=batch_size, transformer_path=LOCAL_TRANSFORMERS_DIR, **EmbedderConfig.MODEL_ARGS)
             logger.info(f"Creating Document Embeddings with {encoder_model} on {corpus}")
             logger.info("-------------- Indexing Documents--------------")
             start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
