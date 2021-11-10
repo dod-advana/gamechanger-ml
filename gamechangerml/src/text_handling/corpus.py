@@ -115,14 +115,14 @@ class CorpusBatcher():
 
     def get_batch_size(self):
         '''If no batch size set, calculate one based on n_batches'''
-        return len(self.filelist) // self.n_batches + 1
+        return len(self.file_list) // self.n_batches + 1
 
     def batch(self):
         '''Makes dictionary of batches of filenames in corpus'''
         batches = {}
         count = 0
-        for i in range(0, len(self.filelist), self.batch_size):
-            batches[count] = self.filelist[i:i + self.batch_size]
+        for i in range(0, len(self.file_list), self.batch_size):
+            batches[count] = self.file_list[i:i + self.batch_size]
             count += 1
         
         return batches

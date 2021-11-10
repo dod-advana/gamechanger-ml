@@ -142,7 +142,7 @@ class SentenceEncoder(object):
         self.embedder.embeddings.index(embeddings)
         logger.info(f"Built the embeddings index")
 
-    def index_documents(self, corpus_path, index_path, n_batches=10, batch_size=512):
+    def index_documents(self, corpus_path, index_path, n_batches=0, batch_size=32):
         """
         Create the index and accompanying dataframe to perform text
         and paragraph id search
@@ -157,10 +157,11 @@ class SentenceEncoder(object):
         if corpus_path and n_batches > 1 or batch_size > 0:
 
             batcher = CorpusBatcher(corpus_path, n_batches, batch_size)
-            batches = batcher.batches()
+            batches = batcher.batches
             total = len(batches)
             logger.info(f"Splitting corpus into {str(total)}")
             progress = 0
+            total_len = 0
             processmanager.update_status(
                 processmanager.training, progress, total)
             for key in batches.keys():
@@ -174,9 +175,11 @@ class SentenceEncoder(object):
                     verbose=self.verbose)
                 corpus = [(para_id, " ".join(tokens), None)
                         for tokens, para_id in corp]
+                total_len += len(corpus)
                 logger.info(f"\nLength of batch (in par ids) for indexing : {str(len(corpus))}")
+                logger.info(f"\nTotal length of IDs expected: {str(total_len)}")
                 
-                self._index(corpus)
+                self._index(corpus, index_path)
 
                 self.embedder.save(index_path)
                 logger.info(f"Saved embedder to {index_path}")
@@ -202,7 +205,7 @@ class SentenceEncoder(object):
                         for tokens, para_id in corp]
                 logger.info(f"\nLength of corpus (in par ids) for indexing: {str(len(corpus))}")
 
-            self._index(corpus)
+            self._index(corpus, index_path)
 
             self.embedder.save(index_path)
             logger.info(f"Saved embedder to {index_path}")
