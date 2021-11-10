@@ -142,7 +142,7 @@ class SentenceEncoder(object):
         self.embedder.embeddings.index(embeddings)
         logger.info(f"Built the embeddings index")
 
-    def index_documents(self, corpus_path, n_batches=10, batch_size=512):
+    def index_documents(self, corpus_path, index_path, n_batches=10, batch_size=512):
         """
         Create the index and accompanying dataframe to perform text
         and paragraph id search
@@ -178,8 +178,8 @@ class SentenceEncoder(object):
                 
                 self._index(corpus)
 
-                self.embedder.save(self.index_path)
-                logger.info(f"Saved embedder to {self.index_path}")
+                self.embedder.save(index_path)
+                logger.info(f"Saved embedder to {index_path}")
                 progress += 1
                 processmanager.update_status(
                     processmanager.training, progress, total)
@@ -204,8 +204,8 @@ class SentenceEncoder(object):
 
             self._index(corpus)
 
-            self.embedder.save(self.index_path)
-            logger.info(f"Saved embedder to {self.index_path}")
+            self.embedder.save(index_path)
+            logger.info(f"Saved embedder to {index_path}")
 
 
 class SimilarityRanker(object):
