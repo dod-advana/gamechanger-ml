@@ -163,6 +163,7 @@ class SentenceEncoder(object):
             )
             corpus = [(para_id, " ".join(tokens), None)
                       for tokens, para_id in corp]
+            logger.info(f"\nLength of batch (in par ids) for indexing : {str(len(corpus))}")
         else:
             logger.info(
                 "Did not include path to corpus, making test index with msmarco data"
