@@ -8,11 +8,12 @@ import pandas as pd
 import pickle
 import torch
 
-from gamechangerml.src.text_handling.corpus import LocalCorpus
+from gamechangerml.src.text_handling.corpus import LocalCorpus, CorpusBatcher, BatchedCorpus
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
+from gamechangerml.api.utils import processmanager
 
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
@@ -145,7 +146,7 @@ class SentenceEncoder(object):
         self.embedder.embeddings.index(embeddings)
         logger.info(f"Built the embeddings index")
 
-    def index_documents(self, corpus_path):
+    def index_documents(self, corpus_path, n_batches=10, batch_size=512):
         """
         Create the index and accompanying dataframe to perform text
         and paragraph id search
@@ -156,27 +157,59 @@ class SentenceEncoder(object):
                 would be storred
         """
         logger.info(f"Indexing documents from {corpus_path}")
+        
+        if corpus_path and n_batches > 1 or batch_size > 0:
 
-        if corpus_path:
-            corp = LocalCorpus(
-                corpus_path,
-                return_id=self.return_id,
-                min_token_len=self.min_token_len,
-                verbose=self.verbose,
-            )
-            corpus = [(para_id, " ".join(tokens), None)
-                      for tokens, para_id in corp]
+            batcher = CorpusBatcher(corpus_path, n_batches, batch_size)
+            batches = batcher.batches()
+            total = len(batches)
+            logger.info(f"Splitting corpus into {str(total)}")
+            progress = 0
+            processmanager.update_status(
+                processmanager.training, progress, total)
+            for key in batches.keys():
+                logger.info(f"\nIndexing batch {str(key)} of {str(total)}")
+                corp = BatchedCorpus(
+                    corpus_path,
+                    batches=batches, 
+                    batch_num=key, 
+                    return_id=self.return_id, 
+                    min_token_len=self.min_token_len, 
+                    verbose=self.verbose)
+                corpus = [(para_id, " ".join(tokens), None)
+                        for tokens, para_id in corp]
+                logger.info(f"\nLength of batch (in par ids) for indexing : {str(len(corpus))}")
+                
+                self._index(corpus)
+
+                self.embedder.save(self.index_path)
+                logger.info(f"Saved embedder to {self.index_path}")
+                progress += 1
+                processmanager.update_status(
+                    processmanager.training, progress, total)
+        
         else:
-            logger.info(
-                "Did not include path to corpus, making test index with msmarco data"
-            )
-            data = MSMarcoData()
-            corpus = data.corpus
+            if not corpus_path:
+                logger.info(
+                    "Did not include path to corpus, making test index with msmarco data"
+                )
+                data = MSMarcoData()
+                corpus = data.corpus
+            else:
+                corp = LocalCorpus(
+                    corpus_path,
+                    return_id=self.return_id,
+                    min_token_len=self.min_token_len,
+                    verbose=self.verbose,
+                )
+                corpus = [(para_id, " ".join(tokens), None)
+                        for tokens, para_id in corp]
+                logger.info(f"\nLength of corpus (in par ids) for indexing: {str(len(corpus))}")
 
-        self._index(corpus)
+            self._index(corpus)
 
-        self.embedder.save(self.index_path)
-        logger.info(f"Saved embedder to {self.index_path}")
+            self.embedder.save(self.index_path)
+            logger.info(f"Saved embedder to {self.index_path}")
 
 
 class SimilarityRanker(object):

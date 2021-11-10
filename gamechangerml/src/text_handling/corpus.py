@@ -95,3 +95,41 @@ class LocalTaggedCorpus(object):
             line = f.readline()
             line = json.loads(line)
         return line
+
+class CorpusBatcher():
+
+    def __init__(self, directory, n_batches, batch_size):
+        
+        self.directory = directory
+        self.file_list = [
+            os.path.join(directory, file)
+            for file in os.listdir(directory)
+            if file[-5:] == ".json"
+        ]
+        self.n_batches = n_batches
+        if batch_size:
+            self.batch_size = batch_size
+        else:
+            self.batch_size = self.get_batch_size()
+        self.batches = self.batch()
+
+    def get_batch_size(self):
+        '''If no batch size set, calculate one based on n_batches'''
+        return len(self.filelist) // self.n_batches + 1
+
+    def batch(self):
+        '''Makes dictionary of batches of filenames in corpus'''
+        batches = {}
+        count = 0
+        for i in range(0, len(self.filelist), self.batch_size):
+            batches[count] = self.filelist[i:i + self.batch_size]
+            count += 1
+        
+        return batches
+    
+class BatchedCorpus(LocalCorpus):
+
+    def __init__(self, directory, batches, batch_num, return_id=False, min_token_len=3, verbose=False):
+
+        super().__init__(directory, return_id, min_token_len, verbose)
+        self.file_list = batches[batch_num]
