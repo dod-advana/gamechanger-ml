@@ -152,8 +152,7 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
     # logger.info("[{}] expanded: {}".format(user, termsList))
 
     logger.info(f"Expanding: {termsList}")
-
-    query_expander = MODELS.query_expander if termsList.get("qe_model","core")=="jbook" else MODELS.query_expander_jbook
+    query_expander = MODELS.query_expander if termsList.get("qe_model","core")!="jbook" else MODELS.query_expander_jbook
     try:
         for term in terms:
             term = unquoted(term)

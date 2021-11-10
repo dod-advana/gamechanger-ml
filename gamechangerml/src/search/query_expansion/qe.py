@@ -119,8 +119,8 @@ class QE(object):
             logger.debug("{}".format(query_str.lower().strip()))
             logger.debug(" cos sim {}".format(final_cos))
             logger.debug("expanded {}".format(expanded))
-            logger.debug("   vocab {}".format(
-                [self._vocab[idx] for idx in v_idx]))
+            # logger.debug("   vocab {}".format(
+            #     [self._vocab[idx] for idx in v_idx]))
             return expanded[:topn]
         except IndexError as e:
             logger.exception("{}: {}".format(type(e), str(e)), exc_info=True)

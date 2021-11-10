@@ -77,6 +77,7 @@ class ModelLoader:
     # So when ModelLoader().qa_model is referenced getQA is called.
     qa_model = property(getQA, set_error)
     query_expander = property(getQE, set_error)
+    query_expander_jbook = property(getQEJbook, set_error)
     sparse_reader = property(getSparse, set_error)
     sentence_trans = property(getSentence_trans, set_error)
     word_sim = property(getWordSim, set_error)
