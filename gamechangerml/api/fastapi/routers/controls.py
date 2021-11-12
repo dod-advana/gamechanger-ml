@@ -177,12 +177,13 @@ async def create_LTR_model(response: Response):
             with open("gamechangerml/models/ltr/xgb-model.json") as f:
                 model = json.load(f)
             logger.info("Created LTR model")
+            resp = ltr.post_model(model, model_name="ltr_model")
+            logger.info("Posted LTR model")
 
         ltr_thread = MlThread(ltr_process)
+
         ltr_thread.start()
 
-        resp = ltr.post_model(model, model_name="ltr_model")
-        logger.info("Posted LTR model")
     except Exception as e:
         logger.warning(e)
         logger.warning(f"There is an issue with LTR creation")
