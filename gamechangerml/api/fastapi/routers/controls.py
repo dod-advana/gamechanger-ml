@@ -162,21 +162,27 @@ async def create_LTR_model(response: Response):
     number_files = 0
     resp = None
     try:
+        model = []
 
-        logger.info("Attempting to create judgement list")
-        judgements = ltr.generate_judgement(ltr.mappings)
-        logger.info("Attempting to get features")
-        fts = ltr.generate_ft_txt_file(judgements)
-        logger.info("Attempting to read in data")
-        ltr.data = ltr.read_xg_data()
-        logger.info("Attempting to train LTR model")
-        bst, model = ltr.train()
-        with open("gamechangerml/models/ltr/xgb-model.json") as f:
-            model = json.load(f)
-        logger.info("Created LTR model")
+        def ltr_process():
+            logger.info("Attempting to create judgement list")
+            judgements = ltr.generate_judgement(ltr.mappings)
+            logger.info("Attempting to get features")
+
+            fts = ltr.generate_ft_txt_file(judgements)
+            logger.info("Attempting to read in data")
+            ltr.data = ltr.read_xg_data()
+            logger.info("Attempting to train LTR model")
+            bst, model = ltr.train()
+            with open("gamechangerml/models/ltr/xgb-model.json") as f:
+                model = json.load(f)
+            logger.info("Created LTR model")
+
+        ltr_thread = MlThread(ltr_process)
+        ltr_thread.start()
+
         resp = ltr.post_model(model, model_name="ltr_model")
         logger.info("Posted LTR model")
-        number_files = len(judgements)
     except Exception as e:
         logger.warning(e)
         logger.warning(f"There is an issue with LTR creation")
