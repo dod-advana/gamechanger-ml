@@ -28,7 +28,7 @@ class D2VConfig:
         "epochs": 20,
         "alpha": 0.020,
         "min_alpha": 0.005,
-        # 'workers': multiprocessing.cpu_count() // 2 # to allow some portion of the cores to perform generator tasks
+        # "workers": multiprocessing.cpu_count() // 2 # to allow some portion of the cores to perform generator tasks
     }
 
 
@@ -44,7 +44,7 @@ class BertSummConfig:
             "custom_tokenizer": None,
             # Needs to be negative, but allows you to pick which layer you want the embeddings to come from.
             "hidden": -2,
-            # It can be 'mean', 'median', or 'max'. This reduces the embedding layer for pooling.
+            # It can be "mean", "median", or "max". This reduces the embedding layer for pooling.
             "reduce_option": "mean",
         },
         "fit": {
@@ -61,31 +61,29 @@ class BertSummConfig:
 
 
 class QAConfig:
+    BASE_MODEL = "bert-base-cased-squad2"
     MODEL_ARGS = {
-        "model_name": "bert-base-cased-squad2",
-        # options are: ['scored_answer', 'simple_answer']
+        # options are: ["scored_answer", "simple_answer"]
         "qa_type": "scored_answer",
         "nbest": 1,  # number of answers to retrieve from each context for comparison
-        # if diff between the answer score and null answer score is greater than this threshold, don't return answer
+        # if diff between the answer score and null answer score is greater than this threshold, don"t return answer
         "null_threshold": -3,
     }
 
 
 class EmbedderConfig:
+    BASE_MODEL = "msmarco-distilbert-base-v2"
     MODEL_ARGS = {
-        "encoder_model_name": "msmarco-distilbert-base-v2",
         "min_token_len": 10,
-        "overwrite": False,
         "verbose": True,  # for creating LocalCorpus
-        "return_id": True,  # for creating LocalCorpus
-        "n_returns": 5, #this will be unused after this point, but the model default will be 5
+        "return_id": True  # for creating LocalCorpus
     }
-    FINETUNE = {"shuffle": True, "batch_size": 16,
-                "epochs": 1, "warmup_steps": 100}
+    FINETUNE = {"shuffle": True, "batch_size": 32,
+                "epochs": 3, "warmup_steps": 100}
 
 
 class SimilarityConfig:
-    MODEL_ARGS = {"model_name": "distilbart-mnli-12-3"}  # SOURCE
+    BASE_MODEL = "distilbart-mnli-12-3" 
 
 
 class QexpConfig:
@@ -128,9 +126,20 @@ class ValidationConfig:
         },
         "question_gc": {"queries": "QA_domain_data.json"},
         "retriever_gc": {"gold_standard": "gold_standard.csv"},
-        "matamo_feedback_file": "matamo_feedback.csv",
-        "search_history_file": "SearchPdfMapping.csv",
+        "matamo_dir": "gamechangerml/data/validation/matamo",
+        "search_hist_dir": "gamechangerml/data/validation/search_history",
         "qe_gc": "QE_domain.json",
+        "start_date": "2020-12-01", # earliest date to include search hist/feedback data from
+        "end_date": "2025-12-01", # last date to include search hist/feedback data from
+        "exclude_searches": ["pizza", "shark"],
+        "gold_level": {
+            "min_correct_matches": 3,
+            "max_results": 7
+        },
+        "silver_level": {
+            "min_correct_matches": 2,
+            "max_results": 10
+        }
     }
 
 

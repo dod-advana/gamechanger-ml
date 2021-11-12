@@ -1,25 +1,34 @@
 import pandas as pd
 import numpy as np
-from gamechangerml.src.utilities.text_utils import normalize_answer, get_tokens
+from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, get_tokens
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.configs.config import ValidationConfig
+from gamechangerml.configs.config import ValidationConfig, TrainingConfig
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.es_search_utils import get_paragraph_results, connect_es
+from gamechangerml.src.utilities.test_utils import filter_date_range
 
 ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
 
 class ValidationData():
 
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(self, validation_dir):
 
-        self.validation_dir = validation_config['validation_dir']
+        self.validation_dir = validation_dir
 
 class SQuADData(ValidationData):
 
-    def __init__(self, sample_limit=None, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(
+        self, 
+        validation_dir=ValidationConfig.DATA_ARGS['validation_dir'], 
+        squad_path=ValidationConfig.DATA_ARGS['squad']['dev'], 
+        sample_limit=None
+        ):
 
-        super().__init__(validation_config)
-        self.dev = open_json(validation_config['squad']['dev'], self.validation_dir)
+        super().__init__(validation_dir)
+        logger.info(f"Pulling validation data from {str(os.path.join(validation_dir, squad_path))}")
+        if not os.path.exists(os.path.join(validation_dir, squad_path)):
+            logger.warning("No directory exists for this validation data.")
+        self.dev = open_json(squad_path, validation_dir)
         self.queries = self.get_squad_sample(sample_limit)
     
     def get_squad_sample(self, sample_limit):
@@ -64,10 +73,14 @@ class SQuADData(ValidationData):
 
 class QADomainData(ValidationData):
 
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(
+        self, 
+        validation_dir=ValidationConfig.DATA_ARGS['validation_dir'], 
+        qa_gc_data_path=ValidationConfig.DATA_ARGS['question_gc']['queries']
+        ):
 
-        super().__init__(validation_config)
-        self.all_queries = open_json(validation_config['question_gc']['queries'], self.validation_dir)
+        super().__init__(validation_dir)
+        self.all_queries = open_json(qa_gc_data_path, self.validation_dir)
         self.queries = self.check_queries()
 
     def check_queries(self):
@@ -75,7 +88,7 @@ class QADomainData(ValidationData):
 
         checked = []
         for test in self.all_queries['test_queries']:
-            alltext = normalize_answer(' '.join(test['search_context']))
+            alltext = normalize_query(' '.join(test['search_context']))
             checked_answers = [i for i in test['expected'] if normalize_answer(i['text']) in alltext]
             test['expected'] = checked_answers
             if test['expected'] != []:
@@ -89,13 +102,20 @@ class QADomainData(ValidationData):
 
 class MSMarcoData(ValidationData):
 
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(
+        self, 
+        validation_dir=ValidationConfig.DATA_ARGS['validation_dir'], 
+        queries=ValidationConfig.DATA_ARGS['msmarco']['queries'], 
+        collection=ValidationConfig.DATA_ARGS['msmarco']['collection'],
+        relations=ValidationConfig.DATA_ARGS['msmarco']['relations'],
+        metadata=ValidationConfig.DATA_ARGS['msmarco']['metadata']
+        ):
 
-        super().__init__(validation_config)
-        self.queries = open_json(validation_config['msmarco']['queries'], self.validation_dir)
-        self.collection = open_json(validation_config['msmarco']['collection'], self.validation_dir)
-        self.relations = open_json(validation_config['msmarco']['relations'], self.validation_dir)
-        self.metadata = open_json(validation_config['msmarco']['metadata'], self.validation_dir)
+        super().__init__(validation_dir)
+        self.queries = open_json(queries, self.validation_dir)
+        self.collection = open_json(collection, self.validation_dir)
+        self.relations = open_json(relations, self.validation_dir)
+        self.metadata = open_json(metadata, self.validation_dir)
         self.corpus = self.get_msmarco_corpus()
 
     def get_msmarco_corpus(self):
@@ -105,10 +125,14 @@ class MSMarcoData(ValidationData):
 
 class RetrieverGSData(ValidationData):
 
-    def __init__(self, available_ids, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(
+        self, 
+        validation_dir,
+        available_ids,
+        gold_standard):
 
-        super().__init__(validation_config)
-        self.samples = pd.read_csv(os.path.join(self.validation_dir, validation_config['retriever_gc']['gold_standard']), names=['query', 'document'])
+        super().__init__(validation_dir)
+        self.samples = pd.read_csv(os.path.join(self.validation_dir, gold_standard), names=['query', 'document'])
         self.queries, self.collection, self.relations = self.dictify_data(available_ids)
     
     def dictify_data(self, available_ids):
@@ -139,13 +163,56 @@ class RetrieverGSData(ValidationData):
 
         return queries, collection, relations
 
+class UpdatedGCRetrieverData(RetrieverGSData):
+
+    def __init__(self, 
+        available_ids, 
+        level=['gold', 'silver'],
+        data_path=None,
+        validation_dir=ValidationConfig.DATA_ARGS['validation_dir'],
+        gold_standard=ValidationConfig.DATA_ARGS['retriever_gc']['gold_standard']
+        ):
+
+        super().__init__(validation_dir, available_ids, gold_standard)
+        try:
+            if data_path: # if there is a path for data, use that
+                self.data_path = os.path.join(data_path, level)
+            else:
+                new_data = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS['validation_dir'], 'sent_transformer'))
+                self.data_path = os.path.join(new_data, level)
+            self.new_queries, self.new_collection, self.new_relations = self.load_new_data()
+            self.combine_in_domain()
+        except:
+            logger.info(f"Error getting data from {new_data}. Could not create UpdatedGCRetrieverData object.")
+
+    def load_new_data(self):
+
+        f = open_json('intelligent_search_data.json', self.data_path)
+        intel = json.loads(f)
+        logger.info(f"Added {str(len(intel['correct']))} correct query/sent pairs from updated GC retriever data.")
+        return intel['queries'], intel['collection'], intel['correct']
+
+    def combine_in_domain(self):
+
+        self.queries.update({k:v for (k, v) in self.new_queries.items() if k in self.new_relations.keys()})
+        self.collection.update(self.new_collection)
+        self.relations.update(self.new_relations)
+
+        return
+
 class NLIData(ValidationData):
 
-    def __init__(self, sample_limit, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(
+        self, 
+        sample_limit, 
+        validation_dir=ValidationConfig.DATA_ARGS['validation_dir'], 
+        matched=ValidationConfig.DATA_ARGS['nli']['matched'], 
+        mismatched=ValidationConfig.DATA_ARGS['nli']['matched']
+        ):
 
-        super().__init__(validation_config)
-        self.matched = open_jsonl(validation_config['nli']['matched'], self.validation_dir)
-        self.mismatched = open_jsonl(validation_config['nli']['mismatched'], self.validation_dir)
+        super().__init__(validation_dir)
+        self.matched = open_jsonl(matched, self.validation_dir)
+        self.mismatched = open_jsonl(mismatched, self.validation_dir)
         self.sample_csv = self.get_sample_csv(sample_limit)
         self.query_lookup = dict(zip(self.sample_csv['promptID'], self.sample_csv['sentence1']))
 
@@ -195,20 +262,35 @@ class NLIData(ValidationData):
 
 class MatamoFeedback():
     
-    def __init__(self, matamo_feedback_path):
-        
-        self.matamo = pd.read_csv(matamo_feedback_path)
+    def __init__(
+        self,
+        start_date, 
+        end_date,
+        exclude_searches
+        ):
+    
+        self.matamo = concat_matamo()        
+        self.start_date = start_date
+        self.end_date = end_date
+        self.exclude_searches=exclude_searches
         self.intel, self.qa = self.split_matamo()
     
     def split_matamo(self):
         '''Split QA queries from intelligent search queries'''
         
         df = self.matamo
+        if self.start_date or self.end_date:
+            df = filter_date_range(df, self.start_date, self.end_date)
+        df.drop_duplicates(subset = ['user_id', 'createdAt', 'value_1', 'value_2'], inplace = True)
         df['source'] = 'matamo'
         df['correct'] = df['event_name'].apply(lambda x: ' '.join(x.split('_')[-2:])).map({'thumbs up': True, 'thumbs down': False})
         df['type'] = df['event_name'].apply(lambda x: ' '.join(x.split('_')[:-2]))
+        df['value_5'] = df['value_5'].apply(lambda x: x.replace('sentence_results', 'sentence_results:') if type(x)==str else x)
+        
         intel = df[df['type']=='intelligent search'].copy()
+        intel.dropna(axis=1, how='all', inplace = True)
         qa = df[df['type']=='qa'].copy()
+        qa.dropna(axis=1, how='all', inplace = True)
     
         def process_matamo(df):
             '''Reformat Matamo feedback'''
@@ -234,12 +316,13 @@ class MatamoFeedback():
                 query['correct_match'] = df.loc[i, 'correct']
                 for j in cols:
                     row = df.loc[i, j]
-                    key, val = process_row(row, j)
-                    query[key] = val
-                    if key in ['question', 'search_text', 'QA answer']:
-                        clean_val = normalize_answer(val)
-                        clean_key = key + '_clean'
-                        query[clean_key] = clean_val
+                    if type(row) == str and row[0] != '[':
+                        key, val = process_row(row, j)
+                        query[key] = val
+                        if key in ['question', 'search_text', 'QA answer']:
+                            clean_val = normalize_query(val)
+                            clean_key = key + '_clean'
+                            query[clean_key] = clean_val
                 queries.append(query)
 
             return pd.DataFrame(queries)
@@ -248,14 +331,30 @@ class MatamoFeedback():
 
 class SearchHistory():
     
-    def __init__(self, search_history_path):
+    def __init__(
+        self, 
+        start_date,
+        end_date,
+        exclude_searches
+        ):
     
-        self.history = pd.read_csv(search_history_path)
-        self.intel = self.split_feedback()
+        self.history = concat_search_hist()
+        self.start_date = start_date
+        self.end_date = end_date
+        self.exclude_searches=exclude_searches
+        self.intel_matched, self.intel_unmatched = self.split_feedback()
         
     def split_feedback(self):
         
         df = self.history
+        if self.start_date or self.end_date:
+            df = filter_date_range(df, self.start_date, self.end_date)
+        df.dropna(subset = ['search'], inplace = True) # drop all rows where is no search
+        if self.exclude_searches:
+            logger.info(f"Excluding searches: {str(self.exclude_searches)}")
+            df = df[~df['search'].isin(self.exclude_searches)] # remove searches we don't want to use
+        df.drop_duplicates(subset = ['idvisit', 'document', 'search'], inplace = True) # drop duplicates
+        df['source'] = 'user_history'
         
         def clean_quot(string):
             return string.replace('&quot;', "'").replace("&#039;", "'").lower()
@@ -271,37 +370,54 @@ class SearchHistory():
                 return True
             else:
                 return bool(set(string.lower().split()).intersection(question_words))
-        
-        df['source'] = 'user_history'
-        df['correct_match'] = True
-        #df['is_question'] = sh['search'].apply(lambda x: is_question(x))
+
         df.rename(columns = {'documenttime': 'date', 'search': 'search_text', 'document': 'title_returned'}, inplace = True)
-        df['title_returned'] = df['title_returned'].apply(lambda x: clean_doc(x))
         df['search_text'] = df['search_text'].apply(lambda x: clean_quot(x))
-        df['search_text_clean'] = df['search_text'].apply(lambda x: normalize_answer(x))
+        df['search_text_clean'] = df['search_text'].apply(lambda x: normalize_query(x))
+        df = df[df['search_text_clean'] != ''].copy()
         df.drop(columns = ['idvisit', 'idaction_name', 'search_cat', 'searchtime'], inplace = True)
         
-        return df
-    
-class SearchValidationData(ValidationData):
-    
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+        matched = df[~df['title_returned'].isnull()].copy()
+        matched['correct_match'] = True
+        matched['title_returned'] = matched['title_returned'].apply(lambda x: clean_doc(x))
+        #matched['is_question'] = matched['search'].apply(lambda x: is_question(x))
         
-        ##TODO: option to add new data to existing formatted data/add only new records
-        super().__init__(validation_config)
-        self.matamo_path = os.path.join(self.validation_dir, validation_config['matamo_feedback_file'])
-        self.history_path = os.path.join(self.validation_dir, validation_config['search_history_file'])
-        self.matamo_data = MatamoFeedback(self.matamo_path)
-        self.history_data = SearchHistory(self.history_path)
+        unmatched = df[df['title_returned'].isnull()].copy()
+        unmatched['correct_match'] = False
+        
+        return matched, unmatched
+    
+class SearchValidationData():
+    
+    def __init__(
+        self, 
+        start_date,
+        end_date,
+        exclude_searches
+        ):
+
+        self.start_date = start_date
+        self.end_date = end_date
+        self.exclude_searches=exclude_searches
+        self.matamo_data = MatamoFeedback(self.start_date, self.end_date, self.exclude_searches)
+        self.history_data = SearchHistory(self.start_date, self.end_date, self.exclude_searches)
     
 class QASearchData(SearchValidationData):
     
     ##TODO: add context relations attr for QASearchData
-    
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS, save=False):
+    def __init__(
+        self,
+        start_date, 
+        end_date,
+        exclude_searches,
+        min_correct_matches, 
+        max_results
+        ):
         
-        super().__init__(validation_config)
+        super().__init__(start_date, end_date, exclude_searches)
         self.data = self.matamo_data.qa
+        self.min_correct_matches = min_correct_matches
+        self.max_results = max_results
         self.queries, self.collection, self.all_relations, self.correct, self.incorrect = self.make_qa()
         
     def make_qa(self):
@@ -325,21 +441,32 @@ class QASearchData(SearchValidationData):
         new_qa_metadata = update_meta_relations(qa_metadata, qa, 'question', 'QA answer')
         
         # filtere the metadata to only get relations we want to test against
-        correct, incorrect = filter_rels(new_qa_metadata, min_correct_matches=0)
+        correct, incorrect = filter_rels(new_qa_metadata, min_correct_matches=self.min_correct_matches, max_results=self.max_results)
         
         return qa_search_queries, qa_search_results, new_qa_metadata, correct, incorrect
 
 class IntelSearchData(SearchValidationData):
     
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(
+        self, 
+        start_date, 
+        end_date,
+        exclude_searches,
+        min_correct_matches,
+        max_results
+        ):
         
-        super().__init__(validation_config)
-        self.data = pd.concat([self.matamo_data.intel, self.history_data.intel]).reset_index()
+        super().__init__(start_date, end_date, exclude_searches)
+        self.exclude_searches = exclude_searches
+        self.data = pd.concat([self.matamo_data.intel, self.history_data.intel_matched]).reset_index()
+        self.min_correct_matches = min_correct_matches
+        self.max_results = max_results
         self.queries, self.collection, self.all_relations, self.correct, self.incorrect = self.make_intel()
         
     def make_intel(self):
         
         intel = self.data
+        intel = intel[~intel['search_text'].isin(self.exclude_searches)]
         
         int_queries = set(intel['search_text_clean'])
         intel_search_queries = update_dictionary(old_dict = {}, new_additions = int_queries, prefix ='S')
@@ -356,13 +483,19 @@ class IntelSearchData(SearchValidationData):
         new_intel_metadata = update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned')
 
         # filtere the metadata to only get relations we want to test against
-        correct, incorrect = filter_rels(new_intel_metadata, min_correct_matches=2)
+        logger.info(f"min_correct_matches: {(str(self.min_correct_matches))}")
+        logger.info(f"max_results: {(str(self.max_results))}")
+        correct, incorrect = filter_rels(new_intel_metadata, min_correct_matches=self.min_correct_matches, max_results=self.max_results)
         
         return intel_search_queries, intel_search_results, new_intel_metadata, correct, incorrect
 
 class QEXPDomainData(ValidationData):
 
-    def __init__(self, validation_config=ValidationConfig.DATA_ARGS):
+    def __init__(
+        self, 
+        validation_dir=ValidationConfig.DATA_ARGS['validation_dir'], 
+        qe_gc_path=ValidationConfig.DATA_ARGS['qe_gc']
+        ):
 
-        super().__init__(validation_config)
-        self.data = open_json(validation_config['qe_gc'], self.validation_dir)['queries']
+        super().__init__(validation_dir)
+        self.data = open_json(qe_gc_path, self.validation_dir)['queries']
