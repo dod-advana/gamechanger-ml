@@ -14,7 +14,6 @@ async def load_models():
     MODELS.initQE()
     MODELS.initSentenceEncoder()
     MODELS.initSentenceSearcher()
-    MODELS.initTrans()
     MODELS.initWordSim()
 
 
