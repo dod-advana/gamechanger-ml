@@ -6,7 +6,6 @@ astunparse==1.6.3
 async-timeout==3.0.1
 attrs==21.2.0
 beautifulsoup4==4.9.3
-bert-extractive-summarizer==0.5.2
 blis==0.7.4
 boto3==1.18.4
 botocore==1.21.4
