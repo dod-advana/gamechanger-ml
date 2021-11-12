@@ -220,7 +220,7 @@ async def transformer_classify(payload: dict, response: Response) -> dict:
 
     # TODO RAC update to table columns
     text_col_dict = {
-        "pdoc": ["Program_Description", "Budget_Justification"],
+        "pdoc": ["Program_Description", "Budget_Justification","budget_type"],
         "rdoc": ["Project_Mission_Description", "PE_Mission_Description_and_Budget_Justification", "Project_Title",
                  "Program_Element_Title",
                  "Project_Notes", "Project_Aquisition_Strategy", "Project_Perfromance_Metircs",
@@ -234,45 +234,55 @@ async def transformer_classify(payload: dict, response: Response) -> dict:
         3: "AI Enabling"
     }
 
+
     try:
         text_list=[]
     #TODO unravel json
     #TODO Determine if pdoc or rdoc    (number of columns? or tagging?)
 
-        #how does this separate for each record?
+        # #how does this separate for each record?
+        # for concat_col in text_col_dict[payload['budget_type']]:
+        #     combined_text=[]
+        #     for doc in payload:
+        #         combined_text += doc[str(concat_col)]
+        #     # aggregate text columns
+        #     text_list.append(combined_text)
+
+       #testing
         for concat_col in text_col_dict[payload['budget_type']]:
             combined_text=[]
-            for doc in payload:
-                combined_text += doc[concat_col]
+            for item in payload:
+                #logger.info(" my statement "+concat_col +" and "+str(item))
+                combined_text += payload[concat_col]
             # aggregate text columns
             text_list.append(combined_text)
 
-
-
-
-        #TODO clean text
-        def clean_text(text):
-            """
-            Performs the following transformation on a string that is passed in:
-            1. Lowercase the text
-            2. Replaces /(){}\[\]\|@,;#+_ characters with spaces
-            3. Removes any non numeric or lowercase alphabetical characters
-            4. Removes stopwords (from nltk)
-            :param text: (str) Text to be cleaned
-            :return: (str) Cleaned text
-            """
-            import re
-            from nltk.corpus import stopwords
-            REPLACE_BY_SPACE_RE = re.compile('[/(){}\[\]\|@,;#+_]')
-            BAD_SYMBOLS_RE = re.compile('[^0-9a-z ]')
-            STOPWORDS = set(stopwords.words('english'))
-            text = text.lower()  # lowercase text
-            text = REPLACE_BY_SPACE_RE.sub(' ', text)  # replace REPLACE_BY_SPACE_RE symbols by space in text
-            text = BAD_SYMBOLS_RE.sub('', text)  # delete symbols which are in BAD_SYMBOLS_RE from text
-            text = ' '.join(word for word in text.split() if word not in STOPWORDS)  # delete stopwords from text
-            return text
-
-        text_list.map(lambda text: clean_text(text))
+        # import nltk
+        # nltk.download('stopwords')
+        #
+        # #TODO clean text
+        # def clean_text(text):
+        #     """
+        #     Performs the following transformation on a string that is passed in:
+        #     1. Lowercase the text
+        #     2. Replaces /(){}\[\]\|@,;#+_ characters with spaces
+        #     3. Removes any non numeric or lowercase alphabetical characters
+        #     4. Removes stopwords (from nltk)
+        #     :param text: (str) Text to be cleaned
+        #     :return: (str) Cleaned text
+        #     """
+        #     import re
+        #     from nltk.corpus import stopwords
+        #     REPLACE_BY_SPACE_RE = re.compile('[/(){}\[\]\|@,;#+_]')
+        #     BAD_SYMBOLS_RE = re.compile('[^0-9a-z ]')
+        #     STOPWORDS = set(stopwords.words('english'))
+        #     text = text.lower()  # lowercase text
+        #     text = REPLACE_BY_SPACE_RE.sub(' ', text)  # replace REPLACE_BY_SPACE_RE symbols by space in text
+        #     text = BAD_SYMBOLS_RE.sub('', text)  # delete symbols which are in BAD_SYMBOLS_RE from text
+        #     text = ' '.join(word for word in text.split() if word not in STOPWORDS)  # delete stopwords from text
+        #     return text
+        #
+        # new_text=clean_text(text_list)
         # call encoder()
 
 

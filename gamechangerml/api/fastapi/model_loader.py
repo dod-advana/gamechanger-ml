@@ -66,9 +66,10 @@ class ModelLoader:
 
     #TODO getClassify
     def getClassify_trans(self):
+        logger.info("*** inside getClassify")
         if ModelLoader.__classify_trans == None:
             logger.warning(
-                "sentence_trans was not set and was attempted to be used. Running init"
+                "classify_trans was not set and was attempted to be used. Running init"
             )
             ModelLoader.initClassify()
         return ModelLoader.__classify_trans
@@ -83,6 +84,7 @@ class ModelLoader:
     sparse_reader = property(getSparse, set_error)
     sentence_trans = property(getSentence_trans, set_error)
     word_sim = property(getWordSim, set_error)
+    classify_trans = property(getClassify_trans, set_error)
 
     @staticmethod
     def initQA():
@@ -193,7 +195,7 @@ class ModelLoader:
         #    transformer_path, "msmarco-distilbert-base-v2")
         try:
 
-            ModelLoader.__classify_trans = Predictor(model_path)
+            ModelLoader.__classify_trans = Predictor(model_path,4)
 
             #encoder_model = ModelLoader.__classify_trans.encoder_model
             #logger.info(f"Using {encoder_model} for classification transformer")

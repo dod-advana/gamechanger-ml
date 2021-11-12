@@ -11,3 +11,4 @@ matplotlib
 seaborn
 autopep8
 black
+nltk

@@ -24,7 +24,7 @@ MODELS = ModelLoader()
 
 
 @router.post("/transformerClassify", status_code=200)
-async def transformer_classify(payload: dict, response: Response) -> dict:
+async def transformer_classify(message: dict, response: Response) -> dict:
     """transformer_infer - endpoint for transformer inference
    Args:
         corpus: dict; format of query
@@ -36,12 +36,16 @@ async def transformer_classify(payload: dict, response: Response) -> dict:
     Returns:
         results: dict; results of inference
     """
-    logger.debug("TRANSFORMER - predicting text: " + str(query))
+    logger.debug("TRANSFORMER - predicting text: " + str(payload))
+    payload=message["payload"]
+    print(payload['Program_Description'])
+    print(payload['Budget_Justification'])
+    print(payload['budget_type'])
     results = {}
 
     #TODO RAC update to table columns
     text_col_dict = {
-        "pdoc": ["Program_Description", "Budget_Justification"],
+        "pdoc": ["Program_Description", "Budget_Justification","budget_type"],
         "rdoc": ["Project_Mission_Description", "PE_Mission_Description_and_Budget_Justification", "Project_Title",
                  "Program_Element_Title",
                  "Project_Notes", "Project_Aquisition_Strategy", "Project_Perfromance_Metircs",
@@ -55,12 +59,8 @@ async def transformer_classify(payload: dict, response: Response) -> dict:
         3: "AI Enabling"
     }
 
-    if not dict:
-        return results
-    else:
-        return results
 
-    # try:
+    try:
     #     text_list=[]
     # #TODO unravel json
     # #TODO Determine if pdoc or rdoc    (number of columns? or tagging?)
@@ -103,16 +103,16 @@ async def transformer_classify(payload: dict, response: Response) -> dict:
     #
     #
     #     # pass data through classifier model
-    #         # results = MODELS.classify_trans.predict(text)   #What does predictor return?
+    #     results = MODELS.classify_trans.predict(text_list)   #What does predictor return?
     #
     #
     #     # construct return payload
     #         #results.map(lambda num_class: label_mapping[num_class])
-    #
-    #
-    #     logger.info(results)
-    # except Exception:
-    #     logger.error(f"Unable to get results from transformer for {query}")
-    #     response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    #     raise
+
+
+        logger.info(results)
+    except Exception:
+        logger.error(f"Unable to get results from transformer for {payload}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise
     return results
