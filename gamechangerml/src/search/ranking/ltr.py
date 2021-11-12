@@ -441,6 +441,11 @@ class LTR:
         r = requests.put(endpoint)
         return r.content
 
+    def delete_ltr(self, model_name="ltr_model"):
+        endpoint = ES_HOST + f"/_ltr/_model/{model_name}"
+        r = requests.delete(endpoint)
+        return r.content
+
     def normalize(self, arr, start=0, end=4):
         """normalize: basic normalize between two numbers function
         params:

@@ -174,9 +174,12 @@ async def create_LTR_model(response: Response):
             ltr.data = ltr.read_xg_data()
             logger.info("Attempting to train LTR model")
             bst, model = ltr.train()
+            logger.info("Created LTR model")
             with open("gamechangerml/models/ltr/xgb-model.json") as f:
                 model = json.load(f)
-            logger.info("Created LTR model")
+            logger.info("removing old LTR")
+            resp = ltr.delete_ltr("ltr_model")
+            logger.info(resp)
             resp = ltr.post_model(model, model_name="ltr_model")
             logger.info("Posted LTR model")
 
