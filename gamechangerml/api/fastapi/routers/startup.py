@@ -12,7 +12,9 @@ MODELS = ModelLoader()
 async def load_models():
     MODELS.initQA()
     MODELS.initQE()
-    MODELS.initSentence()
+    MODELS.initSentenceEncoder()
+    MODELS.initSentenceSearcher()
+    MODELS.initTrans()
     MODELS.initWordSim()
 
 
@@ -26,6 +28,8 @@ async def check_health():
     logger.info("API Health Check")
     try:
         new_trans_model_name = str(latest_intel_model_trans.value)
+        new_sim_model_name = str(latest_intel_model_sim.value)
+        new_encoder_model_name = str(latest_intel_model_encoder.value)
         new_sent_model_name = str(latest_intel_model_sent.value)
         new_qa_model_name = str(latest_qa_model.value)
     except Exception as e:
@@ -55,7 +59,9 @@ async def check_health():
         logger.info("Model Health: POOR")
 
     # logger.info(f"-- Transformer model name: {new_trans_model_name}")
-    logger.info(f"-- Sentence Transformer model name: {new_sent_model_name}")
+    # logger.info(f"-- Sentence Transformer model name: {new_sent_model_name}")
+    logger.info(f"-- Similarity model name: {new_sim_model_name}")
+    logger.info(f"-- Encoder model name: {new_encoder_model_name}")
     logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
     logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")

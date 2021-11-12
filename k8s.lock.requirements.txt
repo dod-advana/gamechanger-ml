@@ -6,7 +6,6 @@ astunparse==1.6.3
 async-timeout==3.0.1
 attrs==21.2.0
 beautifulsoup4==4.9.3
-bert-extractive-summarizer==0.5.2
 blis==0.7.4
 boto3==1.18.4
 botocore==1.21.4
@@ -125,7 +124,7 @@ toml==0.10.2
 torch==1.7.1
 torchvision==0.8.2
 tqdm==4.61.2
-transformers==4.8.2
+transformers==4.11.3
 txtai==2.0.0
 typer==0.3.2
 typing-extensions==3.7.4.3
