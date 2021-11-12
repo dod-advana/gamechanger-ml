@@ -166,7 +166,7 @@ async def create_LTR_model(response: Response):
         logger.info("Attempting to create judgement list")
         judgements = ltr.generate_judgement(ltr.mappings)
         logger.info("Attempting to get features")
-        # fts = ltr.generate_ft_txt_file(judgements)
+        fts = ltr.generate_ft_txt_file(judgements)
         logger.info("Attempting to read in data")
         ltr.data = ltr.read_xg_data()
         logger.info("Attempting to train LTR model")
