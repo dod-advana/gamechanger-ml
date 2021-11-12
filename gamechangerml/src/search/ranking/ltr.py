@@ -291,7 +291,6 @@ class LTR:
             outputs a file
         """
         ltr_log = self.query_es_fts(df)
-        print(ltr_log)
         vals = self.process_ltr_log(ltr_log)
         ft_df = pd.DataFrame(
             vals, columns=["title", "kw", "textlength", "paragraph"])
