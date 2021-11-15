@@ -10,17 +10,36 @@ from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.routers.startup import *
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
+from gamechangerml.src.search.ranking.ltr import LTR
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
-from gamechangerml.src.utilities.test_utils import collect_evals, open_json, get_most_recent_dir, collect_sent_evals_gc, handle_sent_evals
+from gamechangerml.src.utilities.test_utils import (
+    collect_evals,
+    open_json,
+    get_most_recent_dir,
+    collect_sent_evals_gc,
+    handle_sent_evals,
+)
 
 from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
-from gamechangerml.src.model_testing.evaluation import SQuADQAEvaluator, IndomainQAEvaluator, IndomainRetrieverEvaluator, MSMarcoRetrieverEvaluator, NLIEvaluator, QexpEvaluator
-from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig
+from gamechangerml.src.model_testing.evaluation import (
+    SQuADQAEvaluator,
+    IndomainQAEvaluator,
+    IndomainRetrieverEvaluator,
+    MSMarcoRetrieverEvaluator,
+    NLIEvaluator,
+    QexpEvaluator,
+)
+from gamechangerml.configs.config import (
+    QAConfig,
+    EmbedderConfig,
+    SimilarityConfig,
+    QexpConfig,
+)
 
 router = APIRouter()
 MODELS = ModelLoader()
-
+ltr = MODELS.ltr_model
 ## Get Methods ##
 
 
@@ -57,8 +76,9 @@ def get_downloaded_models_list():
                     meta_file = open(meta_path)
                     qexp_list[f] = json.load(meta_file)
                     qexp_list[f]["evaluation"] = {}
-                    qexp_list[f]["evaluation"] = collect_evals(os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, f))
+                    qexp_list[f]["evaluation"] = collect_evals(
+                        os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
+                    )
                     meta_file.close()
     except Exception as e:
         logger.error(e)
@@ -76,8 +96,9 @@ def get_downloaded_models_list():
                     config_file = open(config_path)
                     transformer_list[trans] = json.load(config_file)
                     transformer_list[trans]["evaluation"] = {}
-                    transformer_list[trans]["evaluation"] = collect_evals(os.path.join(
-                        LOCAL_TRANSFORMERS_DIR.value, trans))
+                    transformer_list[trans]["evaluation"] = collect_evals(
+                        os.path.join(LOCAL_TRANSFORMERS_DIR.value, trans)
+                    )
                     config_file.close()
     except Exception as e:
         logger.error(e)
@@ -96,8 +117,10 @@ def get_downloaded_models_list():
                     meta_file = open(meta_path)
                     sent_index_list[f] = json.load(meta_file)
                     sent_index_list[f]["evaluation"] = {}
-                    sent_index_list[f]["evaluation"] = handle_sent_evals(os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, f))
+
+                    sent_index_list[f]["evaluation"] = handle_sent_evals(
+                        os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
+                    )
                     meta_file.close()
     except Exception as e:
         logger.error(e)
@@ -108,6 +131,67 @@ def get_downloaded_models_list():
         "qexp": qexp_list,
     }
     return model_list
+
+
+@router.get("/LTR/initLTR", status_code=200)
+async def initLTR(response: Response):
+    """generate judgement - checks how many files are in the corpus directory
+    Args:
+    Returns: integer
+    """
+    number_files = 0
+    resp = None
+    try:
+
+        logger.info("Attempting to initialize LTR")
+        resp = ltr.post_init_ltr()
+        logger.info(resp)
+        logger.info("Attempting to post features to LTR")
+        resp = ltr.post_features()
+        logger.info(resp)
+    except Exception as e:
+        logger.warning("Could not init LTR")
+
+
+@router.get("/LTR/createModel", status_code=200)
+async def create_LTR_model(response: Response):
+    """generate judgement - checks how many files are in the corpus directory
+    Args:
+    Returns: integer
+    """
+    number_files = 0
+    resp = None
+    try:
+        model = []
+
+        def ltr_process():
+            logger.info("Attempting to create judgement list")
+            judgements = ltr.generate_judgement(ltr.mappings)
+            logger.info("Attempting to get features")
+
+            fts = ltr.generate_ft_txt_file(judgements)
+            logger.info("Attempting to read in data")
+            ltr.data = ltr.read_xg_data()
+            logger.info("Attempting to train LTR model")
+            bst, model = ltr.train()
+            logger.info("Created LTR model")
+            with open("gamechangerml/models/ltr/xgb-model.json") as f:
+                model = json.load(f)
+            logger.info("removing old LTR")
+            resp = ltr.delete_ltr("ltr_model")
+            logger.info(resp)
+            resp = ltr.post_model(model, model_name="ltr_model")
+            logger.info("Posted LTR model")
+
+        ltr_thread = MlThread(ltr_process)
+
+        ltr_thread.start()
+
+    except Exception as e:
+        logger.warning(e)
+        logger.warning(f"There is an issue with LTR creation")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    return resp
 
 
 @router.get("/getFilesInCorpus", status_code=200)
@@ -139,7 +223,7 @@ async def get_trans_model():
     Returns:
         dict of model name
     """
-    #sent_model = latest_intel_model_sent.value
+    # sent_model = latest_intel_model_sent.value
     return {
         "sim_model": latest_intel_model_sim.value,
         "encoder_model": latest_intel_model_encoder.value,
@@ -266,6 +350,7 @@ async def download_corpus(corpus_dict: dict, response: Response):
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return await get_process_status()
 
+
 @router.post("/trainModel", status_code=200)
 async def train_model(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
@@ -277,7 +362,7 @@ async def train_model(model_dict: dict, response: Response):
     """
     try:
         # Methods for all the different models we can train
-        def finetune_sentence(model_dict = model_dict):
+        def finetune_sentence(model_dict=model_dict):
             logger.info("Attempting to finetune the sentence transformer")
             pipeline = Pipeline()
             try:
@@ -288,11 +373,15 @@ async def train_model(model_dict: dict, response: Response):
                 "batch_size": model_dict["batch_size"],
                 "epochs": model_dict["epochs"],
                 "warmup_steps": model_dict["warmup_steps"],
-                "testing_only": testing_only
+                "testing_only": testing_only,
             }
-            pipeline.run(build_type = "sent_finetune", run_name = datetime.now().strftime("%Y%m%d"), params = args)
+            pipeline.run(
+                build_type="sent_finetune",
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
 
-        def train_sentence(model_dict = model_dict):
+        def train_sentence(model_dict=model_dict):
             logger.info("Attempting to start sentence pipeline")
             pipeline = Pipeline()
             try:
@@ -300,7 +389,8 @@ async def train_model(model_dict: dict, response: Response):
             except:
                 corpus_dir = CORPUS_DIR
             if not os.path.exists(corpus_dir):
-                logger.warning(f"Corpus is not in local directory {str(corpus_dir)}")
+                logger.warning(
+                    f"Corpus is not in local directory {str(corpus_dir)}")
                 raise Exception("Corpus is not in local directory")
             args = {
                 "corpus": corpus_dir,
@@ -309,9 +399,13 @@ async def train_model(model_dict: dict, response: Response):
                 "upload": bool(model_dict["upload"]),
                 "version": model_dict["version"],
             }
-            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
+            pipeline.run(
+                build_type=model_dict["build_type"],
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
 
-        def train_qexp(model_dict = model_dict):
+        def train_qexp(model_dict=model_dict):
             logger.info("Attempting to start qexp pipeline")
             pipeline = Pipeline()
             args = {
@@ -320,30 +414,38 @@ async def train_model(model_dict: dict, response: Response):
                 "upload": bool(model_dict["upload"]),
                 "version": model_dict["version"],
             }
-            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
-        
-        def run_evals(model_dict = model_dict):
+            pipeline.run(
+                build_type=model_dict["build_type"],
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
+
+        def run_evals(model_dict=model_dict):
             logger.info("Attempting to run evaluation")
             pipeline = Pipeline()
             args = {
                 "model_name": model_dict["model_name"],
                 "eval_type": model_dict["eval_type"],
                 "sample_limit": model_dict["sample_limit"],
-                "validation_data": model_dict["validation_data"]
+                "validation_data": model_dict["validation_data"],
             }
-            pipeline.run(build_type = model_dict["build_type"], run_name = datetime.now().strftime("%Y%m%d"), params = args)
-            
+            pipeline.run(
+                build_type=model_dict["build_type"],
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
+
         # Create a mapping between the training methods and input from the api
-        training_switch ={
-            "sentence":train_sentence,
-            "qexp":train_qexp,
+        training_switch = {
+            "sentence": train_sentence,
+            "qexp": train_qexp,
             "sent_finetune": finetune_sentence,
-            "eval": run_evals
+            "eval": run_evals,
         }
         # Set the training method to be loaded onto the thread
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
-        else: # PLACEHOLDER
+        else:  # PLACEHOLDER
             model_dict["build_type"] = "sentence"
             training_method = training_switch[model_dict["build_type"]]
 

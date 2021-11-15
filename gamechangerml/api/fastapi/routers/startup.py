@@ -14,7 +14,6 @@ async def load_models():
     MODELS.initQE()
     MODELS.initSentenceEncoder()
     MODELS.initSentenceSearcher()
-    MODELS.initTrans()
     MODELS.initWordSim()
 
 
@@ -59,7 +58,7 @@ async def check_health():
         logger.info("Model Health: POOR")
 
     # logger.info(f"-- Transformer model name: {new_trans_model_name}")
-    #logger.info(f"-- Sentence Transformer model name: {new_sent_model_name}")
+    # logger.info(f"-- Sentence Transformer model name: {new_sent_model_name}")
     logger.info(f"-- Similarity model name: {new_sim_model_name}")
     logger.info(f"-- Encoder model name: {new_encoder_model_name}")
     logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")

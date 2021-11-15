@@ -1,4 +1,7 @@
 # from gamechangerml.src.search.ranking import matamo as mt
+from gamechangerml.src.text_handling.process import preprocess
+import numpy as np
+import re
 from gamechangerml.src.search.ranking import search_data as meta
 from gamechangerml.src.search.ranking import rank
 from gamechangerml import REPO_PATH
@@ -24,18 +27,17 @@ logger = logging.getLogger("gamechanger")
 
 corpus_dir = "test/corpus_new"
 prod_data_file = os.path.join(
-    REPO_PATH,
-    "gamechangerml/src/search/ranking/generated_files/prod_test_data.csv"
+    REPO_PATH, "gamechangerml/src/search/ranking/generated_files/prod_test_data.csv"
 )
 
 
 def generate_pop_docs(pop_kw_df: pd.DataFrame, corpus_df: pd.DataFrame) -> pd.DataFrame:
-    """ generate popular documents based on keyword searches
-        Args:
-            pop_kw_df: dataframe of keywords and counts
-            corpus_df: dataframe of corpus unique ID with text
-        Returns:
-            dataframe
+    """generate popular documents based on keyword searches
+    Args:
+        pop_kw_df: dataframe of keywords and counts
+        corpus_df: dataframe of corpus unique ID with text
+    Returns:
+        dataframe
 
     """
 
@@ -55,17 +57,16 @@ def generate_pop_docs(pop_kw_df: pd.DataFrame, corpus_df: pd.DataFrame) -> pd.Da
 
 
 def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_file):
-    """ generate feature document
-        Args:
-            corpus_dir: corpus directory
-            days: how many days to retrieve data
-        Returns:
+    """generate feature document
+    Args:
+        corpus_dir: corpus directory
+        days: how many days to retrieve data
+    Returns:
 
     """
     today = datetime.datetime.now()
     out_dir = os.path.join(
-        REPO_PATH,
-        "gamechangerml/src/search/ranking/generated_files"
+        REPO_PATH, "gamechangerml/src/search/ranking/generated_files"
     )
     r = rank.Rank()
     day_delta = 80
@@ -94,8 +95,9 @@ def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_
     corp_df = corp_df.merge(docCounts, on="id", how="outer")
 
     corp_df["kw_in_doc_score"] = corp_df["kw_in_doc_score"].fillna(0.00001)
-    corp_df["kw_in_doc_score"] = (corp_df['kw_in_doc_score'] - corp_df['kw_in_doc_score'].min()) / (
-        corp_df['kw_in_doc_score'].max() - corp_df['kw_in_doc_score'].min())
+    corp_df["kw_in_doc_score"] = (
+        corp_df["kw_in_doc_score"] - corp_df["kw_in_doc_score"].min()
+    ) / (corp_df["kw_in_doc_score"].max() - corp_df["kw_in_doc_score"].min())
     corp_df.kw_in_doc_score.loc[corp_df.kw_in_doc_score == 0] = 0.00001
     corp_df.to_csv(os.path.join(out_dir, "corpus_meta.csv"))
 
@@ -106,7 +108,11 @@ if __name__ == "__main__":
         "--corpus", "-c", dest="corpus_dir", help="corpus directory, full path"
     )
     parser.add_argument(
-        "--days", "-dd", dest="day_delta", default=80, help="days of data to grab since todays date"
+        "--days",
+        "-dd",
+        dest="day_delta",
+        default=80,
+        help="days of data to grab since todays date",
     )
     # Until we can pull data from postgres from production automatically (currently avail in dev)
     parser.add_argument(
@@ -115,7 +121,7 @@ if __name__ == "__main__":
         dest="prod_data",
         default=os.path.join(
             REPO_PATH,
-            "gamechangerml/src/search/ranking/generated_files/prod_test_data.csv"
+            "gamechangerml/src/search/ranking/generated_files/prod_test_data.csv",
         ),
         help="production data historical search logs csv ",
     )
@@ -129,4 +135,4 @@ if __name__ == "__main__":
     days = args.day_delta
     prod_data = args.prod_data
     # outfilename = args.outfile
-    generate_ft_doc(corpus_dir=corpus_dir, days=days, prod_data=prod_data)
+    # generate_ft_doc(corpus_dir=corpus_dir, days=days, prod_data=prod_data)

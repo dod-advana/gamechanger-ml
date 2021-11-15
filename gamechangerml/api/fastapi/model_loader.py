@@ -9,6 +9,7 @@ from gamechangerml.configs.config import (
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher, SentenceEncoder
 from gamechangerml.src.search.embed_reader import sparse
+from gamechangerml.src.search.ranking import ltr
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.src.featurization.word_sim import WordSim
 
@@ -20,6 +21,9 @@ from gamechangerml.src.featurization.word_sim import WordSim
 
 class ModelLoader:
     # private model variables
+    def __init__(self):
+        self.ltr_model = ltr.LTR()
+
     __qa_model = None
     __sentence_searcher = None
     __sentence_encoder = None
@@ -191,31 +195,3 @@ class ModelLoader:
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
             logger.warning(e)
-
-    # Currently deprecated
-    @staticmethod
-    def initTrans():
-        """initTrans - loads transformer model on start
-        Args:
-        Returns:
-        """
-        try:
-            model_name = os.path.join(
-                LOCAL_TRANSFORMERS_DIR.value, "distilbert-base-uncased-distilled-squad"
-            )
-            # not loading due to ram and deprecation
-            # logger.info(f"Attempting to load in BERT model default: {model_name}")
-            logger.info(
-                f"SKIPPING LOADING OF TRANSFORMER MODEL FOR INTELLIGENT SEARCH: {model_name}"
-            )
-            # ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
-            # logger.info(
-            #    f" ** Successfully loaded BERT model default: {model_name}")
-            logger.info(f" ** Setting Redis model to {model_name}")
-            # set cache variable defined in settings.py
-            latest_intel_model_trans.value = model_name
-        except OSError:
-            logger.error(f"Could not load BERT Model {model_name}")
-            logger.error(
-                "Check if BERT cache is in correct location: tranformer_cache/ above root directory."
-            )
