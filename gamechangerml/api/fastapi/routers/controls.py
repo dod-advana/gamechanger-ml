@@ -291,13 +291,13 @@ async def reload_models(model_dict: dict, response: Response):
             try:
                 progress = 0
                 if "sentence" in model_dict:
-                    setence_path = os.path.join(
+                    sentence_path = os.path.join(
                         Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
                     )
                     # uses SENT_INDEX_PATH by default
                     logger.info("Attempting to load Sentence Transformer")
-                    MODELS.initSentence(setence_path)
-                    SENT_INDEX_PATH.value = setence_path
+                    MODELS.initSentenceSearcher(sentence_path)
+                    SENT_INDEX_PATH.value = sentence_path
                     progress += 1
                     processmanager.update_status(
                         processmanager.reloading, progress, total
