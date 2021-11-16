@@ -454,6 +454,7 @@ class LTR:
             end: ending number integer
         returns: normalized array
         """
+        arr = np.log(arr)
         width = end - start
         res = (arr - arr.min()) / (arr.max() - arr.min()) * width + start
         return res
