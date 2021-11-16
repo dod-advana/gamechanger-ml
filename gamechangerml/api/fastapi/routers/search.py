@@ -202,25 +202,19 @@ async def post_word_sim(termsDict: dict, response: Response) -> dict:
 
 
 @router.post("/transformerClassify", status_code=200)
-async def transformer_classify(payload: dict, response: Response) -> dict:
+async def transformer_classify(payload: list, response: Response) -> dict:
     """transformer_infer - endpoint for transformer inference
-   Args:
-        corpus: dict; format of query
-            {"text": "i am text"}
-        Response: Response class; for status codes(apart of fastapi do not need to pass param)
-
-        extractType: topics, keywords, or summary
+    Args:
 
     Returns:
         results: dict; results of inference
     """
 
     logger.info("TRANSFORMER - predicting text: " + str(payload))
-    results = {}
-
     # TODO RAC update to table columns
+    ## Update with actual db columns rather than these
     text_col_dict = {
-        "pdoc": ["Program_Description", "Budget_Justification","budget_type"],
+        "pdoc": ["Program_Description", "Budget_Justification"],
         "rdoc": ["Project_Mission_Description", "PE_Mission_Description_and_Budget_Justification", "Project_Title",
                  "Program_Element_Title",
                  "Project_Notes", "Project_Aquisition_Strategy", "Project_Perfromance_Metircs",
@@ -233,73 +227,40 @@ async def transformer_classify(payload: dict, response: Response) -> dict:
         2: "Core AI",
         3: "AI Enabling"
     }
-
-
+    model_inputs_list = []
     try:
-        text_list=[]
-    #TODO unravel json
-    #TODO Determine if pdoc or rdoc    (number of columns? or tagging?)
+        for record in payload:
+            # #how does this separate for each record?
+            combined_text = ""
+            # if 'budget_type' not in record:
+            for concat_col in text_col_dict[record['budget_type']]:
+                combined_text += f"{record.get(concat_col,'')} "
+            model_inputs_list.append({"sentence":combined_text})
+    except Exception as e:
+        logger.error(f"Error parsing payload with exception: {e}")
+        raise e
 
-        # #how does this separate for each record?
-        # for concat_col in text_col_dict[payload['budget_type']]:
-        #     combined_text=[]
-        #     for doc in payload:
-        #         combined_text += doc[str(concat_col)]
-        #     # aggregate text columns
-        #     text_list.append(combined_text)
+    classif_results_list = []
+    ## Todo: should the batch size be a config, same for max_seq_len, if so where does it go?
+    for classif_results in MODELS.classify_trans.predict(model_inputs_list, batch_size=16, max_seq_len=int(512)):
+            classif_results_list += classif_results
 
-       #testing
-        for concat_col in text_col_dict[payload['budget_type']]:
-            combined_text=[]
-            for item in payload:
-                #logger.info(" my statement "+concat_col +" and "+str(item))
-                combined_text += payload[concat_col]
-            # aggregate text columns
-            text_list.append(combined_text)
-
-        # import nltk
-        # nltk.download('stopwords')
-        #
-        # #TODO clean text
-        # def clean_text(text):
-        #     """
-        #     Performs the following transformation on a string that is passed in:
-        #     1. Lowercase the text
-        #     2. Replaces /(){}\[\]\|@,;#+_ characters with spaces
-        #     3. Removes any non numeric or lowercase alphabetical characters
-        #     4. Removes stopwords (from nltk)
-        #     :param text: (str) Text to be cleaned
-        #     :return: (str) Cleaned text
-        #     """
-        #     import re
-        #     from nltk.corpus import stopwords
-        #     REPLACE_BY_SPACE_RE = re.compile('[/(){}\[\]\|@,;#+_]')
-        #     BAD_SYMBOLS_RE = re.compile('[^0-9a-z ]')
-        #     STOPWORDS = set(stopwords.words('english'))
-        #     text = text.lower()  # lowercase text
-        #     text = REPLACE_BY_SPACE_RE.sub(' ', text)  # replace REPLACE_BY_SPACE_RE symbols by space in text
-        #     text = BAD_SYMBOLS_RE.sub('', text)  # delete symbols which are in BAD_SYMBOLS_RE from text
-        #     text = ' '.join(word for word in text.split() if word not in STOPWORDS)  # delete stopwords from text
-        #     return text
-        #
-        # new_text=clean_text(text_list)
-        # call encoder()
+    # extract out the "top class" for the record (numerically encoded prediction)
+    classif_results_list = [classif_results['top_class'] for classif_results in classif_results_list]
+    # map the numerically encoded
+    classif_results_list = list(map(lambda classif_result: label_mapping[classif_result], classif_results_list))
 
 
-        # pass data through classifier model
-        results = MODELS.classify_trans.predict(text_list)   #What does predictor return?
 
-
-        # construct return payload
-            #results.map(lambda num_class: label_mapping[num_class])
-
-
-        logger.info(results)
-    except Exception:
-        logger.error(f"Unable to get results from transformer for {payload}")
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        raise
-    return results
+    # construct return payload
+    #
+    #
+    #     logger.info(results)
+    # except Exception:
+    #     logger.error(f"Unable to get results from transformer for {payload}")
+    # response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    #     raise
+    return classif_results_list
 
 
 def unquoted(term):

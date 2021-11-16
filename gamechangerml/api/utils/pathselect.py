@@ -75,12 +75,12 @@ def get_model_paths():
 
     try:
         CLASSIFY_MODEL_PATH = os.path.join(
-            Config.LOCAL_PACKAGED_MODELS_DIR, "classification/distilbert_classifier_model"
+            Config.LOCAL_PACKAGED_MODELS_DIR, "distilbert_classifier_20211112"
         )
         logger.info("Cannot get Classification model path")
     except Exception as e:
         logger.error(e)
-
+        CLASSIFY_MODEL_PATH = "gamechangerml/models/"
         logger.info("Cannot get Classification model path")
 
     model_dict = {

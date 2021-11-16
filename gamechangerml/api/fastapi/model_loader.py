@@ -194,7 +194,6 @@ class ModelLoader:
         # encoder_model = os.path.join(
         #    transformer_path, "msmarco-distilbert-base-v2")
         try:
-
             ModelLoader.__classify_trans = Predictor(model_path,4)
 
             #encoder_model = ModelLoader.__classify_trans.encoder_model

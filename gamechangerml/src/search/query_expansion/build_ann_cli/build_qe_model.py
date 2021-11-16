@@ -141,7 +141,7 @@ def main(
             "directory not found; got {}".format(str(corpus_dir))
         )
 
-    word_wt = get_word_weight(weight_file="enwiki_vocab_min200.txt", a=1e-03)
+    word_wt = get_word_weight(weight_file=weight_file, a=1e-03)
 
     if ngram[0] < 1:
         raise ValueError("minimum ngram must be > 0; got {}".format(ngram))
@@ -281,7 +281,7 @@ if __name__ == "__main__":
             int(args.num_trees),
             int(args.num_keywords),
             ngram,
-            args.word_wt_file,
+            args.weight_file,
             args.abbrv_file,
         )
     logger.info("complete")
