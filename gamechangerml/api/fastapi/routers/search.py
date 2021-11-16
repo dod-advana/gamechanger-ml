@@ -202,66 +202,30 @@ async def post_word_sim(termsDict: dict, response: Response) -> dict:
 
 
 @router.post("/transformerClassify", status_code=200)
-async def transformer_classify(payload: list, response: Response) -> dict:
-    """transformer_infer - endpoint for transformer inference
+async def transformer_classify(payload: dict, response: Response) -> list:
+    """transformerClassify - endpoint for transformer classification
     Args:
-
+        records: (list) List of dict records which require classification
     Returns:
         results: dict; results of inference
     """
 
-    logger.info("TRANSFORMER - predicting text: " + str(payload))
-    # TODO RAC update to table columns
-    ## Update with actual db columns rather than these
-    text_col_dict = {
-        "pdoc": ["Program_Description", "Budget_Justification"],
-        "rdoc": ["Project_Mission_Description", "PE_Mission_Description_and_Budget_Justification", "Project_Title",
-                 "Program_Element_Title",
-                 "Project_Notes", "Project_Aquisition_Strategy", "Project_Perfromance_Metircs",
-                 "Other_program_funding_summary_remarks"]
-    }
-
-    label_mapping = {
-        0: "Not AI",
-        1: "AI Enabled",
-        2: "Core AI",
-        3: "AI Enabling"
-    }
-    model_inputs_list = []
+    records = payload.get("records",[])
+    logger.info(f"TRANSFORMER - classifying {len(records)} total records ")
     try:
-        for record in payload:
-            # #how does this separate for each record?
-            combined_text = ""
-            # if 'budget_type' not in record:
-            for concat_col in text_col_dict[record['budget_type']]:
-                combined_text += f"{record.get(concat_col,'')} "
-            model_inputs_list.append({"sentence":combined_text})
-    except Exception as e:
-        logger.error(f"Error parsing payload with exception: {e}")
-        raise e
-
-    classif_results_list = []
-    ## Todo: should the batch size be a config, same for max_seq_len, if so where does it go?
-    for classif_results in MODELS.classify_trans_jbook.predict(model_inputs_list, batch_size=16, max_seq_len=int(512)):
+        model_inputs_list = [{"sentence":text} for text in records]
+        infer_start_time = time.time()
+        classif_results_list = []
+        # predict() will batch the list of inputs
+        for classif_results in MODELS.classify_trans_jbook.predict(model_inputs_list, max_seq_len=int(512)):
             classif_results_list += classif_results
-
-    # extract out the "top class" for the record (numerically encoded prediction)
-    classif_results_list = [classif_results['top_class'] for classif_results in classif_results_list]
-    # map the numerically encoded
-    classif_results_list = list(map(lambda classif_result: label_mapping[classif_result], classif_results_list))
-
-
-
-    # construct return payload
-    #
-    #
-    #     logger.info(results)
-    # except Exception:
-    #     logger.error(f"Unable to get results from transformer for {payload}")
-    # response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    #     raise
-    return classif_results_list
-
+        logger.info(f"Classification of {len(records)} total records took {time.time()-infer_start_time:0.4f} seconds")
+        # extract out the "top class" for the record (numerically encoded prediction)
+        classif_results_list = [int(classif_results['top_class']) for classif_results in classif_results_list]
+        return classif_results_list
+    except Exception as e:
+        logger.error(f"Error performing transformer classification {e}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
 def unquoted(term):
     """unquoted - unquotes string
