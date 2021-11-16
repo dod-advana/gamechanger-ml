@@ -74,13 +74,14 @@ def get_model_paths():
         logger.info("Cannot get Sentence Index model path")
 
     try:
-        CLASSIFY_MODEL_PATH = os.path.join(
-            Config.LOCAL_PACKAGED_MODELS_DIR, "distilbert_classifier_20211112"
+        CLASSIFY_JBOOK_MODEL_PATH = os.path.join(
+            Config.LOCAL_PACKAGED_MODELS_DIR,
+            "distilbert_classifier_20211112"
         )
         logger.info("Cannot get Classification model path")
     except Exception as e:
         logger.error(e)
-        CLASSIFY_MODEL_PATH = "gamechangerml/models/"
+        CLASSIFY_JBOOK_MODEL_PATH = "gamechangerml/models/"
         logger.info("Cannot get Classification model path")
 
     model_dict = {
@@ -88,6 +89,6 @@ def get_model_paths():
         "sentence": INDEX_PATH,
         "qexp": QEXP_MODEL_PATH,
         "word_sim": WORD_SIM_MODEL_PATH,
-        "classification": CLASSIFY_MODEL_PATH
+        "classify_jbook": CLASSIFY_JBOOK_MODEL_PATH
     }
     return model_dict

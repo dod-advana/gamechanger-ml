@@ -18,6 +18,10 @@ echo "Downloading Topic Model"
 echo "S3 TOPIC MODEL: $S3_TOPICS_PATH"
 aws s3 cp "$S3_TOPICS_PATH" $PWD/gamechangerml/models/topic_models/
 
+echo "Downloading JBOOK Classifier Model"
+echo "S3 MODEL PATH JBOOK Classifier: $S3_CLASSIFY_JBOOK_MODEL_PATH"
+aws s3 cp "$S3_CLASSIFY_JBOOK_MODEL_PATH" $PWD/gamechangerml/models/
+
 echo "Uncompressing all tar files in models"
 for f in ./gamechangerml/models/*.tar.gz; do
   tar kxvfz "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C ./gamechangerml/models/;

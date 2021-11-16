@@ -242,7 +242,7 @@ async def transformer_classify(payload: list, response: Response) -> dict:
 
     classif_results_list = []
     ## Todo: should the batch size be a config, same for max_seq_len, if so where does it go?
-    for classif_results in MODELS.classify_trans.predict(model_inputs_list, batch_size=16, max_seq_len=int(512)):
+    for classif_results in MODELS.classify_trans_jbook.predict(model_inputs_list, batch_size=16, max_seq_len=int(512)):
             classif_results_list += classif_results
 
     # extract out the "top class" for the record (numerically encoded prediction)

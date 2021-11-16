@@ -25,7 +25,7 @@ class ModelLoader:
     __query_expander = None
     __word_sim = None
     __sparse_reader = None
-    __classify_trans = None
+    __classify_trans_jbook = None
 
 
     # Get methods for the models. If they don't exist try initializing them.
@@ -67,12 +67,12 @@ class ModelLoader:
     #TODO getClassify
     def getClassify_trans(self):
         logger.info("*** inside getClassify")
-        if ModelLoader.__classify_trans == None:
+        if ModelLoader.__classify_trans_jbook == None:
             logger.warning(
-                "classify_trans was not set and was attempted to be used. Running init"
+                "classify_trans_jbook was not set and was attempted to be used. Running init"
             )
-            ModelLoader.initClassify()
-        return ModelLoader.__classify_trans
+            ModelLoader.initClassifyJBook()
+        return ModelLoader.__classify_trans_jbook
 
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
@@ -84,7 +84,7 @@ class ModelLoader:
     sparse_reader = property(getSparse, set_error)
     sentence_trans = property(getSentence_trans, set_error)
     word_sim = property(getWordSim, set_error)
-    classify_trans = property(getClassify_trans, set_error)
+    classify_trans_jbook = property(getClassify_trans, set_error)
 
     @staticmethod
     def initQA():
@@ -184,24 +184,18 @@ class ModelLoader:
             logger.warning(e)
 
     @staticmethod
-    def initClassify(model_path=CLASSIFY_MODEL_PATH.value):
+    def initClassifyJBook(model_path=CLASSIFY_JBOOK_MODEL_PATH.value):
         """
-        initQE - loads classification Transformers on start
+        initClassifyJBook - loads JBOOK classification Transformers on start
         Args:
+            - model_path (str): relative or absolute pathing to the JBOOK classifier
         Returns:
         """
-        # load defaults
-        # encoder_model = os.path.join(
-        #    transformer_path, "msmarco-distilbert-base-v2")
         try:
-            ModelLoader.__classify_trans = Predictor(model_path,4)
-
-            #encoder_model = ModelLoader.__classify_trans.encoder_model
-            #logger.info(f"Using {encoder_model} for classification transformer")
-
-            logger.info("** Loaded Classification model")
+            ModelLoader.__classify_trans_jbook = Predictor(model_path,4)
+            logger.info("** Loaded JBook Classification model")
         except Exception as e:
-            logger.warning("** Could not load Classification model")
+            logger.warning("** Could not load JBook Classification model")
             logger.warning(e)
 
 
