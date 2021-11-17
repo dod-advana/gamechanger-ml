@@ -17,4 +17,4 @@ app.include_router(
 app.include_router(
     controls.router,
     tags=["API Controls"]
- )
+)

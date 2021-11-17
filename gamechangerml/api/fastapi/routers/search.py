@@ -205,12 +205,12 @@ async def post_word_sim(termsDict: dict, response: Response) -> dict:
 async def transformer_classify(payload: dict, response: Response) -> list:
     """transformerClassify - endpoint for transformer classification
     Args:
-        records: (list) List of dict records which require classification
+        records: (dict) List of dict records which require classification
     Returns:
         results: dict; results of inference
     """
 
-    records = payload.get("records",[])
+    records = payload.get("records_list",[])
     logger.info(f"TRANSFORMER - classifying {len(records)} total records ")
     try:
         model_inputs_list = [{"sentence":text} for text in records]

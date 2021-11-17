@@ -78,9 +78,8 @@ class ModelLoader:
     def getSparse(self):
         return ModelLoader.__sparse_reader
 
-    #TODO getClassify
-    def getClassify_trans(self):
-        logger.info("*** inside getClassify")
+    def getClassifyJbook(self):
+        logger.info("*** inside getClassifyJbook")
         if ModelLoader.__classify_trans_jbook == None:
             logger.warning(
                 "classify_trans_jbook was not set and was attempted to be used. Running init"
@@ -99,7 +98,7 @@ class ModelLoader:
     sentence_searcher = property(getSentence_searcher, set_error)
     sentence_encoder = property(getSentence_encoder, set_error)
     word_sim = property(getWordSim, set_error)
-    classify_trans_jbook = property(getClassify_trans, set_error)
+    classify_trans_jbook = property(getClassifyJbook, set_error)
 
     @staticmethod
     def initQA():
@@ -224,32 +223,3 @@ class ModelLoader:
         except Exception as e:
             logger.warning("** Could not load JBook Classification model")
             logger.warning(e)
-
-
-    # Currently deprecated
-    @staticmethod
-    def initTrans():
-        """initTrans - loads transformer model on start
-        Args:
-        Returns:
-        """
-        try:
-            model_name = os.path.join(
-                LOCAL_TRANSFORMERS_DIR.value, "distilbert-base-uncased-distilled-squad"
-            )
-            # not loading due to ram and deprecation
-            # logger.info(f"Attempting to load in BERT model default: {model_name}")
-            logger.info(
-                f"SKIPPING LOADING OF TRANSFORMER MODEL FOR INTELLIGENT SEARCH: {model_name}"
-            )
-            # ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
-            # logger.info(
-            #    f" ** Successfully loaded BERT model default: {model_name}")
-            logger.info(f" ** Setting Redis model to {model_name}")
-            # set cache variable defined in settings.py
-            latest_intel_model_trans.value = model_name
-        except OSError:
-            logger.error(f"Could not load BERT Model {model_name}")
-            logger.error(
-                "Check if BERT cache is in correct location: tranformer_cache/ above root directory."
-            )
