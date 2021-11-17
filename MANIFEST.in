@@ -1,5 +1,5 @@
 include LICENSE
 include README.md
-include gamechangerml/data/*
-include gamechangerml/src/featurization/data/*
-include gamechangerml/src/search/ranking/generated_files/*
+recursive-include gamechangerml/data/ *
+recursive-include gamechangerml/src/featurization/data/ *
+recursive-include gamechangerml/src/search/ranking/generated_files/ *

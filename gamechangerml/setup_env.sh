@@ -21,9 +21,11 @@ function setup_prod() {
     export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v7/sent_index_20210715.tar.gz}"
     export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-data-zone/bronze/gamechanger/models/qexp_model/v3/qexp_20201217.tar.gz}"
     export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-data-zone/bronze/gamechanger/models/topic_model/v1/20210208.tar.gz}"
+    export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20211018.tar.gz}"
     export S3_CLASSIFY_JBOOK_MODEL_PATH="${S3_CLASSIFY_JBOOK_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/classification/v1/distilbert_classifier_20211112.tar.gz}"
 
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-true}"
+    export ES_HOST="${ES_HOST}:-}"
 
     export DEV_ENV="PROD"
 }
@@ -34,9 +36,10 @@ function setup_dev() {
     export REDIS_PORT="${REDIS_PORT:-6380}"
     export GC_ML_HOST="${GC_ML_HOST:-http://host.docker.internal}"
     export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v5/transformers.tar.gz}"
-    export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v7/sent_index_20210715.tar.gz}"
+    export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v7/sent_index_20210716.tar.gz}"
     export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-data-zone/bronze/gamechanger/models/qexp_model/v4/qexp_20211001.tar.gz}"
     export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-data-zone/bronze/gamechanger/models/topic_model/v1/20210208.tar.gz}"
+    export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20211018.tar.gz}"
     export S3_CLASSIFY_JBOOK_MODEL_PATH="${S3_CLASSIFY_JBOOK_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/classification/v1/distilbert_classifier_20211112.tar.gz}"
 
     export DEV_ENV="DEV"
@@ -44,6 +47,7 @@ function setup_dev() {
     export MLFLOW_HOST="${MLFLOW_HOST:-localhost}"
     export MLFLOW_TRACKING_URI="http://${MLFLOW_HOST}:5050/"
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-false}"
+    export ES_HOST="${ES_HOST:-https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com}"
 }
 
 
@@ -54,7 +58,9 @@ function setup_devlocal() {
   export GC_ML_HOST="${GC_ML_HOST:-http://localhost}"
   export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v5/transformers.tar.gz}"
   export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v4/sent_index_20210422.tar.gz}"
+  export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20211018.tar.gz}"
 
+  export ES_HOST="${ES_HOST:-https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com}"
   export DEV_ENV="DEVLOCAL"
 }
 
@@ -90,7 +96,7 @@ case "$ENV_TYPE" in
   K8S_TEST)
     setup_k8s_test
     ;;
-  K8s_PROD)
+  K8S_PROD)
     setup_k8s_prod
     ;;
   *)
@@ -109,7 +115,9 @@ cat <<EOF
   * S3_TRANS_MODEL_PATH: ${S3_TRANS_MODEL_PATH:-<unset>}"
   * S3_SENT_INDEX_PATH: ${S3_SENT_INDEX_PATH:-<unset>}"
   * S3_QEXP_PATH: ${S3_QEXP_PATH:-<unset>}"
+  * S3_ML_DATA_PATH= ${S3_ML_DATA_PATH:-:-<unset>}"
   * S3_TOPICS_PATH: ${S3_TOPICS_PATH:-<unset>}"
   * S3_CLASSIFY_JBOOK_MODEL_PATH: ${S3_CLASSIFY_JBOOK_MODEL_PATH:-<unset>}"
   * DOWNLOAD_DEP: ${DOWNLOAD_DEP:-<unset>}"
+  * ES_HOST: ${ES_HOST:-<unset>}"
 EOF

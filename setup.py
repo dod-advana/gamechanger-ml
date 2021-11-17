@@ -6,8 +6,8 @@ import os
 
 
 ROOT_PATH = Path(os.path.dirname(os.path.abspath(__file__))).resolve()
-REQUIREMENTS_PATH = Path(ROOT_PATH, "requirements.txt")
-DEV_REQUIREMENTS_PATH = Path(ROOT_PATH, "dev-requirements.txt")
+REQUIREMENTS_PATH = Path(ROOT_PATH, "k8s.requirements.txt")
+DEV_REQUIREMENTS_PATH = Path(ROOT_PATH, "k8s.requirements.txt")
 README_PATH = Path(ROOT_PATH, "README.md")
 
 
@@ -42,20 +42,20 @@ def parse_readme(readme: Path) -> str:
 
 setuptools.setup(
     name="gamechangerml",
-    version="0.2.0",
+    version="1.0.0",
     author="Booz Allen Hamilton",
-    author_email="ha_robert@example.com",
+    author_email="gamechanger@advana",
     description="Package for GAMECHANGER ML modules",
     long_description=parse_readme(README_PATH),
     long_description_content_type="text/markdown",
     url="https://github.com/dod-advana/gamechanger-ml",
     packages=setuptools.find_packages(),
     classifiers=[
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.6 - 3.8",
         "License :: ",
         "Operating System :: OS Independent",
     ],
-    python_requires="==3.6.*",
+    python_requires=">=3.6.*,<3.9.*",
     install_requires=parse_requirements(REQUIREMENTS_PATH),
     include_package_data=True,
     extras_require={"dev": parse_requirements(DEV_REQUIREMENTS_PATH)},

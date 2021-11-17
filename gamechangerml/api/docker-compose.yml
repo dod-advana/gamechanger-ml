@@ -22,15 +22,12 @@ services:
         reservations:
           devices:
           - capabilities: [gpu]
-            #runtime: nvidia
-            #command: nvidia-smi
     ports:
       - "5000:5000"
     env_file:
       - .env
     volumes:
-      - "../../gamechangerml/models:/opt/app-root/src/gamechangerml/models"
-      - "../../gamechangerml/corpus:/opt/app-root/src/gamechangerml/corpus"
+      - "../../gamechangerml/:/opt/app-root/src/gamechangerml/"
       - ~/.aws/:/.aws
     depends_on:
       - gc-redis

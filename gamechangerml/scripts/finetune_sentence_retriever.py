@@ -4,16 +4,16 @@ from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
 import argparse
 import os
-from datetime import date
+from datetime import datetime
 
 model_path_dict = get_model_paths()
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-BASE_MODEL_NAME = EmbedderConfig.MODEL_ARGS['model_name']
+BASE_MODEL_NAME = EmbedderConfig.BASE_MODEL
 
 def main(data_path, model_load_path, model_save_path):
 
-    tuner = STFinetuner(model=None, model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.MODEL_ARGS['finetune'])
+    tuner = STFinetuner(model_load_path=model_load_path, model_save_path=model_save_path, **EmbedderConfig.FINETUNE)
     return tuner.retrain(data_path)
 
 if __name__ == "__main__":
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     if args.model_save_path:
         model_save_path = args.model_save_path
     else:
-        model_save_path = model_load_path + '_' + str(date.today())
+        model_save_path = model_load_path + str(datetime.now().strftime("%Y%m%d"))
 
     data_path = args.data_path
 

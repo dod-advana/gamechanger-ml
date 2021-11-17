@@ -11,14 +11,14 @@ from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig, ValidationConfig
 from gamechangerml.src.utilities.text_utils import normalize_answer
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData, QEXPDomainData
+from gamechangerml.src.model_testing.validation_data import SQuADData, NLIData, MSMarcoData, QADomainData, RetrieverGSData, UpdatedGCRetrieverData, QEXPDomainData
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.metrics import *
 from gamechangerml.api.utils.logger import logger
 import signal
 import torch
 
-retriever_k = EmbedderConfig.MODEL_ARGS['n_returns'] # k
+retriever_k = 5
 
 init_timer()
 model_path_dict = get_model_paths()
@@ -53,6 +53,9 @@ class QAEvaluator(TransformerEvaluator):
 
         self.model_name = model_name
         self.model_path = os.path.join(transformer_path, model_name)
+        logger.info(f"model path: {str(self.model_path)}")
+        if not os.path.exists(self.model_path):
+            logger.warning("Model directory provided does not exist.")
         if model:
             self.model = model
         else:
@@ -184,6 +187,7 @@ class QAEvaluator(TransformerEvaluator):
         file = "_".join(["qa_eval", self.data_name])
         output_file = timestamp_filename(file, '.json')
         save_json(output_file, eval_path, agg_results)
+        logger.info(f"Saved evaluation to {output_file}")
 
         return agg_results
 
@@ -270,54 +274,51 @@ class RetrieverEvaluator(TransformerEvaluator):
             csvwriter.writerow(columns) 
 
             ## collect metrics for each query made + results generated
-            query_count = 0
-            tp = 0
-            tn = 0
-            fp = 0
-            fn = 0
-            total_expected = 0
+            query_count = tp = tn = fp = fn = total_expected = 0
             for idx, query in data.queries.items(): 
-                logger.info("Q-{}: {}".format(query_count, query))
-                doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query) ## returns results ordered highest - lowest score
+                logger.info("\n\nQ-{}: {}".format(query_count, query))
+                doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query, num_results=k) ## returns results ordered highest - lowest score
                 if index != 'msmarco_index':
                     doc_ids = ['.'.join(i.split('.')[:-1]) for i in doc_ids]
+                logger.info(f"retrieved: {str(doc_texts)}, {str(doc_ids)}, {str(doc_scores)}")
                 expected_ids = data.relations[idx] # collect the expected results (ground truth)
                 if type(expected_ids) == str:
                     expected_ids = [expected_ids]
-
-                total_expected += min(len(expected_ids), k) # if we have more than k expected, set this to k
+                expected_docs = [data.collection[x] for x in expected_ids]
+                expected_docs = list(set([i.split('.pdf')[0] for i in expected_docs]))
+                logger.info(f"expected: {str(expected_docs)}")
+                total_expected += min(len(expected_docs), k) # if we have more than k expected, set this to k
                 ## collect ordered metrics
-                recip_rank = reciprocal_rank(doc_ids, expected_ids)
-                avg_p = average_precision(doc_ids, expected_ids)
+                recip_rank = reciprocal_rank(doc_ids, expected_docs)
+                avg_p = average_precision(doc_ids, expected_docs)
                 
                 ## collect non-ordered metrics
                 hits = []
-                true_pos = 0
-                false_pos = 0 # no negative samples to test against
-                for eid in doc_ids:
+                true_pos = false_pos = 0 # no negative samples to test against
+                for eid in set(doc_ids):
                     hit = {}
-                    if eid in expected_ids: ## we have a hit
+                    if eid in expected_docs: ## we have a hit
                         rank = doc_ids.index(eid)
                         hit['rank'] = rank
-                        hit['matching_text'] = data.collection[eid]
+                        hit['match'] = eid
                         hit['score'] = doc_scores[rank]
                         hits.append(hit)
                         true_pos += 1
                 if len(doc_ids) < k: # if there are not k predictions, there are pred negatives
                     remainder = k - len(doc_ids)
-                    false_neg = min(len([i for i in expected_ids if i not in doc_ids], remainder))
-                    true_neg = min((k - len(expected_ids)), (k - len(doc_ids)))
+                    false_neg = min(len([i for i in expected_docs if i not in doc_ids], remainder))
+                    true_neg = min((k - len(expected_docs)), (k - len(doc_ids)))
                 else: # if there are k predictions, there are no predicted negatives
                     false_neg = true_neg = 0
                 fn += false_neg
                 tn += true_neg
                 tp += true_pos
-                
+                logger.info(f"Metrics: fn: {str(fn)}, tn: {str(tn)}, tp: {str(tp)}")
                 ## save metrics to csv
                 row = [[
                     str(query_count),
                     str(query),
-                    str(expected_ids),
+                    str(expected_docs),
                     str(hits),
                     str(true_pos),
                     str(false_pos),
@@ -348,6 +349,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             "user": user,
             "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "model": model_name,
+            "index": index,
             "validation_data": data_name,
             "query_count": num_queries,
             "k": k,
@@ -356,9 +358,10 @@ class RetrieverEvaluator(TransformerEvaluator):
             "recall": recall
         }
 
-        file = "_".join(["retriever_eval", data_name])
-        output_file = timestamp_filename(file, '.json')
+        logger.info(f"** Eval Results: {str(agg_results)}")
+        output_file = timestamp_filename("retriever_eval", '.json')
         save_json(output_file, eval_path, agg_results)
+        logger.info(f"Saved evaluation to {str(os.path.join(eval_path, output_file))}")
 
         return agg_results
 
@@ -368,15 +371,13 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
             self, 
             encoder_model_name,
             sim_model_name,
-            overwrite,
             min_token_len,
             return_id,
             verbose,
-            n_returns,
             encoder=None,
             retriever=None,
             transformer_path=LOCAL_TRANSFORMERS_DIR,
-            index='msmarco_index',
+            index='sent_index_MSMARCO',
             use_gpu=False,
             data_name='msmarco'
         ):
@@ -385,19 +386,20 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
         logger.info("Model path: {}".format(self.model_path))
         self.index_path = os.path.join(os.path.dirname(transformer_path), index)
         if not os.path.exists(self.index_path):  
+            logger.info("MSMARCO index path doesn't exist.")
             logger.info("Making new embeddings index at {}".format(str(self.index_path)))
             os.makedirs(self.index_path)
             if encoder:
                 self.encoder=encoder
             else:
-                self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, overwrite=overwrite, min_token_len=min_token_len, return_id=return_id, verbose=verbose, sent_index=self.index_path, use_gpu=use_gpu)
-            self.make_index(encoder=self.encoder, corpus_path=None)
+                self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, min_token_len=min_token_len, return_id=return_id, verbose=verbose, use_gpu=use_gpu)
+            self.make_index(encoder=self.encoder, corpus_path=None, index_path=self.index_path)
         self.data = MSMarcoData()
         if retriever:
             self.retriever = retriever
         else:
-            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, encoder_model_name=encoder_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
-        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_msmarco'))
+            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, index_path=self.index_path, transformer_path=transformer_path)
+        self.eval_path = check_directory(os.path.join(self.index_path, 'evals_msmarco'))
         logger.info("Evals path: {}".format(self.eval_path))
         self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path, model_name=encoder_model_name)
 
@@ -407,14 +409,14 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             self,
             encoder_model_name,
             sim_model_name,
-            overwrite,
             min_token_len,
             return_id,
             verbose,
-            n_returns,
+            data_level,
+            create_index=True,
+            data_path=None,
             encoder=None,
             retriever=None,
-            data_name='gold_standard',
             transformer_path=LOCAL_TRANSFORMERS_DIR,
             index=SENT_INDEX_PATH,
             use_gpu=False
@@ -424,26 +426,29 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
 
         self.model_path = os.path.join(transformer_path, encoder_model_name)
         if not index:
-            self.index_path = os.path.join(os.path.dirname(transformer_path), 'test_sent_index')
-            logger.info("Making new embeddings index at {}".format(str(self.index_path)))
-            if not os.path.exists(self.index_path):
-                os.makedirs(self.index_path)
-            if encoder:
-                self.encoder=encoder
-            else:
-                self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, overwrite=overwrite, min_token_len=min_token_len, return_id=return_id, verbose=verbose, sent_index=self.index_path, use_gpu=use_gpu)
-            self.make_index(encoder=self.encoder, corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'])
+            logger.info("No index provided for evaluating.")
+            if create_index:
+                self.index_path = os.path.join(os.path.dirname(transformer_path), 'sent_index_TEST')
+                logger.info("Making new embeddings index at {}".format(str(self.index_path)))
+                if not os.path.exists(self.index_path):
+                    os.makedirs(self.index_path)
+                if encoder:
+                    self.encoder=encoder
+                else:
+                    self.encoder = SentenceEncoder(encoder_model_name=encoder_model_name, min_token_len=min_token_len, return_id=return_id, verbose=verbose, use_gpu=use_gpu)
+                self.make_index(encoder=self.encoder, corpus_path=ValidationConfig.DATA_ARGS['test_corpus_dir'], index_path=self.index_path)
         else:
             self.index_path = os.path.join(os.path.dirname(transformer_path), index)
-        self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
-        self.data = RetrieverGSData(self.doc_ids)
-        logger.info("SENT INDEX PATH: {}".format(self.index_path))
-        if retriever:
-            self.retriever=retriever
-        else:
-            self.retriever = SentenceSearcher(sim_model_name=sim_model_name, encoder_model_name=encoder_model_name, n_returns=n_returns, index_path=self.index_path, transformers_path=transformer_path)
-        self.eval_path = check_directory(os.path.join(self.model_path, 'evals_gc'))
-        self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_name, eval_path=self.eval_path, model_name=encoder_model_name)
+        
+        if self.index_path:
+            self.doc_ids = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
+            if retriever:
+                self.retriever=retriever
+            else:
+                self.retriever = SentenceSearcher(sim_model_name=sim_model_name, index_path=self.index_path, transformer_path=transformer_path)
+            self.eval_path = check_directory(os.path.join(self.index_path, 'evals_gc', data_level))
+            self.data = UpdatedGCRetrieverData(available_ids=self.doc_ids, level=data_level, data_path=data_path)
+            self.results = self.eval(data=self.data, index=index, retriever=self.retriever, data_name=data_level, eval_path=self.eval_path, model_name=encoder_model_name)
 
 class SimilarityEvaluator(TransformerEvaluator):
 
@@ -499,6 +504,7 @@ class SimilarityEvaluator(TransformerEvaluator):
 
         output_file = timestamp_filename('sim_model_eval', '.json')
         save_json(output_file, eval_path, agg_results)
+        logger.info(f"Saved evaluation to {str(os.path.join(eval_path, output_file))}")
 
         return agg_results
 
@@ -645,5 +651,6 @@ class QexpEvaluator():
 
         output_file = timestamp_filename('qe_model_eval', '.json')
         save_json(output_file, self.model_path, agg_results)
+        logger.info(f"Saved evaluation to {str(os.path.join(self.model_path, output_file))}")
 
         return agg_results

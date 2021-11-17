@@ -498,8 +498,7 @@ class Classifier(object):
         logger.info("confusion matrix\n\n\t{}\n".format(cm_matrix))
         logger.info("\tvalidation loss : {:>0.3f}".format(avg_val_loss))
         logger.info("\t            MCC : {:>0.3f}".format(mcc))
-        if self.cfg.num_labels <= 2:
-            logger.info("\t            AUC : {:>0.3f}".format(auc_val))
+        logger.info("\t            AUC : {:>0.3f}".format(auc_val))
         logger.info("\t accuracy score : {:>0.3f}".format(acc_score))
         logger.info("\tvalidation time : {:}".format(validation_time))
 
