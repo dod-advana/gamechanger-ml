@@ -11,4 +11,3 @@ matplotlib
 seaborn
 autopep8
 black
-nltk==3.*
