@@ -69,11 +69,11 @@ if __name__ == "__main__":
     )
     ww = os.path.join(
         REPO_PATH,
-        "gamechangerml/src/search/query_expansion/aux_data/word-freq-corpus-20201101.txt"
+        "gamechangerml/data/features/word-freq-corpus-20201101.txt"
     )
     word_wt_file = os.path.join(
         REPO_PATH,
-        "gamechangerml/src/search/query_expansion/aux_data/word-freq-corpus-20201101.txt"
+        "gamechangerml/data/features/word-freq-corpus-20201101.txt"
     )
     word_weights = get_word_weight(word_wt_file)
     embed_titles(c_dir, nlp, word_weights)

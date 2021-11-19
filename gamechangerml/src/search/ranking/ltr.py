@@ -2,8 +2,8 @@ import spacy
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
-from gamechangerml.src.search.ranking import search_data as meta
-from gamechangerml.src.search.ranking import rank
+from gamechangerml.src.featurization.rank_features.ranking import search_data as meta
+from gamechangerml.src.featurization.rank_features.ranking import rank
 from gamechangerml import REPO_PATH
 import datetime
 import pandas as pd

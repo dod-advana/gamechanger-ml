@@ -1,11 +1,10 @@
 import pandas as pd
 import ast
-from gamechangerml.src.search.ranking import GENERATED_FILES_PATH
 from gamechangerml import DATA_PATH
 import os
 
-df = pd.read_csv(os.path.join(GENERATED_FILES_PATH, "corpus_meta.csv"))
-pop_df = pd.read_csv(os.path.join(DATA_PATH, "popular_documents.csv"))
+df = pd.read_csv(os.path.join(DATA_PATH, "features/generated_files/corpus_meta.csv"))
+pop_df = pd.read_csv(os.path.join(DATA_PATH, "features/popular_documents.csv"))
 
 
 """ retrieve pre-generated features from corpus
@@ -31,7 +30,7 @@ def get_pop_score(docId: str) -> float:
     else:
         return 0.0
 
-
+## TODO: R4EMOVE THESE???
 def get_orgs(docId: str) -> dict:
     if docId in list(df.id):
         return ast.literal_eval(df[df.id == docId].orgs.values[0])

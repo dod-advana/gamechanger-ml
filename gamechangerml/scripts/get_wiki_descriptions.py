@@ -22,7 +22,7 @@ if __name__ == '__main__':
     if args.filepath:
         entities_filepath = args.filepath
     else:
-        entities_filepath = '../data/combined_entities.csv'
+        entities_filepath = 'gamechangerml/data/features/combined_entities.csv'
     df = pd.read_csv(entities_filepath)
     df['information'] = df['entity_name'].apply(lambda x: lookup_wiki_summary(x))
     df['information_source'] = "Wikipedia"

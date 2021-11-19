@@ -11,7 +11,7 @@ def expand_abbreviations(
         t.Dict[str, t.Any], str
     ] = os.path.join(
         REPO_PATH,
-        "gamechangerml/src/featurization/data/abbreviations.json"
+        "gamechangerml/data/features/abbreviations.json"
     ),
 ):
     """
@@ -117,7 +117,7 @@ def expand_abbreviations_no_context(
         t.Dict[str, t.Any], str
     ] = os.path.join(
         REPO_PATH,
-        "gamechangerml/src/featurization/data/abbcounts.json"
+        "gamechangerml/data/features/abbcounts.json"
     ),
 ):
     """
@@ -202,7 +202,7 @@ def find_abbreviations(
         t.Dict[str, t.Any], str
     ] = os.path.join(
         REPO_PATH,
-        "gamechangerml/src/featurization/data/abbreviations.json"
+        "gamechangerml/data/features/abbreviations.json"
     ),
 ):
     """

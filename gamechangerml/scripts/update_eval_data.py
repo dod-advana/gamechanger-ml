@@ -15,7 +15,7 @@ def make_tiered_eval_data(
     exclude_searches
     ):
     
-    sub_dir = os.path.join('gamechangerml/data/validation', 'sent_transformer')
+    sub_dir = "gamechangerml/data/validation/domain/sent_transformer"
     save_dir = make_timestamp_directory(sub_dir)
 
     def save_data(level, min_correct_matches, max_results, start_date, end_date, exclude_searches, save_dir=save_dir):

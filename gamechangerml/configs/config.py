@@ -112,23 +112,26 @@ class ValidationConfig:
         "validation_dir": "gamechangerml/data/validation",
         "evaluation_dir": "gamechangerml/data/evaluation",
         # location with smaller set of corpus JSONs
-        "test_corpus_dir": "gamechanger/data/test_corpus",
-        "squad": {"dev": "squad2.0/dev-v2.0.json", "train": "squad2.0/train-v2.0.json"},
+        "test_corpus_dir": "gamechangerml/test_corpus",
+        "squad": {
+            "dev": "original/squad2.0/dev-v2.0.json", 
+            "train": "original/squad2.0/train-v2.0.json"
+        },
         "nli": {
-            "matched": "multinli_1.0/multinli_1.0_dev_matched.jsonl",
-            "mismatched": "multinli_1.0/multinli_1.0_dev_mismatched.jsonl",
+            "matched": "original/multinli_1.0/multinli_1.0_dev_matched.jsonl",
+            "mismatched": "original/multinli_1.0/multinli_1.0_dev_mismatched.jsonl",
         },
         "msmarco": {
-            "collection": "msmarco_1k/collection.json",
-            "queries": "msmarco_1k/queries.json",
-            "relations": "msmarco_1k/relations.json",
-            "metadata": "msmarco_1k/metadata.json",
+            "collection": "original/msmarco_1k/collection.json",
+            "queries": "original/msmarco_1k/queries.json",
+            "relations": "original/msmarco_1k/relations.json",
+            "metadata": "original/msmarco_1k/metadata.json",
         },
-        "question_gc": {"queries": "QA_domain_data.json"},
-        "retriever_gc": {"gold_standard": "gold_standard.csv"},
-        "matamo_dir": "gamechangerml/data/validation/matamo",
-        "search_hist_dir": "gamechangerml/data/validation/search_history",
-        "qe_gc": "QE_domain.json",
+        "question_gc": {"queries": "domain/question_answer/QA_domain_data.json"},
+        "retriever_gc": {"gold_standard": "gold_standard.csv"}, ##TODO
+        "matamo_dir": "gamechangerml/data/user_data/matamo_feedback",
+        "search_hist_dir": "gamechangerml/data/user_data/search_history",
+        "qe_gc": "domain/query_expansion/QE_domain.json",
         "start_date": "2020-12-01", # earliest date to include search hist/feedback data from
         "end_date": "2025-12-01", # last date to include search hist/feedback data from
         "exclude_searches": ["pizza", "shark"],

@@ -31,7 +31,7 @@ if os.environ.get("DOWNLOAD_NLTK_DATA") == "yes":
 def get_responsibilities(text, agencies=None):
     check = True
     if not agencies:
-        df = pd.read_csv(os.path.join(DATA_PATH, "agencies/agencies.csv"))
+        df = pd.read_csv(os.path.join(DATA_PATH, "features/agencies.csv"))
         agencies = list(df["Agency_Name"])
         agencies = [x.lower() for x in agencies]
 

@@ -1,9 +1,8 @@
-# from gamechangerml.src.search.ranking import matamo as mt
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
-from gamechangerml.src.search.ranking import search_data as meta
-from gamechangerml.src.search.ranking import rank
+from gamechangerml.featurization.rank_features.ranking import search_data as meta
+from gamechangerml.src.featurization.rank_features.ranking import rank
 from gamechangerml import REPO_PATH
 import datetime
 import pandas as pd
@@ -15,7 +14,7 @@ import os
 """
 Usage:
     example:
-    python -m gamechangerml.src.search.ranking.generate_ft -c test/small_corpus/ -dd 80 --prod gamechangerml/src/search/ranking/generated_files/prod_test_data.csv
+    python -m gamechangerml.src.featurization.rank_features.generate_ft -c test/small_corpus/ -dd 80 --prod gamechangerml/src/search/ranking/generated_files/prod_test_data.csv
 
 optional arguements:
     --corpus, -c Corpus directory
@@ -27,7 +26,7 @@ logger = logging.getLogger("gamechanger")
 
 corpus_dir = "test/corpus_new"
 prod_data_file = os.path.join(
-    REPO_PATH, "gamechangerml/src/search/ranking/generated_files/prod_test_data.csv"
+    REPO_PATH, "gamechangerml/data/features/generated_files/prod_test_data.csv"
 )
 
 
@@ -66,7 +65,7 @@ def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_
     """
     today = datetime.datetime.now()
     out_dir = os.path.join(
-        REPO_PATH, "gamechangerml/src/search/ranking/generated_files"
+        REPO_PATH, "gamechangerml/data/features/generated_files"
     )
     r = rank.Rank()
     day_delta = 80
@@ -121,7 +120,7 @@ if __name__ == "__main__":
         dest="prod_data",
         default=os.path.join(
             REPO_PATH,
-            "gamechangerml/src/search/ranking/generated_files/prod_test_data.csv",
+            "gamechangerml/data/features/generated_files/prod_test_data.csv",
         ),
         help="production data historical search logs csv ",
     )

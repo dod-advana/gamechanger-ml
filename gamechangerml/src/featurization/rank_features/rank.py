@@ -143,7 +143,7 @@ class Rank:
     def _getCorpusData(self, directory):
         common_orgs = pd.read_csv(os.path.join(
             REPO_PATH,
-            "gamechangerml/src/search/ranking/generated_files/common_orgs.csv"
+            "gamechangerml/data/features/generated_files/common_orgs.csv"
         ))
         entList = common_orgs.org.to_list()
         corpus_df = pd.DataFrame()

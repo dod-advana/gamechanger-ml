@@ -20,7 +20,7 @@ SENT_INDEX = model_path_dict["sentence"]
 base_dir=TrainingConfig.DATA_ARGS["training_data_dir"]
 tts_ratio=TrainingConfig.DATA_ARGS["train_test_split_ratio"]
 gold_standard_path = os.path.join(
-    ValidationConfig.DATA_ARGS["validation_dir"], ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"]
+    "gamechangerml/data/user_data", ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"]
     )
 
 

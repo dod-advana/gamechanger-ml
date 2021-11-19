@@ -52,9 +52,9 @@ logger.setLevel(logging.INFO)
 modelname = datetime.now().strftime("%Y%m%d")
 model_path_dict = get_model_paths()
 
-SEARCH_MAPPINGS_FILE = "gamechangerml/data/SearchPdfMapping.csv"
-TOPICS_FILE = "gamechangerml/data/topics_wiki.csv"
-ORGS_FILE = "gamechangerml/data/agencies/agencies_in_corpus.csv"
+SEARCH_MAPPINGS_FILE = "gamechangerml/data/user_data/search_history/SearchPdfMapping.csv"
+TOPICS_FILE = "gamechangerml/data/features/topics_wiki.csv"
+ORGS_FILE = "gamechangerml/data/features/agencies.csv"
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 
 data_path = "gamechangerml/data"
