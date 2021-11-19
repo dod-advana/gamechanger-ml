@@ -12,6 +12,7 @@ MODELS = ModelLoader()
 async def load_models():
     MODELS.initQA()
     MODELS.initQE()
+    MODELS.initQEJBook()
     MODELS.initSentenceEncoder()
     MODELS.initSentenceSearcher()
     MODELS.initWordSim()
@@ -64,6 +65,7 @@ async def check_health():
     logger.info(f"-- Encoder model name: {new_encoder_model_name}")
     logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
     logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
+    logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")
     logger.info(f"-- Classifier JBOOK model name: {CLASSIFY_JBOOK_MODEL_PATH.value}")
 
@@ -84,9 +86,13 @@ def check_dep_exist():
     # if not os.path.isdir(topics_dir):
     #    logger.warning(f"{topics_dir} does NOT exist")
     #    healthy = False
-
+    
+    if not os.path.isdir(QEXP_JBOOK_MODEL_NAME.value):
+        logger.warning(f"{QEXP_JBOOK_MODEL_NAME.value} does NOT exist")
+        healthy = False
+        
     if not os.path.isdir(CLASSIFY_JBOOK_MODEL_PATH.value):
         logger.warning(f"{CLASSIFY_JBOOK_MODEL_PATH.value} does NOT exist")
         healthy = False
-
+        
     return healthy
