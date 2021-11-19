@@ -25,7 +25,7 @@ function setup_prod() {
     export S3_CLASSIFY_JBOOK_MODEL_PATH="${S3_CLASSIFY_JBOOK_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/classification/v1/distilbert_classifier_20211112.tar.gz}"
 
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-true}"
-    export ES_HOST="${ES_HOST}:-}"
+    export ES_HOST="${ES_HOST:-}"
 
     export DEV_ENV="PROD"
 }
