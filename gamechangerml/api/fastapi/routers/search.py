@@ -205,9 +205,10 @@ async def post_word_sim(termsDict: dict, response: Response) -> dict:
 async def transformer_classify(payload: dict, response: Response) -> list:
     """transformerClassify - endpoint for transformer classification
     Args:
-        records: (dict) List of dict records which require classification
+        payload: (dict) json payload which contains the records to be classified by a transformer clssifier.
+                 structure: payload = {"record_list":["corpus1 to be classified", "corpus2 to be classified"]}
     Returns:
-        results: dict; results of inference
+        classif_results_list: (list) list of classification results.
     """
 
     records = payload.get("records_list",[])
@@ -216,7 +217,7 @@ async def transformer_classify(payload: dict, response: Response) -> list:
         model_inputs_list = [{"sentence":text} for text in records]
         infer_start_time = time.time()
         classif_results_list = []
-        # predict() will batch the list of inputs
+        # predict() will batch the list of inputs for classification
         for classif_results in MODELS.classify_trans_jbook.predict(model_inputs_list, max_seq_len=int(512)):
             classif_results_list += classif_results
         logger.info(f"Classification of {len(records)} total records took {time.time()-infer_start_time:0.4f} seconds")
