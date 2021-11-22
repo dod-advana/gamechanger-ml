@@ -362,6 +362,27 @@ async def train_model(model_dict: dict, response: Response):
     """
     try:
         # Methods for all the different models we can train
+        def update_metadata(model_dict=model_dict):
+            logger.info("Attempting to update feature metadata")
+            pipeline = Pipeline()
+            model_dict["build_type"] = "meta"
+            try:
+                corpus_dir = model_dict["corpus_dir"]
+            except:
+                corpus_dir = CORPUS_DIR
+            try:
+                meta_steps = model_dict["meta_steps"]
+            except:
+                meta_steps = ["pop_docs", "combined_ents", "rank_features"]
+            args = {
+                "meta_steps": meta_steps,
+                "corpus_dir": corpus_dir
+            }
+            pipeline.run(
+                build_type=model_dict["build_type"], 
+                run_name=datetime.now().strftime("%Y%m%d"), 
+                params=args)
+
         def finetune_sentence(model_dict=model_dict):
             logger.info("Attempting to finetune the sentence transformer")
             pipeline = Pipeline()
@@ -441,6 +462,7 @@ async def train_model(model_dict: dict, response: Response):
             "qexp": train_qexp,
             "sent_finetune": finetune_sentence,
             "eval": run_evals,
+            "meta": update_metadata
         }
         # Set the training method to be loaded onto the thread
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:

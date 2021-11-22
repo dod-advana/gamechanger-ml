@@ -10,6 +10,7 @@ from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.utilities.arg_parser import LocalParser
 from gamechangerml.src.model_testing.evaluation import SQuADQAEvaluator, IndomainQAEvaluator, IndomainRetrieverEvaluator, MSMarcoRetrieverEvaluator, NLIEvaluator, QexpEvaluator
 from gamechangerml.scripts.finetune_sentence_retriever import STFinetuner
+from gamechangerml.src.featurization.rank_features.generate_ft import generate_ft_doc
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
@@ -52,12 +53,12 @@ logger.setLevel(logging.INFO)
 modelname = datetime.now().strftime("%Y%m%d")
 model_path_dict = get_model_paths()
 
-SEARCH_MAPPINGS_FILE = "gamechangerml/data/user_data/search_history/SearchPdfMapping.csv"
-TOPICS_FILE = "gamechangerml/data/features/topics_wiki.csv"
-ORGS_FILE = "gamechangerml/data/features/agencies.csv"
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
+FEATURES_DATA_PATH = "gamechangerml/data/features"
+USER_DATA_PATH = "gamechangerml/data/user_data"
+PROD_DATA_FILE = "gamechangerml/data/features/generated_files/prod_test_data.csv"
 
-data_path = "gamechangerml/data"
+
 try:
     import mlflow
     from mlflow.tracking import MlflowClient
@@ -72,27 +73,84 @@ except Exception as e:
     logger.warning("Wikipedia may not be installed")
 
 
-def lookup_wiki_summary(query):
+def make_pop_docs(user_data, save_path):
+    '''Makes popular_documents.csv'''
+    logger.info("| --------- Making popular documents csv from user search history ----- |")
     try:
-        return wikipedia.summary(query).replace("\n", "")
-    except:
-        print(f"Could not retrieve description for {query}")
-        return ""
+        data = user_data.document.value_counts().to_frame().reset_index()
+        data.rename(columns={"document": "pop_score", "index": "doc"}, inplace=True)
+        data.to_csv(save_path, index=False)
+        logger.info(f"Saved popular documents to {save_path}")
+    except Exception as e:
+        logger.info("Error making popular documents csv")
+        logger.info(e)
+    return
+
+def make_combined_entities(topics, orgs, save_path):
+    '''Makes combined_entities.csv'''
+        
+    def lookup_wiki_summary(query):
+        '''Get summaries for topics and orgs from Wikipedia'''
+        try:
+            logger.info(f"Looking up {query}")
+            return wikipedia.summary(query).replace("\n", "")
+        except Exception as e:
+            logger.info(f"Could not retrieve description for {query}")
+            logger.info(e)
+            return ""
+
+    logger.info("| --------- Making combined entities csv (orgs and topics) -------- |")
+    try:
+        ## clean up orgs dataframe
+        if "Unnamed: 0" in orgs.columns:
+            orgs.drop(columns=["Unnamed: 0"], inplace=True)
+        orgs.rename(columns={"Agency_Name": "entity_name"}, inplace=True)
+        orgs["entity_type"] = "org"
+        ## clean up topics dataframe
+        topics.rename(
+            columns={"name": "entity_name", "type": "entity_type"}, inplace=True
+        )    
+        combined_ents = orgs.append(topics)
+        combined_ents["information"] = combined_ents["entity_name"].apply(
+            lambda x: lookup_wiki_summary(x)
+        )
+        combined_ents["information_source"] = "Wikipedia"
+        combined_ents["information_retrieved"] = date.today().strftime(
+            "%Y-%m-%d")
+        combined_ents.to_csv(save_path, index=False)
+        logger.info(f"Saved combined entities to {save_path}")
+    except Exception as e:
+        logger.info("Error making combined entities csv")
+        logger.info(e)
+    return
+
+def make_corpus_meta(corpus_dir, days=80, prod_data=PROD_DATA_FILE):
+    '''Generates corpus_meta.csv of ranking features'''
+    logger.info("| ------------  Making corpus_meta.csv (rank features) ------------- |")
+    try:
+        generate_ft_doc(corpus_dir, days, prod_data)
+    except Exception as e:
+        logger.info("Could not generate corpus meta file")
+        logger.info(e)
 
 
 class Pipeline:
     def __init__(self, steps={}):
-        self.steps = steps
-        POP_DOCS_PATH = Path(os.path.join(data_path, "popular_documents.csv"))
-        if POP_DOCS_PATH.is_file():
-            self.popular_docs = pd.read_csv(POP_DOCS_PATH)
-        else:
-            logger.info(
-                "popular_documents.csv does not exist - generating meta data")
-            self.create_metadata()
-            self.popular_docs = pd.read_csv(POP_DOCS_PATH)
 
+        self.steps = steps
         self.model_suffix = datetime.now().strftime("%Y%m%d")
+        
+        ## read in input data files
+        try:
+            self.search_history = pd.read_csv(os.path.join(USER_DATA_PATH, "search_history/SearchPdfMapping.csv"))
+            self.topics = pd.read_csv(os.path.join(FEATURES_DATA_PATH, "topics_wiki.csv"))
+            self.orgs = pd.read_csv(os.path.join(FEATURES_DATA_PATH, "agencies.csv"))
+        except Exception as e:
+            logger.info(e)
+        
+        ## set paths for output data files
+        self.pop_docs_path = Path(os.path.join(FEATURES_DATA_PATH, "popular_documents.csv"))
+        self.combined_ents_path = Path(os.path.join(FEATURES_DATA_PATH, "combined_entities.csv"))
 
     def run_pipeline(self, params):
         """
@@ -112,7 +170,9 @@ class Pipeline:
                     build_type="sentence", run_name=str(date.today()), params=params
                 )
             if step == "meta":
-                self.create_metadata()
+                self.run(
+                    build_type="meta", run_name=str(date.today()), params=params
+                )
             if step == "qexp":
                 self.run(
                     build_type="qexp", run_name=str(date.today()), params=params
@@ -121,52 +181,33 @@ class Pipeline:
                 self.run(
                     build_type="eval", run_name=str(date.today()), params=params
                 )
-
+    
     def create_metadata(
         self,
+        corpus_dir,
+        days=80,
+        prod_data_file=PROD_DATA_FILE,
+        meta_steps=["pop_docs", "combined_ents", "rank_features"]
     ):
         """
         create_metadata: combines datasets to create a readable set for ingest
-        Args:
         Returns:
         """
-        try:
-            mappings = pd.read_csv(SEARCH_MAPPINGS_FILE)
-        except Exception as e:
-            logger.info(e)
-        mappings = self.process_mappings(mappings)
-        mappings.to_csv(os.path.join(
-            data_path, "popular_documents.csv"), index=False)
-        try:
-            topics = pd.read_csv(TOPICS_FILE)
-            orgs = pd.read_csv(ORGS_FILE)
-        except Exception as e:
-            logger.info(e)
-        orgs.drop(columns=["Unnamed: 0"], inplace=True)
-        topics.rename(
-            columns={"name": "entity_name", "type": "entity_type"}, inplace=True
-        )
-        orgs.rename(columns={"Agency_Name": "entity_name"}, inplace=True)
-        orgs["entity_type"] = "org"
-        combined_ents = orgs.append(topics)
-        combined_ents["information"] = combined_ents["entity_name"].apply(
-            lambda x: lookup_wiki_summary(x)
-        )
-        combined_ents["information_source"] = "Wikipedia"
-        combined_ents["information_retrieved"] = date.today().strftime(
-            "%Y-%m-%d")
-        combined_ents.to_csv(
-            os.path.join(data_path, "combined_entities.csv"), index=False
-        )
+        def run_func(callback):
+            callback()
 
-    def get_doc_count(self, filename: str):
-        return self.popular_docs[self.popular_docs.doc == filename]["count"][0]
+        FUNCTION_MAP = {
+           "pop_docs": make_pop_docs(self.search_history, self.pop_docs_path),
+           "combined_ents": make_combined_entities(self.topics, self.orgs, self.combined_ents_path),
+           "rank_features": make_corpus_meta(corpus_dir, days, prod_data_file)
+        }
 
-    def process_mappings(self, data):
-        data = data.document.value_counts().to_frame().reset_index()
-        data.rename(columns={"document": "pop_score",
-                    "index": "doc"}, inplace=True)
-        return data
+        for step in meta_steps:
+            run_func(FUNCTION_MAP[step])
+
+        ## Update validation + training data??
+
+        return
 
     def finetune_sent(
         self,
@@ -524,6 +565,9 @@ class Pipeline:
                     metadata, evals = self.create_qexp(**params)
                 elif build_type == "eval":
                     metadata, evals = {}, self.evaluate(**params)
+                elif build_type == "meta":
+                    self.create_metadata(**params)
+                    metadata = evals = {}
                 self.mlflow_record(metadata, evals)
                 processmanager.update_status(processmanager.training, 0, 1, "training" + build_type + " model")
 
@@ -542,12 +586,16 @@ class Pipeline:
                     metadata, evals = self.create_qexp(**params)
                 elif build_type == "eval":
                     metadata, evals = {}, self.evaluate(**params)
+                elif build_type == "meta":
+                    self.create_metadata(**params)
+                    metadata = evals = {}
                 else:
                     logger.info(f"Started pipeline with unknown build_type: {build_type}")
                 processmanager.update_status(processmanager.training, 0, 1, "training" + build_type + " model")
                 processmanager.update_status(processmanager.training, 1, 1, "trained" + build_type + " model")
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
+                logger.info(err)
                 processmanager.update_status(
                     processmanager.loading_corpus, message="failed to load corpus", failed=True)
                 processmanager.update_status(
