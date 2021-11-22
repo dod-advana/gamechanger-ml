@@ -6,7 +6,7 @@ set -o xtrace
 
 readonly SCRIPT_PARENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 readonly REPO_DIR="$( cd "$SCRIPT_PARENT_DIR/../../../"  >/dev/null 2>&1 && pwd )"
-readonly MLAPP_VENV_DIR="${MLAPP_VENV_DIR:-/opt/gc-venv-current}"
+readonly MLAPP_VENV_DIR="${MLAPP_VENV_DIR:-/opt/app-root/venv}"
 readonly DS_SETUP_PATH="${REPO_DIR}/gamechangerml/setup_env.sh"
 
 ENV_TYPE="${ENV_TYPE:+${ENV_TYPE^^}}"
@@ -53,8 +53,13 @@ function download_dependencies() {
 
 function activate_venv() {
   set +o xtrace
-  echo "[INFO] Activating venv"
-  source ${MLAPP_VENV_DIR}/bin/activate
+  
+  if [[ ! -f "${MLAPP_VENV_DIR}/bin/activate" ]]; then
+    >&2 echo "[WARNING] No venv detected at ${MLAPP_VENV_DIR}; using current python env ..."
+  else
+    echo "[INFO] Activating venv at ${MLAPP_VENV_DIR} ..."
+    source ${MLAPP_VENV_DIR}/bin/activate
+  fi
 
   # if gamechangerml wasn't installed as module in the venv, just alter pythonpath
   if ! (pip freeze | grep -q gamechangerml); then
