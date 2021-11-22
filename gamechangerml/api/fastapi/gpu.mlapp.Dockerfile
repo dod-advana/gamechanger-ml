@@ -1,6 +1,3 @@
-# [CPU] ARG BASE_IMAGE="registry.access.redhat.com/ubi8/python-36:1-148"
-#  -- https://catalog.redhat.com/software/containers/rhel8/python-36/5ba244fc5a134643ef2f04ba?container-tabs=dockerfile
-#  -- or ironbank equivalents
 # [GPU] ARG BASE_IMAGE="nvidia/cuda:11.2.2-cudnn8-runtime-ubi8"
 #  -- https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/11.2.2/ubi8-x86_64/base/Dockerfile
 #  -- not yet found on ironbank, unfortunately
@@ -62,18 +59,12 @@ ENV APP_DIR="${APP_ROOT}/src"
 RUN mkdir -p "${APP_DIR}" "${APP_VENV}"
 
 # install python venv w all the packages
-ARG APP_REQUIREMENTS_FILE="./k8s.lock.requirements.txt"
+ARG APP_REQUIREMENTS_FILE="./requirements.txt"
 ARG VENV_INSTALL_NO_DEPS="yes"
 COPY "${APP_REQUIREMENTS_FILE}" "/tmp/requirements.txt"
 RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
-    && { \
-        if [[ "${VENV_INSTALL_NO_DEPS,,}" == "yes" ]]; then \
-            "${APP_VENV}/bin/python" -m pip install --no-deps --no-cache-dir -r "/tmp/requirements.txt" ; \
-        else \
-            "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" ; \
-        fi ; \
-    } \
+    && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" ; \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}"
 
 # thou shall not root
@@ -87,6 +78,7 @@ EXPOSE 5000
 
 ENV ENV_TYPE="DEV" \
     DOWNLOAD_DEP="false" \
-    CONTAINER_RELOAD="false"
+    CONTAINER_RELOAD="false" \
+    PYTHONPATH="${APP_DIR}"
 
 ENTRYPOINT ["/bin/bash", "./gamechangerml/api/fastapi/startFast.sh"]
