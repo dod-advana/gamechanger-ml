@@ -2,8 +2,8 @@ import spacy
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
-from gamechangerml.src.featurization.rank_features.ranking import search_data as meta
-from gamechangerml.src.featurization.rank_features.ranking import rank
+from gamechangerml.src.featurization.rank_features import search_data as meta
+from gamechangerml.src.featurization.rank_features import rank
 from gamechangerml import REPO_PATH
 import datetime
 import pandas as pd
@@ -25,6 +25,7 @@ ES_HOST = os.environ.get("ES_HOST", default="localhost")
 
 client = Elasticsearch([ES_HOST])
 logger = logging.getLogger("gamechanger")
+GC_USER_DATA = "gamechangerml/data/user_data/search_history/SearchPdfMapping.csv"
 GC_MODEL_PATH = "gamechangerml/models/ltr"
 if not os.path.exists(GC_MODEL_PATH):
     os.mkdir(GC_MODEL_PATH)
@@ -69,7 +70,7 @@ class LTR:
         except Exception as e:
             logger.error("Could not read in data for training")
 
-    def read_mappings(self, path="gamechangerml/data/SearchPdfMapping.csv"):
+    def read_mappings(self, path=GC_USER_DATA):
         """read mappings: reads search pdf mappings
         params: path to file
         returns:
