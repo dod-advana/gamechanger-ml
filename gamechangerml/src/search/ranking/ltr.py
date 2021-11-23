@@ -11,7 +11,7 @@ from tqdm import tqdm
 import argparse
 import logging
 import os
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
 import pickle
 import xgboost as xgb
 import matplotlib
@@ -22,6 +22,7 @@ from sklearn.preprocessing import LabelEncoder
 
 
 ES_HOST = os.environ.get("ES_HOST", default="localhost")
+ES_INDEX = os.environ.get("ES_INDEX", default="gamechanger")
 
 client = Elasticsearch([ES_HOST])
 logger = logging.getLogger("gamechanger")
@@ -251,15 +252,20 @@ class LTR:
         ltr_log = []
         logger.info("querying es ltr logs")
         # loop through all unique keywords
+        query_list = []
         for kw in tqdm(df.keyword.unique()):
             # get frame of all of the keyword rows
             tmp = df[df.keyword == kw]
             # get logged feature
+
             for docs in tmp.itertuples():
                 doc = docs.Index
                 q = self.construct_query(doc, kw)
-                r = client.search(index="gamechanger", body=dict(q))
-                ltr_log.append(r["hits"]["hits"])
+                query_list.append(json.dumps({"index": ES_INDEX}))
+                query_list.append(json.dumps(q))
+        query = "\n".join(query_list)
+        res = client.msearch(body=query)
+        ltr_log = [x["hits"]["hits"] for x in res["responses"]]
         return ltr_log
 
     def process_ltr_log(self, ltr_log, num_fts=7):
