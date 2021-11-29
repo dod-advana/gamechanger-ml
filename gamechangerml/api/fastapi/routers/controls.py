@@ -191,7 +191,7 @@ async def create_LTR_model(response: Response):
         logger.warning(e)
         logger.warning(f"There is an issue with LTR creation")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return resp
+    return response.status_code
 
 
 @router.get("/getFilesInCorpus", status_code=200)

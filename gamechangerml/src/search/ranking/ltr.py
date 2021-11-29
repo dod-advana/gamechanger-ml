@@ -24,7 +24,7 @@ from sklearn.preprocessing import LabelEncoder
 ES_HOST = os.environ.get("ES_HOST", default="localhost")
 ES_INDEX = os.environ.get("ES_INDEX", default="gamechanger")
 
-client = Elasticsearch([ES_HOST])
+client = Elasticsearch([ES_HOST], timeout=60)
 logger = logging.getLogger("gamechanger")
 GC_MODEL_PATH = "gamechangerml/models/ltr"
 if not os.path.exists(GC_MODEL_PATH):
