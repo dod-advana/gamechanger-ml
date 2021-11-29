@@ -2,7 +2,7 @@ from fastapi import APIRouter, Response, status
 import subprocess
 import os
 import json
-from datetime import datetime, date
+from datetime import datetime
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
@@ -15,26 +15,7 @@ from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.src.utilities.test_utils import (
     collect_evals,
-    open_json,
-    get_most_recent_dir,
-    collect_sent_evals_gc,
     handle_sent_evals,
-)
-
-from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
-from gamechangerml.src.model_testing.evaluation import (
-    SQuADQAEvaluator,
-    IndomainQAEvaluator,
-    IndomainRetrieverEvaluator,
-    MSMarcoRetrieverEvaluator,
-    NLIEvaluator,
-    QexpEvaluator,
-)
-from gamechangerml.configs.config import (
-    QAConfig,
-    EmbedderConfig,
-    SimilarityConfig,
-    QexpConfig,
 )
 
 router = APIRouter()

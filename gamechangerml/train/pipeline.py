@@ -1,41 +1,34 @@
-import argparse
 import logging
 import os
+import torch
+import json
+import urllib3
+import pandas as pd
+from distutils.dir_util import copy_tree
 from datetime import datetime, date
-import time
+from pathlib import Path
+import typing as t
 
-# import wikipedia
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
-from gamechangerml.src.search.query_expansion.qe import QE
-from gamechangerml.src.utilities.arg_parser import LocalParser
-from gamechangerml.src.model_testing.evaluation import SQuADQAEvaluator, IndomainQAEvaluator, IndomainRetrieverEvaluator, MSMarcoRetrieverEvaluator, NLIEvaluator, QexpEvaluator
+from gamechangerml.src.model_testing.evaluation import IndomainRetrieverEvaluator
 from gamechangerml.scripts.finetune_sentence_retriever import STFinetuner
-from gamechangerml.src.featurization.rank_features.generate_ft import generate_ft_doc
+from gamechangerml.scripts.run_evaluation import eval_qa, eval_sent, eval_sim, eval_qe
+from gamechangerml.src.featurization.make_meta import (
+    make_pop_docs, make_combined_entities, make_corpus_meta
+)
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
-from gamechangerml.src.utilities.test_utils import get_user, get_most_recent_dir, get_index_size, collect_evals, open_json
+from gamechangerml.src.utilities.test_utils import get_user, get_most_recent_dir, get_index_size
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.pathselect import get_model_paths
-from distutils.dir_util import copy_tree
-
-import torch
-import json
-from pathlib import Path
-import tarfile
-import typing as t
-import subprocess
-
 
 from gamechangerml.src.search.query_expansion.build_ann_cli import (
     build_qe_model as bqe,
 )
 from gamechangerml.src.utilities import utils
-from gamechangerml.configs.config import DefaultConfig, D2VConfig, QexpConfig, QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig
-
-import pandas as pd
-import urllib3
+from gamechangerml.configs.config import DefaultConfig, D2VConfig, QexpConfig, EmbedderConfig, SimilarityConfig, QexpConfig
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 os.environ["CURL_CA_BUNDLE"] = ""
@@ -66,80 +59,13 @@ except Exception as e:
     logger.warning(e)
     logger.warning("MLFLOW may not be installed")
 
-try:
-    import wikipedia
-except Exception as e:
-    logger.warning(e)
-    logger.warning("Wikipedia may not be installed")
-
-
-def make_pop_docs(user_data, save_path):
-    '''Makes popular_documents.csv'''
-    logger.info("| --------- Making popular documents csv from user search history ----- |")
-    try:
-        data = user_data.document.value_counts().to_frame().reset_index()
-        data.rename(columns={"document": "pop_score", "index": "doc"}, inplace=True)
-        data.to_csv(save_path, index=False)
-        logger.info(f"Saved popular documents to {save_path}")
-    except Exception as e:
-        logger.info("Error making popular documents csv")
-        logger.info(e)
-    return
-
-def make_combined_entities(topics, orgs, save_path):
-    '''Makes combined_entities.csv'''
-        
-    def lookup_wiki_summary(query):
-        '''Get summaries for topics and orgs from Wikipedia'''
-        try:
-            logger.info(f"Looking up {query}")
-            return wikipedia.summary(query).replace("\n", "")
-        except Exception as e:
-            logger.info(f"Could not retrieve description for {query}")
-            logger.info(e)
-            return ""
-
-    logger.info("| --------- Making combined entities csv (orgs and topics) -------- |")
-    try:
-        ## clean up orgs dataframe
-        if "Unnamed: 0" in orgs.columns:
-            orgs.drop(columns=["Unnamed: 0"], inplace=True)
-        orgs.rename(columns={"Agency_Name": "entity_name"}, inplace=True)
-        orgs["entity_type"] = "org"
-        ## clean up topics dataframe
-        topics.rename(
-            columns={"name": "entity_name", "type": "entity_type"}, inplace=True
-        )    
-        combined_ents = orgs.append(topics)
-        combined_ents["information"] = combined_ents["entity_name"].apply(
-            lambda x: lookup_wiki_summary(x)
-        )
-        combined_ents["information_source"] = "Wikipedia"
-        combined_ents["information_retrieved"] = date.today().strftime(
-            "%Y-%m-%d")
-        combined_ents.to_csv(save_path, index=False)
-        logger.info(f"Saved combined entities to {save_path}")
-    except Exception as e:
-        logger.info("Error making combined entities csv")
-        logger.info(e)
-    return
-
-def make_corpus_meta(corpus_dir, days=80, prod_data=PROD_DATA_FILE):
-    '''Generates corpus_meta.csv of ranking features'''
-    logger.info("| ------------  Making corpus_meta.csv (rank features) ------------- |")
-    try:
-        generate_ft_doc(corpus_dir, days, prod_data)
-    except Exception as e:
-        logger.info("Could not generate corpus meta file")
-        logger.info(e)
-
+def run_func(callback):
+    callback()
 
 class Pipeline:
-    def __init__(self, steps={}):
+    def __init__(self):
 
-        self.steps = steps
         self.model_suffix = datetime.now().strftime("%Y%m%d")
-        
         ## read in input data files
         try:
             self.search_history = pd.read_csv(os.path.join(USER_DATA_PATH, "search_history/SearchPdfMapping.csv"))
@@ -152,62 +78,50 @@ class Pipeline:
         self.pop_docs_path = Path(os.path.join(FEATURES_DATA_PATH, "popular_documents.csv"))
         self.combined_ents_path = Path(os.path.join(FEATURES_DATA_PATH, "combined_entities.csv"))
 
-    def run_pipeline(self, params):
+    def run_pipeline(self, steps={}):
         """
         run_pipeline: runs a list of configured components
         Args:
-            params: dict of params
+            steps: Dictionary of steps (build_types) and their function args/params, ex:
+            {
+                "create_meta": {"corpus_dir": "gamechangerml/corpus"},
+                "sent_finetune": {...}
+            }
         Returns:
         """
-        for step in self.steps:
-            logger.info("Running step %s in pipeline." % step)
-            if step == "sent_finetune":
-                self.run(
-                    build_type="sent_finetune", run_name=str(date.today()), params=params
-                )
-            if step == "sentence":
-                self.run(
-                    build_type="sentence", run_name=str(date.today()), params=params
-                )
-            if step == "meta":
-                self.run(
-                    build_type="meta", run_name=str(date.today()), params=params
-                )
-            if step == "qexp":
-                self.run(
-                    build_type="qexp", run_name=str(date.today()), params=params
-                )
-            if step == "eval":
-                self.run(
-                    build_type="eval", run_name=str(date.today()), params=params
-                )
+        step_order = ["meta", "sent_finetune", "qexp", "sentence", "eval"]
+        steps = {k: steps[k] for k in step_order if k in steps}
+        for step in steps:
+            try:
+                logger.info("Running step %s in pipeline." % step)
+                self.run(build_type=step, run_name=str(date.today()), params=steps[step])
+            except Exception as e:
+                logger.info(f"Could not run {step}")
+                logger.info(e)
     
     def create_metadata(
         self,
         corpus_dir,
+        meta_steps,
         days=80,
-        prod_data_file=PROD_DATA_FILE,
-        meta_steps=["pop_docs", "combined_ents", "rank_features"]
+        prod_data_file=PROD_DATA_FILE
     ):
         """
         create_metadata: combines datasets to create a readable set for ingest
+        Args: 
+            corpus_dir
         Returns:
         """
-        def run_func(callback):
-            callback()
-
         FUNCTION_MAP = {
            "pop_docs": make_pop_docs(self.search_history, self.pop_docs_path),
            "combined_ents": make_combined_entities(self.topics, self.orgs, self.combined_ents_path),
            "rank_features": make_corpus_meta(corpus_dir, days, prod_data_file)
-        }
+        } ## TODO: add validation and training data
 
         for step in meta_steps:
             run_func(FUNCTION_MAP[step])
 
-        ## Update validation + training data??
-
-        return
+        return {}, {}
 
     def finetune_sent(
         self,
@@ -234,7 +148,7 @@ class Pipeline:
             )
         logger.info("Loaded finetuner class...")
         logger.info(f"Testing only is set to: {testing_only}")
-        return finetuner.retrain(data_path, testing_only)
+        return finetuner.retrain(data_path, testing_only), {}
 
     def evaluate(
         self,
@@ -250,55 +164,6 @@ class Pipeline:
         "validation_data": "latest"
         }
         '''
-
-        def eval_qa(model_name, sample_limit, eval_type="original"):
-            if eval_type=="original":
-                logger.info(f"Evaluating QA model on SQuAD dataset with sample limit of {str(sample_limit)}.")
-                originalEval = SQuADQAEvaluator(model_name=model_name, sample_limit=sample_limit, **QAConfig.MODEL_ARGS)
-                return originalEval.results
-            elif eval_type == "domain":
-                logger.info("No in-domain gamechanger evaluation available for the QA model.")
-            else:
-                logger.info("No eval_type selected. Options: ['original', 'gamechanger'].")
-        
-        def eval_sent(model_name, validation_data, eval_type="domain"):
-            metadata = open_json('metadata.json', os.path.join('gamechangerml/models', model_name))
-            encoder = metadata['encoder_model']
-            logger.info(f"Evaluating {model_name} created with {encoder}")
-            if eval_type == "domain":
-                if validation_data != "latest":
-                    data_path = os.path.join('gamechangerml/data/validation/sent_transformer', validation_data)
-                else:
-                    data_path = None
-                results = {}
-                for level in ['gold', 'silver']:
-                    domainEval = IndomainRetrieverEvaluator(index=model_name, data_path=data_path, data_level=level, encoder_model_name=encoder, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
-                    results[level] = domainEval.results
-            elif eval_type == "original":
-                originalEval = MSMarcoRetrieverEvaluator(**EmbedderConfig.MODEL_ARGS, encoder_model_name=EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL)
-                results = originalEval.results
-            else:
-                logger.info("No eval_type selected. Options: ['original', 'domain'].")
-                
-            return results
-
-        def eval_sim(model_name, sample_limit, eval_type="original"):
-            if eval_type=="original":
-                logger.info(f"Evaluating sim model on NLI dataset with sample limit of {str(sample_limit)}.")
-                originalEval = NLIEvaluator(sample_limit=sample_limit, sim_model_name=model_name)
-                results = originalEval.results
-                logger.info(f"Evals: {str(results)}")
-                return results
-            elif eval_type == "domain":
-                logger.info("No in-domain evaluation available for the sim model.")
-            else:
-                logger.info("No eval_type selected. Options: ['original', 'domain'].")
-
-        def eval_qe(model_name):
-            domainEval = QexpEvaluator(qe_model_dir=os.path.join('gamechangerml/models', model_name), **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
-            results = domainEval.results
-            logger.info(f"Evals: {str(results)}")
-            return results
         
         results = {"original": {}, "domain": {}}
         try:
@@ -361,14 +226,14 @@ class Pipeline:
                 "-------------- Model Training Complete --------------")
             # Create .tgz file
             dst_path = index_dir + ".tar.gz"
-            self.create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
+            utils.create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
 
             logger.info(f"Created tgz file and saved to {dst_path}")
 
             if upload:
                 S3_MODELS_PATH = "bronze/gamechanger/models"
                 s3_path = os.path.join(S3_MODELS_PATH, f"qexp_model/{version}")
-                self.upload(s3_path, dst_path, "qexp", model_id, version)
+                utils.upload(s3_path, dst_path, "qexp", model_id, version)
 
             if validate:
                 logger.info(
@@ -401,15 +266,6 @@ class Pipeline:
             logger.error(e)
             logger.error("Error with QExp building")
         return params, evals
-
-    def create_tgz_from_dir(
-        self,
-        src_dir: t.Union[str, Path],
-        dst_archive: t.Union[str, Path],
-        exclude_junk: bool = False,
-    ) -> None:
-        with tarfile.open(dst_archive, "w:gz") as tar:
-            tar.add(src_dir, arcname=os.path.basename(src_dir))
 
     def create_embedding(
         self,
@@ -446,8 +302,6 @@ class Pipeline:
 
         # Define model saving directories
         model_dir = os.path.join("gamechangerml", "models")
-        encoder_path = os.path.join(model_dir, "transformers", encoder_model)
-
         model_id = datetime.now().strftime("%Y%m%d")
         model_name = "sent_index_" + model_id
         local_sent_index_dir = os.path.join(
@@ -505,7 +359,7 @@ class Pipeline:
             logger.info(f"Saved metadata.json to {metadata_path}")
             # Create .tgz file
             dst_path = local_sent_index_dir + ".tar.gz"
-            self.create_tgz_from_dir(
+            utils.create_tgz_from_dir(
                 src_dir=local_sent_index_dir, dst_archive=dst_path)
 
             logger.info(f"Created tgz file and saved to {dst_path}")
@@ -530,19 +384,8 @@ class Pipeline:
         if upload:
             S3_MODELS_PATH = "bronze/gamechanger/models"
             s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
-            self.upload(s3_path, dst_path, "sentence_index", model_id, version)
+            utils.upload(s3_path, dst_path, "sentence_index", model_id, version)
         return metadata, evals
-
-    def upload(self, s3_path, local_path, model_prefix, model_name, version):
-        # Loop through each file and upload to S3
-        logger.info(f"Uploading files to {s3_path}")
-        logger.info(f"\tUploading: {local_path}")
-        # local_path = os.path.join(dst_path)
-        s3_path = os.path.join(
-            s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
-        utils.upload_file(local_path, s3_path)
-        logger.info(f"Successfully uploaded files to {s3_path}")
-        logger.info("-------------- Finished Uploading --------------")
 
     def run(self, build_type, run_name, params):
         """
@@ -595,7 +438,6 @@ class Pipeline:
                 processmanager.update_status(processmanager.training, 1, 1, "trained" + build_type + " model")
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
-                logger.info(err)
                 processmanager.update_status(
                     processmanager.loading_corpus, message="failed to load corpus", failed=True)
                 processmanager.update_status(

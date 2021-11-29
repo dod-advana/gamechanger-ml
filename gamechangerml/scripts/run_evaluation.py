@@ -1,7 +1,58 @@
 from gamechangerml.src.model_testing.evaluation import SQuADQAEvaluator, IndomainQAEvaluator, IndomainRetrieverEvaluator, MSMarcoRetrieverEvaluator, NLIEvaluator, QexpEvaluator
 from gamechangerml.configs.config import QAConfig, EmbedderConfig, SimilarityConfig, QexpConfig
+from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.logger import logger
 import argparse
+import os
+
+def eval_qa(model_name, sample_limit, eval_type="original"):
+    if eval_type=="original":
+        logger.info(f"Evaluating QA model on SQuAD dataset with sample limit of {str(sample_limit)}.")
+        originalEval = SQuADQAEvaluator(model_name=model_name, sample_limit=sample_limit, **QAConfig.MODEL_ARGS)
+        return originalEval.results
+    elif eval_type == "domain":
+        logger.info("No in-domain gamechanger evaluation available for the QA model.")
+    else:
+        logger.info("No eval_type selected. Options: ['original', 'gamechanger'].")
+
+def eval_sent(model_name, validation_data, eval_type="domain"):
+    metadata = open_json('metadata.json', os.path.join('gamechangerml/models', model_name))
+    encoder = metadata['encoder_model']
+    logger.info(f"Evaluating {model_name} created with {encoder}")
+    if eval_type == "domain":
+        if validation_data != "latest":
+            data_path = os.path.join('gamechangerml/data/validation/sent_transformer', validation_data)
+        else:
+            data_path = None
+        results = {}
+        for level in ['gold', 'silver']:
+            domainEval = IndomainRetrieverEvaluator(index=model_name, data_path=data_path, data_level=level, encoder_model_name=encoder, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
+            results[level] = domainEval.results
+    elif eval_type == "original":
+        originalEval = MSMarcoRetrieverEvaluator(**EmbedderConfig.MODEL_ARGS, encoder_model_name=EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL)
+        results = originalEval.results
+    else:
+        logger.info("No eval_type selected. Options: ['original', 'domain'].")
+        
+    return results
+
+def eval_sim(model_name, sample_limit, eval_type="original"):
+    if eval_type=="original":
+        logger.info(f"Evaluating sim model on NLI dataset with sample limit of {str(sample_limit)}.")
+        originalEval = NLIEvaluator(sample_limit=sample_limit, sim_model_name=model_name)
+        results = originalEval.results
+        logger.info(f"Evals: {str(results)}")
+        return results
+    elif eval_type == "domain":
+        logger.info("No in-domain evaluation available for the sim model.")
+    else:
+        logger.info("No eval_type selected. Options: ['original', 'domain'].")
+
+def eval_qe(model_name):
+    domainEval = QexpEvaluator(qe_model_dir=os.path.join('gamechangerml/models', model_name), **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
+    results = domainEval.results
+    logger.info(f"Evals: {str(results)}")
+    return results
 
 def _squad(limit):
     logger.info("\nEvaluating QA with SQuAD Data...")
@@ -50,7 +101,7 @@ FUNCTION_MAP = {
 def run(limit, callback):
     callback(limit)
 
-def main(limit, all_gc, all_og, evals):
+def main(limit, evals):
 
     if all_gc:
         run(limit, _gc_qa)
