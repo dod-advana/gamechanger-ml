@@ -222,9 +222,12 @@ async def transformer_classify(payload: dict, response: Response) -> list:
         for classif_results in MODELS.classify_trans_jbook.predict(model_inputs_list, max_seq_len=int(512)):
             classif_results_list += classif_results
         logger.info(f"Classification of {len(records)} total records took {time.time()-infer_start_time:0.4f} seconds")
-        # extract out the "top class" for the record (numerically encoded prediction)
-        classif_results_list = [int(classif_results['top_class']) for classif_results in classif_results_list]
-        return classif_results_list
+        results_list = []
+        for classif_result in classif_results_list:
+            # extract out the top label and associated probability for each record (numerically encoded prediction)
+            results_list.append({"top_class": int(classif_result['top_class']),
+                                 "probability":float(classif_result['prob'])})
+        return results_list
     except Exception as e:
         logger.error(f"Error performing transformer classification {e}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
