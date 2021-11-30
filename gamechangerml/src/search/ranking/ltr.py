@@ -38,15 +38,24 @@ class LTR:
     def __init__(
         self,
         params={
-            "max_depth": 10,
+            "max_depth": 6,
             "eta": 0.3,
-            "objective": "rank:map",
+            "objective": "rank:pairwise",
         },
     ):
         self.data = self.read_xg_data()
         self.params = params
         self.mappings = self.read_mappings()
         self.judgement = None
+        self.eval_metrics = [
+            "map",
+            "ndcg@1",
+            "ndcg@5",
+            "ndcg@10",
+            "ndcg@20",
+            "ndcg@50",
+            "ndcg@100",
+        ]
 
     def write_model(self, model):
         """write model: writes model to file
@@ -82,7 +91,7 @@ class LTR:
             logger.error("Could not read in mappings to make judgement list")
         return self.mappings
 
-    def train(self, write=True):
+    def train(self, data=None, params=None, write=True):
         """train - train a xgboost model with parameters
         params:
             write: boolean to write to file
@@ -90,12 +99,18 @@ class LTR:
             bst: xgboost object
             model: model json
         """
-        bst = xgb.train(self.params, self.data)
+        if not data:
+            data = self.data
+        if not params:
+            params = self.params
+        bst = xgb.train(params, data)
+        cv = xgb.cv(params, dtrain=data, nfold=3, metrics=self.eval_metrics)
         model = bst.get_dump(
             fmap=os.path.join(GC_DATA_PATH, "featmap.txt"), dump_format="json"
         )
         if write:
             self.write_model(model)
+            path = os.path.join(GC_MODEL_PATH, "ltr_evals.csv")
         return bst, model
 
     def post_model(self, model, model_name):
