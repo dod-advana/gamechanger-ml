@@ -68,13 +68,16 @@ class LTR:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
-    def read_xg_data(self, path=os.path.join(GC_DATA_PATH, "xgboost.txt")):
+    def read_xg_data(self, path=os.path.join(GC_DATA_PATH, "xgboost.csv")):
         """read xg data: reads LTR formatted data
         params: path to file
         returns:
         """
         try:
-            self.data = xgb.DMatrix(path)
+            df = pd.read_csv(path)
+            fts = df[df.columns[4:]]
+            label = df["ranking"]
+            self.data = xgb.DMatrix(fts, label)
             return self.data
         except Exception as e:
             logger.error("Could not read in data for training")
@@ -111,6 +114,7 @@ class LTR:
         if write:
             self.write_model(model)
             path = os.path.join(GC_MODEL_PATH, "ltr_evals.csv")
+            cv.to_csv(path, index=False)
         return bst, model
 
     def post_model(self, model, model_name):
@@ -334,6 +338,7 @@ class LTR:
         df = pd.concat([df, ft_df], axis=1)
 
         logger.info("generating txt file")
+        """
         for kw in tqdm(df.keyword.unique()):
             rows = df[df.keyword == kw]
             for i in rows.itertuples():
@@ -363,6 +368,8 @@ class LTR:
                 )
                 with open(os.path.join(GC_DATA_PATH, "xgboost.txt"), "a") as f:
                     f.writelines(new_row)
+            """
+        df.to_csv(os.path.join(GC_DATA_PATH, "xgboost.csv"), index=False)
         return df
 
     def construct_query(self, doc, kw):
