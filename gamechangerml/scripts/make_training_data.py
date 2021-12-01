@@ -1,98 +1,71 @@
 import argparse
 import random
 import pandas as pd
-from gamechangerml.configs.config import TrainingConfig, ValidationConfig, EmbedderConfig, SimilarityConfig
-from gamechangerml.src.search.sent_transformer.model import SentenceEncoder, SentenceSearcher
-from gamechangerml.src.utilities.es_search_utils import connect_es, collect_results
+import os
+import json
+from datetime import date
+from gamechangerml.configs.config import TrainingConfig, ValidationConfig, SimilarityConfig
+from gamechangerml.src.search.sent_transformer.model import SentenceSearcher, SimilarityRanker
 from gamechangerml.src.utilities.text_utils import normalize_query
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.pathselect import get_model_paths
+from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 
 model_path_dict = get_model_paths()
 random.seed(42)
 
-ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-
-VALIDATION_DIR = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS["validation_dir"], "sent_transformer"))
-SENT_INDEX = model_path_dict["sentence"]
-base_dir=TrainingConfig.DATA_ARGS["training_data_dir"]
+VALIDATION_DIR = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS["validation_dir"], "domain", "sent_transformer"))
+SIM_MODEL = SimilarityConfig.BASE_MODEL
+training_dir=os.path.join(TrainingConfig.DATA_ARGS["training_data_dir"], "sent_transformer")
 tts_ratio=TrainingConfig.DATA_ARGS["train_test_split_ratio"]
 gold_standard_path = os.path.join(
     "gamechangerml/data/user_data", ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"]
     )
 
+def get_best_paragraphs(data, query, doc_id, sim, n_matching):
+    '''Retrieves the best 3 paragraphs for expected doc using sim model'''
 
-def train_test_split(data, tts_ratio):
-    '''Splits a dictionary into train/test set based on split ratio'''
+    pars = []
+    ids = []
+    for i in data[data["doc_id"]==doc_id].index[:20]:
+        ids.append(data.loc[i, 'paragraph_id'])
+        short = ' '.join(data.loc[i, 'text'].split(' ')[:150])
+        pars.append(short)
 
-    train_size = round(len(data) * tts_ratio)
-    train_keys = random.sample(data.keys(), train_size)
-    test_keys = [i for i in data.keys() if i not in train_keys]
+    logger.info(f"Re-ranking {str(len(ids))} paragraphs retrieved for {doc_id}")
+    ranked = sim.re_rank(query=query, texts=pars, ids=ids)
 
-    train = {k: data[k] for k in train_keys}
-    test = {k: data[k] for k in test_keys}
+    return ranked[:n_matching]
 
-    return train, test
+def check_no_match(expected_id, par_id):
 
-def lookup_negative_samples(
-    intel, 
-    index_path=SENT_INDEX, 
-    transformers_path=LOCAL_TRANSFORMERS_DIR, 
-    sim_model_name=SimilarityConfig.MODEL_ARGS['model_name'], 
-    encoder_model_name=EmbedderConfig.MODEL_ARGS['encoder_model_name'], 
-    n_returns=EmbedderConfig.MODEL_ARGS['n_returns'], 
-    encoder=None, 
-    sim_model=None
-    ):
+    if par_id.split('.pdf')[0].upper().strip().lstrip() == expected_id.upper().strip().lstrip():
+        return False
+    else:
+        return True
 
-    def normalize_docs(doc):
-        return doc.split('.pdf')[0]
+def get_negative_paragraphs(data, query, doc_id, retriever, n_returns, label):
+
+    results = []
+    try:
+        doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query, n_returns)
+        results = []
+        for par_id in doc_ids:
+            logger.info(f"PAR ID: {par_id}")
+            par = data[data["paragraph_id"]==par_id].iloc[0]["text"]
+            logger.info(f"PAR: {par}")
+            par = ' '.join(par.split(' ')[:150])
+            if label == 1:
+                if check_no_match(doc_id, par_id):
+                    results.append({"query": query, "doc": par_id, "paragraph": par, "label": 0})
+        logger.info(results)
+    except Exception as e:
+        logger.info("Could not get negative paragraphs")
+        logger.info(e)
     
-    ## look up queries against index
-    
-    retriever = SentenceSearcher(
-        index_path=index_path, 
-        transformers_path=transformers_path, 
-        sim_model_name=sim_model_name, 
-        encoder_model_name=encoder_model_name, 
-        n_returns=n_returns, 
-        encoder=encoder, 
-        sim_model=sim_model
-        )
-
-    reverse_docs = {v.upper():k for (k, v) in intel['collection'].items()}
-    neutral_samples = {}
-    for key in intel['correct'].keys():
-        query = intel['queries'][key]
-        docs = intel['correct'][key]
-        doc_names = [intel['collection'][val] for val in docs]
-        try:
-            doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query)
-            clean_ids = [normalize_docs(i) for i in doc_ids]
-            dedup = []
-            for d in clean_ids:
-                try:
-                    if d not in doc_names:
-                        dedup.append(d)
-                    else:
-                        continue
-                except:
-                    logger.info(f"------Error finding doc_id for {d}")
-
-            dedup = [d.upper() for d in clean_ids if d not in doc_names]
-            diff = len(clean_ids) - len(dedup)
-            if diff > 0:
-                logger.info(f"Removed {str(diff)} (correct) duplicates")
-            neutral_samples[key] = [reverse_docs[d] for d in dedup]
-            logger.info(f"Found {str(len(dedup))} negative samples for {key}")
-        except:
-            logger.info(f"------Error retrieving sent index results for {query}")
-
-    intel['neutral'] = neutral_samples
-
-    return intel
+    return results
 
 def add_gold_standard(intel, gold_standard_path):
     '''Adds original gold standard data to the intel training data.'''
@@ -150,56 +123,171 @@ def add_gold_standard(intel, gold_standard_path):
     
     return intel
 
-def make_training_data(base_dir, tts_ratio, gold_standard_path):
+def train_test_split(data, tts_ratio):
+    '''Splits a dictionary into train/test set based on split ratio'''
 
+    train_size = round(len(data) * tts_ratio)
+    train_keys = random.sample(data.keys(), train_size)
+    test_keys = [i for i in data.keys() if i not in train_keys]
+
+    train = {k: data[k] for k in train_keys}
+    test = {k: data[k] for k in test_keys}
+
+    return train, test
+
+def collect_results(
+    data, 
+    sim, 
+    retriever, 
+    n_returns,
+    relations, 
+    queries, 
+    collection, 
+    label,
+    n_matching
+    ):
+    '''Get paragraphs from either correct/incorrect rels'''
+    
+    found = {}
+    not_found = {}
+    for i in relations.keys():
+        query = queries[i]
+        logger.info(f"\n-----------Searching for {query}")
+        for k in relations[i]:
+            doc = collection[k]
+            logger.info(f" - expected doc: {doc}")
+            uid = str(i) + '_' + str(k) # backup UID, overwritten if there are results
+
+            try:
+                matching = get_best_paragraphs(data, query, doc, sim, n_matching)
+                for match in matching:
+                    uid =  str(i) + '_' + str(match['id'])
+                    text = ' '.join(match['text'].split(' ')[:400]) # truncate to 400 tokens
+                    found[uid] = {"query": query, "doc": doc, "paragraph": text, "label": label}
+                    logger.info(f" - MATCH: {found[uid]}")
+            except Exception as e:
+                logger.info("Could not get positive matches")
+                logger.info(e)
+                not_found[uid] = {"query": query, "doc": doc, "label": label}
+            
+            try:
+                not_matching = get_negative_paragraphs(data, query, k, retriever, n_returns, label)
+                for match in not_matching:
+                    uid =  str(i) + '_' + str(match['doc'])
+                    text = ' '.join(match['paragraph'].split(' ')[:400]) # truncate to 400 tokens
+                    found[uid] = {"query": query, "doc": doc, "paragraph": text, "label": 0}
+                    logger.info(f" - UNMATCH: {found[uid]}")
+            except Exception as e:
+                logger.info("Could not get negative samples")
+                logger.info(e)
+                
+    return found, not_found
+
+def make_training_data(
+    index_path, ## SENT_INDEX
+    n_returns, ## 15
+    n_matching, ## 3
+    level, ## silver
+    update_eval_data, ## True
+    sim_model_name=SIM_MODEL,
+    transformers_dir=LOCAL_TRANSFORMERS_DIR,
+    gold_standard_path=gold_standard_path,
+    tts_ratio=tts_ratio,
+    training_dir=training_dir
+):
+
+    ## Updating eval data if true
+    if update_eval_data:
+        logger.info("****    Updating the evaluation data")
+        make_tiered_eval_data()
+
+    ## read in sent_index data
+    logger.info(f"****   Loading in data from {index_path}")
+    data = pd.read_csv(os.path.join(index_path, 'data.csv'))
+    data['doc_id'] = data['paragraph_id'].apply(lambda x: x.split('.pdf')[0])
+    
     ## open json files
-    directory = os.path.join(VALIDATION_DIR, 'any')
+    directory = os.path.join(VALIDATION_DIR, level)
     f = open_json('intelligent_search_data.json', directory)
     intel = json.loads(f)
 
     ## add gold standard samples
+    logger.info("****   Adding gold standard examples")
     intel = add_gold_standard(intel, gold_standard_path)
 
-    ## collect negative samples
-    intel = lookup_negative_samples(intel)
-    
     ## set up save dir
-    sub_dir = os.path.join(base_dir, 'sent_transformer')
-    save_dir = make_timestamp_directory(sub_dir)
+    save_dir = make_timestamp_directory(training_dir)
+    
+    logger.info("Loading sim model")
+    sim = SimilarityRanker(sim_model_name, transformers_dir)
 
-    ## query ES
-    es = connect_es(ES_URL)
-    correct_found, correct_notfound = collect_results(relations=intel['correct'], queries=intel['queries'], collection=intel['collection'], es=es, label=1)
-    logger.info(f"---Number of correct query/result pairs that were not found in ES: {str(len(correct_notfound))}")
-    neutral_found, neutral_notfound = collect_results(relations=intel['neutral'], queries=intel['queries'], collection=intel['collection'], es=es, label=0)
-    logger.info(f"---Number of neutral query/result pairs that were not found in ES: {str(len(neutral_notfound))}")
-    incorrect_found, incorrect_notfound = collect_results(relations=intel['incorrect'], queries=intel['queries'], collection=intel['collection'], es=es, label=-1)
-    logger.info(f"---Number of incorrect query/result pairs that were not found in ES: {str(len(incorrect_notfound))}")
-
-    ## make sure no dups
-    neutral_found = {k:v for (k, v) in neutral_found.items() if k not in correct_found.keys()}
-    neutral_notfound = {k:v for (k, v) in neutral_notfound.items() if k not in correct_notfound.keys()}
+    logger.info("Loading retriever")
+    retriever = SentenceSearcher(
+        sim_model_name=sim_model_name, 
+        index_path=index_path, 
+        transformer_path=transformers_dir,
+        )
+    ## get paragraphs
+    correct_found, correct_notfound = collect_results(
+        data=data,
+        sim=sim,
+        retriever=retriever,
+        n_returns=n_returns,
+        n_matching=n_matching,
+        relations=intel['correct'], 
+        queries=intel['queries'], 
+        collection=intel['collection'], 
+        label=1,
+        )
+    logger.info(f"---Number of correct query/result pairs that were not found: {str(len(correct_notfound))}")
+    incorrect_found, incorrect_notfound = collect_results(
+            data=data,
+            sim=sim,
+            retriever=retriever,
+            n_returns=n_returns,
+            relations=intel['incorrect'], 
+            queries=intel['queries'], 
+            collection=intel['collection'], 
+            label=-1,
+            limit=3
+    )
+    logger.info(f"---Number of incorrect query/result pairs that were not found: {str(len(incorrect_notfound))}")
 
     ## save a json of the query-doc pairs that did not retrieve an ES paragraph for training data
-    notfound = {**correct_notfound, **neutral_notfound, **incorrect_notfound}
-    logger.info(f"---Number of total query/result pairs that were not found in ES: {str(len(notfound))}")
+    notfound = {**correct_notfound, **incorrect_notfound}
+    logger.info(f"---Number of total query/result pairs that were not found: {str(len(notfound))}")
     notfound_path = os.path.join(save_dir, 'not_found_search_pairs.json')
     with open(notfound_path, "w") as outfile:
         json.dump(notfound, outfile)
 
     ## train/test split (separate on correct/incorrect for balance)
     correct_train, correct_test = train_test_split(correct_found, tts_ratio)
-    neutral_found_train, neutral_found_test = train_test_split(neutral_found, tts_ratio)
     incorrect_train, incorrect_test = train_test_split(incorrect_found, tts_ratio)
-    train = {**neutral_found_train, **correct_train, **incorrect_train}
-    test = {**neutral_found_test, **correct_test, **incorrect_test}
+    train = {**correct_train, **incorrect_train}
+    test = {**correct_test, **incorrect_test}
+
+    ## check labels
+    pos = len([i for i in train if train[i]['label'] == 1])
+    logger.info(f"*** {str(pos)} positive samples in TRAIN")
+    neutral = len([i for i in train if train[i]['label'] == 0])
+    logger.info(f"*** {str(neutral)} neutral samples in TRAIN")
+    neg = len([i for i in train if train[i]['label'] == -1])
+    logger.info(f"*** {str(neg)} negative samples in TRAIN")
+
+     ## check labels
+    pos_test = len([i for i in train if test[i]['label'] == 1])
+    logger.info(f"*** {str(pos_test)} positive samples in TEST")
+    neutral_test = len([i for i in train if test[i]['label'] == 0])
+    logger.info(f"*** {str(neutral_test)} neutral samples in TEST")
+    neg_test = len([i for i in train if test[i]['label'] == -1])
+    logger.info(f"*** {str(neg_test)} negative samples in TEST")
 
     data = {"train": train, "test": test}
     metadata = {
         "date_created": str(date.today()),
-        "n_positive_samples": len(correct_found),
-        "n_negative_samples": len(incorrect_found),
-        "n_neutral_samples": len(neutral_found),
+        "n_positive_samples": f"{str(pos)} train / {str(pos_test)} test",
+        "n_neutral_samples": f"{str(neutral)} train / {str(neutral_test)} test",
+        "n_negative_samples": f"{str(neg)} train / {str(neg_test)} test",
         "train_size": len(train),
         "test_size": len(test),
         "split_ratio": tts_ratio

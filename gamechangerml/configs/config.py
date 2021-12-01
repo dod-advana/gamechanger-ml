@@ -132,19 +132,23 @@ class ValidationConfig:
         "matamo_dir": "gamechangerml/data/user_data/matamo_feedback",
         "search_hist_dir": "gamechangerml/data/user_data/search_history",
         "qe_gc": "domain/query_expansion/QE_domain.json",
+    }
+
+    TRAINING_ARGS = {
         "start_date": "2020-12-01", # earliest date to include search hist/feedback data from
         "end_date": "2025-12-01", # last date to include search hist/feedback data from
         "exclude_searches": ["pizza", "shark"],
-        "gold_level": {
-            "min_correct_matches": 3,
-            "max_results": 7
+        "min_correct_matches": {
+            "gold": 3,
+            "silver": 2,
+            "any": 0
         },
-        "silver_level": {
-            "min_correct_matches": 2,
-            "max_results": 10
+        "max_results": {
+            "gold": 7,
+            "silver": 10,
+            "any": 100
         }
     }
-
 
 class TrainingConfig:
     DATA_ARGS = {

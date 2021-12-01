@@ -16,6 +16,8 @@ from gamechangerml.scripts.run_evaluation import eval_qa, eval_sent, eval_sim, e
 from gamechangerml.src.featurization.make_meta import (
     make_pop_docs, make_combined_entities, make_corpus_meta
 )
+from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
+from gamechangerml.scripts.make_training_data import make_training_data
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
@@ -50,7 +52,8 @@ LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 FEATURES_DATA_PATH = "gamechangerml/data/features"
 USER_DATA_PATH = "gamechangerml/data/user_data"
 PROD_DATA_FILE = "gamechangerml/data/features/generated_files/prod_test_data.csv"
-
+#SENT_INDEX = model_path_dict["sentence"]
+SENT_INDEX = "gamechangerml/models/sent_index_20210715"
 
 try:
     import mlflow
@@ -104,7 +107,12 @@ class Pipeline:
         corpus_dir,
         meta_steps,
         days=80,
-        prod_data_file=PROD_DATA_FILE
+        prod_data_file=PROD_DATA_FILE,
+        index_path=SENT_INDEX,
+        n_returns=15,
+        n_matching=3,
+        level='silver',
+        update_eval_data=True
     ):
         """
         create_metadata: combines datasets to create a readable set for ingest
@@ -115,8 +123,9 @@ class Pipeline:
         FUNCTION_MAP = {
            "pop_docs": make_pop_docs(self.search_history, self.pop_docs_path),
            "combined_ents": make_combined_entities(self.topics, self.orgs, self.combined_ents_path),
-           "rank_features": make_corpus_meta(corpus_dir, days, prod_data_file)
-        } ## TODO: add validation and training data
+           "rank_features": make_corpus_meta(corpus_dir, days, prod_data_file),
+           "update_sent_data": make_training_data(index_path, n_returns, n_matching, level, update_eval_data)
+        } 
 
         for step in meta_steps:
             run_func(FUNCTION_MAP[step])
