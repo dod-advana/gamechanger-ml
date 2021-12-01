@@ -1,6 +1,8 @@
 from gamechangerml.src.text_handling.custom_stopwords import custom_stopwords
+from gamechangerml.src.text_handling.process import topic_processing
 from gensim.models.tfidfmodel import TfidfModel
 from gensim import corpora
+from gensim.models.phrases import Phraser
 import os
 import logging
 
@@ -11,7 +13,7 @@ class Topics(object):
     """
     TF-iDF topic model wrapper class.
 
-    This class is written to be processing pipeline egnostic, but
+    This class is written to be processing pipeline agnostic, but
     because of that be sure that you track your own pipeline for
     training and inference otherwise results may vary.
 
@@ -68,8 +70,10 @@ class Topics(object):
         """
         dictionary_path = os.path.join(directory, "tfidf_dictionary.dic")
         tfidf_path = os.path.join(directory, "tfidf.model")
+        bigrams_path = os.path.join(directory, "bigrams.phr")
         self.dictionary = corpora.Dictionary.load(dictionary_path)
         self.tfidf = TfidfModel.load(tfidf_path)
+        self.bigrams = Phraser.load(bigrams_path)
 
     def save(self, directory):
         """
@@ -101,6 +105,10 @@ class Topics(object):
         self.dictionary = corpora.Dictionary(corpus)
         doc_term_matrix = [self.dictionary.doc2bow(doc) for doc in corpus]
         self.tfidf = TfidfModel(doc_term_matrix)
+
+    def get_topics_from_text(self, text, topn=5):
+        tokens = topic_processing(text, self.bigrams)
+        return self.get_topics(tokens, topn=topn)
 
     def get_topics(self, tokens, topn=5):
         """
