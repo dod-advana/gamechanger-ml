@@ -96,7 +96,7 @@ class ModelLoader:
             logger.warning(
                 "topic_model was not set and was attempted to be used. Running init"
             )
-            ModelLoader.initSentenceEncoder()
+            ModelLoader.initTopics()
         return ModelLoader.__topic_model
 
     def set_error(self):
