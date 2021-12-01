@@ -1,8 +1,10 @@
 import random
+import torch
 import pandas as pd
 import os
 import json
 from datetime import date
+from typing import List, Union, Dict, Tuple
 from gamechangerml.configs.config import TrainingConfig, ValidationConfig, SimilarityConfig
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher, SimilarityRanker
 from gamechangerml.src.utilities.text_utils import normalize_query
@@ -23,9 +25,17 @@ gold_standard_path = os.path.join(
     "gamechangerml/data/user_data", ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"]
     )
 
-def get_best_paragraphs(data, query, doc_id, sim, n_matching):
-    '''Retrieves the best 3 paragraphs for expected doc using sim model'''
-
+def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, sim, n_matching: int) -> List[Dict[str,str]]:
+    """Retrieves the best paragraphs for expected doc using similarity model
+    Args:
+        data [pd.DataFrame]: data df with processed text at paragraph_id level for sent_index
+        query [str]: query
+        doc_id [str]: doc_id of the expected document to show up with the query
+        sim: SimilarityRanker class
+        n_matching [int]: number of matching paragraphs to retrieve for the expected doc
+    Returns:
+        [List[Dict[str,str]]]: List of dictionaries of paragraph matches
+    """
     pars = []
     ids = []
     for i in data[data["doc_id"]==doc_id].index[:20]:
@@ -38,14 +48,26 @@ def get_best_paragraphs(data, query, doc_id, sim, n_matching):
 
     return ranked[:n_matching]
 
-def check_no_match(expected_id, par_id):
-
+def check_no_match(expected_id: str, par_id: str) -> bool:
+    """Checks if paragraph ID matches the expected doc ID"""
     if par_id.split('.pdf')[0].upper().strip().lstrip() == expected_id.upper().strip().lstrip():
         return False
     else:
         return True
 
-def get_negative_paragraphs(data, query, doc_id, retriever, n_returns, label):
+def get_negative_paragraphs(
+    data: pd.DataFrame, query: str, doc_id: str, retriever, n_returns: int, label: int) -> List[Dict[str,str]]:
+    """Looks up negative (not matching) paragraphs for each query
+    Args:
+        data [pd.DataFrame]: data df with processed text at paragraph_id level for sent_index
+        query [str]: query
+        doc_id [str]: doc_id of the expected document to show up with the query
+        retriever: SentenceSearcher class
+        n_returns [int]: number of negative samples to retrieve for each query
+        label [int]: label to assign paragraphs (1=correct, 0=neutral, -1=confirmed nonmatch)
+    Returns:
+        [List[Dict[str,str]]]: list of dictionaries of negative sample paragraphs
+    """
 
     results = []
     try:
@@ -66,15 +88,21 @@ def get_negative_paragraphs(data, query, doc_id, retriever, n_returns, label):
     
     return results
 
-def add_gold_standard(intel, gold_standard_path):
-    '''Adds original gold standard data to the intel training data.'''
+def add_gold_standard(intel: Dict[str,str], gold_standard_path: Union[str, os.PathLike]) -> Dict[str,str]:
+    """Adds original gold standard data to the intel training data.
+    Args:
+        intel [Dict[str,str]: intelligent search evaluation data
+        gold_standard_path [Union[str, os.PathLike]]: path to load in the manually curated gold_standard.csv
+    Returns:
+        intel [Dict[str,str]: intelligent search evaluation data with manual entries added
+    """
     gold = pd.read_csv(gold_standard_path, names=['query', 'document'])
     gold['query_clean'] = gold['query'].apply(lambda x: normalize_query(x))
     gold['docs_split'] = gold['document'].apply(lambda x: x.split(';'))
     all_docs = list(set([a for b in gold['docs_split'].tolist() for a in b]))
 
-    def add_key(mydict):
-        '''Adds new key to queries/collections dictionaries'''
+    def add_key(mydict: Dict[str,str]) -> str:
+        """Adds new key to queries/collections dictionaries"""
         last_key = sorted([*mydict.keys()])[-1]
         key_len = len(last_key) - 1
         last_prefix = last_key[0]
@@ -122,8 +150,8 @@ def add_gold_standard(intel, gold_standard_path):
     
     return intel
 
-def train_test_split(data, tts_ratio):
-    '''Splits a dictionary into train/test set based on split ratio'''
+def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, str]]:
+    """Splits a dictionary into train/test set based on split ratio"""
 
     train_size = round(len(data) * tts_ratio)
     train_keys = random.sample(data.keys(), train_size)
@@ -135,18 +163,30 @@ def train_test_split(data, tts_ratio):
     return train, test
 
 def collect_results(
-    data, 
+    data: pd.DataFrame, 
     sim, 
     retriever, 
-    n_returns,
-    relations, 
-    queries, 
-    collection, 
-    label,
-    n_matching
-    ):
-    '''Get paragraphs from either correct/incorrect rels'''
-    
+    n_returns: int,
+    relations: Dict[str, str], 
+    queries: Dict[str, str], 
+    collection: Dict[str, str], 
+    label: int,
+    n_matching: int
+    ) -> Tuple[Dict[str, str]]:
+    """Gets positive/negative and neutral (not matching) paragraphs for each query/docid pair
+    Args:
+        data [pd.DataFrame]: data df with processed text at paragraph_id level for sent_index
+        sim: SimilarityRanker class
+        retriever: SentenceSearcher class
+        n_returns [int]: number of non-matching paragraphs to retrieve for each query
+        relations [Dict[str, str]]: dictionary of query:doc matches from intelligent search data
+        queries [Dict[str, str]]: dictionary of query ids : query text from intelligent search data
+        collection [Dict[str, str]]: dictionary of match ids : match text (doc ids) from intelligent search data
+        label [int]: label to assign paragraphs (1=correct, 0=neutral, -1=confirmed nonmatch)
+        n_matching [int]: number of matching paragraphs to retrieve for the expected doc
+    Returns:
+        [Tuple[Dict[str, str]]]: one dictionary of found search pairs, one dictionary of notfound search pairs
+    """
     found = {}
     not_found = {}
     for i in relations.keys():
@@ -183,18 +223,31 @@ def collect_results(
     return found, not_found
 
 def make_training_data(
-    index_path, ## SENT_INDEX
-    n_returns, ## 15
-    n_matching, ## 3
-    level, ## silver
-    update_eval_data, ## True
-    sim_model_name=SIM_MODEL,
-    transformers_dir=LOCAL_TRANSFORMERS_DIR,
-    gold_standard_path=gold_standard_path,
-    tts_ratio=tts_ratio,
-    training_dir=training_dir
-):
-
+    index_path: Union[str, os.PathLike],
+    n_returns: int,
+    n_matching: int,
+    level: str, 
+    update_eval_data: bool, 
+    sim_model_name: str=SIM_MODEL,
+    transformers_dir: Union[str,os.PathLike]=LOCAL_TRANSFORMERS_DIR,
+    gold_standard_path: Union[str,os.PathLike]=gold_standard_path,
+    tts_ratio: float=tts_ratio,
+    training_dir: Union[str,os.PathLike]=training_dir) -> Tuple[Dict[str,str]]:
+    """Makes training data based on new user search history data
+    Args:
+        index_path [str|os.PathLike]: path to the sent index for retrieving the training data (should be most recent index)
+        n_returns [int]: number of non-matching paragraphs to retrieve for each query
+        n_matching [int]: number of matching paragraphs to retrieve for the expected doc
+        level [str]: level of eval tier to use for training data (options: ['all', 'silver', 'gold'])
+        update_eval_data [bool]: whether or not to update the eval data before making training data
+        sim_model_name [str]: name of sim model for loading SimilarityRanker
+        transformers_dir [Union[str,os.PathLike]]: directory of transformer models
+        gold_standard_path [Union[str,os.PathLike]]: path to load in the manually curated gold_standard.csv
+        tts_ratio [float]: train/test split ratio, float from 0-1
+        training_dir [Union[str,os.PathLike]]: directory for saving training data
+    Returns:
+        [Tuple[Dict[str,str]]]: training data and training metadata dictionaries
+    """
     ## Updating eval data if true
     if update_eval_data:
         logger.info("****    Updating the evaluation data")
@@ -306,4 +359,4 @@ def make_training_data(
 
 if __name__ == '__main__':
 
-    make_training_data(base_dir=base_dir, tts_ratio=tts_ratio, gold_standard_path=gold_standard_path)
+    make_training_data(training_dir=training_dir, tts_ratio=tts_ratio, gold_standard_path=gold_standard_path)

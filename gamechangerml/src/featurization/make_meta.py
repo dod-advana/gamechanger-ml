@@ -1,6 +1,8 @@
+import os
 import pandas as pd
 import logging
 from datetime import date
+from typing import Union
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.featurization.rank_features.generate_ft import generate_ft_doc
 
@@ -12,8 +14,12 @@ except Exception as e:
     logger.warning(e)
     logger.warning("Wikipedia may not be installed")
 
-def make_pop_docs(user_data, save_path):
-    '''Makes popular_documents.csv'''
+def make_pop_docs(user_data: pd.DataFrame, save_path: Union[os.PathLike, str]) -> None:
+    """Makes popular_documents.csv
+    Args: 
+        user_data [pd.DataFrame]: df of user search history data
+        save_path [str|os.PathLike]: path to save popular docs csv
+    """
     logger.info("| --------- Making popular documents csv from user search history ----- |")
     try:
         data = user_data.document.value_counts().to_frame().reset_index()
@@ -25,11 +31,23 @@ def make_pop_docs(user_data, save_path):
         logger.info(e)
     return
 
-def make_combined_entities(topics, orgs, save_path):
-    '''Makes combined_entities.csv'''
+def make_combined_entities(topics: pd.DataFrame, orgs: pd.DataFrame, save_path: Union[os.PathLike, str]) -> None:
+    """Makes combined_entities.csv
+    Args:
+        topics [pd.DataFrame]: dataframe of topics
+        orgs [pd.DataFrame]: dataframe of agencies
+        save_path [str|os.PathLike]: path to save the combined entities csv
+    Returns:
+        None (saves CSV to save_path)
+    """
         
-    def lookup_wiki_summary(query):
-        '''Get summaries for topics and orgs from Wikipedia'''
+    def lookup_wiki_summary(query: str) -> str:
+        """Queries the Wikipedia API for summaries
+        Args:
+            query [str]: query
+        Returns:
+            [str]: summary / description of query from Wikipedia (if none found, returns an empty string)
+        """
         try:
             logger.info(f"Looking up {query}")
             return wikipedia.summary(query).replace("\n", "")
@@ -63,8 +81,15 @@ def make_combined_entities(topics, orgs, save_path):
         logger.info(e)
     return
 
-def make_corpus_meta(corpus_dir, days, prod_data):
-    '''Generates corpus_meta.csv of ranking features'''
+def make_corpus_meta(corpus_dir: Union[os.PathLike, str], days: int, prod_data: str) -> None:
+    """Generates corpus_meta.csv of ranking features
+    Args:
+        corpus_dir [str|os.PathLike]: directory of corpus jsons
+        days [int]: number of days back to process
+        prod_data [str]: filename of prod data
+    Returns:
+        None (saves corpus_meta.csv file)
+    """
     logger.info("| ------------  Making corpus_meta.csv (rank features) ------------- |")
     try:
         generate_ft_doc(corpus_dir, days, prod_data)

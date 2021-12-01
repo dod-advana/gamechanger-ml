@@ -354,7 +354,7 @@ async def train_model(model_dict: dict, response: Response):
             try:
                 meta_steps = model_dict["meta_steps"]
             except:
-                meta_steps = ["pop_docs", "combined_ents", "rank_features"]
+                meta_steps = ["pop_docs", "combined_ents", "rank_features", "update_sent_data"]
             args = {
                 "meta_steps": meta_steps,
                 "corpus_dir": corpus_dir
@@ -362,7 +362,8 @@ async def train_model(model_dict: dict, response: Response):
             pipeline.run(
                 build_type=model_dict["build_type"], 
                 run_name=datetime.now().strftime("%Y%m%d"), 
-                params=args)
+                params=args
+                )
 
         def finetune_sentence(model_dict=model_dict):
             logger.info("Attempting to finetune the sentence transformer")

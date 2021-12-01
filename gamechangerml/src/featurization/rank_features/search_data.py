@@ -112,17 +112,35 @@ def scored_logs(search_logs) -> pd.DataFrame:
             dataframe with pop_score column
     """
     if type(search_logs) == list:
-        search_df = _logs_toDf(search_logs)
+        logger.info("Search logs is a list")
+        try:
+            search_df = _logs_toDf(search_logs)
+        except Exception as e:
+            logger.info("Could not make search df")
+            logger.info(e)
     elif type(search_logs) == pd.DataFrame:
-        search_df = process_search_terms(search_logs)
+        logger.info("Search logs is a dataframe")
+        try:
+            search_df = process_search_terms(search_logs)
+        except Exception as e:
+            logger.info("Could not make search df")
+            logger.info(e)
     else:
         logger.error("Wrong type for search logs")
         return
-    top_kw = get_top_keywords(search_df)
-
-    for row in tqdm(top_kw.itertuples()):
-        search_df.loc[search_df.search ==
-                      row.keywords, "pop_score"] = row.pop_score
+    
+    try:
+        top_kw = get_top_keywords(search_df)
+    except Exception as e:
+            logger.info("Could not get top keywords")
+            logger.info(e)
+    try:
+        for row in tqdm(top_kw.itertuples()):
+            search_df.loc[search_df.search ==
+                        row.keywords, "pop_score"] = row.pop_score
+    except Exception as e:
+            logger.info("Could not set row pop scores")
+            logger.info(e)
     return search_df
 
 

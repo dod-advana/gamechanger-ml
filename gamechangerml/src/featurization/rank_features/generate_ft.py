@@ -81,23 +81,32 @@ def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_
     # resp = meta.get_searchLogs(str(from_date.date()))
 
     # until we get connection to prod data
+    logger.info(f"****    Reading in prod data from {prod_data}")
     resp = pd.read_csv(prod_data)
+    logger.info("****    Getting top keywords")
     popular_keywords = meta.get_top_keywords(resp)
+    logger.info("****    Making meta df")
     meta_df = meta.scored_logs(resp)
 
     # CORPUS
+    logger.info("****    Getting corpus data")
     corp_df = r._getCorpusData(corpus_dir)
+    logger.info("****    Getting pagerank docs")
     pr_df = r.get_pr_docs(corpus_dir)
+    logger.info("****    Merging corpus and pagerank df")
     corp_df = corp_df.merge(pr_df)
 
+    logger.info("****    Generating popular docs")
     docCounts = generate_pop_docs(popular_keywords, corp_df)
     corp_df = corp_df.merge(docCounts, on="id", how="outer")
 
-    corp_df["kw_in_doc_score"] = corp_df["kw_in_doc_score"].fillna(0.00001)
+    logger.info("****    Filling nulls/calculating kw in doc scores")
+    corp_df["kw_in_doc_score"].fillna(0.00001, inplace=True)
     corp_df["kw_in_doc_score"] = (
         corp_df["kw_in_doc_score"] - corp_df["kw_in_doc_score"].min()
     ) / (corp_df["kw_in_doc_score"].max() - corp_df["kw_in_doc_score"].min())
     corp_df.kw_in_doc_score.loc[corp_df.kw_in_doc_score == 0] = 0.00001
+    logger.info(f"****    Saving corpus meta to {out_dir}")
     corp_df.to_csv(os.path.join(out_dir, "corpus_meta.csv"))
 
 

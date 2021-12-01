@@ -1,6 +1,7 @@
 import os
 import json
 from datetime import date
+from typing import List, Union, Tuple, Dict
 from gamechangerml.src.model_testing.validation_data import IntelSearchData
 from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.src.utilities.test_utils import (
@@ -13,7 +14,26 @@ def make_tiered_eval_data():
     
     save_dir = make_timestamp_directory(SUB_DIR)
 
-    def save_data(level, min_correct_matches, max_results, start_date, end_date, exclude_searches, save_dir=save_dir):
+    def save_data(
+        level: str, 
+        min_correct_matches: int, 
+        max_results: int, 
+        start_date: str, 
+        end_date: str, 
+        exclude_searches: List[str], 
+        save_dir: Union[str,os.PathLike]=save_dir) -> Tuple[Dict[str,str], Dict[str,str], Dict[str,str]]:
+        """Makes eval data for each tier level using args from config.py and saves to save_dir
+        Args:
+            level [str]: tier level (['any', 'silver', 'gold'])
+            min_correct_matches [int]: number of minimum correct matches to count a positive pair
+            max_results [int]: number of max unique results for a query to include matches as positive pairs
+            start_date [str]: start date for queries (ex. 2020-12-01)
+            end_date [str]: end date for queries (ex. 2021-12-01)
+            exclude_searches [List[str]]: searches to ignore for making eval data
+            save_dir [str}os.PathLike]: path for saving validation data
+        Returns:
+            [Tuple[Dict[str,str], Dict[str,str], Dict[str,str]]]: dictionaries of any, silver, and gold data
+        """
 
         min_matches = min_correct_matches[level]
         max_res = max_results[level]

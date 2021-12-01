@@ -1,3 +1,4 @@
+from _typeshed import NoneType
 import logging
 import os
 import torch
@@ -62,9 +63,6 @@ except Exception as e:
     logger.warning(e)
     logger.warning("MLFLOW may not be installed")
 
-def run_func(callback):
-    callback()
-
 class Pipeline:
     def __init__(self):
 
@@ -87,7 +85,7 @@ class Pipeline:
         Args:
             steps: Dictionary of steps (build_types) and their function args/params, ex:
             {
-                "create_meta": {"corpus_dir": "gamechangerml/corpus"},
+                "meta": {"corpus_dir": "gamechangerml/corpus", "meta_steps": ["rank_features"]},
                 "sent_finetune": {...}
             }
         Returns:
@@ -104,46 +102,58 @@ class Pipeline:
     
     def create_metadata(
         self,
-        corpus_dir,
-        meta_steps,
-        days=80,
-        prod_data_file=PROD_DATA_FILE,
-        index_path=SENT_INDEX,
-        n_returns=15,
-        n_matching=3,
-        level='silver',
-        update_eval_data=True
-    ):
+        corpus_dir: t.Union[str,os.PathLike],
+        meta_steps: t.List[str],
+        days: int=80,
+        prod_data_file: t.Union[str,os.PathLike]=PROD_DATA_FILE,
+        index_path: t.Union[str,os.PathLike]=SENT_INDEX,
+        n_returns: int=15,
+        n_matching: int=3,
+        level: str='silver',
+        update_eval_data: bool=True
+    ) -> None:
         """
-        create_metadata: combines datasets to create a readable set for ingest
+        create_metadata: combines datasets to create readable sets for ingest
         Args: 
-            corpus_dir
+            corpus_dir [Union[str,os.PathLike]]: path to corpus JSONs
+            meta_steps [List[str]]: list of metadata steps to execute (
+                options: ["pop_docs", "combined_ents", "rank_features", "update_sent_data"])
+            days [int]: days back to go for creating rank features (** rank_features)
+            prod_data_file [Union[str,os.PathLike]]: path to prod data file (** rank_features)
+            index_path [Union[str,os.PathLike]]: sent index path (** update_sent_data)
+            n_returns [int]: number of neutral (non-matching) paragraphs to retrieve (** update_sent_data)
+            n_matching [int]: number of matching paragraphs to retrieve (** update_sent_data)
+            level [str]: level of tiered eval data to use (any, silver, gold) (** update_sent_data)
+            update_eval_data [bool]: whether or not to update the eval data (** update_sent_data)
         Returns:
+            None (saves files for each step)
         """
-        FUNCTION_MAP = {
-           "pop_docs": make_pop_docs(self.search_history, self.pop_docs_path),
-           "combined_ents": make_combined_entities(self.topics, self.orgs, self.combined_ents_path),
-           "rank_features": make_corpus_meta(corpus_dir, days, prod_data_file),
-           "update_sent_data": make_training_data(index_path, n_returns, n_matching, level, update_eval_data)
-        } 
+        logger.info(f"Meta steps: {str(meta_steps)}")
 
-        for step in meta_steps:
-            run_func(FUNCTION_MAP[step])
-
-        return {}, {}
+        if "pop_docs" in meta_steps:
+            make_pop_docs(self.search_history, self.pop_docs_path)
+        if "combined_ents" in meta_steps:
+            make_combined_entities(self.topics, self.orgs, self.combined_ents_path)
+        if "rank_features" in meta_steps:
+            make_corpus_meta(corpus_dir, days, prod_data_file)
+        if "update_sent_data" in meta_steps:
+            make_training_data(index_path, n_returns, n_matching, level, update_eval_data)
 
     def finetune_sent(
         self,
-        batch_size=32,
-        epochs=3,
-        warmup_steps=100,
-        testing_only=False
-    ):
+        batch_size: int=32,
+        epochs: int=3,
+        warmup_steps: int=100,
+        testing_only: bool=False
+    ) -> t.Dict[str,str]:
         """
         finetune_sent: finetunes the sentence transformer - saves new model, a csv file of old/new cos sim scores,
         and a metadata file.
         Args:
-            params and directories for finetuning the sentence transformer
+            batch_size [int]: batch_size
+            epochs [int]: epochs
+            warmup_steps [int]: warmup steps
+            testing_only [bool]: set True if only testing finetune functionality
         Returns:
             metadata: meta information on finetuning
         """
@@ -157,23 +167,25 @@ class Pipeline:
             )
         logger.info("Loaded finetuner class...")
         logger.info(f"Testing only is set to: {testing_only}")
-        return finetuner.retrain(data_path, testing_only), {}
+        return finetuner.retrain(data_path, testing_only)
 
     def evaluate(
         self,
-        model_name,
-        sample_limit,
-        validation_data="latest",
-        eval_type="original"
-    ):
-        '''model_dict: {
-        "model_name": [REQUIRED],
-        "eval_type": ["original", "domain"],
-        "sample_limit": 15000,
-        "validation_data": "latest"
-        }
-        '''
-        
+        model_name: str,
+        sample_limit: int,
+        validation_data: str="latest",
+        eval_type: str="original"
+    ) -> t.Dict[str,str]:
+        """Evaluates models/sent index
+        Args:
+            model_name [str]: name of the model or sent index to evaluate
+            sample_limit [int]: max samples for evaluating (if testing on original data)
+            validation_data [str]: which validation set to use (
+                "latest" pulls newest, otherwise needs timestamp dir ex. '2021-12-01_191740')
+            eval_type [str]: type of evaluation to run (options = ["original", "domain"])
+        Returns:
+            eval [Dict[str,str]]: evaluation dictionary
+        """
         results = {"original": {}, "domain": {}}
         try:
             logger.info(f"Attempting to evaluate model {model_name}")
@@ -407,22 +419,21 @@ class Pipeline:
         except Exception as e:
             logger.warning(e)
             logger.warning("Could not create experiment")
+        metadata = evals = {}
         try:
             with mlflow.start_run(run_name=run_name) as run:
                 if build_type == "sent_finetune": 
-                    metadata, evals = self.finetune_sent(**params), {}
+                    metadata = self.finetune_sent(**params)
                 elif build_type == "sentence":
                     metadata, evals = self.create_embedding(**params)
                 elif build_type == "qexp":
                     metadata, evals = self.create_qexp(**params)
                 elif build_type == "eval":
-                    metadata, evals = {}, self.evaluate(**params)
+                    evals = self.evaluate(**params)
                 elif build_type == "meta":
                     self.create_metadata(**params)
-                    metadata = evals = {}
                 self.mlflow_record(metadata, evals)
                 processmanager.update_status(processmanager.training, 0, 1, "training" + build_type + " model")
-
             mlflow.end_run()
             processmanager.update_status(processmanager.training, 1, 1, "trained" + build_type + " model")
         except Exception as e:
@@ -431,16 +442,15 @@ class Pipeline:
             logger.warning(f"Trying without MLFlow")
             try:
                 if build_type == "sent_finetune": 
-                    metadata, evals = self.finetune_sent(**params), {}
+                    metadata = self.finetune_sent(**params)
                 elif build_type == "sentence":
                     metadata, evals = self.create_embedding(**params)
                 elif build_type == "qexp":
                     metadata, evals = self.create_qexp(**params)
                 elif build_type == "eval":
-                    metadata, evals = {}, self.evaluate(**params)
+                    evals = self.evaluate(**params)
                 elif build_type == "meta":
                     self.create_metadata(**params)
-                    metadata = evals = {}
                 else:
                     logger.info(f"Started pipeline with unknown build_type: {build_type}")
                 processmanager.update_status(processmanager.training, 0, 1, "training" + build_type + " model")

@@ -21,7 +21,7 @@ def eval_sent(model_name, validation_data, eval_type="domain"):
     logger.info(f"Evaluating {model_name} created with {encoder}")
     if eval_type == "domain":
         if validation_data != "latest":
-            data_path = os.path.join('gamechangerml/data/validation/sent_transformer', validation_data)
+            data_path = os.path.join('gamechangerml/data/validation/domain/sent_transformer', validation_data)
         else:
             data_path = None
         results = {}
