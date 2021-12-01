@@ -151,6 +151,7 @@ async def initLTR(response: Response):
         logger.info(resp)
     except Exception as e:
         logger.warning("Could not init LTR")
+    return resp
 
 
 @router.get("/LTR/createModel", status_code=200)
@@ -165,15 +166,18 @@ async def create_LTR_model(response: Response):
         model = []
 
         def ltr_process():
+            processmanager.update_status(processmanager.ltr_creation, 0, 4)
             logger.info("Attempting to create judgement list")
             judgements = ltr.generate_judgement(ltr.mappings)
+            processmanager.update_status(processmanager.ltr_creation, 1, 4)
             logger.info("Attempting to get features")
-
             fts = ltr.generate_ft_txt_file(judgements)
+            processmanager.update_status(processmanager.ltr_creation, 2, 4)
             logger.info("Attempting to read in data")
             ltr.data = ltr.read_xg_data()
             logger.info("Attempting to train LTR model")
             bst, model = ltr.train()
+            processmanager.update_status(processmanager.ltr_creation, 3, 4)
             logger.info("Created LTR model")
             with open("gamechangerml/models/ltr/xgb-model.json") as f:
                 model = json.load(f)
@@ -182,6 +186,7 @@ async def create_LTR_model(response: Response):
             logger.info(resp)
             resp = ltr.post_model(model, model_name="ltr_model")
             logger.info("Posted LTR model")
+            processmanager.update_status(processmanager.ltr_creation, 4, 4)
 
         ltr_thread = MlThread(ltr_process)
 
