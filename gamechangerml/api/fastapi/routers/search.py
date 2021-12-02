@@ -178,6 +178,45 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
         logger.error(e)
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
+@router.post("/expandTermsNGrams", status_code=200)
+async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
+    """post_expand_query_terms - endpoint for expand query terms
+    Args:
+        termsList: dict;
+        Response: Response class; for status codes(apart of fastapi do not need to pass param)
+    Returns:
+        expansion_dict: dict; expanded dictionary of terms
+    """
+    default_ngram = "(1,3)"
+    terms_string = " ".join(termsList["termsList"])
+    terms_string = " ".join(preprocess(terms_string, remove_stopwords=True))
+    # extract out the ngram passed in (default to (1,3) if not supplied
+    ngram_model = termsList.get("ngram",default_ngram).replace(" ","")
+    #
+    if ngram_model in MODELS.query_expander_jbook_ngram.keys():
+        logger.warning(f"Requested ngram passed in: {ngram_model} is not available, defaulting to {default_ngram} ngram model")
+        ngram_model = default_ngram
+
+    expansion_dict = {}
+    logger.info(f"Expanding: {terms_string}")
+    try:
+        query_expander = MODELS.query_expander_jbook_ngram.get(ngram_model)
+        terms_string = unquoted(terms_string)
+        expansion_list = query_expander.expand(
+            terms_string, **QexpConfig.MODEL_ARGS["expansion"]
+        )
+        # turn word pairs into search phrases since otherwise it will just search for pages with both words on them
+        # removing original word from the return terms unless it is combined with another word
+        logger.info(f"original expanded terms: {expansion_list}")
+        finalTerms = remove_original_kw(expansion_list, terms_string)
+        expansion_dict[terms_string] = ['"{}"'.format(exp) for exp in finalTerms]
+        expanded_words = {}
+        expanded_words["qexp"] = expansion_dict
+        return expanded_words
+    except Exception as e:
+        logger.error(f"Error with query expansion on {termsList}")
+        logger.error(e)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
 @router.post("/wordSimilarity", status_code=200)
 async def post_word_sim(termsDict: dict, response: Response) -> dict:

@@ -1,4 +1,5 @@
 import os
+import re
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.configs.config import (
     QAConfig,
@@ -29,6 +30,7 @@ class ModelLoader:
     __sentence_encoder = None
     __query_expander = None
     __query_expander_jbook = None
+    __query_expander_jbook_ngram = None
     __word_sim = None
     __sparse_reader = None
 
@@ -56,6 +58,14 @@ class ModelLoader:
             )
             ModelLoader.initQEJBook()
         return ModelLoader.__query_expander_jbook
+
+    def getQEJbookNgram(self):
+        if ModelLoader.__query_expander_jbook_ngram == None:
+            logger.warning(
+                "query_expander was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initQEJBookNGram()
+        return ModelLoader.__query_expander_jbook_ngram
 
     def getWordSim(self):
         if ModelLoader.__word_sim == None:
@@ -92,6 +102,7 @@ class ModelLoader:
     qa_model = property(getQA, set_error)
     query_expander = property(getQE, set_error)
     query_expander_jbook = property(getQEJbook, set_error)
+    query_expander_jbook_ngram = property(getQEJbookNgram, set_error)
     sparse_reader = property(getSparse, set_error)
     sentence_searcher = property(getSentence_searcher, set_error)
     sentence_encoder = property(getSentence_encoder, set_error)
@@ -147,6 +158,36 @@ class ModelLoader:
             logger.info("** Loaded JBOOK Query Expansion Model")
         except Exception as e:
             logger.warning("** Could not load JBOOK QE model")
+            logger.warning(e)
+
+    @staticmethod
+    def initQEJBookNGram(qexp_jbook_ngram_model_path=QEXP_JBOOK_NGRAM_MODEL_PATH_LIST.value):
+        """initQEJBookNGram - loads JBOOK NGRAM QE models on start
+        Args:
+        Returns:
+        """
+        qexp_jbook_ngram_model_path = qexp_jbook_ngram_model_path.split(",")
+        logger.info(f"Loading Pretrained Vector from {qexp_jbook_ngram_model_path}")
+        ngram_regex = "(\d)_(\d)_ngram"
+        try:
+            ngram_qexp_dict = {}
+            for qexp_jbook_ngram_model in qexp_jbook_ngram_model_path:
+                match = re.search(ngram_regex,qexp_jbook_ngram_model)
+                if match:
+                    ngram_key = f"({match.groups()[0]},{match.groups()[1]})"
+                    if ngram_key in ngram_qexp_dict:
+                        logger.info(f"skipping loading {qexp_jbook_ngram_model} due to a more recent {ngram_key} model being loaded in")
+                        continue
+                    ngram_qexp_dict[ngram_key] = qe.QE(
+                        qexp_jbook_ngram_model, **QexpConfig.MODEL_ARGS["init"]
+                    )
+                    logger.info(f"Loaded in {ngram_key} ngram model: {qexp_jbook_ngram_model}")
+                else:
+                    logger.info(f"Unable to regex match {qexp_jbook_ngram_model}, skipping this ngram model")
+            ModelLoader.__query_expander_jbook_ngram = ngram_qexp_dict
+            logger.info(f"** Loaded {len(ngram_qexp_dict)} total JBOOK n-gram Query Expansion Model")
+        except Exception as e:
+            logger.warning("** Could not load JBOOK n-gram QE model")
             logger.warning(e)
 
     @staticmethod

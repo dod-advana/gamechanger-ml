@@ -13,6 +13,7 @@ async def load_models():
     MODELS.initQA()
     MODELS.initQE()
     MODELS.initQEJBook()
+    MODELS.initQEJBookNGram()
     MODELS.initSentenceEncoder()
     MODELS.initSentenceSearcher()
     MODELS.initWordSim()
@@ -65,6 +66,7 @@ async def check_health():
     logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
     logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
     logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
+    logger.info(f"-- QE JBOOK NGRAM model list: {QEXP_JBOOK_NGRAM_MODEL_PATH_LIST.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")
 
 

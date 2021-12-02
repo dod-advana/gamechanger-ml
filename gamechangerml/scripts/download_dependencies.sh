@@ -23,6 +23,10 @@ echo "Downloading JBOOK QE Model"
 echo "S3 JBOOK QE MODEL: $S3_QEXP_JBOOK_PATH"
 aws s3 cp "$S3_QEXP_JBOOK_PATH" $PWD/gamechangerml/models/.
 
+echo "Downloading JBOOK NGRAM QE Model"
+echo "S3 JBOOK NGRAM QE MODEL: $S3_QEXP_NGRAM_JBOOK_PATH"
+aws s3 cp "$S3_QEXP_NGRAM_JBOOK_PATH" $PWD/gamechangerml/models/.
+
 echo "Downloading Topic Model"
 echo "S3 TOPIC MODEL: $S3_TOPICS_PATH"
 aws s3 cp "$S3_TOPICS_PATH" $PWD/gamechangerml/models/topic_models/
