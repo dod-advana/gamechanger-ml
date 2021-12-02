@@ -5,6 +5,7 @@ from gamechangerml.configs.config import (
     EmbedderConfig,
     SimilarityConfig,
     QexpConfig,
+    TopicsConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import (
@@ -14,6 +15,7 @@ from gamechangerml.src.search.sent_transformer.model import (
 from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.src.featurization.word_sim import WordSim
+from gamechangerml.src.featurization.topic_modeling import Topics
 
 # A singleton class that loads all of the models.
 # All variables and methods are static so you
@@ -32,6 +34,7 @@ class ModelLoader:
         __query_expander_jbook = None
         __word_sim = None
         __sparse_reader = None
+        __topic_model = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -85,8 +88,17 @@ class ModelLoader:
     def getSparse(self):
         return ModelLoader.__sparse_reader
 
+    def getTopicModel(self):
+        if ModelLoader.__topic_model is None:
+            logger.warning(
+                "topic_model was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initTopics()
+        return ModelLoader.__topic_model
+
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
+
     # Static variables that use these custom getters defined above.
     # So when ModelLoader().qa_model is referenced getQA is called.
     qa_model = property(getQA, set_error)
@@ -96,8 +108,7 @@ class ModelLoader:
     sentence_searcher = property(getSentence_searcher, set_error)
     sentence_encoder = property(getSentence_encoder, set_error)
     word_sim = property(getWordSim, set_error)
-
-
+    topic_model = property(getTopicModel, set_error)
 
     @staticmethod
     def initQA():
@@ -208,7 +219,6 @@ class ModelLoader:
         """
         logger.info(f"Loading encoder model")
         try:
-
             if MODEL_LOAD_FLAG:
                 ModelLoader.__sentence_encoder = SentenceEncoder(
                     encoder_model_name=EmbedderConfig.BASE_MODEL,
@@ -233,4 +243,22 @@ class ModelLoader:
                 logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
+            logger.warning(e)
+
+    @staticmethod
+    def initTopics() -> None:
+        """initTopics - load topics model on start
+        Args:
+        Returns:
+        """
+        try:
+            if MODEL_LOAD_FLAG:
+                logger.info("Starting Topic pipeline")
+                logger.info(TopicsConfig.DATA_ARGS)
+                ModelLoader.__topic_model = Topics(
+                    TopicsConfig.DATA_ARGS["LOCAL_MODEL_DIR"]
+                )
+                logger.info("Finished loading Topic Model")
+        except Exception as e:
+            logger.warning("** Could not load Topic model")
             logger.warning(e)
