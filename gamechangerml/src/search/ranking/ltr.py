@@ -19,19 +19,18 @@ import math
 import requests
 import json
 from sklearn.preprocessing import LabelEncoder
-
+from gamechangerml import MODEL_PATH, DATA_PATH
 
 ES_HOST = os.environ.get("ES_HOST", default="localhost")
 ES_INDEX = os.environ.get("ES_INDEX", default="gamechanger")
 
 client = Elasticsearch([ES_HOST], timeout=60)
 logger = logging.getLogger("gamechanger")
-GC_MODEL_PATH = "gamechangerml/models/ltr"
-if not os.path.exists(GC_MODEL_PATH):
-    os.mkdir(GC_MODEL_PATH)
-GC_DATA_PATH = "gamechangerml/data/ltr"
-if not os.path.exists(GC_DATA_PATH):
-    os.mkdir(GC_DATA_PATH)
+
+LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
+LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
+os.makedirs(LTR_MODEL_PATH, exist_ok=True)
+os.makedirs(LTR_DATA_PATH, exist_ok=True)
 
 
 class LTR:
@@ -69,12 +68,12 @@ class LTR:
         returns:
         """
         # write model to json for LTR
-        path = os.path.join(GC_MODEL_PATH, "xgb-model.json")
+        path = os.path.join(LTR_MODEL_PATH, "xgb-model.json")
         with open(path, "w") as output:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
-    def read_xg_data(self, path=os.path.join(GC_DATA_PATH, "xgboost.csv")):
+    def read_xg_data(self, path=os.path.join(LTR_DATA_PATH, "xgboost.csv")):
         """read xg data: reads LTR formatted data
         params: path to file
         returns:
@@ -115,7 +114,7 @@ class LTR:
         bst = xgb.train(params, data)
         cv = xgb.cv(params, dtrain=data, nfold=3, metrics=self.eval_metrics)
         model = bst.get_dump(
-            fmap=os.path.join(GC_DATA_PATH, "featmap.txt"), dump_format="json"
+            fmap=os.path.join(LTR_DATA_PATH, "featmap.txt"), dump_format="json"
         )
         if write:
             self.write_model(model)
@@ -344,7 +343,7 @@ class LTR:
         df = pd.concat([df, ft_df], axis=1)
 
         logger.info("generating csv file")
-        df.to_csv(os.path.join(GC_DATA_PATH, "xgboost.csv"), index=False)
+        df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
         return df
 
     def construct_query(self, doc, kw):
