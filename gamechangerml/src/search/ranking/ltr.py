@@ -337,38 +337,7 @@ class LTR:
         df.reset_index(inplace=True)
         df = pd.concat([df, ft_df], axis=1)
 
-        logger.info("generating txt file")
-        """
-        for kw in tqdm(df.keyword.unique()):
-            rows = df[df.keyword == kw]
-            for i in rows.itertuples():
-                new_row = (
-                    str(int(i.ranking))
-                    + " qid:"
-                    + str(i.qid)
-                    + " 1:"
-                    + str(i.title)
-                    + " 2:"
-                    + str(i.title_phrase)
-                    + " 3:"
-                    + str(i.kw)
-                    + " 4:"
-                    + str(i.textlength)
-                    + " 5:"
-                    + str(i.paragraph)
-                    + " 6:"
-                    + str(i.popscore)
-                    + " 7:"
-                    + str(i.paragraph_phr)
-                    + " # "
-                    + kw
-                    + " "
-                    + str(i.document)
-                    + "\n"
-                )
-                with open(os.path.join(GC_DATA_PATH, "xgboost.txt"), "a") as f:
-                    f.writelines(new_row)
-            """
+        logger.info("generating csv file")
         df.to_csv(os.path.join(GC_DATA_PATH, "xgboost.csv"), index=False)
         return df
 
