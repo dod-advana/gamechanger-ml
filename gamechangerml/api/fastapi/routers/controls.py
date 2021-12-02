@@ -10,7 +10,6 @@ from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.routers.startup import *
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
-from gamechangerml.src.search.ranking.ltr import LTR
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.src.utilities.test_utils import (
@@ -39,8 +38,9 @@ from gamechangerml.configs.config import (
 
 router = APIRouter()
 MODELS = ModelLoader()
-ltr = MODELS.ltr_model
 ## Get Methods ##
+
+pipeline = Pipeline()
 
 
 @router.get("/")
@@ -166,27 +166,7 @@ async def create_LTR_model(response: Response):
         model = []
 
         def ltr_process():
-            processmanager.update_status(processmanager.ltr_creation, 0, 4)
-            logger.info("Attempting to create judgement list")
-            judgements = ltr.generate_judgement(ltr.mappings)
-            processmanager.update_status(processmanager.ltr_creation, 1, 4)
-            logger.info("Attempting to get features")
-            fts = ltr.generate_ft_txt_file(judgements)
-            processmanager.update_status(processmanager.ltr_creation, 2, 4)
-            logger.info("Attempting to read in data")
-            ltr.data = ltr.read_xg_data()
-            logger.info("Attempting to train LTR model")
-            bst, model = ltr.train()
-            processmanager.update_status(processmanager.ltr_creation, 3, 4)
-            logger.info("Created LTR model")
-            with open("gamechangerml/models/ltr/xgb-model.json") as f:
-                model = json.load(f)
-            logger.info("removing old LTR")
-            resp = ltr.delete_ltr("ltr_model")
-            logger.info(resp)
-            resp = ltr.post_model(model, model_name="ltr_model")
-            logger.info("Posted LTR model")
-            processmanager.update_status(processmanager.ltr_creation, 4, 4)
+            pipeline.create_ltr()
 
         ltr_thread = MlThread(ltr_process)
 
@@ -369,7 +349,6 @@ async def train_model(model_dict: dict, response: Response):
         # Methods for all the different models we can train
         def finetune_sentence(model_dict=model_dict):
             logger.info("Attempting to finetune the sentence transformer")
-            pipeline = Pipeline()
             try:
                 testing_only = model_dict["testing_only"]
             except:
@@ -388,7 +367,6 @@ async def train_model(model_dict: dict, response: Response):
 
         def train_sentence(model_dict=model_dict):
             logger.info("Attempting to start sentence pipeline")
-            pipeline = Pipeline()
             try:
                 corpus_dir = model_dict["corpus_dir"]
             except:
@@ -412,7 +390,6 @@ async def train_model(model_dict: dict, response: Response):
 
         def train_qexp(model_dict=model_dict):
             logger.info("Attempting to start qexp pipeline")
-            pipeline = Pipeline()
             args = {
                 "model_id": model_dict["model_id"],
                 "validate": bool(model_dict["validate"]),
@@ -427,7 +404,6 @@ async def train_model(model_dict: dict, response: Response):
 
         def run_evals(model_dict=model_dict):
             logger.info("Attempting to run evaluation")
-            pipeline = Pipeline()
             args = {
                 "model_name": model_dict["model_name"],
                 "eval_type": model_dict["eval_type"],
