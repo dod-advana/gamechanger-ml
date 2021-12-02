@@ -9,7 +9,8 @@ pop_df = pd.read_csv(os.path.join(DATA_PATH, "features/popular_documents.csv"))
 
 """ retrieve pre-generated features from corpus
     - pr: pagerank
-    - pop_score: document popularity score 
+    - orgs: organization importance
+    - kw_in_doc_score: keyword in doc score historically 
 """
 df.orgs.replace({"'": '"'}, regex=True, inplace=True)
 

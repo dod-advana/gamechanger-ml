@@ -1,4 +1,3 @@
-from _typeshed import NoneType
 import logging
 import os
 import torch
@@ -110,7 +109,8 @@ class Pipeline:
         n_returns: int=15,
         n_matching: int=3,
         level: str='silver',
-        update_eval_data: bool=True
+        update_eval_data: bool=False,
+        retriever=None
     ) -> None:
         """
         create_metadata: combines datasets to create readable sets for ingest
@@ -137,7 +137,7 @@ class Pipeline:
         if "rank_features" in meta_steps:
             make_corpus_meta(corpus_dir, days, prod_data_file)
         if "update_sent_data" in meta_steps:
-            make_training_data(index_path, n_returns, n_matching, level, update_eval_data)
+            make_training_data(index_path, n_returns, n_matching, level, update_eval_data, retriever)
 
     def finetune_sent(
         self,
@@ -146,9 +146,8 @@ class Pipeline:
         warmup_steps: int=100,
         testing_only: bool=False
     ) -> t.Dict[str,str]:
-        """
-        finetune_sent: finetunes the sentence transformer - saves new model, a csv file of old/new cos sim scores,
-        and a metadata file.
+        """finetune_sent: finetunes the sentence transformer - saves new model, 
+           a csv file of old/new cos sim scores, and a metadata file.
         Args:
             batch_size [int]: batch_size
             epochs [int]: epochs

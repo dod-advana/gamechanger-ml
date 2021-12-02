@@ -228,6 +228,7 @@ def make_training_data(
     n_matching: int,
     level: str, 
     update_eval_data: bool, 
+    retriever,
     sim_model_name: str=SIM_MODEL,
     transformers_dir: Union[str,os.PathLike]=LOCAL_TRANSFORMERS_DIR,
     gold_standard_path: Union[str,os.PathLike]=gold_standard_path,
@@ -274,11 +275,15 @@ def make_training_data(
     sim = SimilarityRanker(sim_model_name, transformers_dir)
 
     logger.info("Loading retriever")
-    retriever = SentenceSearcher(
-        sim_model_name=sim_model_name, 
-        index_path=index_path, 
-        transformer_path=transformers_dir,
-        )
+    if not retriever:
+        logger.info("Making SentenceSearcher")
+        retriever = SentenceSearcher(
+            sim_model_name=sim_model_name, 
+            index_path=index_path, 
+            transformer_path=transformers_dir,
+            )
+    else:
+        logger.info("Using existing loaded SentenceSearcher")
     ## get paragraphs
     correct_found, correct_notfound = collect_results(
         data=data,
