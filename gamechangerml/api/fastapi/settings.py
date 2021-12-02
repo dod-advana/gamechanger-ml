@@ -8,6 +8,10 @@ from gamechangerml.api.utils.redisdriver import *
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
 
 MODEL_LOAD_FLAG = os.environ.get("MODEL_LOAD", default=True)
+if MODEL_LOAD_FLAG in ["False", "false", "0"]:
+    MODEL_LOAD_FLAG = False
+else:
+    MODEL_LOAD_FLAG = True
 
 if GC_ML_HOST == "":
     GC_ML_HOST = "localhost"
