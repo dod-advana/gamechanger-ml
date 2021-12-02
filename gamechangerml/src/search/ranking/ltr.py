@@ -49,12 +49,18 @@ class LTR:
         self.judgement = None
         self.eval_metrics = [
             "map",
+            "map@25",
+            "map@50",
+            "map@75",
+            "map@100",
             "ndcg@1",
             "ndcg@5",
             "ndcg@10",
             "ndcg@20",
             "ndcg@50",
             "ndcg@100",
+            "rmse",
+            "error",
         ]
 
     def write_model(self, model):
