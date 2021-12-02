@@ -16,7 +16,7 @@ services:
     image: gamechanger-ml-gpu
     build:
       context: ../../.
-      dockerfile: gamechangerml/api/fastapi/rhel8.mlapp.Dockerfile
+      dockerfile: gamechangerml/api/fastapi/gpu.mlapp.Dockerfile
     deploy:
       resources:
         reservations:
