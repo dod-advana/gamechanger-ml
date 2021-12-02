@@ -19,22 +19,19 @@ import math
 import requests
 import json
 from sklearn.preprocessing import LabelEncoder
-
+from gamechangerml import MODEL_PATH, DATA_PATH
 
 ES_HOST = os.environ.get("ES_HOST", default="localhost")
 ES_INDEX = os.environ.get("ES_INDEX", default="gamechanger")
 
 client = Elasticsearch([ES_HOST], timeout=60)
 logger = logging.getLogger("gamechanger")
-GC_USER_DATA = "gamechangerml/data/user_data/search_history/SearchPdfMapping.csv"
-GC_MODEL_PATH = "gamechangerml/models/ltr"
-if not os.path.exists(GC_MODEL_PATH):
-    os.mkdir(GC_MODEL_PATH)
-GC_DATA_PATH = "gamechangerml/data/ltr"
-if not os.path.exists(GC_DATA_PATH):
-    os.mkdir(GC_DATA_PATH)
 
-
+GC_USER_DATA = os.path.join(DATA_PATH, "user_data/search_history/SearchPdfMapping.csv")
+LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
+LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
+os.makedirs(LTR_MODEL_PATH, exist_ok=True)
+os.makedirs(LTR_DATA_PATH, exist_ok=True)
 class LTR:
     def __init__(
         self,
@@ -55,12 +52,12 @@ class LTR:
         returns:
         """
         # write model to json for LTR
-        path = os.path.join(GC_MODEL_PATH, "xgb-model.json")
+        path = os.path.join(LTR_MODEL_PATH, "xgb-model.json")
         with open(path, "w") as output:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
-    def read_xg_data(self, path=os.path.join(GC_DATA_PATH, "xgboost.txt")):
+    def read_xg_data(self, path=os.path.join(LTR_DATA_PATH, "xgboost.txt")):
         """read xg data: reads LTR formatted data
         params: path to file
         returns:
@@ -93,7 +90,7 @@ class LTR:
         """
         bst = xgb.train(self.params, self.data)
         model = bst.get_dump(
-            fmap=os.path.join(GC_DATA_PATH, "featmap.txt"), dump_format="json"
+            fmap=os.path.join(LTR_DATA_PATH, "featmap.txt"), dump_format="json"
         )
         if write:
             self.write_model(model)
@@ -347,7 +344,7 @@ class LTR:
                     + str(i.document)
                     + "\n"
                 )
-                with open(os.path.join(GC_DATA_PATH, "xgboost.txt"), "a") as f:
+                with open(os.path.join(LTR_DATA_PATH, "xgboost.txt"), "a") as f:
                     f.writelines(new_row)
         return df
 

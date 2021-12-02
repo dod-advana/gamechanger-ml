@@ -76,14 +76,13 @@ class EmbedderConfig:
     MODEL_ARGS = {
         "min_token_len": 10,
         "verbose": True,  # for creating LocalCorpus
-        "return_id": True  # for creating LocalCorpus
+        "return_id": True,  # for creating LocalCorpus
     }
-    FINETUNE = {"shuffle": True, "batch_size": 32,
-                "epochs": 3, "warmup_steps": 100}
+    FINETUNE = {"shuffle": True, "batch_size": 32, "epochs": 3, "warmup_steps": 100}
 
 
 class SimilarityConfig:
-    BASE_MODEL = "distilbart-mnli-12-3" 
+    BASE_MODEL = "distilbart-mnli-12-3"
 
 
 class QexpConfig:
@@ -155,3 +154,7 @@ class TrainingConfig:
         "training_data_dir": "gamechangerml/data/training",
         "train_test_split_ratio": 0.8,
     }
+
+
+class TopicsConfig:
+    DATA_ARGS = {"LOCAL_MODEL_DIR": os.path.join(REPO_PATH, "gamechangerml/models")}

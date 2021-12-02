@@ -5,19 +5,25 @@ from gamechangerml.configs.config import (
     EmbedderConfig,
     SimilarityConfig,
     QexpConfig,
+    TopicsConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
-from gamechangerml.src.search.sent_transformer.model import SentenceSearcher, SentenceEncoder
+from gamechangerml.src.search.sent_transformer.model import (
+    SentenceSearcher,
+    SentenceEncoder,
+)
 from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.src.search.ranking import ltr
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.src.featurization.word_sim import WordSim
+from gamechangerml.src.featurization.topic_modeling import Topics
 
 # A singleton class that loads all of the models.
 # All variables and methods are static so you
 # reference them by ModelLoader().example_method()
 
-#SENT_INDEX_PATH.value = 'gamechangerml/models/sent_index_TEST'
+# SENT_INDEX_PATH.value = 'gamechangerml/models/sent_index_TEST'
+
 
 class ModelLoader:
     # private model variables
@@ -31,6 +37,7 @@ class ModelLoader:
     __query_expander_jbook = None
     __word_sim = None
     __sparse_reader = None
+    __topic_model = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -84,6 +91,14 @@ class ModelLoader:
     def getSparse(self):
         return ModelLoader.__sparse_reader
 
+    def getTopicModel(self):
+        if ModelLoader.__topic_model is None:
+            logger.warning(
+                "topic_model was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initTopics()
+        return ModelLoader.__topic_model
+
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
 
@@ -96,6 +111,7 @@ class ModelLoader:
     sentence_searcher = property(getSentence_searcher, set_error)
     sentence_encoder = property(getSentence_encoder, set_error)
     word_sim = property(getWordSim, set_error)
+    topic_model = property(getTopicModel, set_error)
 
     @staticmethod
     def initQA():
@@ -183,7 +199,9 @@ class ModelLoader:
             sim_model = ModelLoader.__sentence_searcher.similarity
             # set cache variable defined in settings.py
             latest_intel_model_sim.value = sim_model.sim_model
-            logger.info(f"** Loaded Similarity Model from {sim_model.sim_model} and sent index from {index_path}")
+            logger.info(
+                f"** Loaded Similarity Model from {sim_model.sim_model} and sent index from {index_path}"
+            )
 
         except Exception as e:
             logger.warning("** Could not load Similarity model")
@@ -201,7 +219,7 @@ class ModelLoader:
             ModelLoader.__sentence_encoder = SentenceEncoder(
                 encoder_model_name=EmbedderConfig.BASE_MODEL,
                 transformer_path=transformer_path,
-                **EmbedderConfig.MODEL_ARGS
+                **EmbedderConfig.MODEL_ARGS,
             )
             encoder_model = ModelLoader.__sentence_encoder.encoder_model
             # set cache variable defined in settings.py
@@ -215,9 +233,26 @@ class ModelLoader:
     @staticmethod
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
-            ModelLoader.__sparse_reader = sparse.SparseReader(
-                model_name=model_name)
+            ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
             logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
             logger.warning(e)
+
+    @staticmethod
+    def initTopics() -> None:
+        """initTopics - load topics model on start
+        Args:
+        Returns:
+        """
+        try:
+            logger.info("Starting Topic pipeline")
+            logger.info(TopicsConfig.DATA_ARGS)
+            ModelLoader.__topic_model = Topics(
+                TopicsConfig.DATA_ARGS["LOCAL_MODEL_DIR"]
+            )
+            logger.info("Finished loading Topic Model")
+        except Exception as e:
+            logger.warning("** Could not load Topic model")
+            logger.warning(e)
+
