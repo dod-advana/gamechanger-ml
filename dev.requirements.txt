@@ -1,0 +1,12 @@
+hypothesis
+ipython
+mypy
+pylint
+pytest
+flake8
+devtools
+typing_extensions
+matplotlib
+seaborn
+autopep8
+black

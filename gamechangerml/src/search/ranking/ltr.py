@@ -11,7 +11,7 @@ from tqdm import tqdm
 import argparse
 import logging
 import os
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
 import pickle
 import xgboost as xgb
 import matplotlib
@@ -22,8 +22,9 @@ from sklearn.preprocessing import LabelEncoder
 
 
 ES_HOST = os.environ.get("ES_HOST", default="localhost")
+ES_INDEX = os.environ.get("ES_INDEX", default="gamechanger")
 
-client = Elasticsearch([ES_HOST])
+client = Elasticsearch([ES_HOST], timeout=60)
 logger = logging.getLogger("gamechanger")
 GC_USER_DATA = "gamechangerml/data/user_data/search_history/SearchPdfMapping.csv"
 GC_MODEL_PATH = "gamechangerml/models/ltr"
@@ -212,6 +213,11 @@ class LTR:
         word_tuples = []
         for row in tqdm(searches.itertuples()):
             words = row.search.split(" ")
+            clean_phr = re.sub(r"[^\w\s]", "", row.search)
+            clean_phr = preprocess(clean_phr, remove_stopwords=True)
+            if clean_phr:
+                word_tuples.append((" ".join(clean_phr), row.document))
+
             for word in words:
                 clean = word.lower()
                 clean = re.sub(r"[^\w\s]", "", clean)
@@ -247,18 +253,23 @@ class LTR:
         ltr_log = []
         logger.info("querying es ltr logs")
         # loop through all unique keywords
+        query_list = []
         for kw in tqdm(df.keyword.unique()):
             # get frame of all of the keyword rows
             tmp = df[df.keyword == kw]
             # get logged feature
+
             for docs in tmp.itertuples():
                 doc = docs.Index
                 q = self.construct_query(doc, kw)
-                r = client.search(index="gamechanger", body=dict(q))
-                ltr_log.append(r["hits"]["hits"])
+                query_list.append(json.dumps({"index": ES_INDEX}))
+                query_list.append(json.dumps(q))
+        query = "\n".join(query_list)
+        res = client.msearch(body=query)
+        ltr_log = [x["hits"]["hits"] for x in res["responses"]]
         return ltr_log
 
-    def process_ltr_log(self, ltr_log, num_fts=4):
+    def process_ltr_log(self, ltr_log, num_fts=7):
         """process ltr log: extracts features from ES logs for judgement list
         params:
             ltr_log: results from ES
@@ -294,7 +305,17 @@ class LTR:
         ltr_log = self.query_es_fts(df)
         vals = self.process_ltr_log(ltr_log)
         ft_df = pd.DataFrame(
-            vals, columns=["title", "kw", "textlength", "paragraph"])
+            vals,
+            columns=[
+                "title",
+                "title_phrase",
+                "kw",
+                "textlength",
+                "paragraph",
+                "popscore",
+                "paragraph_phr",
+            ],
+        )
         df.reset_index(inplace=True)
         df = pd.concat([df, ft_df], axis=1)
 
@@ -309,11 +330,17 @@ class LTR:
                     + " 1:"
                     + str(i.title)
                     + " 2:"
-                    + str(i.paragraph)
+                    + str(i.title_phrase)
                     + " 3:"
                     + str(i.kw)
                     + " 4:"
                     + str(i.textlength)
+                    + " 5:"
+                    + str(i.paragraph)
+                    + " 6:"
+                    + str(i.popscore)
+                    + " 7:"
+                    + str(i.paragraph_phr)
                     + " # "
                     + kw
                     + " "
@@ -378,6 +405,12 @@ class LTR:
                         },
                     },
                     {
+                        "name": "title-phrase",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match_phrase": {"title": "{{keywords}}"}},
+                    },
+                    {
                         "name": "keyw_5",
                         "params": ["keywords"],
                         "template_language": "mustache",
@@ -428,10 +461,49 @@ class LTR:
                             }
                         },
                     },
+                    {
+                        "name": "popscore",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {
+                            "function_score": {
+                                "functions": [
+                                    {
+                                        "field_value_factor": {
+                                            "field": "pop_score",
+                                            "missing": 0,
+                                        }
+                                    }
+                                ],
+                                "query": {"match_all": {}},
+                            }
+                        },
+                    },
+                    {
+                        "name": "paragraph-phrase",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {
+                            "nested": {
+                                "path": "paragraphs",
+                                "inner_hits": {},
+                                "query": {
+                                    "bool": {
+                                        "should": [
+                                            {
+                                                "match_phrase": {
+                                                    "paragraphs.par_raw_text_t.gc_english": "{{keywords}}"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                            }
+                        },
+                    },
                 ],
             }
         }
-
         headers = {"Content-Type": "application/json"}
         endpoint = ES_HOST + "/_ltr/_featureset/doc_features"
         r = requests.post(endpoint, data=json.dumps(query), headers=headers)
@@ -455,6 +527,7 @@ class LTR:
             end: ending number integer
         returns: normalized array
         """
+        arr = np.log(arr)
         width = end - start
         res = (arr - arr.min()) / (arr.max() - arr.min()) * width + start
         return res

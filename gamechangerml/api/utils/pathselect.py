@@ -12,7 +12,7 @@ def get_model_paths():
         qexp_names = [
             f
             for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if ("qexp_" in f) and ("tar" not in f)
+            if ("qexp_" in f) and (all(substr not in f for substr in ["tar","jbook"]))
         ]
         qexp_names.sort(reverse=True)
         if len(qexp_names) > 0:
@@ -28,6 +28,28 @@ def get_model_paths():
         logger.error(e)
         logger.info("Cannot get QEXP model path")
         QEXP_MODEL_PATH = "gamechangerml/models/"
+
+    # QEXP JBOOK MODEL
+    try:
+        qexp_jbook_names = [
+            f
+            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            if (all(substr in f for substr in ["qexp_","jbook"])) and ("tar" not in f)
+        ]
+        qexp_jbook_names.sort(reverse=True)
+        if len(qexp_jbook_names) > 0:
+            QEXP_JBOOK_MODEL_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, qexp_jbook_names[0]
+            )
+        else:
+            print("defaulting INDEX_PATH to qexp")
+            QEXP_JBOOK_MODEL_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, "jbook_qexp_20211029"
+            )
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get QEXP JBOOK model path")
+        QEXP_JBOOK_MODEL_PATH = "gamechangerml/models/"
 
     # TRANSFORMER MODEL PATH
     try:
@@ -78,6 +100,7 @@ def get_model_paths():
         "transformers": LOCAL_TRANSFORMERS_DIR,
         "sentence": INDEX_PATH,
         "qexp": QEXP_MODEL_PATH,
+        "qexp_jbook": QEXP_JBOOK_MODEL_PATH,
         "word_sim": WORD_SIM_MODEL_PATH,
     }
     return model_dict
