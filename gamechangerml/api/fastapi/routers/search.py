@@ -193,7 +193,7 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
     # extract out the ngram passed in (default to (1,3) if not supplied
     ngram_model = termsList.get("ngram",default_ngram).replace(" ","")
     #
-    if ngram_model in MODELS.query_expander_jbook_ngram.keys():
+    if ngram_model not in MODELS.query_expander_jbook_ngram.keys():
         logger.warning(f"Requested ngram passed in: {ngram_model} is not available, defaulting to {default_ngram} ngram model")
         ngram_model = default_ngram
 
