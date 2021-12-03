@@ -12,18 +12,25 @@ from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
+from gamechangerml import DATA_PATH
 
 model_path_dict = get_model_paths()
 random.seed(42)
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-VALIDATION_DIR = get_most_recent_dir(os.path.join(ValidationConfig.DATA_ARGS["validation_dir"], "domain", "sent_transformer"))
+VALIDATION_DIR = os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
 SIM_MODEL = SimilarityConfig.BASE_MODEL
-training_dir=os.path.join(TrainingConfig.DATA_ARGS["training_data_dir"], "sent_transformer")
+training_dir= os.path.join(DATA_PATH, "training", "sent_transformer")
 tts_ratio=TrainingConfig.DATA_ARGS["train_test_split_ratio"]
 gold_standard_path = os.path.join(
     "gamechangerml/data/user_data", ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"]
     )
+
+try:
+    GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
+    API_URL = f"http://{GC_ML_HOST}:5000"
+except:
+    logger.warning("****    Could not connect to ML API")
 
 def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, sim, n_matching: int) -> List[Dict[str,str]]:
     """Retrieves the best paragraphs for expected doc using similarity model
@@ -71,6 +78,7 @@ def get_negative_paragraphs(
 
     results = []
     try:
+        
         doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query, n_returns)
         results = []
         for par_id in doc_ids:
