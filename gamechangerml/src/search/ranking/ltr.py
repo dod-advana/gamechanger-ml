@@ -118,7 +118,7 @@ class LTR:
         )
         if write:
             self.write_model(model)
-            path = os.path.join(GC_MODEL_PATH, "ltr_evals.csv")
+            path = os.path.join(LTR_MODEL_PATH, "ltr_evals.csv")
             cv.to_csv(path, index=False)
         return bst, model
 
