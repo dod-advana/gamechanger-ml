@@ -142,13 +142,7 @@ async def initLTR(response: Response):
     number_files = 0
     resp = None
     try:
-
-        logger.info("Attempting to initialize LTR")
-        resp = ltr.post_init_ltr()
-        logger.info(resp)
-        logger.info("Attempting to post features to LTR")
-        resp = ltr.post_features()
-        logger.info(resp)
+        pipeline.init_ltr()
     except Exception as e:
         logger.warning("Could not init LTR")
     return resp

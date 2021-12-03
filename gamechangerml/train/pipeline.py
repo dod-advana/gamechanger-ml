@@ -1,4 +1,5 @@
 import argparse
+from gamechangerml import MODEL_PATH
 from gamechangerml.src.search.ranking.ltr import LTR
 import logging
 import os
@@ -583,6 +584,19 @@ class Pipeline:
             self.upload(s3_path, dst_path, "sentence_index", model_id, version)
         return metadata, evals
 
+    def init_ltr(self):
+        try:
+            ltr = LTR()
+            logger.info("attempting to init LTR")
+            resp = ltr.post_init_ltr()
+            logger.info(resp)
+            logger.info("attemtping to post features to ES")
+            resp = ltr.post_features()
+            logger.info(resp)
+        except Exception as e:
+            logger.warning(e)
+            logger.warning("Could not initialize LTR")
+
     def create_ltr(self):
         try:
             ltr = LTR()
@@ -599,7 +613,7 @@ class Pipeline:
             bst, model = ltr.train()
             processmanager.update_status(processmanager.ltr_creation, 3, 4)
             logger.info("Created LTR model")
-            with open("gamechangerml/models/ltr/xgb-model.json") as f:
+            with open(os.path.join(MODEL_PATH, "ltr/xgb-model.json")) as f:
                 model = json.load(f)
             logger.info("removing old LTR")
             resp = ltr.delete_ltr("ltr_model")
