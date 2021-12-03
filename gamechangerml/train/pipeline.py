@@ -1,3 +1,6 @@
+import argparse
+from gamechangerml import MODEL_PATH
+from gamechangerml.src.search.ranking.ltr import LTR
 import logging
 import os
 import torch
@@ -10,7 +13,16 @@ from pathlib import Path
 import typing as t
 
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
-from gamechangerml.src.model_testing.evaluation import IndomainRetrieverEvaluator
+from gamechangerml.src.search.query_expansion.qe import QE
+from gamechangerml.src.utilities.arg_parser import LocalParser
+from gamechangerml.src.model_testing.evaluation import (
+    SQuADQAEvaluator,
+    IndomainQAEvaluator,
+    IndomainRetrieverEvaluator,
+    MSMarcoRetrieverEvaluator,
+    NLIEvaluator,
+    QexpEvaluator,
+)
 from gamechangerml.scripts.finetune_sentence_retriever import STFinetuner
 from gamechangerml.scripts.run_evaluation import eval_qa, eval_sent, eval_sim, eval_qe
 from gamechangerml.src.featurization.make_meta import (
@@ -21,7 +33,13 @@ from gamechangerml.scripts.make_training_data import make_training_data
 
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities import aws_helper as aws_helper
-from gamechangerml.src.utilities.test_utils import get_user, get_most_recent_dir, get_index_size
+from gamechangerml.src.utilities.test_utils import (
+    get_user,
+    get_most_recent_dir,
+    get_index_size,
+    collect_evals,
+    open_json,
+)
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.pathselect import get_model_paths
@@ -30,7 +48,18 @@ from gamechangerml.src.search.query_expansion.build_ann_cli import (
     build_qe_model as bqe,
 )
 from gamechangerml.src.utilities import utils
-from gamechangerml.configs.config import DefaultConfig, D2VConfig, QexpConfig, EmbedderConfig, SimilarityConfig, QexpConfig
+from gamechangerml.configs.config import (
+    DefaultConfig,
+    D2VConfig,
+    QexpConfig,
+    QAConfig,
+    EmbedderConfig,
+    SimilarityConfig,
+    QexpConfig,
+)
+
+import pandas as pd
+import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 os.environ["CURL_CA_BUNDLE"] = ""
@@ -156,14 +185,23 @@ class Pipeline:
         Returns:
             metadata: meta information on finetuning
         """
-        model_load_path=os.path.join(LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL)
+        model_load_path = os.path.join(
+            LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
+        )
         model_save_path = model_load_path + "_" + str(date.today())
-        logger.info(f"Setting {str(model_save_path)} as save path for new model")
-        data_path = get_most_recent_dir("gamechangerml/data/training/sent_transformer")
+        logger.info(
+            f"Setting {str(model_save_path)} as save path for new model")
+        data_path = get_most_recent_dir(
+            "gamechangerml/data/training/sent_transformer")
         logger.info(f"Loading in domain data to finetune from {data_path}")
         finetuner = STFinetuner(
-            model_load_path=model_load_path, model_save_path=model_save_path, shuffle=True, batch_size=batch_size, epochs=epochs, warmup_steps=warmup_steps
-            )
+            model_load_path=model_load_path,
+            model_save_path=model_save_path,
+            shuffle=True,
+            batch_size=batch_size,
+            epochs=epochs,
+            warmup_steps=warmup_steps,
+        )
         logger.info("Loaded finetuner class...")
         logger.info(f"Testing only is set to: {testing_only}")
         return finetuner.retrain(data_path, testing_only)
@@ -188,27 +226,35 @@ class Pipeline:
         results = {"original": {}, "domain": {}}
         try:
             logger.info(f"Attempting to evaluate model {model_name}")
-            
+
             if "bert-base-cased-squad2" in model_name:
-                results[eval_type] = eval_qa(model_name, sample_limit, eval_type)
+                results[eval_type] = eval_qa(
+                    model_name, sample_limit, eval_type)
             elif "msmarco-distilbert-base-v2" in model_name:
-                results["original"] = eval_sent(model_name, validation_data, eval_type="original")
+                results["original"] = eval_sent(
+                    model_name, validation_data, eval_type="original"
+                )
             elif "sent_index" in model_name:
-                results["domain"] = eval_sent(model_name, validation_data, eval_type="domain")
+                results["domain"] = eval_sent(
+                    model_name, validation_data, eval_type="domain"
+                )
             elif "distilbart-mnli-12-3" in model_name:
-                results[eval_type] = eval_sim(model_name, sample_limit, eval_type)
-            elif 'qexp' in model_name:
-                results['domain'] = eval_qe(model_name)
+                results[eval_type] = eval_sim(
+                    model_name, sample_limit, eval_type)
+            elif "qexp" in model_name:
+                results["domain"] = eval_qe(model_name)
             else:
-                logger.warning("There is currently no evaluation pipeline for this type of model.")
+                logger.warning(
+                    "There is currently no evaluation pipeline for this type of model."
+                )
                 raise Exception("No evaluation pipeline available")
 
         except Exception as e:
             logger.warning(f"Could not evaluate {model_name}")
             logger.warning(e)
-        
+
         return results
-    
+
     def create_qexp(
         self,
         model_id=None,
@@ -232,7 +278,7 @@ class Pipeline:
 
         if not model_id:
             model_id = datetime.now().strftime("%Y%m%d")
-        
+
         # get model name schema
         model_name = "qexp_" + model_id
         model_path = utils.create_model_schema(model_dir, model_name)
@@ -259,9 +305,9 @@ class Pipeline:
                 logger.info(
                     "-------------- Running Assessment Model Script --------------"
                 )
-                #qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
-                #evals = qxpeval.results
-                
+                # qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
+                # evals = qxpeval.results
+
                 logger.info(
                     "-------------- Assessment is not available--------------")
                 """
@@ -277,7 +323,7 @@ class Pipeline:
                         mlflow.log_metric(
                             key=metric, value=results[metric])
                 """
-                
+
                 logger.info(
                     "-------------- Finished Assessment --------------")
             else:
@@ -295,7 +341,7 @@ class Pipeline:
         gpu=True,
         upload=False,
         version="v4",
-        validate=True
+        validate=True,
     ):
         """
         create_embedding: creates a sentence embedding
@@ -324,8 +370,7 @@ class Pipeline:
         model_dir = os.path.join("gamechangerml", "models")
         model_id = datetime.now().strftime("%Y%m%d")
         model_name = "sent_index_" + model_id
-        local_sent_index_dir = os.path.join(
-            model_dir, model_name)
+        local_sent_index_dir = os.path.join(model_dir, model_name)
 
         # Define new index directory
         if not os.path.isdir(local_sent_index_dir):
@@ -340,25 +385,37 @@ class Pipeline:
 
         # Building the Index
         try:
-            encoder = SentenceEncoder(encoder_model_name=encoder_model, use_gpu=use_gpu, transformer_path=LOCAL_TRANSFORMERS_DIR, **EmbedderConfig.MODEL_ARGS)
-            logger.info(f"Creating Document Embeddings with {encoder_model} on {corpus}")
+            encoder = SentenceEncoder(
+                encoder_model_name=encoder_model,
+                use_gpu=use_gpu,
+                transformer_path=LOCAL_TRANSFORMERS_DIR,
+                **EmbedderConfig.MODEL_ARGS,
+            )
+            logger.info(
+                f"Creating Document Embeddings with {encoder_model} on {corpus}"
+            )
             logger.info("-------------- Indexing Documents--------------")
             start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            encoder.index_documents(corpus_path=corpus, index_path=local_sent_index_dir)
+            encoder.index_documents(
+                corpus_path=corpus, index_path=local_sent_index_dir)
             end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             logger.info("-------------- Completed Indexing --------------")
             user = get_user(logger)
 
-            # Checking length of IDs 
+            # Checking length of IDs
             try:
                 SENT_INDEX_PATH = model_path_dict["sentence"]
                 old_index_len = get_index_size(SENT_INDEX_PATH)
                 new_index_len = len(encoder.embedder.config["ids"])
                 if new_index_len < old_index_len:
-                    logger.warning(f"Length of index ({str(new_index_len)}) is shorter than previous index ({str(old_index_len)})")
+                    logger.warning(
+                        f"Length of index ({str(new_index_len)}) is shorter than previous index ({str(old_index_len)})"
+                    )
                     logger.info(f"Old index location: {str(SENT_INDEX_PATH)}")
             except Exception as e:
-                logger.warning(f"Could not compare length to old index: {str(SENT_INDEX_PATH)}")
+                logger.warning(
+                    f"Could not compare length to old index: {str(SENT_INDEX_PATH)}"
+                )
                 logger.error(e)
 
             # Generating process metadata
@@ -387,14 +444,25 @@ class Pipeline:
 
             try:
                 evals = {}
-                for level in ['gold', 'silver']:
-                    sentev = IndomainRetrieverEvaluator(encoder=encoder, index=model_name, data_level=level, encoder_model_name=EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
+                for level in ["gold", "silver"]:
+                    sentev = IndomainRetrieverEvaluator(
+                        encoder=encoder,
+                        index=model_name,
+                        data_level=level,
+                        encoder_model_name=EmbedderConfig.BASE_MODEL,
+                        sim_model_name=SimilarityConfig.BASE_MODEL,
+                        **EmbedderConfig.MODEL_ARGS,
+                    )
                     evals[level] = sentev.results
-                    logger.info(f"Evals for {level} standard validation: {(str(sentev.results))}")
+                    logger.info(
+                        f"Evals for {level} standard validation: {(str(sentev.results))}"
+                    )
             except Exception as e:
-                logger.warning("Could not create evaluations for the new sentence index")
+                logger.warning(
+                    "Could not create evaluations for the new sentence index"
+                )
                 logger.error(e)
-            
+
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")
         except Exception as e:
@@ -406,6 +474,57 @@ class Pipeline:
             s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
             utils.upload(s3_path, dst_path, "sentence_index", model_id, version)
         return metadata, evals
+
+    def init_ltr(self):
+        try:
+            ltr = LTR()
+            logger.info("attempting to init LTR")
+            resp = ltr.post_init_ltr()
+            logger.info(resp)
+            logger.info("attemtping to post features to ES")
+            resp = ltr.post_features()
+            logger.info(resp)
+        except Exception as e:
+            logger.warning(e)
+            logger.warning("Could not initialize LTR")
+
+    def create_ltr(self):
+        try:
+            ltr = LTR()
+            processmanager.update_status(processmanager.ltr_creation, 0, 4)
+            logger.info("Attempting to create judgement list")
+            judgements = ltr.generate_judgement(ltr.mappings)
+            processmanager.update_status(processmanager.ltr_creation, 1, 4)
+            logger.info("Attempting to get features")
+            fts = ltr.generate_ft_txt_file(judgements)
+            processmanager.update_status(processmanager.ltr_creation, 2, 4)
+            logger.info("Attempting to read in data")
+            ltr.data = ltr.read_xg_data()
+            logger.info("Attempting to train LTR model")
+            bst, model = ltr.train()
+            processmanager.update_status(processmanager.ltr_creation, 3, 4)
+            logger.info("Created LTR model")
+            with open(os.path.join(MODEL_PATH, "ltr/xgb-model.json")) as f:
+                model = json.load(f)
+            logger.info("removing old LTR")
+            resp = ltr.delete_ltr("ltr_model")
+            logger.info(resp)
+            resp = ltr.post_model(model, model_name="ltr_model")
+            logger.info("Posted LTR model")
+            processmanager.update_status(processmanager.ltr_creation, 4, 4)
+        except Exception as e:
+            logger.error("Could not create LTR")
+
+    def upload(self, s3_path, local_path, model_prefix, model_name, version):
+        # Loop through each file and upload to S3
+        logger.info(f"Uploading files to {s3_path}")
+        logger.info(f"\tUploading: {local_path}")
+        # local_path = os.path.join(dst_path)
+        s3_path = os.path.join(
+            s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
+        utils.upload_file(local_path, s3_path)
+        logger.info(f"Successfully uploaded files to {s3_path}")
+        logger.info("-------------- Finished Uploading --------------")
 
     def run(self, build_type, run_name, params):
         """
@@ -432,9 +551,14 @@ class Pipeline:
                 elif build_type == "meta":
                     self.create_metadata(**params)
                 self.mlflow_record(metadata, evals)
-                processmanager.update_status(processmanager.training, 0, 1, "training" + build_type + " model")
+                processmanager.update_status(
+                    processmanager.training, 0, 1, "training" + build_type + " model"
+                )
+
             mlflow.end_run()
-            processmanager.update_status(processmanager.training, 1, 1, "trained" + build_type + " model")
+            processmanager.update_status(
+                processmanager.training, 1, 1, "trained" + build_type + " model"
+            )
         except Exception as e:
             logger.warning(f"Error building {build_type} with MLFlow")
             logger.warning(e)
@@ -451,15 +575,27 @@ class Pipeline:
                 elif build_type == "meta":
                     self.create_metadata(**params)
                 else:
-                    logger.info(f"Started pipeline with unknown build_type: {build_type}")
-                processmanager.update_status(processmanager.training, 0, 1, "training" + build_type + " model")
-                processmanager.update_status(processmanager.training, 1, 1, "trained" + build_type + " model")
+                    logger.info(
+                        f"Started pipeline with unknown build_type: {build_type}"
+                    )
+                processmanager.update_status(
+                    processmanager.training, 0, 1, "training" + build_type + " model"
+                )
+                processmanager.update_status(
+                    processmanager.training, 1, 1, "trained" + build_type + " model"
+                )
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
                 processmanager.update_status(
-                    processmanager.loading_corpus, message="failed to load corpus", failed=True)
+                    processmanager.loading_corpus,
+                    message="failed to load corpus",
+                    failed=True,
+                )
                 processmanager.update_status(
-                    processmanager.training, message="failed to train " + build_type + " model", failed=True)
+                    processmanager.training,
+                    message="failed to train " + build_type + " model",
+                    failed=True,
+                )
 
     def mlflow_record(self, metadata, evals):
         """

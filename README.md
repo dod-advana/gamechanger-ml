@@ -143,7 +143,14 @@
 6. `docker-compose up`
 7. visit `localhost:5000/docs`
 
+## HELPFUL FLAGS FOR API
+- export CONTAINER_RELOAD=True to reload the container on code changes for development
+- export DOWNLOAD_DEP=True to get models and other deps from s3
+- export MODEL_LOAD=False to not load models on API start (only for development needs) 
+
 ## FAQ
+- I get an error with redis on API start
+  - export ENV_TYPE=DEV
 - Do I need to train models to use the API?
   - No, you can use the pretrained models within the dependencies. 
 - The API is crashing when trying to load the models.
@@ -152,3 +159,4 @@
   - No, but it will make training or inferring faster.
 - What if I can't download the dependencies since I am external?
   - We are working on making models publically available. However you can use download pretrained transformers from HuggingFace to include in the models/transformers directory, which will enable you to use some functionality of the API. Without any models, there is still functionality available like text extraction avaiable. 
+

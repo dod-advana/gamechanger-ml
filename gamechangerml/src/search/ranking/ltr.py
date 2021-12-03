@@ -23,19 +23,36 @@ LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
 LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
 os.makedirs(LTR_MODEL_PATH, exist_ok=True)
 os.makedirs(LTR_DATA_PATH, exist_ok=True)
+
+
 class LTR:
     def __init__(
         self,
         params={
-            "max_depth": 10,
+            "max_depth": 6,
             "eta": 0.3,
-            "objective": "rank:map",
+            "objective": "rank:pairwise",
         },
     ):
         self.data = self.read_xg_data()
         self.params = params
         self.mappings = self.read_mappings()
         self.judgement = None
+        self.eval_metrics = [
+            "map",
+            "map@25",
+            "map@50",
+            "map@75",
+            "map@100",
+            "ndcg@1",
+            "ndcg@5",
+            "ndcg@10",
+            "ndcg@20",
+            "ndcg@50",
+            "ndcg@100",
+            "rmse",
+            "error",
+        ]
 
     def write_model(self, model):
         """write model: writes model to file
@@ -48,13 +65,18 @@ class LTR:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
-    def read_xg_data(self, path=os.path.join(LTR_DATA_PATH, "xgboost.txt")):
+    def read_xg_data(self, path=os.path.join(LTR_DATA_PATH, "xgboost.csv")):
         """read xg data: reads LTR formatted data
         params: path to file
         returns:
         """
         try:
-            self.data = xgb.DMatrix(path)
+            df = pd.read_csv(path)
+            fts = df[df.columns[5:]]
+            fts.index = df.qid
+
+            label = df["ranking"]
+            self.data = xgb.DMatrix(fts, label)
             return self.data
         except Exception as e:
             logger.error("Could not read in data for training")
@@ -72,7 +94,7 @@ class LTR:
             logger.error("Could not read in mappings to make judgement list")
         return mappings
 
-    def train(self, write=True):
+    def train(self, data=None, params=None, write=True):
         """train - train a xgboost model with parameters
         params:
             write: boolean to write to file
@@ -80,12 +102,19 @@ class LTR:
             bst: xgboost object
             model: model json
         """
-        bst = xgb.train(self.params, self.data)
+        if not data:
+            data = self.data
+        if not params:
+            params = self.params
+        bst = xgb.train(params, data)
+        cv = xgb.cv(params, dtrain=data, nfold=3, metrics=self.eval_metrics)
         model = bst.get_dump(
             fmap=os.path.join(LTR_DATA_PATH, "featmap.txt"), dump_format="json"
         )
         if write:
             self.write_model(model)
+            path = os.path.join(LTR_MODEL_PATH, "ltr_evals.csv")
+            cv.to_csv(path, index=False)
         return bst, model
 
     def post_model(self, model, model_name):
@@ -297,47 +326,19 @@ class LTR:
             vals,
             columns=[
                 "title",
-                "title_phrase",
-                "kw",
+                "title-phrase",
+                "keyw_5",
                 "textlength",
                 "paragraph",
                 "popscore",
-                "paragraph_phr",
+                "paragraph-phrase",
             ],
         )
         df.reset_index(inplace=True)
         df = pd.concat([df, ft_df], axis=1)
 
-        logger.info("generating txt file")
-        for kw in tqdm(df.keyword.unique()):
-            rows = df[df.keyword == kw]
-            for i in rows.itertuples():
-                new_row = (
-                    str(int(i.ranking))
-                    + " qid:"
-                    + str(i.qid)
-                    + " 1:"
-                    + str(i.title)
-                    + " 2:"
-                    + str(i.title_phrase)
-                    + " 3:"
-                    + str(i.kw)
-                    + " 4:"
-                    + str(i.textlength)
-                    + " 5:"
-                    + str(i.paragraph)
-                    + " 6:"
-                    + str(i.popscore)
-                    + " 7:"
-                    + str(i.paragraph_phr)
-                    + " # "
-                    + kw
-                    + " "
-                    + str(i.document)
-                    + "\n"
-                )
-                with open(os.path.join(LTR_DATA_PATH, "xgboost.txt"), "a") as f:
-                    f.writelines(new_row)
+        logger.info("generating csv file")
+        df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
         return df
 
     def construct_query(self, doc, kw):
