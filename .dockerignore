@@ -2,7 +2,6 @@
 ../.git
 ../out
 .git/
-gamechangerml/data/
 src/DrQA/data/
 experimental/
 gamechangerml/models/*.gz
