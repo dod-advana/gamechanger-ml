@@ -18,7 +18,7 @@ model_path_dict = get_model_paths()
 random.seed(42)
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-VALIDATION_DIR = os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
+VALIDATION_DIR = get_most_recent_dir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
 SIM_MODEL = SimilarityConfig.BASE_MODEL
 training_dir= os.path.join(DATA_PATH, "training", "sent_transformer")
 tts_ratio=TrainingConfig.DATA_ARGS["train_test_split_ratio"]
@@ -26,11 +26,11 @@ gold_standard_path = os.path.join(
     "gamechangerml/data/user_data", ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"]
     )
 
-try:
-    GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
-    API_URL = f"http://{GC_ML_HOST}:5000"
-except:
-    logger.warning("****    Could not connect to ML API")
+#try:
+#    GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
+#    API_URL = f"http://{GC_ML_HOST}:5000"
+#except:
+#    logger.warning("****    Could not connect to ML API")
 
 def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, sim, n_matching: int) -> List[Dict[str,str]]:
     """Retrieves the best paragraphs for expected doc using similarity model
@@ -236,7 +236,7 @@ def make_training_data(
     n_matching: int,
     level: str, 
     update_eval_data: bool, 
-    retriever,
+    retriever=None,
     sim_model_name: str=SIM_MODEL,
     transformers_dir: Union[str,os.PathLike]=LOCAL_TRANSFORMERS_DIR,
     gold_standard_path: Union[str,os.PathLike]=gold_standard_path,
@@ -257,20 +257,27 @@ def make_training_data(
     Returns:
         [Tuple[Dict[str,str]]]: training data and training metadata dictionaries
     """
-    ## Updating eval data if true
-    if update_eval_data:
-        logger.info("****    Updating the evaluation data")
-        make_tiered_eval_data()
-
     ## read in sent_index data
-    logger.info(f"****   Loading in data from {index_path}")
-    data = pd.read_csv(os.path.join(index_path, 'data.csv'))
-    data['doc_id'] = data['paragraph_id'].apply(lambda x: x.split('.pdf')[0])
+    logger.info(f"****   Loading in sent index data from {index_path}")
+    try:
+        data = pd.read_csv(os.path.join(index_path, 'data.csv'))
+        data['doc_id'] = data['paragraph_id'].apply(lambda x: x.split('.pdf')[0])
+    except Exception as e:
+        logger.info(f"Could not load in data from {index_path}")
+        logger.warning(e)
     
     ## open json files
     directory = os.path.join(VALIDATION_DIR, level)
-    f = open_json('intelligent_search_data.json', directory)
-    intel = json.loads(f)
+    if not os.path.exists(directory) or update_eval_data:
+        logger.info("****    Updating the evaluation data")
+        make_tiered_eval_data()
+    logger.info(f"****    Loading in intelligent search data from {str(directory)}")
+    try:
+        f = open_json('intelligent_search_data.json', directory)
+        intel = json.loads(f)
+    except Exception as e:
+        logger.info("Could not load intelligent search data")
+        logger.warning(e)
 
     ## add gold standard samples
     logger.info("****   Adding gold standard examples")
@@ -282,16 +289,14 @@ def make_training_data(
     logger.info("Loading sim model")
     sim = SimilarityRanker(sim_model_name, transformers_dir)
 
-    logger.info("Loading retriever")
     if not retriever:
-        logger.info("Making SentenceSearcher")
+        logger.info("Did not init SentenceSearcher, loading now")
         retriever = SentenceSearcher(
             sim_model_name=sim_model_name, 
             index_path=index_path, 
             transformer_path=transformers_dir,
             )
-    else:
-        logger.info("Using existing loaded SentenceSearcher")
+        
     ## get paragraphs
     correct_found, correct_notfound = collect_results(
         data=data,

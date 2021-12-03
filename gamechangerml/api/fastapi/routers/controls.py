@@ -352,6 +352,10 @@ async def train_model(model_dict: dict, response: Response):
             except:
                 corpus_dir = CORPUS_DIR
             try:
+                retriever = MODELS.__sentence_searcher
+            except:
+                retriever = None
+            try:
                 meta_steps = model_dict["meta_steps"]
             except:
                 meta_steps = ["pop_docs", "combined_ents", "rank_features", "update_sent_data"]

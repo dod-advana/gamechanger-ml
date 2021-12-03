@@ -52,8 +52,7 @@ LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 FEATURES_DATA_PATH = "gamechangerml/data/features"
 USER_DATA_PATH = "gamechangerml/data/user_data"
 PROD_DATA_FILE = "gamechangerml/data/features/generated_files/prod_test_data.csv"
-#SENT_INDEX = model_path_dict["sentence"]
-SENT_INDEX = "gamechangerml/models/sent_index_20210715"
+SENT_INDEX = model_path_dict["sentence"]
 
 try:
     import mlflow
@@ -101,16 +100,17 @@ class Pipeline:
     
     def create_metadata(
         self,
-        corpus_dir: t.Union[str,os.PathLike],
-        meta_steps: t.List[str],
+        meta_steps,
+        corpus_dir:str='gamechangerml/corpus',
+        index_path:str='gamechangerml/models/sent_index_20210715',
         days: int=80,
-        prod_data_file: t.Union[str,os.PathLike]=PROD_DATA_FILE,
-        index_path: t.Union[str,os.PathLike]=SENT_INDEX,
+        prod_data_file=PROD_DATA_FILE,
         n_returns: int=15,
         n_matching: int=3,
         level: str='silver',
         update_eval_data: bool=False,
-        retriever=None
+        retriever=None,
+        upload=True
     ) -> None:
         """
         create_metadata: combines datasets to create readable sets for ingest
