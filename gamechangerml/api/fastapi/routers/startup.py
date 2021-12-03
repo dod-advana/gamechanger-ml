@@ -15,7 +15,7 @@ async def load_models():
     MODELS.initQEJBook()
     MODELS.initSentenceEncoder()
     MODELS.initSentenceSearcher()
-    MODELS.initWordSim()
+    #MODELS.initWordSim()
     MODELS.initTopics()
 
 

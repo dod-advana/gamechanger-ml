@@ -140,6 +140,12 @@ def test_trainModel_eval_nli():
     resp = requests.post(API_URL + "/trainModel", json=model_dict)
     assert resp.ok == True
 
+def test_TrainModel_meta():
+    model_dict = {
+        "build_type": "meta",
+    }
+    resp = requests.post(API_URL + "/trainModel", json=model_dict)
+    assert resp.ok == True
 ## Search Tests
 
 def test_transformerSearch():

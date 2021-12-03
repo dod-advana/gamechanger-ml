@@ -45,13 +45,21 @@ def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, sim, n_matc
     """
     pars = []
     ids = []
+    ranked = []
     for i in data[data["doc_id"]==doc_id].index[:20]:
         ids.append(data.loc[i, 'paragraph_id'])
         short = ' '.join(data.loc[i, 'text'].split(' ')[:150])
         pars.append(short)
 
-    logger.info(f"Re-ranking {str(len(ids))} paragraphs retrieved for {doc_id}")
-    ranked = sim.re_rank(query=query, texts=pars, ids=ids)
+    try:
+        if len(ids) > 1:
+            logger.info(f"Re-ranking {str(len(ids))} paragraphs retrieved for {doc_id}")
+            ranked = sim.re_rank(query=query, texts=pars, ids=ids)
+        elif len(ids) == 1:
+            ranked = [{"score": 'na', "id": ids[0], "text": pars[0]}]
+    except Exception as e:
+        logger.info(f"****   Could not re-rank the paragraphs for {query}")
+        logger.warning(e)
 
     return ranked[:n_matching]
 
@@ -78,7 +86,6 @@ def get_negative_paragraphs(
 
     results = []
     try:
-        
         doc_texts, doc_ids, doc_scores = retriever.retrieve_topn(query, n_returns)
         results = []
         for par_id in doc_ids:
@@ -256,16 +263,7 @@ def make_training_data(
         training_dir [Union[str,os.PathLike]]: directory for saving training data
     Returns:
         [Tuple[Dict[str,str]]]: training data and training metadata dictionaries
-    """
-    ## read in sent_index data
-    logger.info(f"****   Loading in sent index data from {index_path}")
-    try:
-        data = pd.read_csv(os.path.join(index_path, 'data.csv'))
-        data['doc_id'] = data['paragraph_id'].apply(lambda x: x.split('.pdf')[0])
-    except Exception as e:
-        logger.info(f"Could not load in data from {index_path}")
-        logger.warning(e)
-    
+    """    
     ## open json files
     directory = os.path.join(VALIDATION_DIR, level)
     if not os.path.exists(directory) or update_eval_data:
@@ -296,6 +294,14 @@ def make_training_data(
             index_path=index_path, 
             transformer_path=transformers_dir,
             )
+    ## read in sent_index data
+    logger.info("****   Loading in sent index data from retriever")
+    try:
+        data = retriever.data
+        data['doc_id'] = data['paragraph_id'].apply(lambda x: x.split('.pdf')[0])
+    except Exception as e:
+        logger.info("Could not load in data from retriever")
+        logger.warning(e)
         
     ## get paragraphs
     correct_found, correct_notfound = collect_results(

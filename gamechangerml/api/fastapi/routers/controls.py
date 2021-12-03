@@ -352,16 +352,19 @@ async def train_model(model_dict: dict, response: Response):
             except:
                 corpus_dir = CORPUS_DIR
             try:
-                retriever = MODELS.__sentence_searcher
+                retriever = MODELS.sentence_searcher
+                logger.info("Using pre-loaded SentenceSearcher")
             except:
                 retriever = None
+                logger.info("Setting SentenceSearcher to None")
             try:
                 meta_steps = model_dict["meta_steps"]
             except:
                 meta_steps = ["pop_docs", "combined_ents", "rank_features", "update_sent_data"]
             args = {
                 "meta_steps": meta_steps,
-                "corpus_dir": corpus_dir
+                "corpus_dir": corpus_dir,
+                "retriever": retriever
             }
             pipeline.run(
                 build_type=model_dict["build_type"], 
