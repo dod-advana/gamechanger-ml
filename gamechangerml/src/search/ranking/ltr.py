@@ -80,7 +80,9 @@ class LTR:
         """
         try:
             df = pd.read_csv(path)
-            fts = df[df.columns[4:]]
+            fts = df[df.columns[5:]]
+            fts.index = df.qid
+
             label = df["ranking"]
             self.data = xgb.DMatrix(fts, label)
             return self.data
@@ -331,12 +333,12 @@ class LTR:
             vals,
             columns=[
                 "title",
-                "title_phrase",
-                "kw",
+                "title-phrase",
+                "keyw_5",
                 "textlength",
                 "paragraph",
                 "popscore",
-                "paragraph_phr",
+                "paragraph-phrase",
             ],
         )
         df.reset_index(inplace=True)
