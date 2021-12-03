@@ -65,6 +65,7 @@ class LTR:
         returns:
             mappings file
         """
+        mappings = None
         try:
             mappings = pd.read_csv(path)
         except Exception as e:
