@@ -19,7 +19,12 @@ services:
       dockerfile: gamechangerml/api/fastapi/gpu.mlapp.Dockerfile
     deploy:
       resources:
+        limits:
+          cpus: '0.50'
+          memory: 4G
         reservations:
+          cpus: '0.25'
+          memory: 20M
           devices:
           - capabilities: [gpu]
     ports:

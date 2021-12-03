@@ -1,21 +1,12 @@
-import spacy
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
-from gamechangerml.src.featurization.rank_features import search_data as meta
-from gamechangerml.src.featurization.rank_features import rank
-from gamechangerml import REPO_PATH
-import datetime
 import pandas as pd
 from tqdm import tqdm
-import argparse
 import logging
 import os
 from elasticsearch import Elasticsearch, helpers
-import pickle
 import xgboost as xgb
-import matplotlib
-import math
 import requests
 import json
 from sklearn.preprocessing import LabelEncoder
