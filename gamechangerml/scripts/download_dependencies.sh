@@ -38,5 +38,5 @@ done
 
 echo "Uncompressing all tar files in data"
 for f in ./gamechangerml/data/*.tar.gz; do
-  tar kxvfz "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C ./gamechangerml/data/;
+  tar kxvfz "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C ./gamechangerml/data/ --skip-old-files;
 done
