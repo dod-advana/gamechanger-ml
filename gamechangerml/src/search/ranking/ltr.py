@@ -66,10 +66,10 @@ class LTR:
             mappings file
         """
         try:
-            self.mappings = pd.read_csv(path)
+            mappings = pd.read_csv(path)
         except Exception as e:
             logger.error("Could not read in mappings to make judgement list")
-        return self.mappings
+        return mappings
 
     def train(self, write=True):
         """train - train a xgboost model with parameters
