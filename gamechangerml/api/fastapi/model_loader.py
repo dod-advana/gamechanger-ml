@@ -13,7 +13,6 @@ from gamechangerml.src.search.sent_transformer.model import (
     SentenceEncoder,
 )
 from gamechangerml.src.search.embed_reader import sparse
-from gamechangerml.src.search.ranking import ltr
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.src.featurization.word_sim import WordSim
 from gamechangerml.src.featurization.topic_modeling import Topics
@@ -28,16 +27,14 @@ from gamechangerml.src.featurization.topic_modeling import Topics
 class ModelLoader:
     # private model variables
     def __init__(self):
-        self.ltr_model = ltr.LTR()
-
-    __qa_model = None
-    __sentence_searcher = None
-    __sentence_encoder = None
-    __query_expander = None
-    __query_expander_jbook = None
-    __word_sim = None
-    __sparse_reader = None
-    __topic_model = None
+        __qa_model = None
+        __sentence_searcher = None
+        __sentence_encoder = None
+        __query_expander = None
+        __query_expander_jbook = None
+        __word_sim = None
+        __sparse_reader = None
+        __topic_model = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -120,16 +117,17 @@ class ModelLoader:
         Returns:
         """
         try:
-            logger.info("Starting QA pipeline")
-            ModelLoader.__qa_model = QAReader(
-                transformer_path=LOCAL_TRANSFORMERS_DIR.value,
-                use_gpu=True,
-                model_name=QAConfig.BASE_MODEL,
-                **QAConfig.MODEL_ARGS,
-            )
-            # set cache variable defined in settings.py
-            latest_qa_model.value = ModelLoader.__qa_model.READER_PATH
-            logger.info("Finished loading QA Reader")
+            if MODEL_LOAD_FLAG:
+                logger.info("Starting QA pipeline")
+                ModelLoader.__qa_model = QAReader(
+                    transformer_path=LOCAL_TRANSFORMERS_DIR.value,
+                    use_gpu=True,
+                    model_name=QAConfig.BASE_MODEL,
+                    **QAConfig.MODEL_ARGS,
+                )
+                # set cache variable defined in settings.py
+                latest_qa_model.value = ModelLoader.__qa_model.READER_PATH
+                logger.info("Finished loading QA Reader")
         except OSError:
             logger.error(f"Could not load Question Answer Model")
 
@@ -141,10 +139,11 @@ class ModelLoader:
         """
         logger.info(f"Loading Pretrained Vector from {qexp_model_path}")
         try:
-            ModelLoader.__query_expander = qe.QE(
-                qexp_model_path, **QexpConfig.MODEL_ARGS["init"]
-            )
-            logger.info("** Loaded Query Expansion Model")
+            if MODEL_LOAD_FLAG:
+                ModelLoader.__query_expander = qe.QE(
+                    qexp_model_path, **QexpConfig.MODEL_ARGS["init"]
+                )
+                logger.info("** Loaded Query Expansion Model")
         except Exception as e:
             logger.warning("** Could not load QE model")
             logger.warning(e)
@@ -157,10 +156,11 @@ class ModelLoader:
         """
         logger.info(f"Loading Pretrained Vector from {qexp_jbook_model_path}")
         try:
-            ModelLoader.__query_expander_jbook = qe.QE(
-                qexp_jbook_model_path, **QexpConfig.MODEL_ARGS["init"]
-            )
-            logger.info("** Loaded JBOOK Query Expansion Model")
+            if MODEL_LOAD_FLAG:
+                ModelLoader.__query_expander_jbook = qe.QE(
+                    qexp_jbook_model_path, **QexpConfig.MODEL_ARGS["init"]
+                )
+                logger.info("** Loaded JBOOK Query Expansion Model")
         except Exception as e:
             logger.warning("** Could not load JBOOK QE model")
             logger.warning(e)
@@ -173,8 +173,9 @@ class ModelLoader:
         """
         logger.info(f"Loading Query Expansion Model from {model_path}")
         try:
-            ModelLoader.__word_sim = WordSim(model_path)
-            logger.info("** Loaded Word Sim Model")
+            if MODEL_LOAD_FLAG:
+                ModelLoader.__word_sim = WordSim(model_path)
+                logger.info("** Loaded Word Sim Model")
         except Exception as e:
             logger.warning("** Could not load Word Sim model")
             logger.warning(e)
@@ -188,20 +189,22 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
+        logger.info(
+            f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
-            ModelLoader.__sentence_searcher = SentenceSearcher(
-                sim_model_name=SimilarityConfig.BASE_MODEL,
-                index_path=index_path,
-                transformer_path=transformer_path,
-            )
+            if MODEL_LOAD_FLAG:
+                ModelLoader.__sentence_searcher = SentenceSearcher(
+                    sim_model_name=SimilarityConfig.BASE_MODEL,
+                    index_path=index_path,
+                    transformer_path=transformer_path,
+                )
 
-            sim_model = ModelLoader.__sentence_searcher.similarity
-            # set cache variable defined in settings.py
-            latest_intel_model_sim.value = sim_model.sim_model
-            logger.info(
-                f"** Loaded Similarity Model from {sim_model.sim_model} and sent index from {index_path}"
-            )
+                sim_model = ModelLoader.__sentence_searcher.similarity
+                # set cache variable defined in settings.py
+                latest_intel_model_sim.value = sim_model.sim_model
+                logger.info(
+                    f"** Loaded Similarity Model from {sim_model.sim_model} and sent index from {index_path}"
+                )
 
         except Exception as e:
             logger.warning("** Could not load Similarity model")
@@ -216,15 +219,16 @@ class ModelLoader:
         """
         logger.info(f"Loading encoder model")
         try:
-            ModelLoader.__sentence_encoder = SentenceEncoder(
-                encoder_model_name=EmbedderConfig.BASE_MODEL,
-                transformer_path=transformer_path,
-                **EmbedderConfig.MODEL_ARGS,
-            )
-            encoder_model = ModelLoader.__sentence_encoder.encoder_model
-            # set cache variable defined in settings.py
-            latest_intel_model_encoder.value = encoder_model
-            logger.info(f"** Loaded Encoder Model from {encoder_model}")
+            if MODEL_LOAD_FLAG:
+                ModelLoader.__sentence_encoder = SentenceEncoder(
+                    encoder_model_name=EmbedderConfig.BASE_MODEL,
+                    transformer_path=transformer_path,
+                    **EmbedderConfig.MODEL_ARGS,
+                )
+                encoder_model = ModelLoader.__sentence_encoder.encoder_model
+                # set cache variable defined in settings.py
+                latest_intel_model_encoder.value = encoder_model
+                logger.info(f"** Loaded Encoder Model from {encoder_model}")
 
         except Exception as e:
             logger.warning("** Could not load Encoder model")
@@ -233,8 +237,10 @@ class ModelLoader:
     @staticmethod
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
-            ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
-            logger.info(f"Sparse Reader: {model_name} loaded")
+            if MODEL_LOAD_FLAG:
+                ModelLoader.__sparse_reader = sparse.SparseReader(
+                    model_name=model_name)
+                logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
             logger.warning(e)
@@ -246,13 +252,13 @@ class ModelLoader:
         Returns:
         """
         try:
-            logger.info("Starting Topic pipeline")
-            logger.info(TopicsConfig.DATA_ARGS)
-            ModelLoader.__topic_model = Topics(
-                TopicsConfig.DATA_ARGS["LOCAL_MODEL_DIR"]
-            )
-            logger.info("Finished loading Topic Model")
+            if MODEL_LOAD_FLAG:
+                logger.info("Starting Topic pipeline")
+                logger.info(TopicsConfig.DATA_ARGS)
+                ModelLoader.__topic_model = Topics(
+                    TopicsConfig.DATA_ARGS["LOCAL_MODEL_DIR"]
+                )
+                logger.info("Finished loading Topic Model")
         except Exception as e:
             logger.warning("** Could not load Topic model")
             logger.warning(e)
-

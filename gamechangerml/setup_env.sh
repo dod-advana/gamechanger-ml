@@ -47,6 +47,7 @@ function setup_dev() {
     export MLFLOW_HOST="${MLFLOW_HOST:-localhost}"
     export MLFLOW_TRACKING_URI="http://${MLFLOW_HOST}:5050/"
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-false}"
+    export MODEL_LOAD="${MODEL_LOAD:-True}"
     export ES_HOST="${ES_HOST:-https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com}"
 }
 

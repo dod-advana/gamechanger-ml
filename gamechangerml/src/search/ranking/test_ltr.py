@@ -45,7 +45,6 @@ def test_construct_query():
 
 def test_process_ltr_log():
     log = [
-        [],
         [
             {
                 "_index": "gamechanger_20211014",
@@ -136,16 +135,19 @@ def test_process_ltr_log():
         ],
     ]
     log = ltr.process_ltr_log(log)
+    print(log)
     expected = [
-        np.array([0.0, 0.0, 0.0, 0.0]),
         [2.0, 0, 21.0, 6.8133063],
         [0, 0, 123.0, 4.470147],
         [2.0, 0, 57.0, 7.5755434],
         [0, 0, 146.0, 2.7437596],
     ]
+
     assert np.array_equal(expected, log)
 
 
 def test_normalize():
     norm = ltr.normalize(np.array([1, 3, 4, 5]))
-    assert np.array_equal(norm, np.array([0, 2, 3, 4]))
+    assert np.array_equal(
+        norm.tolist(), [0.0, 2.7304247779439415, 3.4454124645871445, 4.0]
+    )
