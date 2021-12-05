@@ -182,9 +182,7 @@ def collect_results(
     sim, 
     retriever, 
     n_returns: int,
-    relations: Dict[str, str], 
-    queries: Dict[str, str], 
-    collection: Dict[str, str], 
+    intel: Dict[str,Dict[str, str]],
     label: int,
     n_matching: int
     ) -> Tuple[Dict[str, str]]:
@@ -202,8 +200,12 @@ def collect_results(
     Returns:
         [Tuple[Dict[str, str]]]: one dictionary of found search pairs, one dictionary of notfound search pairs
     """
+    relations=intel['correct'], 
+    queries=intel['queries'], 
+    collection=intel['collection']
     found = {}
     not_found = {}
+    logger.info("****    Looking up samples")
     for i in relations.keys():
         query = queries[i]
         logger.info(f"\n-----------Searching for {query}")
@@ -211,7 +213,6 @@ def collect_results(
             doc = collection[k]
             logger.info(f" - expected doc: {doc}")
             uid = str(i) + '_' + str(k) # backup UID, overwritten if there are results
-
             try:
                 matching = get_best_paragraphs(data, query, doc, sim, n_matching)
                 for match in matching:
@@ -219,12 +220,6 @@ def collect_results(
                     text = ' '.join(match['text'].split(' ')[:400]) # truncate to 400 tokens
                     found[uid] = {"query": query, "doc": doc, "paragraph": text, "label": label}
                     logger.info(f" - MATCH: {found[uid]}")
-            except Exception as e:
-                logger.info("Could not get positive matches")
-                logger.info(e)
-                not_found[uid] = {"query": query, "doc": doc, "label": label}
-            
-            try:
                 not_matching = get_negative_paragraphs(data, query, k, retriever, n_returns, label)
                 for match in not_matching:
                     uid =  str(i) + '_' + str(match['doc'])
@@ -232,8 +227,9 @@ def collect_results(
                     found[uid] = {"query": query, "doc": doc, "paragraph": text, "label": 0}
                     logger.info(f" - UNMATCH: {found[uid]}")
             except Exception as e:
-                logger.info("Could not get negative samples")
+                logger.info("Could not get matches")
                 logger.info(e)
+                not_found[uid] = {"query": query, "doc": doc, "label": label}
                 
     return found, not_found
 
@@ -302,30 +298,14 @@ def make_training_data(
     except Exception as e:
         logger.info("Could not load in data from retriever")
         logger.warning(e)
-        
+
     ## get paragraphs
     correct_found, correct_notfound = collect_results(
-        data=data,
-        sim=sim,
-        retriever=retriever,
-        n_returns=n_returns,
-        n_matching=n_matching,
-        relations=intel['correct'], 
-        queries=intel['queries'], 
-        collection=intel['collection'], 
-        label=1,
+        data=data, sim=sim, retriever=retriever, n_returns=n_returns, n_matching=n_matching, intel=intel, label=1
         )
     logger.info(f"---Number of correct query/result pairs that were not found: {str(len(correct_notfound))}")
     incorrect_found, incorrect_notfound = collect_results(
-            data=data,
-            sim=sim,
-            retriever=retriever,
-            n_returns=n_returns,
-            relations=intel['incorrect'], 
-            queries=intel['queries'], 
-            collection=intel['collection'], 
-            label=-1,
-            limit=3
+        data=data, sim=sim, retriever=retriever, n_returns=n_returns, n_matching=n_matching, intel=intel, label=-1
     )
     logger.info(f"---Number of incorrect query/result pairs that were not found: {str(len(incorrect_notfound))}")
 
