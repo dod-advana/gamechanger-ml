@@ -235,6 +235,7 @@ def collect_results(
             except Exception as e:
                 logger.info("Could not get negative matches")
                 logger.info(e)
+                not_found[uid] = {"query": query, "doc": doc, "label": label}
                 
     return found, not_found
 
