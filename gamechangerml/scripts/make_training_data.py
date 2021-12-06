@@ -71,7 +71,7 @@ def check_no_match(expected_id: str, par_id: str) -> bool:
         return True
 
 def get_negative_paragraphs(
-    data: pd.DataFrame, query: str, doc_id: str, retriever, n_returns: int, label: int) -> List[Dict[str,str]]:
+    data: pd.DataFrame, query: str, doc_id: str, retriever, n_returns: int) -> List[Dict[str,str]]:
     """Looks up negative (not matching) paragraphs for each query
     Args:
         data [pd.DataFrame]: data df with processed text at paragraph_id level for sent_index
@@ -177,21 +177,19 @@ def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, s
 
     return train, test
 
-def collect_results(
+def collect_matches(
     data: pd.DataFrame, 
     sim, 
-    retriever, 
-    n_returns: int,
-    intel: Dict[str,Dict[str, str]],
+    relations: Dict[str, str],
+    queries: Dict[str, str],
+    collection: Dict[str, str],
     label: int,
     n_matching: int
     ) -> Tuple[Dict[str, str]]:
-    """Gets positive/negative and neutral (not matching) paragraphs for each query/docid pair
+    """Gets matching paragraphs for each query/docid pair
     Args:
         data [pd.DataFrame]: data df with processed text at paragraph_id level for sent_index
         sim: SimilarityRanker class
-        retriever: SentenceSearcher class
-        n_returns [int]: number of non-matching paragraphs to retrieve for each query
         relations [Dict[str, str]]: dictionary of query:doc matches from intelligent search data
         queries [Dict[str, str]]: dictionary of query ids : query text from intelligent search data
         collection [Dict[str, str]]: dictionary of match ids : match text (doc ids) from intelligent search data
@@ -200,12 +198,9 @@ def collect_results(
     Returns:
         [Tuple[Dict[str, str]]]: one dictionary of found search pairs, one dictionary of notfound search pairs
     """
-    relations=intel['correct'], 
-    queries=intel['queries'], 
-    collection=intel['collection']
     found = {}
     not_found = {}
-    logger.info("****    Looking up samples")
+    logger.info("****    Looking up matches")
     for i in relations.keys():
         query = queries[i]
         logger.info(f"\n-----------Searching for {query}")
@@ -224,18 +219,50 @@ def collect_results(
                 logger.info("Could not get positive matches")
                 logger.info(e)
                 not_found[uid] = {"query": query, "doc": doc, "label": label}
+                
+    return found, not_found
 
+def collect_negative_samples(
+    data: pd.DataFrame, 
+    retriever, 
+    n_returns: int,
+    relations: Dict[str, str],
+    queries: Dict[str, str],
+    collection: Dict[str, str],
+    ) -> Tuple[Dict[str, str]]:
+    """Gets negative samples each query/docid pair
+    Args:
+        data [pd.DataFrame]: data df with processed text at paragraph_id level for sent_index
+        retriever: SentenceSearcher class
+        n_returns [int]: number of non-matching paragraphs to retrieve for each query
+        relations [Dict[str, str]]: dictionary of query:doc matches from intelligent search data
+        queries [Dict[str, str]]: dictionary of query ids : query text from intelligent search data
+        collection [Dict[str, str]]: dictionary of match ids : match text (doc ids) from intelligent search data
+        label [int]: label to assign paragraphs (1=correct, 0=neutral, -1=confirmed nonmatch)
+    Returns:
+        [Tuple[Dict[str, str]]]: one dictionary of found search pairs, one dictionary of notfound search pairs
+    """
+    found = {}
+    not_found = {}
+    logger.info("****    Looking up negative samples")
+    for i in relations.keys():
+        query = queries[i]
+        logger.info(f"\n-----------Searching for {query}")
+        for k in relations[i]:
+            doc = collection[k]
+            logger.info(f" - expected doc: {doc}")
+            uid = str(i) + '_' + str(k) + '_neg' # backup UID, overwritten if there are results
             try:
-                not_matching = get_negative_paragraphs(data, query, k, retriever, n_returns, label)
+                not_matching = get_negative_paragraphs(data, query, k, retriever, n_returns)
                 for match in not_matching:
                     uid =  str(i) + '_' + str(match['doc'])
                     text = ' '.join(match['paragraph'].split(' ')[:400]) # truncate to 400 tokens
                     found[uid] = {"query": query, "doc": doc, "paragraph": text, "label": 0}
                     logger.info(f" - UNMATCH: {found[uid]}")
             except Exception as e:
-                logger.info("Could not get negative matches")
+                logger.info("Could not get negative samples")
                 logger.info(e)
-                not_found[uid] = {"query": query, "doc": doc, "label": label}
+                not_found[uid] = {"query": query, "doc": doc, "label": 0}
                 
     return found, not_found
 
@@ -305,18 +332,37 @@ def make_training_data(
         logger.info("Could not load in data from retriever")
         logger.warning(e)
 
-    ## get paragraphs
-    correct_found, correct_notfound = collect_results(
-        data=data, sim=sim, retriever=retriever, n_returns=n_returns, n_matching=n_matching, intel=intel, label=1
-        )
-    logger.info(f"---Number of correct query/result pairs that were not found: {str(len(correct_notfound))}")
-    incorrect_found, incorrect_notfound = collect_results(
-        data=data, sim=sim, retriever=retriever, n_returns=n_returns, n_matching=n_matching, intel=intel, label=-1
-    )
-    logger.info(f"---Number of incorrect query/result pairs that were not found: {str(len(incorrect_notfound))}")
+    ## get matching paragraphs
+    try:
+        correct_found, correct_notfound = collect_matches(
+        data=data, sim=sim, n_matching=n_matching, queries=intel['queries'], collection=intel['collection'],
+        relations=intel['correct'], label=1)
+        logger.info(f"---Number of correct query/result pairs that were not found: {str(len(correct_notfound))}")
+    except Exception as e:
+        logger.warning(e)
+        logger.warning("\nCould not retrieve positive matches\n")
+    try:
+        incorrect_found, incorrect_notfound = collect_matches(
+        data=data, sim=sim, n_matching=n_matching, queries=intel['queries'], collection=intel['collection'],
+        relations=intel['incorrect'], label=-1)
+        logger.info(f"---Number of incorrect query/result pairs that were not found: {str(len(incorrect_notfound))}")
+    except Exception as e:
+        logger.warning(e)
+        logger.warning("\nCould not retrieve negative matches\n")
+
+    ## get negative samples
+    try:
+        all_relations = {**intel['correct'], **intel['incorrect']}
+        neutral_found, neutral_notfound = collect_negative_samples(
+        data=data, retriever=retriever, n_returns=n_returns, queries=intel['queries'], collection=intel['collection'],
+        relations=all_relations)
+        logger.info(f"---Number of negative sample pairs that were not found: {str(len(neutral_notfound))}")
+    except Exception as e:
+        logger.warning(e)
+        logger.warning("\nCould not retrieve negative samples\n")
 
     ## save a json of the query-doc pairs that did not retrieve an ES paragraph for training data
-    notfound = {**correct_notfound, **incorrect_notfound}
+    notfound = {**correct_notfound, **incorrect_notfound, **neutral_notfound}
     logger.info(f"---Number of total query/result pairs that were not found: {str(len(notfound))}")
     notfound_path = os.path.join(save_dir, 'not_found_search_pairs.json')
     with open(notfound_path, "w") as outfile:
@@ -325,8 +371,9 @@ def make_training_data(
     ## train/test split (separate on correct/incorrect for balance)
     correct_train, correct_test = train_test_split(correct_found, tts_ratio)
     incorrect_train, incorrect_test = train_test_split(incorrect_found, tts_ratio)
-    train = {**correct_train, **incorrect_train}
-    test = {**correct_test, **incorrect_test}
+    neutral_train, neutral_test = train_test_split(neutral_found, tts_ratio)
+    train = {**correct_train, **incorrect_train, **neutral_train}
+    test = {**correct_test, **incorrect_test, **neutral_test}
 
     ## check labels
     pos = len([i for i in train if train[i]['label'] == 1])
