@@ -416,4 +416,6 @@ def make_training_data(
 
 if __name__ == '__main__':
 
-    make_training_data(training_dir=training_dir, tts_ratio=tts_ratio, gold_standard_path=gold_standard_path)
+    make_training_data(
+        index_path="gamechangerml/models/sent_index_20210715", n_returns=20, n_matching=3, level="silver", 
+        update_eval_data=False)

@@ -165,8 +165,8 @@ class Pipeline:
             make_combined_entities(self.topics, self.orgs, self.combined_ents_path)
         if "rank_features" in meta_steps:
             make_corpus_meta(corpus_dir, days, prod_data_file)
-        if "update_sent_data" in meta_steps:
-            make_training_data(index_path, n_returns, n_matching, level, update_eval_data, retriever)
+        #if "update_sent_data" in meta_steps:
+        #    make_training_data(index_path, n_returns, n_matching, level, update_eval_data, retriever)
 
     def finetune_sent(
         self,
