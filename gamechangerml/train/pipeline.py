@@ -82,6 +82,7 @@ FEATURES_DATA_PATH = "gamechangerml/data/features"
 USER_DATA_PATH = "gamechangerml/data/user_data"
 PROD_DATA_FILE = "gamechangerml/data/features/generated_files/prod_test_data.csv"
 SENT_INDEX = model_path_dict["sentence"]
+S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
 try:
     import mlflow
@@ -139,7 +140,8 @@ class Pipeline:
         level: str='silver',
         update_eval_data: bool=False,
         retriever=None,
-        upload=True
+        upload:bool=True,
+        version:str="v1"
     ) -> None:
         """
         create_metadata: combines datasets to create readable sets for ingest
@@ -158,22 +160,28 @@ class Pipeline:
             None (saves files for each step)
         """
         logger.info(f"Meta steps: {str(meta_steps)}")
-
         if "pop_docs" in meta_steps:
             make_pop_docs(self.search_history, self.pop_docs_path)
         if "combined_ents" in meta_steps:
             make_combined_entities(self.topics, self.orgs, self.combined_ents_path)
         if "rank_features" in meta_steps:
-            make_corpus_meta(corpus_dir, days, prod_data_file)
-        #if "update_sent_data" in meta_steps:
-        #    make_training_data(index_path, n_returns, n_matching, level, update_eval_data, retriever)
+            make_corpus_meta(corpus_dir, days, prod_data_file, upload)
+        if "update_sent_data" in meta_steps:
+            make_training_data(index_path, n_returns, n_matching, level, update_eval_data, retriever)
+        if upload:
+            s3_path = os.path.join(S3_DATA_PATH, f"{version}")
+            logger.info(f"****    Saving new data files to S3: {s3_path}")
+            dst_path = "gamechangerml/data" + ".tar.gz"
+            utils.create_tgz_from_dir(src_dir="gamechangerml/data", dst_archive=dst_path)
+            utils.upload_data(s3_path, dst_path)
 
     def finetune_sent(
         self,
         batch_size: int=32,
         epochs: int=3,
         warmup_steps: int=100,
-        testing_only: bool=False
+        testing_only: bool=False,
+        version: str="v5"
     ) -> t.Dict[str,str]:
         """finetune_sent: finetunes the sentence transformer - saves new model, 
            a csv file of old/new cos sim scores, and a metadata file.
@@ -188,7 +196,8 @@ class Pipeline:
         model_load_path = os.path.join(
             LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
         )
-        model_save_path = model_load_path + "_" + str(date.today())
+        model_id = datetime.now().strftime("%Y%m%d")
+        model_save_path = model_load_path + "_" + model_id
         logger.info(
             f"Setting {str(model_save_path)} as save path for new model")
         data_path = get_most_recent_dir(
@@ -204,14 +213,17 @@ class Pipeline:
         )
         logger.info("Loaded finetuner class...")
         logger.info(f"Testing only is set to: {testing_only}")
-        return finetuner.retrain(data_path, testing_only)
+       
+        return finetuner.retrain(data_path, testing_only, version)
 
     def evaluate(
         self,
         model_name: str,
         sample_limit: int,
         validation_data: str="latest",
-        eval_type: str="original"
+        eval_type: str="original",
+        upload: bool=True,
+        version:str="v1"
     ) -> t.Dict[str,str]:
         """Evaluates models/sent index
         Args:
@@ -252,6 +264,13 @@ class Pipeline:
         except Exception as e:
             logger.warning(f"Could not evaluate {model_name}")
             logger.warning(e)
+
+        if upload:
+            s3_path = os.path.join(S3_DATA_PATH, f"{version}")
+            logger.info(f"****    Saving new data files to S3: {s3_path}")
+            dst_path = "gamechangerml/data" + ".tar.gz"
+            utils.create_tgz_from_dir(src_dir="gamechangerml/data", dst_archive=dst_path)
+            utils.upload_data(s3_path, dst_path)
 
         return results
 

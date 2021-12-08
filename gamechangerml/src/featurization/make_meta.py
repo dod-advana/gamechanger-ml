@@ -7,6 +7,7 @@ from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.featurization.rank_features.generate_ft import generate_ft_doc
 
 logger = logging.getLogger()
+S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
 try:
     import wikipedia
