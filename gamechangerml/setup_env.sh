@@ -59,7 +59,7 @@ function setup_dev() {
     export ES_PORT="${ES_PORT:-443}"
     export ES_USER="${ES_USER:-}"
     export ES_PASSWORD="${ES_PASSWORD:-}"
-    export ES_ENABLE_SSL="${ES_ENABLE_SSL:-false}"
+    export ES_ENABLE_SSL="${ES_ENABLE_SSL:-true}"
     export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-false}"
 }
 
@@ -77,7 +77,7 @@ function setup_devlocal() {
   export ES_PORT="${ES_PORT:-443}"
   export ES_USER="${ES_USER:-}"
   export ES_PASSWORD="${ES_PASSWORD:-}"
-  export ES_ENABLE_SSL="${ES_ENABLE_SSL:-false}"
+  export ES_ENABLE_SSL="${ES_ENABLE_SSL:-true}"
   export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-false}"
 
   export DEV_ENV="DEVLOCAL"
