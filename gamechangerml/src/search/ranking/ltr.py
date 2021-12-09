@@ -1,21 +1,117 @@
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
+from gamechangerml.src.search.ranking import search_data as meta
+from gamechangerml.src.search.ranking import rank
+from gamechangerml import REPO_PATH
 import pandas as pd
 from tqdm import tqdm
 import logging
 import os
-from elasticsearch import Elasticsearch, helpers
+from elasticsearch import Elasticsearch
 import xgboost as xgb
 import requests
 import json
 from sklearn.preprocessing import LabelEncoder
 from gamechangerml import MODEL_PATH, DATA_PATH
+import typing as t
+import base64
+from urllib.parse import urljoin
 
-ES_HOST = os.environ.get("ES_HOST", default="localhost")
-ES_INDEX = os.environ.get("ES_INDEX", default="gamechanger")
 
-client = Elasticsearch([ES_HOST], timeout=60)
+ES_INDEX = os.environ.get("ES_INDEX", "gamechanger")
+class ESUtils:
+    def __init__(self,
+        host: str = os.environ.get("ES_HOST", "localhost"),
+        port: str = os.environ.get("ES_PORT", 9200),
+        user: str = os.environ.get("ES_USER", ""),
+        password: str = os.environ.get("ES_PASSWORD", ""),
+        enable_ssl: bool = os.environ.get("ES_ENABLE_SSL", "False").lower() == "true",
+        enable_auth: bool = os.environ.get("ES_ENABLE_AUTH", "False").lower() == "true"):
+
+        self.host = host
+        self.port = port
+        self.user = user
+        self.password = password
+        self.enable_ssl = enable_ssl
+        self.enable_auth = enable_auth
+        
+        self.auth_token = base64.b64encode(f"{self.user}:{self.password}".encode()).decode()
+
+    @property
+    def client(self) -> Elasticsearch:
+        if hasattr(self, '_es_args'):
+            return Elasticsearch(**self._es_args)
+
+        host_args = dict(
+            hosts=[{
+                'host': self.host,
+                'port': self.port,
+                'http_compress': True,
+                'timeout': 60
+            }]
+        )
+
+        auth_args = dict(
+            http_auth=(
+                self.user,
+                self.password
+            )
+        ) if self.enable_auth else {}
+
+        ssl_args = dict(
+            use_ssl=self.enable_ssl
+        )
+
+        es_args = dict(
+            **host_args,
+            **auth_args,
+            **ssl_args,
+        )
+
+        self._es_args: t.Dict[str, t.Any] = es_args
+        return Elasticsearch(**self._es_args)
+
+    @property
+    def auth_headers(self) -> t.Dict[str, str]:
+        return {
+            "Authorization": f"Basic {self.auth_token}"
+        }
+
+    @property
+    def content_headers(self) -> t.Dict[str, str]:
+        return {
+            "Content-Type": "application/json"
+        }
+    
+    @property
+    def default_headers(self) -> t.Dict[str, str]:
+        return dict(
+            **self.auth_headers,
+            **self.content_headers
+        )
+
+    @property
+    def root_url(self) -> str:
+        return "http" + "s" if self.enable_ssl else "" + f"://{self.host}:{self.port}/"
+
+    def request(self, method: str, endpoint: str, **request_opts) -> requests.Response:
+        url = urljoin(self.root_url, endpoint.lstrip("/"))
+        return requests.request(method=method, url=url, headers=self.default_headers, **request_opts)
+
+    def post(self, endpoint: str, **request_opts) -> requests.Response:
+        return self.request(method='POST', endpoint=endpoint, **request_opts)
+
+    def put(self, endpoint: str, **request_opts) -> requests.Response:
+        return self.request(method='PUT', endpoint=endpoint, **request_opts)
+
+    def get(self, endpoint: str, **request_opts) -> requests.Response:
+        return self.request(method='GET', endpoint=endpoint, **request_opts)
+
+    def delete(self, endpoint: str, **request_opts) -> requests.Response:
+        return self.request(method='DELETE', endpoint=endpoint, **request_opts)
+
+
 logger = logging.getLogger("gamechanger")
 
 GC_USER_DATA = os.path.join(DATA_PATH, "user_data/search_history/SearchPdfMapping.csv")
@@ -23,7 +119,6 @@ LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
 LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
 os.makedirs(LTR_MODEL_PATH, exist_ok=True)
 os.makedirs(LTR_DATA_PATH, exist_ok=True)
-
 
 class LTR:
     def __init__(
@@ -53,6 +148,7 @@ class LTR:
             "rmse",
             "error",
         ]
+        self.esu = ESUtils()
 
     def write_model(self, model):
         """write model: writes model to file
@@ -125,15 +221,14 @@ class LTR:
         returns:
             r: results
         """
-        headers = {"Content-Type": "application/json"}
         query = {
             "model": {
                 "name": model_name,
                 "model": {"type": "model/xgboost+json", "definition": model},
             }
         }
-        endpoint = ES_HOST + "/_ltr/_featureset/doc_features/_createmodel"
-        r = requests.post(endpoint, data=json.dumps(query), headers=headers)
+        endpoint = "/_ltr/_featureset/doc_features/_createmodel"
+        r = self.esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def search(self, terms, rescore=True):
@@ -215,7 +310,7 @@ class LTR:
                     }
                 }
             }
-        r = client.search(index="gamechanger", body=dict(query))
+        r = self.esu.client.search(index=ES_INDEX, body=dict(query))
         return r
 
     def generate_judgement(self, mappings):
@@ -283,7 +378,7 @@ class LTR:
                 query_list.append(json.dumps({"index": ES_INDEX}))
                 query_list.append(json.dumps(q))
         query = "\n".join(query_list)
-        res = client.msearch(body=query)
+        res = self.esu.client.msearch(body=query)
         ltr_log = [x["hits"]["hits"] for x in res["responses"]]
         return ltr_log
 
@@ -494,19 +589,18 @@ class LTR:
                 ],
             }
         }
-        headers = {"Content-Type": "application/json"}
-        endpoint = ES_HOST + "/_ltr/_featureset/doc_features"
-        r = requests.post(endpoint, data=json.dumps(query), headers=headers)
+        endpoint = "/_ltr/_featureset/doc_features"
+        r = self.esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def post_init_ltr(self):
-        endpoint = ES_HOST + "/_ltr"
-        r = requests.put(endpoint)
+        endpoint = "/_ltr"
+        r = self.esu.put(endpoint)
         return r.content
 
     def delete_ltr(self, model_name="ltr_model"):
-        endpoint = ES_HOST + f"/_ltr/_model/{model_name}"
-        r = requests.delete(endpoint)
+        endpoint = f"/_ltr/_model/{model_name}"
+        r = self.esu.delete(endpoint)
         return r.content
 
     def normalize(self, arr, start=0, end=4):

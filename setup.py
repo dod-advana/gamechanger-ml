@@ -63,11 +63,10 @@ setuptools.setup(
     ],
     python_requires=">=3.8.0",
     install_requires=[
-        p
-        for p in parse_requirements(REQUIREMENTS_PATH)
-        if p.split(r"\s*[@=]\s*")[0].lower() not in EXCLUDE_PACKAGES
-    ]
-    + SUBSTITUTE_PACKAGES,
+        p for p in parse_requirements(REQUIREMENTS_PATH)
+        if re.split(r'\s*[@=]\s*', p)[0].lower()
+        not in EXCLUDE_PACKAGES
+    ] + SUBSTITUTE_PACKAGES,
     include_package_data=True,
     extras_require={"dev": parse_requirements(DEV_REQUIREMENTS_PATH)},
 )
