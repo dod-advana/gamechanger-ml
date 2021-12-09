@@ -171,9 +171,11 @@ class Pipeline:
         if upload:
             s3_path = os.path.join(S3_DATA_PATH, f"{version}")
             logger.info(f"****    Saving new data files to S3: {s3_path}")
-            dst_path = "gamechangerml/data" + ".tar.gz"
+            model_name = datetime.now().strftime("%Y%m%d")
+            model_prefix = "data"
+            dst_path = "gamechangerml/data" + model_name + ".tar.gz"
             utils.create_tgz_from_dir(src_dir="gamechangerml/data", dst_archive=dst_path)
-            utils.upload_data(s3_path, dst_path)
+            utils.upload(s3_path, dst_path, model_prefix, model_name)
 
     def finetune_sent(
         self,
@@ -268,9 +270,11 @@ class Pipeline:
         if upload:
             s3_path = os.path.join(S3_DATA_PATH, f"{version}")
             logger.info(f"****    Saving new data files to S3: {s3_path}")
-            dst_path = "gamechangerml/data" + ".tar.gz"
+            model_name = datetime.now().strftime("%Y%m%d")
+            model_prefix = "data"
+            dst_path = "gamechangerml/data" + model_name + ".tar.gz"
             utils.create_tgz_from_dir(src_dir="gamechangerml/data", dst_archive=dst_path)
-            utils.upload_data(s3_path, dst_path)
+            utils.upload(s3_path, dst_path, model_prefix, model_name)
 
         return results
 

@@ -523,24 +523,13 @@ def create_tgz_from_dir(
     with tarfile.open(dst_archive, "w:gz") as tar:
         tar.add(src_dir, arcname=os.path.basename(src_dir))
 
-def upload(s3_path, local_path, model_prefix, model_name, version):
+def upload(s3_path, local_path, model_prefix, model_name):
     # Loop through each file and upload to S3
     logger.info(f"Uploading files to {s3_path}")
     logger.info(f"\tUploading: {local_path}")
     # local_path = os.path.join(dst_path)
     s3_path = os.path.join(
         s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
-    upload_file(local_path, s3_path)
-    logger.info(f"Successfully uploaded files to {s3_path}")
-    logger.info("-------------- Finished Uploading --------------")
-
-def upload_data(s3_path, local_path):
-    # Loop through each file and upload to S3
-    logger.info(f"Uploading files to {s3_path}")
-    logger.info(f"\tUploading: {local_path}")
-    # local_path = os.path.join(dst_path)
-    s3_path = os.path.join(
-        s3_path, "data.tar.gz")
     upload_file(local_path, s3_path)
     logger.info(f"Successfully uploaded files to {s3_path}")
     logger.info("-------------- Finished Uploading --------------")
