@@ -404,6 +404,8 @@ def make_training_data(
         "split_ratio": tts_ratio
     }
 
+    logger.info(f"**** Generated training data: \n {metadata}")
+
     ## save data and metadata files
     data_path = os.path.join(save_dir, 'training_data.json')
     metadata_path = os.path.join(save_dir, 'training_metadata.json')
@@ -413,8 +415,6 @@ def make_training_data(
 
     with open(metadata_path, "w") as outfile:
         json.dump(metadata, outfile)
-
-    return data, metadata
 
 if __name__ == '__main__':
 
