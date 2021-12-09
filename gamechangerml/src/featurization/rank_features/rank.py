@@ -9,7 +9,7 @@ import logging
 import en_core_web_lg
 from collections import Counter
 from gamechangerml.src.text_handling.process import preprocess
-from gamechangerml import REPO_PATH
+from gamechangerml import DATA_PATH
 
 logger = logging.getLogger("gamechanger")
 
@@ -142,8 +142,8 @@ class Rank:
 
     def _getCorpusData(self, directory):
         common_orgs = pd.read_csv(os.path.join(
-            REPO_PATH,
-            "gamechangerml/data/features/generated_files/common_orgs.csv"
+            DATA_PATH,
+            "features", "generated_files", "common_orgs.csv"
         ))
         entList = common_orgs.org.to_list()
         corpus_df = pd.DataFrame()

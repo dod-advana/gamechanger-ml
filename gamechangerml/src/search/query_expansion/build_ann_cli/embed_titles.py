@@ -10,7 +10,7 @@ from gamechangerml.src.utilities.np_utils import is_zero_vector
 from gamechangerml.src.utilities.numpy_encoder import NumpyEncoder
 from gamechangerml.src.utilities.text_generators import gen_json_mult_keys
 from gamechangerml.src.utilities.timer import Timer
-from gamechangerml import REPO_PATH
+from gamechangerml import DATA_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -68,12 +68,12 @@ if __name__ == "__main__":
         "/Users/chrisskiscim/projects/gamechanger/repo/corpus_json_20201101"
     )
     ww = os.path.join(
-        REPO_PATH,
-        "gamechangerml/data/features/word-freq-corpus-20201101.txt"
+        DATA_PATH,
+        "features", "word-freq-corpus-20201101.txt"
     )
     word_wt_file = os.path.join(
-        REPO_PATH,
-        "gamechangerml/data/features/word-freq-corpus-20201101.txt"
+        DATA_PATH,
+        "features", "word-freq-corpus-20201101.txt"
     )
     word_weights = get_word_weight(word_wt_file)
     embed_titles(c_dir, nlp, word_weights)

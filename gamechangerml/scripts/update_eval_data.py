@@ -7,8 +7,9 @@ from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.src.utilities.test_utils import (
     make_timestamp_directory, check_directory, CustomJSONizer
     )
+from gamechangerml import DATA_PATH
 
-SUB_DIR = "gamechangerml/data/validation/domain/sent_transformer"
+SUB_DIR = os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
 
 def make_tiered_eval_data():
     

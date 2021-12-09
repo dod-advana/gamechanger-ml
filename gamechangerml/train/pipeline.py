@@ -1,5 +1,5 @@
 import argparse
-from gamechangerml import MODEL_PATH
+from gamechangerml import MODEL_PATH, DATA_PATH, REPO_PATH
 from gamechangerml.src.search.ranking.ltr import LTR
 import logging
 import os
@@ -78,9 +78,10 @@ modelname = datetime.now().strftime("%Y%m%d")
 model_path_dict = get_model_paths()
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-FEATURES_DATA_PATH = "gamechangerml/data/features"
-USER_DATA_PATH = "gamechangerml/data/user_data"
-PROD_DATA_FILE = "gamechangerml/data/features/generated_files/prod_test_data.csv"
+FEATURES_DATA_PATH = os.path.join(DATA_PATH, "features")
+USER_DATA_PATH = os.path.join(DATA_PATH, "user_data")
+PROD_DATA_FILE = os.path.join(DATA_PATH, "features", "generated_files", "prod_test_data.csv")
+CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 SENT_INDEX = model_path_dict["sentence"]
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
@@ -97,7 +98,7 @@ class Pipeline:
         self.model_suffix = datetime.now().strftime("%Y%m%d")
         ## read in input data files
         try:
-            self.search_history = pd.read_csv(os.path.join(USER_DATA_PATH, "search_history/SearchPdfMapping.csv"))
+            self.search_history = pd.read_csv(os.path.join(USER_DATA_PATH, "search_history", "SearchPdfMapping.csv"))
             self.topics = pd.read_csv(os.path.join(FEATURES_DATA_PATH, "topics_wiki.csv"))
             self.orgs = pd.read_csv(os.path.join(FEATURES_DATA_PATH, "agencies.csv"))
         except Exception as e:
@@ -131,8 +132,8 @@ class Pipeline:
     def create_metadata(
         self,
         meta_steps,
-        corpus_dir:str='gamechangerml/corpus',
-        index_path:str='gamechangerml/models/sent_index_20210715',
+        corpus_dir:t.Union[str,t.Pathlike]=CORPUS_DIR,
+        index_path:t.Union[str,t.Pathlike]=os.path.join(MODEL_PATH, "sent_index_20210715"),
         days: int=80,
         prod_data_file=PROD_DATA_FILE,
         n_returns: int=15,
@@ -173,8 +174,8 @@ class Pipeline:
             logger.info(f"****    Saving new data files to S3: {s3_path}")
             model_name = datetime.now().strftime("%Y%m%d")
             model_prefix = "data"
-            dst_path = "gamechangerml/data" + model_name + ".tar.gz"
-            utils.create_tgz_from_dir(src_dir="gamechangerml/data", dst_archive=dst_path)
+            dst_path = DATA_PATH + model_name + ".tar.gz"
+            utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
             utils.upload(s3_path, dst_path, model_prefix, model_name)
 
     def finetune_sent(
@@ -203,7 +204,7 @@ class Pipeline:
         logger.info(
             f"Setting {str(model_save_path)} as save path for new model")
         data_path = get_most_recent_dir(
-            "gamechangerml/data/training/sent_transformer")
+            os.path.join*DATA_PATH, "training", "sent_transformer")
         logger.info(f"Loading in domain data to finetune from {data_path}")
         finetuner = STFinetuner(
             model_load_path=model_load_path,
@@ -272,8 +273,8 @@ class Pipeline:
             logger.info(f"****    Saving new data files to S3: {s3_path}")
             model_name = datetime.now().strftime("%Y%m%d")
             model_prefix = "data"
-            dst_path = "gamechangerml/data" + model_name + ".tar.gz"
-            utils.create_tgz_from_dir(src_dir="gamechangerml/data", dst_archive=dst_path)
+            dst_path = DATA_PATH + model_name + ".tar.gz"
+            utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
             utils.upload(s3_path, dst_path, model_prefix, model_name)
 
         return results
@@ -390,7 +391,7 @@ class Pipeline:
             use_gpu = False
 
         # Define model saving directories
-        model_dir = os.path.join("gamechangerml", "models")
+        model_dir = MODEL_PATH
         model_id = datetime.now().strftime("%Y%m%d")
         model_name = "sent_index_" + model_id
         local_sent_index_dir = os.path.join(model_dir, model_name)

@@ -114,7 +114,7 @@ class ESUtils:
 
 logger = logging.getLogger("gamechanger")
 
-GC_USER_DATA = os.path.join(DATA_PATH, "user_data/search_history/SearchPdfMapping.csv")
+GC_USER_DATA = os.path.join(DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv")
 LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
 LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
 os.makedirs(LTR_MODEL_PATH, exist_ok=True)

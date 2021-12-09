@@ -4,6 +4,7 @@ from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.logger import logger
 import argparse
 import os
+from gamechangerml import DATA_PATH, MODEL_PATH
 
 def eval_qa(model_name, sample_limit, eval_type="original"):
     if eval_type=="original":
@@ -16,12 +17,12 @@ def eval_qa(model_name, sample_limit, eval_type="original"):
         logger.info("No eval_type selected. Options: ['original', 'gamechanger'].")
 
 def eval_sent(model_name, validation_data, eval_type="domain"):
-    metadata = open_json('metadata.json', os.path.join('gamechangerml/models', model_name))
+    metadata = open_json('metadata.json', os.path.join(MODEL_PATH, model_name))
     encoder = metadata['encoder_model']
     logger.info(f"Evaluating {model_name} created with {encoder}")
     if eval_type == "domain":
         if validation_data != "latest":
-            data_path = os.path.join('gamechangerml/data/validation/domain/sent_transformer', validation_data)
+            data_path = os.path.join(DATA_PATH, "validation", "domain", "sent_transformer", validation_data)
         else:
             data_path = None
         results = {}
@@ -49,7 +50,7 @@ def eval_sim(model_name, sample_limit, eval_type="original"):
         logger.info("No eval_type selected. Options: ['original', 'domain'].")
 
 def eval_qe(model_name):
-    domainEval = QexpEvaluator(qe_model_dir=os.path.join('gamechangerml/models', model_name), **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
+    domainEval = QexpEvaluator(qe_model_dir=os.path.join(MODEL_PATH, model_name), **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
     results = domainEval.results
     logger.info(f"Evals: {str(results)}")
     return results
@@ -86,7 +87,7 @@ def _nli(limit):
 
 def _qexp(limit):
     logger.info("\nEvaluating Query Expansion with GC data...")
-    QEEval = QexpEvaluator(qe_model_dir = 'gamechangerml/models/qexp_20201217', **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
+    QEEval = QexpEvaluator(qe_model_dir=os.path.join(MODEL_PATH, "qexp_20201217"), **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'])
     logger.info(QEEval.results)
 
 FUNCTION_MAP = {

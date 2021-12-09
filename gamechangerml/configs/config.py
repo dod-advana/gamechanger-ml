@@ -1,13 +1,13 @@
 from datetime import datetime
 from os import environ
 import os
-from gamechangerml import REPO_PATH
+from gamechangerml import REPO_PATH, DATA_PATH, MODEL_PATH
 
 
 class DefaultConfig:
 
     DATA_DIR = os.path.join(REPO_PATH, "common/data/processed")
-    LOCAL_MODEL_DIR = os.path.join(REPO_PATH, "gamechangerml/models")
+    LOCAL_MODEL_DIR = os.path.join(REPO_PATH, MODEL_PATH)
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
 
 
@@ -88,7 +88,7 @@ class SimilarityConfig:
 class QexpConfig:
     MODEL_ARGS = {
         "init": {  # args for creating QE object
-            "qe_files_dir": "gamechangerml/src/search/query_expansion",
+            "qe_files_dir": os.path.join(REPO_PATH, "gamechangerml", "src", "search", "query_expansion"),
             "method": "emb",
         },
         "expansion": {  # configs for getting expanded terms
@@ -108,8 +108,8 @@ class QexpConfig:
 class ValidationConfig:
     DATA_ARGS = {
         # need to have validation data in here
-        "validation_dir": "gamechangerml/data/validation",
-        "evaluation_dir": "gamechangerml/data/evaluation",
+        "validation_dir": os.path.join(DATA_PATH, "validation"),
+        "evaluation_dir": os.path.join(DATA_PATH, "evaluation"),
         # location with smaller set of corpus JSONs
         "test_corpus_dir": "gamechangerml/test_corpus",
         "squad": {
@@ -128,8 +128,8 @@ class ValidationConfig:
         },
         "question_gc": {"queries": "domain/question_answer/QA_domain_data.json"},
         "retriever_gc": {"gold_standard": "gold_standard.csv"}, ##TODO
-        "matamo_dir": "gamechangerml/data/user_data/matamo_feedback",
-        "search_hist_dir": "gamechangerml/data/user_data/search_history",
+        "matamo_dir": os.path.join(DATA_PATH, "user_data", "matamo_feedback"),
+        "search_hist_dir": os.path.join(DATA_PATH, "user_data", "search_history"),
         "qe_gc": "domain/query_expansion/QE_domain.json",
     }
 
@@ -151,10 +151,10 @@ class ValidationConfig:
 
 class TrainingConfig:
     DATA_ARGS = {
-        "training_data_dir": "gamechangerml/data/training",
+        "training_data_dir": os.path.join(DATA_PATH, "training"),
         "train_test_split_ratio": 0.8,
     }
 
 
 class TopicsConfig:
-    DATA_ARGS = {"LOCAL_MODEL_DIR": os.path.join(REPO_PATH, "gamechangerml/models")}
+    DATA_ARGS = {"LOCAL_MODEL_DIR": os.path.join(REPO_PATH, MODEL_PATH)}

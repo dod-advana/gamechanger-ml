@@ -7,12 +7,15 @@ import sys
 import time
 
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
+from gamechangerml import DATA_PATH
+
 from .test_examples import TestSet
 
 logger = logging.getLogger()
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
 API_URL = f"http://{GC_ML_HOST}:5000"
 QA_TIMEOUT = 30
+
 
 
 def test_conn():
@@ -87,7 +90,7 @@ def test_changeModels():
 def test_trainModel_sentence():
     model_dict = {
         "build_type": "sentence",
-        "corpus": "gamechangerml/data/test_data", # should have 3 test docs
+        "corpus": os.path.join(DATA_PATH, "test_data"), # should have 3 test docs
         "encoder_model": "msmarco-distilbert-base-v2",
         "gpu": False,
         "upload": False,

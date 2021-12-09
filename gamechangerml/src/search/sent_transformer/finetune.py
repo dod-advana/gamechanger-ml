@@ -10,6 +10,7 @@ S3_DATA_PATH = "bronze/gamechanger/ml-data"
 from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename, cos_sim
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.api.utils.logger import logger
+from gamechangerml import DATA_PATH
 
 def fix_model_config(model_load_path):
     """Workaround for error with sentence_transformers==0.4.1 (vs. version 2.0.0 which our model was trained on)"""
@@ -152,8 +153,8 @@ class STFinetuner():
         if not testing_only:
             s3_path = os.path.join(S3_DATA_PATH, f"{version}")
             logger.info(f"****    Saving new data files to S3: {s3_path}")
-            dst_path = "gamechangerml/data" + ".tar.gz"
-            utils.create_tgz_from_dir(src_dir="gamechangerml/data", dst_archive=dst_path)
+            dst_path = DATA_PATH + ".tar.gz"
+            utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
             utils.upload_data(s3_path, dst_path)
 
         return ft_metadata
