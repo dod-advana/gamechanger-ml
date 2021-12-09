@@ -25,7 +25,13 @@ function setup_prod() {
     export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20211018.tar.gz}"
     
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-true}"
+
     export ES_HOST="${ES_HOST:-}"
+    export ES_PORT="${ES_PORT:-443}"
+    export ES_USER="${ES_USER:-}"
+    export ES_PASSWORD="${ES_PASSWORD:-}"
+    export ES_ENABLE_SSL="${ES_ENABLE_SSL:-true}"
+    export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-true}"
 
     export DEV_ENV="PROD"
 }
@@ -48,7 +54,13 @@ function setup_dev() {
     export MLFLOW_TRACKING_URI="http://${MLFLOW_HOST}:5050/"
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-false}"
     export MODEL_LOAD="${MODEL_LOAD:-True}"
-    export ES_HOST="${ES_HOST:-https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com}"
+
+    export ES_HOST="${ES_HOST:-vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com}"
+    export ES_PORT="${ES_PORT:-443}"
+    export ES_USER="${ES_USER:-}"
+    export ES_PASSWORD="${ES_PASSWORD:-}"
+    export ES_ENABLE_SSL="${ES_ENABLE_SSL:-false}"
+    export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-false}"
 }
 
 
@@ -61,7 +73,13 @@ function setup_devlocal() {
   export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v4/sent_index_20210422.tar.gz}"
   export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20211018.tar.gz}"
 
-  export ES_HOST="${ES_HOST:-https://vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com}"
+  export ES_HOST="${ES_HOST:-vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com}"
+  export ES_PORT="${ES_PORT:-443}"
+  export ES_USER="${ES_USER:-}"
+  export ES_PASSWORD="${ES_PASSWORD:-}"
+  export ES_ENABLE_SSL="${ES_ENABLE_SSL:-false}"
+  export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-false}"
+
   export DEV_ENV="DEVLOCAL"
 }
 
