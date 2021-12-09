@@ -93,9 +93,8 @@ def get_negative_paragraphs(
             par = data[data["paragraph_id"]==par_id].iloc[0]["text"]
             logger.info(f"PAR: {par}")
             par = ' '.join(par.split(' ')[:150])
-            if label == 1:
-                if check_no_match(doc_id, par_id):
-                    results.append({"query": query, "doc": par_id, "paragraph": par, "label": 0})
+            if check_no_match(doc_id, par_id):
+                results.append({"query": query, "doc": par_id, "paragraph": par, "label": 0})
         logger.info(results)
     except Exception as e:
         logger.info("Could not get negative paragraphs")
