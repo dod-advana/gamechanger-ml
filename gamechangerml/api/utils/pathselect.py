@@ -101,7 +101,7 @@ def get_model_paths():
     try:
         CLASSIFY_JBOOK_MODEL_PATH = os.path.join(
             Config.LOCAL_PACKAGED_MODELS_DIR,
-            "distilbert_classifier_20211112"
+            "distilbert_jbook_ai_classifier_20211112"
         )
         logger.info("Cannot get Classification model path")
     except Exception as e:
