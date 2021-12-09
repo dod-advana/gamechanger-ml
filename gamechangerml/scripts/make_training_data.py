@@ -374,21 +374,24 @@ def make_training_data(
     train = {**correct_train, **incorrect_train, **neutral_train}
     test = {**correct_test, **incorrect_test, **neutral_test}
 
-    ## check labels
-    pos = len([i for i in train if train[i]['label'] == 1])
-    logger.info(f"*** {str(pos)} positive samples in TRAIN")
-    neutral = len([i for i in train if train[i]['label'] == 0])
-    logger.info(f"*** {str(neutral)} neutral samples in TRAIN")
-    neg = len([i for i in train if train[i]['label'] == -1])
-    logger.info(f"*** {str(neg)} negative samples in TRAIN")
+    try:## check labels
+        pos = len([i for i in train if train[i]['label'] == 1])
+        logger.info(f"*** {str(pos)} positive samples in TRAIN")
+        neutral = len([i for i in train if train[i]['label'] == 0])
+        logger.info(f"*** {str(neutral)} neutral samples in TRAIN")
+        neg = len([i for i in train if train[i]['label'] == -1])
+        logger.info(f"*** {str(neg)} negative samples in TRAIN")
 
-     ## check labels
-    pos_test = len([i for i in train if test[i]['label'] == 1])
-    logger.info(f"*** {str(pos_test)} positive samples in TEST")
-    neutral_test = len([i for i in train if test[i]['label'] == 0])
-    logger.info(f"*** {str(neutral_test)} neutral samples in TEST")
-    neg_test = len([i for i in train if test[i]['label'] == -1])
-    logger.info(f"*** {str(neg_test)} negative samples in TEST")
+        ## check labels
+        pos_test = len([i for i in test if test[i]['label'] == 1])
+        logger.info(f"*** {str(pos_test)} positive samples in TEST")
+        neutral_test = len([i for i in test if test[i]['label'] == 0])
+        logger.info(f"*** {str(neutral_test)} neutral samples in TEST")
+        neg_test = len([i for i in test if test[i]['label'] == -1])
+        logger.info(f"*** {str(neg_test)} negative samples in TEST")
+    except Exception as e:
+        logger.warning("Could not check stats for train/test")
+        logger.warning(e)
 
     data = {"train": train, "test": test}
     metadata = {
