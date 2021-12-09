@@ -21,14 +21,18 @@ from urllib.parse import urljoin
 
 
 ES_INDEX = os.environ.get("ES_INDEX", "gamechanger")
+
+
 class ESUtils:
-    def __init__(self,
+    def __init__(
+        self,
         host: str = os.environ.get("ES_HOST", "localhost"),
-        port: str = os.environ.get("ES_PORT", 9200),
+        port: str = os.environ.get("ES_PORT", 443),
         user: str = os.environ.get("ES_USER", ""),
         password: str = os.environ.get("ES_PASSWORD", ""),
-        enable_ssl: bool = os.environ.get("ES_ENABLE_SSL", "False").lower() == "true",
-        enable_auth: bool = os.environ.get("ES_ENABLE_AUTH", "False").lower() == "true"):
+        enable_ssl: bool = os.environ.get("ES_ENABLE_SSL", "True").lower() == "true",
+        enable_auth: bool = os.environ.get("ES_ENABLE_AUTH", "False").lower() == "true",
+    ):
 
         self.host = host
         self.port = port
@@ -36,33 +40,29 @@ class ESUtils:
         self.password = password
         self.enable_ssl = enable_ssl
         self.enable_auth = enable_auth
-        
-        self.auth_token = base64.b64encode(f"{self.user}:{self.password}".encode()).decode()
+
+        self.auth_token = base64.b64encode(
+            f"{self.user}:{self.password}".encode()
+        ).decode()
 
     @property
     def client(self) -> Elasticsearch:
-        if hasattr(self, '_es_args'):
-            return Elasticsearch(**self._es_args)
-
         host_args = dict(
-            hosts=[{
-                'host': self.host,
-                'port': self.port,
-                'http_compress': True,
-                'timeout': 60
-            }]
+            hosts=[
+                {
+                    "host": self.host,
+                    "port": self.port,
+                    "http_compress": True,
+                    "timeout": 60,
+                }
+            ]
+        )
+        auth_args = (
+            dict(http_auth=(self.user, self.password)
+                 ) if self.enable_auth else {}
         )
 
-        auth_args = dict(
-            http_auth=(
-                self.user,
-                self.password
-            )
-        ) if self.enable_auth else {}
-
-        ssl_args = dict(
-            use_ssl=self.enable_ssl
-        )
+        ssl_args = dict(use_ssl=self.enable_ssl)
 
         es_args = dict(
             **host_args,
@@ -71,46 +71,47 @@ class ESUtils:
         )
 
         self._es_args: t.Dict[str, t.Any] = es_args
+        if hasattr(self, "_es_args"):
+            return Elasticsearch(**self._es_args)
         return Elasticsearch(**self._es_args)
 
     @property
     def auth_headers(self) -> t.Dict[str, str]:
-        return {
-            "Authorization": f"Basic {self.auth_token}"
-        }
+        return {"Authorization": f"Basic {self.auth_token}"}
 
     @property
     def content_headers(self) -> t.Dict[str, str]:
-        return {
-            "Content-Type": "application/json"
-        }
-    
+        return {"Content-Type": "application/json"}
+
     @property
     def default_headers(self) -> t.Dict[str, str]:
-        return dict(
-            **self.auth_headers,
-            **self.content_headers
-        )
+        if self.enable_auth:
+            return dict(**self.auth_headers, **self.content_headers)
+        else:
+            return dict(**self.content_headers)
 
     @property
     def root_url(self) -> str:
-        return "http" + "s" if self.enable_ssl else "" + f"://{self.host}:{self.port}/"
+        return "https://" if self.enable_ssl else "" + f"http://"
 
     def request(self, method: str, endpoint: str, **request_opts) -> requests.Response:
-        url = urljoin(self.root_url, endpoint.lstrip("/"))
-        return requests.request(method=method, url=url, headers=self.default_headers, **request_opts)
+        # url = urljoin(self.root_url, endpoint.lstrip("/"))
+        url = self.root_url + endpoint
+        return requests.request(
+            method=method, url=url, headers=self.default_headers, **request_opts
+        )
 
     def post(self, endpoint: str, **request_opts) -> requests.Response:
-        return self.request(method='POST', endpoint=endpoint, **request_opts)
+        return self.request(method="POST", endpoint=endpoint, **request_opts)
 
     def put(self, endpoint: str, **request_opts) -> requests.Response:
-        return self.request(method='PUT', endpoint=endpoint, **request_opts)
+        return self.request(method="PUT", endpoint=endpoint, **request_opts)
 
     def get(self, endpoint: str, **request_opts) -> requests.Response:
-        return self.request(method='GET', endpoint=endpoint, **request_opts)
+        return self.request(method="GET", endpoint=endpoint, **request_opts)
 
     def delete(self, endpoint: str, **request_opts) -> requests.Response:
-        return self.request(method='DELETE', endpoint=endpoint, **request_opts)
+        return self.request(method="DELETE", endpoint=endpoint, **request_opts)
 
 
 logger = logging.getLogger("gamechanger")
@@ -119,6 +120,7 @@ LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
 LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
 os.makedirs(LTR_MODEL_PATH, exist_ok=True)
 os.makedirs(LTR_DATA_PATH, exist_ok=True)
+
 
 class LTR:
     def __init__(
@@ -226,7 +228,7 @@ class LTR:
                 "model": {"type": "model/xgboost+json", "definition": model},
             }
         }
-        endpoint = "/_ltr/_featureset/doc_features/_createmodel"
+        endpoint = f"{self.esu.host}/_ltr/_featureset/doc_features/_createmodel"
         r = self.esu.post(endpoint, data=json.dumps(query))
         return r.content
 
@@ -588,17 +590,17 @@ class LTR:
                 ],
             }
         }
-        endpoint = "/_ltr/_featureset/doc_features"
+        endpoint = f"{self.esu.host}/_ltr/_featureset/doc_features"
         r = self.esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def post_init_ltr(self):
-        endpoint = "/_ltr"
+        endpoint = f"{self.esu.host}/_ltr"
         r = self.esu.put(endpoint)
         return r.content
 
     def delete_ltr(self, model_name="ltr_model"):
-        endpoint = f"/_ltr/_model/{model_name}"
+        endpoint = f"{self.esu.host}/_ltr/_model/{model_name}"
         r = self.esu.delete(endpoint)
         return r.content
 
