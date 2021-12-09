@@ -132,8 +132,8 @@ class Pipeline:
     def create_metadata(
         self,
         meta_steps,
-        corpus_dir:t.Union[str,t.Pathlike]=CORPUS_DIR,
-        index_path:t.Union[str,t.Pathlike]=os.path.join(MODEL_PATH, "sent_index_20210715"),
+        corpus_dir:t.Union[str,os.PathLike]=CORPUS_DIR,
+        index_path:t.Union[str,os.PathLike]=os.path.join(MODEL_PATH, "sent_index_20210715"),
         days: int=80,
         prod_data_file=PROD_DATA_FILE,
         n_returns: int=15,
