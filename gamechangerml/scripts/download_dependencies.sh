@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 echo "Be sure to set up environment variables for s3 by sourcing setup_env.sh if running this manually"
 
 function download_and_unpack_deps() {
 
-  local pkg_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../" >/dev/null 2>&1 && pwd )"
+  local pkg_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../" >/dev/null 2>&1 && pwd )"
   local models_dest_dir="$pkg_dir/models/"
   local data_dest_dir="$pkg_dir/data/"
 
@@ -34,15 +34,14 @@ function download_and_unpack_deps() {
   aws s3 cp "$S3_ML_DATA_PATH" "$data_dest_dir"
 
   echo "Uncompressing all tar files in models"
-  for f in ./gamechangerml/models/*.tar.gz; do
-    tar kxvfz "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C "$models_dest_dir";
-  done 
-
-  echo "Uncompressing all tar files in data"
-  for f in ./gamechangerml/data/*.tar.gz; do
-    tar kxvfz "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C "$data_dest_dir";
+  find "$models_dest_dir" -maxdepth 1 -type f -name "*.tar.gz" | while IFS=$'\n' read -r f; do
+    tar kxzvf "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C "$models_dest_dir"
   done
 
+  echo "Uncompressing all tar files in data"
+  find "$data_dest_dir" -maxdepth 1 -type f -name "*.tar.gz" | while IFS=$'\n' read -r f; do
+    tar kxzvf "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C "$data_dest_dir"
+  done
 }
 
 download_and_unpack_deps
