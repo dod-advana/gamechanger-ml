@@ -26,12 +26,6 @@ gold_standard_path = os.path.join(
     "gamechangerml/data/user_data", ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"]
     )
 
-#try:
-#    GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
-#    API_URL = f"http://{GC_ML_HOST}:5000"
-#except:
-#    logger.warning("****    Could not connect to ML API")
-
 def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, sim, n_matching: int) -> List[Dict[str,str]]:
     """Retrieves the best paragraphs for expected doc using similarity model
     Args:

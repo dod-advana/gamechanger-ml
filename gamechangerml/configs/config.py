@@ -127,7 +127,7 @@ class ValidationConfig:
             "metadata": "original/msmarco_1k/metadata.json",
         },
         "question_gc": {"queries": "domain/question_answer/QA_domain_data.json"},
-        "retriever_gc": {"gold_standard": "gold_standard.csv"}, ##TODO
+        "retriever_gc": {"gold_standard": "gold_standard.csv"},
         "matamo_dir": os.path.join(DATA_PATH, "user_data", "matamo_feedback"),
         "search_hist_dir": os.path.join(DATA_PATH, "user_data", "search_history"),
         "qe_gc": "domain/query_expansion/QE_domain.json",

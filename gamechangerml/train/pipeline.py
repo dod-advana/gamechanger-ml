@@ -204,7 +204,7 @@ class Pipeline:
         logger.info(
             f"Setting {str(model_save_path)} as save path for new model")
         data_path = get_most_recent_dir(
-            os.path.join*DATA_PATH, "training", "sent_transformer")
+            os.path.join(DATA_PATH, "training", "sent_transformer"))
         logger.info(f"Loading in domain data to finetune from {data_path}")
         finetuner = STFinetuner(
             model_load_path=model_load_path,

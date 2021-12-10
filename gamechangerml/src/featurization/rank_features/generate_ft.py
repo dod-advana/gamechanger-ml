@@ -3,7 +3,7 @@ import numpy as np
 import re
 from gamechangerml.src.featurization.rank_features import search_data as meta
 from gamechangerml.src.featurization.rank_features import rank
-from gamechangerml import REPO_PATH
+from gamechangerml import DATA_PATH
 import datetime
 import pandas as pd
 from tqdm import tqdm
@@ -26,7 +26,7 @@ logger = logging.getLogger("gamechanger")
 
 corpus_dir = "test/corpus_new"
 prod_data_file = os.path.join(
-    REPO_PATH, "gamechangerml/data/features/generated_files/prod_test_data.csv"
+    DATA_PATH, "features", "generated_files", "prod_test_data.csv"
 )
 
 
@@ -65,7 +65,7 @@ def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_
     """
     today = datetime.datetime.now()
     out_dir = os.path.join(
-        REPO_PATH, "gamechangerml/data/features/generated_files"
+        DATA_PATH, "features", "generated_files"
     )
     r = rank.Rank()
     day_delta = 80
@@ -128,8 +128,8 @@ if __name__ == "__main__":
         "-p",
         dest="prod_data",
         default=os.path.join(
-            REPO_PATH,
-            "gamechangerml/data/features/generated_files/prod_test_data.csv",
+            DATA_PATH,
+            "features", "generated_files", "prod_test_data.csv",
         ),
         help="production data historical search logs csv ",
     )
