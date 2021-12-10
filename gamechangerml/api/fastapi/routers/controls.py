@@ -238,7 +238,6 @@ async def reload_models(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
         model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
-
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -293,7 +292,6 @@ async def download_corpus(corpus_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
         model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
-
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -316,7 +314,6 @@ async def train_model(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
         model_dict: dict; {"encoder_model":"msmarco-distilbert-base-v2", "gpu":true, "upload":false,"version": "v5"}
-
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -330,12 +327,12 @@ async def train_model(model_dict: dict, response: Response):
                 corpus_dir = model_dict["corpus_dir"]
             except:
                 corpus_dir = CORPUS_DIR
-            #try:
-            #    retriever = MODELS.sentence_searcher
-            #    logger.info("Using pre-loaded SentenceSearcher")
-            #except:
-            #    retriever = None
-            #    logger.info("Setting SentenceSearcher to None")
+            try:
+                retriever = MODELS.sentence_searcher
+                logger.info("Using pre-loaded SentenceSearcher")
+            except:
+                retriever = None
+                logger.info("Setting SentenceSearcher to None")
             try:
                 meta_steps = model_dict["meta_steps"]
             except:
@@ -343,7 +340,7 @@ async def train_model(model_dict: dict, response: Response):
             args = {
                 "meta_steps": meta_steps,
                 "corpus_dir": corpus_dir,
-            #    "retriever": retriever
+                "retriever": retriever
             }
             pipeline.run(
                 build_type=model_dict["build_type"], 
