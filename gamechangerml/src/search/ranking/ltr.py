@@ -1,9 +1,6 @@
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
-from gamechangerml.src.search.ranking import search_data as meta
-from gamechangerml.src.search.ranking import rank
-from gamechangerml import REPO_PATH
 import pandas as pd
 from tqdm import tqdm
 import logging
