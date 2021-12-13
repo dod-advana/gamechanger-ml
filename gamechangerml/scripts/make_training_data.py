@@ -18,7 +18,6 @@ model_path_dict = get_model_paths()
 random.seed(42)
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-VALIDATION_DIR = get_most_recent_dir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
 SIM_MODEL = SimilarityConfig.BASE_MODEL
 training_dir= os.path.join(DATA_PATH, "training", "sent_transformer")
 tts_ratio=TrainingConfig.DATA_ARGS["train_test_split_ratio"]
@@ -287,10 +286,11 @@ def make_training_data(
         [Tuple[Dict[str,str]]]: training data and training metadata dictionaries
     """    
     ## open json files
-    directory = os.path.join(VALIDATION_DIR, level)
-    if not os.path.exists(directory) or update_eval_data:
+    if not os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")) or update_eval_data:
         logger.info("****    Updating the evaluation data")
         make_tiered_eval_data()
+    validation_dir = get_most_recent_dir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
+    directory = os.path.join(validation_dir, level)
     logger.info(f"****    Loading in intelligent search data from {str(directory)}")
     try:
         f = open_json('intelligent_search_data.json', directory)
