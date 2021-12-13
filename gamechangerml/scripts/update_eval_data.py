@@ -9,11 +9,15 @@ from gamechangerml.src.utilities.test_utils import (
     )
 from gamechangerml import DATA_PATH
 
-SUB_DIR = os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
-
-def make_tiered_eval_data():
     
-    save_dir = make_timestamp_directory(SUB_DIR)
+def make_tiered_eval_data():
+
+    if not os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")):
+        os.mkdir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
+    
+    sub_dir = os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
+    
+    save_dir = make_timestamp_directory(sub_dir)
 
     def save_data(
         level: str, 
