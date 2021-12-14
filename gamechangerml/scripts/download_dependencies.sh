@@ -5,7 +5,7 @@ function download_and_unpack_deps() {
 
   local pkg_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../" >/dev/null 2>&1 && pwd )"
   local models_dest_dir="$pkg_dir/models/"
-  local data_dest_dir="$pkg_dir/data/"
+  local data_dest_dir="$pkg_dir"
 
   mkdir -p "$models_dest_dir" "$data_dest_dir"
 
