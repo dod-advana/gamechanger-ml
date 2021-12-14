@@ -336,7 +336,7 @@ async def train_model(model_dict: dict, response: Response):
             try:
                 meta_steps = model_dict["meta_steps"]
             except:
-                meta_steps = ["pop_docs", "combined_ents", "rank_features"]
+                meta_steps = ["pop_docs", "combined_ents", "rank_features", "update_sent_data"]
             args = {
                 "meta_steps": meta_steps,
                 "corpus_dir": corpus_dir,
