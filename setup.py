@@ -10,14 +10,12 @@ REQUIREMENTS_PATH = Path(ROOT_PATH, "requirements.txt")
 DEV_REQUIREMENTS_PATH = Path(ROOT_PATH, "dev.requirements.txt")
 README_PATH = Path(ROOT_PATH, "README.md")
 
-EXCLUDE_PACKAGES = [
-    "faiss-gpu",
-    "psycopg2"
-] if sys.platform.lower() != 'linux' else []
+EXCLUDE_PACKAGES = ["faiss-gpu",
+                    "psycopg2"] if sys.platform.lower() != "linux" else []
 
 SUBSTITUTE_PACKAGES = [
-    "psycopg2-binary"
-] if sys.platform.lower() != 'linux' else []
+    "psycopg2-binary"] if sys.platform.lower() != "linux" else []
+
 
 def parse_requirements(requirements: Path) -> List[str]:
     with requirements.open(mode="r") as fd:
@@ -41,10 +39,12 @@ def parse_requirements(requirements: Path) -> List[str]:
 
     return final_rlist
 
+
 def parse_readme(readme: Path) -> str:
     with readme.open("r") as fh:
         long_description = fh.read()
     return long_description
+
 
 setuptools.setup(
     name="gamechangerml",

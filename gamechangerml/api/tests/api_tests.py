@@ -7,12 +7,15 @@ import sys
 import time
 
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
+from gamechangerml import DATA_PATH
+
 from .test_examples import TestSet
 
 logger = logging.getLogger()
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
 API_URL = f"http://{GC_ML_HOST}:5000"
 QA_TIMEOUT = 30
+
 
 
 def test_conn():
@@ -23,8 +26,16 @@ def test_conn():
 def test_expandTerms():
     test_data = {"termsList": ["artificial intelligence"]}
     resp = requests.post(API_URL + "/expandTerms", json=test_data)
-    verified = {"artificial intelligence": [
-        '"intelligence"', '"human intelligence"']}
+    verified = {
+        'qexp': {
+            'artificial': ['"turf"', '"ground"'],
+            'intelligence': ['"questioning"', '"capabilities"']
+            },
+        'wordsim': {
+            'artificial': ['artifical'], 
+            'intelligence': ['intellegence']
+            }
+        }
     assert resp.json() == verified
 
 
@@ -62,9 +73,11 @@ def test_remove_kw_4():
 
 
 def test_getTransformerList():
-    resp = requests.get(API_URL + "/getTransformerList")
+    resp = requests.get(API_URL + "/getModelsList")
     verified = TestSet.transformer_list_expect
-    assert resp.json() == verified
+    response = resp.json()
+    trans = set(list(response["transformers"].keys()))
+    assert trans == verified
     return verified
 
 
@@ -75,86 +88,14 @@ def getCurrentTrans():
 
 def test_changeModels():
 
-    test_transformer = "distilroberta-base"
-    model_dict = {"model_name": test_transformer}
-    resp = requests.post(API_URL + "/updateModel", json=model_dict)
-    time.sleep(10)
+    test_index = "sent_index_20210715"
+    model_dict = {"sentence": test_index}
+    resp = requests.post(API_URL + "/reloadModels", json=model_dict)
+    time.sleep(20)
     curr = getCurrentTrans()
-    assert curr["model_name"] == resp.json()["model_name"]
-
-## Train Model tests
-
-def test_trainModel_sentence():
-    model_dict = {
-        "build_type": "sentence",
-        "corpus": "gamechangerml/data/test_data", # should have 3 test docs
-        "encoder_model": "msmarco-distilbert-base-v2",
-        "gpu": False,
-        "upload": False,
-        "version": "TEST"
-    }
-    resp = requests.post(API_URL + "/trainModel", json=model_dict)
-    assert resp.ok == True
-
-def test_trainModel_sent_finetune():
-    model_dict = {
-        "build_type": "sent_finetune",
-        "batch_size": 32,
-        "epochs": 1,
-        "warmup_steps": 100,
-        "testing_only": True
-    }
-    resp = requests.post(API_URL + "/trainModel", json=model_dict)
-    assert resp.ok == True
-    
-def test_trainModel_eval_squad():
-    model_dict = {
-        "build_type": "eval",
-        "model_name": "bert-base-cased-squad2",
-        "eval_type": "original",
-        "sample_limit": 10,
-        "validation_data": "latest"
-    }
-    resp = requests.post(API_URL + "/trainModel", json=model_dict)
-    assert resp.ok == True
-
-def test_trainModel_eval_msmarco():
-    model_dict = {
-        "build_type": "eval",
-        "model_name": "msmarco-distilbert-base-v2",
-        "eval_type": "original",
-        "sample_limit": 10,
-        "validation_data": "latest"
-    }
-    resp = requests.post(API_URL + "/trainModel", json=model_dict)
-    assert resp.ok == True
-
-def test_trainModel_eval_nli():
-    model_dict = {
-        "build_type": "eval",
-        "model_name": "distilbart-mnli-12-3",
-        "eval_type": "original",
-        "sample_limit": 10,
-        "validation_data": "latest"
-    }
-    resp = requests.post(API_URL + "/trainModel", json=model_dict)
-    assert resp.ok == True
+    assert curr["sentence_index"] == "gamechangerml/models/sent_index_20210715"
 
 ## Search Tests
-
-def test_transformerSearch():
-    test_data = TestSet.transformer_test_data
-    verified = TestSet.transformer_search_expect
-
-    resp = requests.post(API_URL + "/transformerSearch", json=test_data)
-    assert resp.json() == verified
-
-def test_transformerSearch():
-    test_data = TestSet.qa_test_data
-    verified = TestSet.qa_expect
-
-    resp = requests.post(API_URL + "/questionAnswer", json=test_data)
-    assert resp.json() == verified
 
 def test_postSentSearch():
     test_data = TestSet.sentence_test_data
@@ -288,3 +229,68 @@ def test_qa_outside_scope():
     assert top_answer == expected # assert response is right
     #assert took < QA_TIMEOUT # assert time
     assert resp['answers'][0]['null_score_diff'] == min(scores) # assert is best scoring answer
+
+## Train Model tests
+
+def test_trainModel_sentence():
+    model_dict = {
+        "build_type": "sentence",
+        "corpus": os.path.join(DATA_PATH, "test_data"), # should have 3 test docs
+        "encoder_model": "msmarco-distilbert-base-v2",
+        "gpu": False,
+        "upload": False,
+        "version": "TEST"
+    }
+    resp = requests.post(API_URL + "/trainModel", json=model_dict)
+    assert resp.ok == True
+
+def test_trainModel_sent_finetune():
+    model_dict = {
+        "build_type": "sent_finetune",
+        "batch_size": 32,
+        "epochs": 1,
+        "warmup_steps": 100,
+        "testing_only": True
+    }
+    resp = requests.post(API_URL + "/trainModel", json=model_dict)
+    assert resp.ok == True
+    
+def test_trainModel_eval_squad():
+    model_dict = {
+        "build_type": "eval",
+        "model_name": "bert-base-cased-squad2",
+        "eval_type": "original",
+        "sample_limit": 10,
+        "validation_data": "latest"
+    }
+    resp = requests.post(API_URL + "/trainModel", json=model_dict)
+    assert resp.ok == True
+
+def test_trainModel_eval_msmarco():
+    model_dict = {
+        "build_type": "eval",
+        "model_name": "msmarco-distilbert-base-v2",
+        "eval_type": "original",
+        "sample_limit": 10,
+        "validation_data": "latest"
+    }
+    resp = requests.post(API_URL + "/trainModel", json=model_dict)
+    assert resp.ok == True
+
+def test_trainModel_eval_nli():
+    model_dict = {
+        "build_type": "eval",
+        "model_name": "distilbart-mnli-12-3",
+        "eval_type": "original",
+        "sample_limit": 10,
+        "validation_data": "latest"
+    }
+    resp = requests.post(API_URL + "/trainModel", json=model_dict)
+    assert resp.ok == True
+
+def test_TrainModel_meta():
+    model_dict = {
+        "build_type": "meta",
+    }
+    resp = requests.post(API_URL + "/trainModel", json=model_dict)
+    assert resp.ok == True

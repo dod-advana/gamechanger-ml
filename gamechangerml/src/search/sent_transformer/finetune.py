@@ -5,8 +5,12 @@ from datetime import date
 import os
 import json
 
+S3_DATA_PATH = "bronze/gamechanger/ml-data"
+
 from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename, cos_sim
+from gamechangerml.src.utilities import utils as utils
 from gamechangerml.api.utils.logger import logger
+from gamechangerml import DATA_PATH
 
 def fix_model_config(model_load_path):
     """Workaround for error with sentence_transformers==0.4.1 (vs. version 2.0.0 which our model was trained on)"""
@@ -71,7 +75,7 @@ class STFinetuner():
         self.epochs = epochs
         self.warmup_steps = warmup_steps
     
-    def retrain(self, data_dir, testing_only):
+    def retrain(self, data_dir, testing_only, version):
 
         data = open_json("training_data.json", data_dir)
         train = data["train"]
@@ -98,6 +102,18 @@ class STFinetuner():
         ## save model
         self.model.save(self.model_save_path)
         logger.info("Finetuned model saved to {}".format(str(self.model_save_path)))
+
+        # when not testing only, save to S3
+        if not testing_only:
+            dst_path = self.model_save_path + ".tar.gz"
+            utils.create_tgz_from_dir(src_dir=self.model_save_path, dst_archive=dst_path)
+            model_id = self.model_save_path.split('_')[1]
+            logger.info(f"Created tgz file and saved to {dst_path}")
+
+            S3_MODELS_PATH = "bronze/gamechanger/models"
+            s3_path = os.path.join(S3_MODELS_PATH, str(version))
+            utils.upload(s3_path, dst_path, "transformers", model_id, version)
+            logger.info(f"Saved model to S3: {s3_path}")
 
         ## get new cosine sim
         df["new_cos_sim"] = df["pair"].apply(lambda x: get_cos_sim(self.model, x))
@@ -132,5 +148,13 @@ class STFinetuner():
 
         logger.info("Metadata saved to {}".format(ft_metadata_path))
         logger.info(str(ft_metadata))
+
+        # when not testing only, save to S3
+        if not testing_only:
+            s3_path = os.path.join(S3_DATA_PATH, f"{version}")
+            logger.info(f"****    Saving new data files to S3: {s3_path}")
+            dst_path = DATA_PATH + ".tar.gz"
+            utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
+            utils.upload_data(s3_path, dst_path)
 
         return ft_metadata
