@@ -2,7 +2,7 @@ from fastapi import APIRouter, Response, status
 import subprocess
 import os
 import json
-from datetime import datetime, date
+from datetime import datetime
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
@@ -10,37 +10,18 @@ from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.routers.startup import *
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
-from gamechangerml.src.search.ranking.ltr import LTR
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.src.utilities.test_utils import (
     collect_evals,
-    open_json,
-    get_most_recent_dir,
-    collect_sent_evals_gc,
     handle_sent_evals,
-)
-
-from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
-from gamechangerml.src.model_testing.evaluation import (
-    SQuADQAEvaluator,
-    IndomainQAEvaluator,
-    IndomainRetrieverEvaluator,
-    MSMarcoRetrieverEvaluator,
-    NLIEvaluator,
-    QexpEvaluator,
-)
-from gamechangerml.configs.config import (
-    QAConfig,
-    EmbedderConfig,
-    SimilarityConfig,
-    QexpConfig,
 )
 
 router = APIRouter()
 MODELS = ModelLoader()
-ltr = MODELS.ltr_model
 ## Get Methods ##
+
+pipeline = Pipeline()
 
 
 @router.get("/")
@@ -142,15 +123,10 @@ async def initLTR(response: Response):
     number_files = 0
     resp = None
     try:
-
-        logger.info("Attempting to initialize LTR")
-        resp = ltr.post_init_ltr()
-        logger.info(resp)
-        logger.info("Attempting to post features to LTR")
-        resp = ltr.post_features()
-        logger.info(resp)
+        pipeline.init_ltr()
     except Exception as e:
         logger.warning("Could not init LTR")
+    return resp
 
 
 @router.get("/LTR/createModel", status_code=200)
@@ -165,23 +141,7 @@ async def create_LTR_model(response: Response):
         model = []
 
         def ltr_process():
-            logger.info("Attempting to create judgement list")
-            judgements = ltr.generate_judgement(ltr.mappings)
-            logger.info("Attempting to get features")
-
-            fts = ltr.generate_ft_txt_file(judgements)
-            logger.info("Attempting to read in data")
-            ltr.data = ltr.read_xg_data()
-            logger.info("Attempting to train LTR model")
-            bst, model = ltr.train()
-            logger.info("Created LTR model")
-            with open("gamechangerml/models/ltr/xgb-model.json") as f:
-                model = json.load(f)
-            logger.info("removing old LTR")
-            resp = ltr.delete_ltr("ltr_model")
-            logger.info(resp)
-            resp = ltr.post_model(model, model_name="ltr_model")
-            logger.info("Posted LTR model")
+            pipeline.create_ltr()
 
         ltr_thread = MlThread(ltr_process)
 
@@ -191,7 +151,7 @@ async def create_LTR_model(response: Response):
         logger.warning(e)
         logger.warning(f"There is an issue with LTR creation")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return resp
+    return response.status_code
 
 
 @router.get("/getFilesInCorpus", status_code=200)
@@ -278,7 +238,6 @@ async def reload_models(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
         model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
-
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -333,7 +292,6 @@ async def download_corpus(corpus_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
         model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
-
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -356,15 +314,42 @@ async def train_model(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
         model_dict: dict; {"encoder_model":"msmarco-distilbert-base-v2", "gpu":true, "upload":false,"version": "v5"}
-
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
     try:
         # Methods for all the different models we can train
+        def update_metadata(model_dict=model_dict):
+            logger.info("Attempting to update feature metadata")
+            pipeline = Pipeline()
+            model_dict["build_type"] = "meta"
+            try:
+                corpus_dir = model_dict["corpus_dir"]
+            except:
+                corpus_dir = CORPUS_DIR
+            try:
+                retriever = MODELS.sentence_searcher
+                logger.info("Using pre-loaded SentenceSearcher")
+            except:
+                retriever = None
+                logger.info("Setting SentenceSearcher to None")
+            try:
+                meta_steps = model_dict["meta_steps"]
+            except:
+                meta_steps = ["pop_docs", "combined_ents", "rank_features", "update_sent_data"]
+            args = {
+                "meta_steps": meta_steps,
+                "corpus_dir": corpus_dir,
+                "retriever": retriever
+            }
+            pipeline.run(
+                build_type=model_dict["build_type"], 
+                run_name=datetime.now().strftime("%Y%m%d"), 
+                params=args
+                )
+
         def finetune_sentence(model_dict=model_dict):
             logger.info("Attempting to finetune the sentence transformer")
-            pipeline = Pipeline()
             try:
                 testing_only = model_dict["testing_only"]
             except:
@@ -383,7 +368,6 @@ async def train_model(model_dict: dict, response: Response):
 
         def train_sentence(model_dict=model_dict):
             logger.info("Attempting to start sentence pipeline")
-            pipeline = Pipeline()
             try:
                 corpus_dir = model_dict["corpus_dir"]
             except:
@@ -407,7 +391,6 @@ async def train_model(model_dict: dict, response: Response):
 
         def train_qexp(model_dict=model_dict):
             logger.info("Attempting to start qexp pipeline")
-            pipeline = Pipeline()
             args = {
                 "model_id": model_dict["model_id"],
                 "validate": bool(model_dict["validate"]),
@@ -422,7 +405,6 @@ async def train_model(model_dict: dict, response: Response):
 
         def run_evals(model_dict=model_dict):
             logger.info("Attempting to run evaluation")
-            pipeline = Pipeline()
             args = {
                 "model_name": model_dict["model_name"],
                 "eval_type": model_dict["eval_type"],
@@ -441,6 +423,7 @@ async def train_model(model_dict: dict, response: Response):
             "qexp": train_qexp,
             "sent_finetune": finetune_sentence,
             "eval": run_evals,
+            "meta": update_metadata
         }
         # Set the training method to be loaded onto the thread
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:

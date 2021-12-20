@@ -11,15 +11,40 @@ class TestSet:
                        "extracted": ["six-foot rule", "three-foot rule"]}
     sentence_test_data = {"text": "naval command"}
     sentence_search_expect = [
-        {"score": 0.7741742730140686, "id": "OPNAVINST 1752.1C.pdf_1321",
-            "text": "comusnaveur comusnavaf commander u s naval forces europe u s naval forces africa"},
-        {"score": 0.31991302967071533, "id": "AAP 15.pdf_5768",
-         "text": "rncs regional naval control of shipping nasg contrôle naval régional de la navigation commerciale nasg"},
-        {"score": 0.2938539683818817, "id": "AAP 15.pdf_3147",
-            "text": "l lsm lutte sous la mer mc undersea warfare usw mc"},
-        {"score": 0.06577590107917786, "id": "OPNAVINST 3501.33F.pdf_698",
-            "text": "i l battle messing only l f f f nco provide ships service facilities"},
-        {"score": 0.01949344389140606, "id": "AAP 06.pdf_4340", "text": "bâtiment de défense aérienne air defence ship bâtiment assurant la responsabilité de la défense aérienne"}]
+        {
+            'id': 'OPNAVNOTE 5430.1032.pdf_36',
+            'score': 0.9873247742652893,
+            'text': 'naval forces central command comusnavcent commander u s naval '
+                    'forces southern command comnavso and commander u s naval forces '
+                    'europe commander u s naval forces africa comusnaveur comusnavaf'
+        },
+        {
+            'id': 'OPNAVINST 3111.17B.pdf_224',
+            'score': 0.9631027579307556,
+            'text': 'commander u s naval forces europe u s naval forces africa'
+        },
+        {
+            'id': 'OPNAVINST 3440.18.pdf_125',
+            'score': 0.9492706060409546,
+            'text': 'd commander u s naval forces central command for ports in the u s '
+                    'central command area of responsibility and'
+        },
+        {
+            'id': 'OPNAVINST 8120.1A.pdf_64',
+            'score': 0.9469120502471924,
+            'text': 'j commander naval sea systems command comnavseasyscom comnavseasyscom '
+                    'is the echelon supporting flag officer to'
+        },
+        {
+            'id': 'DoDD 4500.56 CH 5.pdf_157',
+            'score': 0.9091718792915344,
+            'text': 'm commander u s naval forces europe and commander u s naval forces '
+                    'africa'
+        }
+   ]
+
+ 
+    
     transformer_test_data = {
         "query": "chemical agents",
         "documents": [
@@ -50,10 +75,12 @@ class TestSet:
             },
         ],
     }
-    transformer_list_expect = [
-        "distilbart-mnli-12-3",
-        "distilbert-base-uncased-distilled-squad",
-        "distilroberta-base",
-        "msmarco-distilbert-base-v2",
-    ]
-    
+    transformer_list_expect =  {
+        'bert-base-cased-squad2',
+        'distilbart-mnli-12-3',
+        'distilbert-base-uncased-distilled-squad',
+        'distilroberta-base',
+        'msmarco-distilbert-base-v2',
+        'msmarco-distilbert-base-v2_2021-10-17',
+        'msmarco-distilbert-base-v2_20211210',
+        }

@@ -19,60 +19,58 @@ MODELS = ModelLoader()
 
 
 @router.post("/transformerSearch", status_code=200)
-async def transformer_infer(query: dict, response: Response) -> dict:
+async def transformer_infer(body: dict, response: Response) -> dict:
     """transformer_infer - endpoint for transformer inference
     Args:
-        query: dict; format of query
+        body: dict; json format of query
             {"query": "test", "documents": [{"text": "...", "id": "xxx"}, ...]
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
         results: dict; results of inference
     """
-    logger.debug("TRANSFORMER - predicting query: " + str(query))
+    logger.debug("TRANSFORMER - predicting query: " + str(body))
     results = {}
     try:
-        results = MODELS.sparse_reader.predict(query)
+        results = MODELS.sparse_reader.predict(body)
         logger.info(results)
     except Exception:
-        logger.error(f"Unable to get results from transformer for {query}")
+        logger.error(f"Unable to get results from transformer for {body}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise
     return results
 
 
 @router.post("/textExtractions", status_code=200)
-async def textExtract_infer(query: dict, extractType: str, response: Response) -> dict:
+async def textExtract_infer(body: dict, extractType: str, response: Response) -> dict:
     """textExtract_infer - endpoint for sentence transformer inference
     Args:
-        query: dict; format of query
+        body: dict; json format of query
             {"text": "i am text"}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
-        extractType: topics, keywords, or summary
+        extractType: url query string; one of topics, keywords, or summary
     Returns:
         results: dict; results of inference
     """
     results = {}
     try:
-        query_text = query["text"]
+        query_text = body["text"]
         results["extractType"] = extractType
         if extractType == "topics":
-            logger.debug("TOPICS - predicting query: " + str(query))
-            # topics = tfidf_model.get_topics(
-            #    topic_processing(query_text, bigrams), topn=5
-            # )
-            # logger.info(topics)
-            # results["extracted"] = topics
+            logger.debug("TOPICS - predicting query: " + str(body))
+            topics = MODELS.topic_model.get_topics_from_text(query_text)
+            logger.info(topics)
+            results["extracted"] = topics
         elif extractType == "summary":
             summary = GensimSumm(
                 query_text, long_doc=False, word_count=30
             ).make_summary()
             results["extracted"] = summary
         elif extractType == "keywords":
-            logger.debug("keywords - predicting query: " + str(query))
+            logger.debug("keywords - predicting query: " + str(body))
             results["extracted"] = get_keywords(query_text)
 
     except Exception:
-        logger.error(f"Unable to get extract text for {query}")
+        logger.error(f"Unable to get extract text for {body}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise
     return results
@@ -80,47 +78,46 @@ async def textExtract_infer(query: dict, extractType: str, response: Response) -
 
 @router.post("/transSentenceSearch", status_code=200)
 async def trans_sentence_infer(
-    query: dict, response: Response, num_results: int = 5
+    body: dict, response: Response, num_results: int = 5
 ) -> dict:
     """trans_sentence_infer - endpoint for sentence transformer inference
     Args:
-        query: dict; format of query
+        body: dict; json format of query
             {"text": "i am text"}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
         results: dict; results of inference
     """
-    logger.debug("SENTENCE TRANSFORMER - predicting query: " + str(query))
+    logger.debug("SENTENCE TRANSFORMER - predicting query: " + str(body))
     results = {}
     try:
-        query_text = query["text"]
+        query_text = body["text"]
         results = MODELS.sentence_searcher.search(query_text, num_results)
         logger.info(results)
     except Exception:
-        logger.error(
-            f"Unable to get results from sentence transformer for {query}")
+        logger.error(f"Unable to get results from sentence transformer for {body}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise
     return results
 
 
 @router.post("/questionAnswer", status_code=200)
-async def qa_infer(query: dict, response: Response) -> dict:
+async def qa_infer(body: dict, response: Response) -> dict:
     """qa_infer - endpoint for sentence transformer inference
     Args:
-        query: dict; format of query, text must be concatenated string
+        body: dict; json format of query, text must be concatenated string
             {"query": "what is the navy",
             "search_context":["pargraph 1", "xyz"]}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
         results: dict; results of inference
     """
-    logger.debug("QUESTION ANSWER - predicting query: " + str(query["query"]))
+    logger.debug("QUESTION ANSWER - predicting query: " + str(body["query"]))
     results = {}
 
     try:
-        query_text = query["query"]
-        query_context = query["search_context"]
+        query_text = body["query"]
+        query_context = body["search_context"]
         start = time.perf_counter()
         answers = MODELS.qa_model.answer(query_text, query_context)
         end = time.perf_counter()
@@ -130,29 +127,33 @@ async def qa_infer(query: dict, response: Response) -> dict:
         results["question"] = query_text
 
     except Exception:
-        logger.error(f"Unable to get results from QA model for {query}")
+        logger.error(f"Unable to get results from QA model for {body}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise
     return results
 
 
 @router.post("/expandTerms", status_code=200)
-async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
+async def post_expand_query_terms(body: dict, response: Response) -> dict:
     """post_expand_query_terms - endpoint for expand query terms
     Args:
-        termsList: dict;
+        body: dict; json format of query
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
         expansion_dict: dict; expanded dictionary of terms
     """
 
-    terms_string = " ".join(termsList["termsList"])
+    terms_string = " ".join(body["termsList"])
     terms = preprocess(terms_string, remove_stopwords=True)
     expansion_dict = {}
     # logger.info("[{}] expanded: {}".format(user, termsList))
 
-    logger.info(f"Expanding: {termsList}")
-    query_expander = MODELS.query_expander if termsList.get("qe_model","gc_core")!="jbook" else MODELS.query_expander_jbook
+    logger.info(f"Expanding: {body}")
+    query_expander = (
+        MODELS.query_expander
+        if body.get("qe_model", "gc_core") != "jbook"
+        else MODELS.query_expander_jbook
+    )
     try:
         for term in terms:
             term = unquoted(term)
@@ -174,22 +175,22 @@ async def post_expand_query_terms(termsList: dict, response: Response) -> dict:
         expanded_words["wordsim"] = sim_words_dict
         return expanded_words
     except Exception as e:
-        logger.error(f"Error with query expansion on {termsList}")
+        logger.error(f"Error with query expansion on {body}")
         logger.error(e)
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 @router.post("/wordSimilarity", status_code=200)
-async def post_word_sim(termsDict: dict, response: Response) -> dict:
+async def post_word_sim(body: dict, response: Response) -> dict:
     """post_word_sim - endpoint for getting similar words
     Args:
-        termsList: dict;
+        body: dict; json format of query
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
         expansion_dict: dict; expanded dictionary of terms
     """
     # logger.info("[{}] expanded: {}".format(user, termsList))
-    terms = termsDict["text"]
+    terms = body["text"]
     logger.info(f"Finding similiar words for: {terms}")
     try:
         sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms)

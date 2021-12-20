@@ -9,6 +9,7 @@ delete_corpus = "corpus: delete_corpus"
 loading_corpus = "training: load_corpus"
 training = "training: train_model"
 reloading = "models: reloading_models"
+ltr_creation = "models: ltr_creation"
 
 # the dictionary that holds all the progress values
 try:
@@ -21,6 +22,7 @@ try:
         training: False,
         loading_corpus: False,
         reloading: False,
+        ltr_creation: False,
     }
 
     PROCESS_STATUS.value = {"flags": default_flags}
@@ -35,7 +37,12 @@ def update_status(key, progress=0, total=100, message="", failed=False):
         if progress == total or failed:
             date = datetime.now()
             date_string = date.strftime("%Y-%m-%d %H:%M:%S")
-            completed = {"process": key, "total": total, "message":message, "date": date_string}
+            completed = {
+                "process": key,
+                "total": total,
+                "message": message,
+                "date": date_string,
+            }
             with thread_lock:
                 if key in PROCESS_STATUS.value:
                     temp = PROCESS_STATUS.value

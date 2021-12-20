@@ -16,6 +16,7 @@ async def load_models():
     MODELS.initSentenceEncoder()
     MODELS.initSentenceSearcher()
     MODELS.initWordSim()
+    MODELS.initTopics()
     MODELS.initClassifyJBook()
 
 
@@ -86,13 +87,13 @@ def check_dep_exist():
     # if not os.path.isdir(topics_dir):
     #    logger.warning(f"{topics_dir} does NOT exist")
     #    healthy = False
-    
+
     if not os.path.isdir(QEXP_JBOOK_MODEL_NAME.value):
         logger.warning(f"{QEXP_JBOOK_MODEL_NAME.value} does NOT exist")
         healthy = False
-        
+
     if not os.path.isdir(CLASSIFY_JBOOK_MODEL_PATH.value):
         logger.warning(f"{CLASSIFY_JBOOK_MODEL_PATH.value} does NOT exist")
         healthy = False
-        
+
     return healthy

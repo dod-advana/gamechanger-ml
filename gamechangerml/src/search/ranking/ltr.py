@@ -1,51 +1,149 @@
-import spacy
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
-from gamechangerml.src.search.ranking import search_data as meta
-from gamechangerml.src.search.ranking import rank
-from gamechangerml import REPO_PATH
-import datetime
 import pandas as pd
 from tqdm import tqdm
-import argparse
 import logging
 import os
 from elasticsearch import Elasticsearch
-import pickle
 import xgboost as xgb
-import matplotlib
-import math
 import requests
 import json
 from sklearn.preprocessing import LabelEncoder
+from gamechangerml import MODEL_PATH, DATA_PATH
+import typing as t
+import base64
+from urllib.parse import urljoin
 
 
-ES_HOST = os.environ.get("ES_HOST", default="localhost")
+ES_INDEX = os.environ.get("ES_INDEX", "gamechanger")
 
-client = Elasticsearch([ES_HOST])
+
+class ESUtils:
+    def __init__(
+        self,
+        host: str = os.environ.get("ES_HOST", "localhost"),
+        port: str = os.environ.get("ES_PORT", 443),
+        user: str = os.environ.get("ES_USER", ""),
+        password: str = os.environ.get("ES_PASSWORD", ""),
+        enable_ssl: bool = os.environ.get("ES_ENABLE_SSL", "True").lower() == "true",
+        enable_auth: bool = os.environ.get("ES_ENABLE_AUTH", "False").lower() == "true",
+    ):
+
+        self.host = host
+        self.port = port
+        self.user = user
+        self.password = password
+        self.enable_ssl = enable_ssl
+        self.enable_auth = enable_auth
+
+        self.auth_token = base64.b64encode(
+            f"{self.user}:{self.password}".encode()
+        ).decode()
+
+    @property
+    def client(self) -> Elasticsearch:
+        if hasattr(self, "_client"):
+            return getattr(self, "_client")
+
+        host_args = dict(
+            hosts=[
+                {
+                    "host": self.host,
+                    "port": self.port,
+                    "http_compress": True,
+                    "timeout": 60,
+                }
+            ]
+        )
+        auth_args = dict(http_auth=(self.user, self.password)) if self.enable_auth else {}
+        ssl_args = dict(use_ssl=self.enable_ssl)
+
+        es_args = dict(
+            **host_args,
+            **auth_args,
+            **ssl_args,
+        )
+
+        self._es_client = Elasticsearch(**es_args)
+        return self._es_client
+
+    @property
+    def auth_headers(self) -> t.Dict[str, str]:
+        return {"Authorization": f"Basic {self.auth_token}"} if self.enable_auth else {}
+
+    @property
+    def content_headers(self) -> t.Dict[str, str]:
+        return {"Content-Type": "application/json"}
+
+    @property
+    def default_headers(self) -> t.Dict[str, str]:
+        if self.enable_auth:
+            return dict(**self.auth_headers, **self.content_headers)
+        else:
+            return dict(**self.content_headers)
+
+    @property
+    def root_url(self) -> str:
+        return ("https" if self.enable_ssl else "http") + f"://{self.host}:{self.port}/"
+
+    def request(self, method: str, url: str, **request_opts) -> requests.Response:
+        complete_url = urljoin(self.root_url, url.lstrip("/"))
+        return requests.request(
+            method=method, url=complete_url, headers=self.default_headers, **request_opts
+        )
+
+    def post(self, url: str, **request_opts) -> requests.Response:
+        return self.request(method="POST", url=url, **request_opts)
+
+    def put(self, url: str, **request_opts) -> requests.Response:
+        return self.request(method="PUT", url=url, **request_opts)
+
+    def get(self, url: str, **request_opts) -> requests.Response:
+        return self.request(method="GET", url=url, **request_opts)
+
+    def delete(self, url: str, **request_opts) -> requests.Response:
+        return self.request(method="DELETE", url=url, **request_opts)
+
+
 logger = logging.getLogger("gamechanger")
-GC_MODEL_PATH = "gamechangerml/models/ltr"
-if not os.path.exists(GC_MODEL_PATH):
-    os.mkdir(GC_MODEL_PATH)
-GC_DATA_PATH = "gamechangerml/data/ltr"
-if not os.path.exists(GC_DATA_PATH):
-    os.mkdir(GC_DATA_PATH)
+
+GC_USER_DATA = os.path.join(DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv")
+LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
+LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
+os.makedirs(LTR_MODEL_PATH, exist_ok=True)
+os.makedirs(LTR_DATA_PATH, exist_ok=True)
 
 
 class LTR:
     def __init__(
         self,
         params={
-            "max_depth": 10,
+            "max_depth": 6,
             "eta": 0.3,
-            "objective": "rank:map",
+            "objective": "rank:pairwise",
         },
     ):
         self.data = self.read_xg_data()
         self.params = params
         self.mappings = self.read_mappings()
         self.judgement = None
+        self.eval_metrics = [
+            "map",
+            "map@25",
+            "map@50",
+            "map@75",
+            "map@100",
+            "ndcg@1",
+            "ndcg@5",
+            "ndcg@10",
+            "ndcg@20",
+            "ndcg@50",
+            "ndcg@100",
+            "rmse",
+            "error",
+        ]
+        self.esu = ESUtils()
 
     def write_model(self, model):
         """write model: writes model to file
@@ -53,35 +151,41 @@ class LTR:
         returns:
         """
         # write model to json for LTR
-        path = os.path.join(GC_MODEL_PATH, "xgb-model.json")
+        path = os.path.join(LTR_MODEL_PATH, "xgb-model.json")
         with open(path, "w") as output:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
-    def read_xg_data(self, path=os.path.join(GC_DATA_PATH, "xgboost.txt")):
+    def read_xg_data(self, path=os.path.join(LTR_DATA_PATH, "xgboost.csv")):
         """read xg data: reads LTR formatted data
         params: path to file
         returns:
         """
         try:
-            self.data = xgb.DMatrix(path)
+            df = pd.read_csv(path)
+            fts = df[df.columns[5:]]
+            fts.index = df.qid
+
+            label = df["ranking"]
+            self.data = xgb.DMatrix(fts, label)
             return self.data
         except Exception as e:
             logger.error("Could not read in data for training")
 
-    def read_mappings(self, path="gamechangerml/data/SearchPdfMapping.csv"):
+    def read_mappings(self, path=GC_USER_DATA):
         """read mappings: reads search pdf mappings
         params: path to file
         returns:
             mappings file
         """
+        mappings = None
         try:
-            self.mappings = pd.read_csv(path)
+            mappings = pd.read_csv(path)
         except Exception as e:
             logger.error("Could not read in mappings to make judgement list")
-        return self.mappings
+        return mappings
 
-    def train(self, write=True):
+    def train(self, data=None, params=None, write=True):
         """train - train a xgboost model with parameters
         params:
             write: boolean to write to file
@@ -89,12 +193,19 @@ class LTR:
             bst: xgboost object
             model: model json
         """
-        bst = xgb.train(self.params, self.data)
+        if not data:
+            data = self.data
+        if not params:
+            params = self.params
+        bst = xgb.train(params, data)
+        cv = xgb.cv(params, dtrain=data, nfold=3, metrics=self.eval_metrics)
         model = bst.get_dump(
-            fmap=os.path.join(GC_DATA_PATH, "featmap.txt"), dump_format="json"
+            fmap=os.path.join(LTR_DATA_PATH, "featmap.txt"), dump_format="json"
         )
         if write:
             self.write_model(model)
+            path = os.path.join(LTR_MODEL_PATH, "ltr_evals.csv")
+            cv.to_csv(path, index=False)
         return bst, model
 
     def post_model(self, model, model_name):
@@ -105,15 +216,14 @@ class LTR:
         returns:
             r: results
         """
-        headers = {"Content-Type": "application/json"}
         query = {
             "model": {
                 "name": model_name,
                 "model": {"type": "model/xgboost+json", "definition": model},
             }
         }
-        endpoint = ES_HOST + "/_ltr/_featureset/doc_features/_createmodel"
-        r = requests.post(endpoint, data=json.dumps(query), headers=headers)
+        endpoint = "/_ltr/_featureset/doc_features/_createmodel"
+        r = self.esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def search(self, terms, rescore=True):
@@ -195,7 +305,7 @@ class LTR:
                     }
                 }
             }
-        r = client.search(index="gamechanger", body=dict(query))
+        r = self.esu.client.search(index=ES_INDEX, body=dict(query))
         return r
 
     def generate_judgement(self, mappings):
@@ -211,6 +321,11 @@ class LTR:
         word_tuples = []
         for row in tqdm(searches.itertuples()):
             words = row.search.split(" ")
+            clean_phr = re.sub(r"[^\w\s]", "", row.search)
+            clean_phr = preprocess(clean_phr, remove_stopwords=True)
+            if clean_phr:
+                word_tuples.append((" ".join(clean_phr), row.document))
+
             for word in words:
                 clean = word.lower()
                 clean = re.sub(r"[^\w\s]", "", clean)
@@ -246,18 +361,23 @@ class LTR:
         ltr_log = []
         logger.info("querying es ltr logs")
         # loop through all unique keywords
+        query_list = []
         for kw in tqdm(df.keyword.unique()):
             # get frame of all of the keyword rows
             tmp = df[df.keyword == kw]
             # get logged feature
+
             for docs in tmp.itertuples():
                 doc = docs.Index
                 q = self.construct_query(doc, kw)
-                r = client.search(index="gamechanger", body=dict(q))
-                ltr_log.append(r["hits"]["hits"])
+                query_list.append(json.dumps({"index": ES_INDEX}))
+                query_list.append(json.dumps(q))
+        query = "\n".join(query_list)
+        res = self.esu.client.msearch(body=query)
+        ltr_log = [x["hits"]["hits"] for x in res["responses"]]
         return ltr_log
 
-    def process_ltr_log(self, ltr_log, num_fts=4):
+    def process_ltr_log(self, ltr_log, num_fts=7):
         """process ltr log: extracts features from ES logs for judgement list
         params:
             ltr_log: results from ES
@@ -293,34 +413,22 @@ class LTR:
         ltr_log = self.query_es_fts(df)
         vals = self.process_ltr_log(ltr_log)
         ft_df = pd.DataFrame(
-            vals, columns=["title", "kw", "textlength", "paragraph"])
+            vals,
+            columns=[
+                "title",
+                "title-phrase",
+                "keyw_5",
+                "textlength",
+                "paragraph",
+                "popscore",
+                "paragraph-phrase",
+            ],
+        )
         df.reset_index(inplace=True)
         df = pd.concat([df, ft_df], axis=1)
 
-        logger.info("generating txt file")
-        for kw in tqdm(df.keyword.unique()):
-            rows = df[df.keyword == kw]
-            for i in rows.itertuples():
-                new_row = (
-                    str(int(i.ranking))
-                    + " qid:"
-                    + str(i.qid)
-                    + " 1:"
-                    + str(i.title)
-                    + " 2:"
-                    + str(i.paragraph)
-                    + " 3:"
-                    + str(i.kw)
-                    + " 4:"
-                    + str(i.textlength)
-                    + " # "
-                    + kw
-                    + " "
-                    + str(i.document)
-                    + "\n"
-                )
-                with open(os.path.join(GC_DATA_PATH, "xgboost.txt"), "a") as f:
-                    f.writelines(new_row)
+        logger.info("generating csv file")
+        df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
         return df
 
     def construct_query(self, doc, kw):
@@ -377,6 +485,12 @@ class LTR:
                         },
                     },
                     {
+                        "name": "title-phrase",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match_phrase": {"title": "{{keywords}}"}},
+                    },
+                    {
                         "name": "keyw_5",
                         "params": ["keywords"],
                         "template_language": "mustache",
@@ -427,23 +541,61 @@ class LTR:
                             }
                         },
                     },
+                    {
+                        "name": "popscore",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {
+                            "function_score": {
+                                "functions": [
+                                    {
+                                        "field_value_factor": {
+                                            "field": "pop_score",
+                                            "missing": 0,
+                                        }
+                                    }
+                                ],
+                                "query": {"match_all": {}},
+                            }
+                        },
+                    },
+                    {
+                        "name": "paragraph-phrase",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {
+                            "nested": {
+                                "path": "paragraphs",
+                                "inner_hits": {},
+                                "query": {
+                                    "bool": {
+                                        "should": [
+                                            {
+                                                "match_phrase": {
+                                                    "paragraphs.par_raw_text_t.gc_english": "{{keywords}}"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                            }
+                        },
+                    },
                 ],
             }
         }
-
-        headers = {"Content-Type": "application/json"}
-        endpoint = ES_HOST + "/_ltr/_featureset/doc_features"
-        r = requests.post(endpoint, data=json.dumps(query), headers=headers)
+        endpoint = "/_ltr/_featureset/doc_features"
+        r = self.esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def post_init_ltr(self):
-        endpoint = ES_HOST + "/_ltr"
-        r = requests.put(endpoint)
+        endpoint = "/_ltr"
+        r = self.esu.put(endpoint)
         return r.content
 
     def delete_ltr(self, model_name="ltr_model"):
-        endpoint = ES_HOST + f"/_ltr/_model/{model_name}"
-        r = requests.delete(endpoint)
+        endpoint = "/_ltr/_model/{model_name}"
+        r = self.esu.delete(endpoint)
         return r.content
 
     def normalize(self, arr, start=0, end=4):
@@ -454,6 +606,7 @@ class LTR:
             end: ending number integer
         returns: normalized array
         """
+        arr = np.log(arr)
         width = end - start
         res = (arr - arr.min()) / (arr.max() - arr.min()) * width + start
         return res
