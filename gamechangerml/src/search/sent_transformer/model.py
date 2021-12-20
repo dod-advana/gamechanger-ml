@@ -185,22 +185,32 @@ class SimilarityRanker(object):
         self,
         sim_model_name,
         transformer_path,
+        embedder= None
     ):
 
         self.sim_model = os.path.join(
             transformer_path, sim_model_name)
         self.similarity = Similarity(self.sim_model)
+        self.embedder = embedder
 
-    def re_rank(self, query, texts, ids):
+    def re_rank(self, query, texts, ids, externalSim=True):
         results = []
-        for idx, score in self.similarity(query, texts):
+        start = time.time()
+        if externalSim or self.embedder==None:
+            scores = self.similarity(query,texts)
+        else:
+            print("here")
+            scores = self.embedder.similarity(query,texts)
+        for idx, score in scores:
             doc = {}
             doc["score"] = score
             doc["id"] = ids[idx]
             doc["text"] = texts[idx]
             results.append(doc)
-        return results
 
+        end = time.time()
+        print("rerank: ", end-start)
+        return results
 
 class SentenceSearcher(object):
     """
@@ -235,11 +245,13 @@ class SentenceSearcher(object):
         if sim_model:
             self.similarity = sim_model
         else:
-            self.similarity = SimilarityRanker(sim_model_name, transformer_path)
+            self.similarity = SimilarityRanker(sim_model_name, transformer_path, embedder= self.embedder)
 
     def retrieve_topn(self, query, num_results):
-
+        start = time.time()
         retrieved = self.embedder.search(query, limit=num_results)
+        end = time.time()
+        print("search time: ", end-start)
         doc_ids = []
         doc_texts = []
         doc_scores = []
@@ -250,9 +262,11 @@ class SentenceSearcher(object):
                              == str(doc_id)].iloc[0]["text"]
             doc_texts.append(text)
 
+        print(doc_ids)
+        print(doc_texts)
         return doc_texts, doc_ids, doc_scores
 
-    def search(self, query, num_results=5):
+    def search(self, query, num_results=5, externalSim=True):
         """
         Search the index and perform a similarity scoring reranker at
         the topn returned documents
@@ -263,4 +277,4 @@ class SentenceSearcher(object):
                 paragraph_text) format ranked based on similarity with query
         """
         top_texts, top_ids, top_scores = self.retrieve_topn(query, num_results)
-        return self.similarity.re_rank(query, top_texts, top_ids)
+        return self.similarity.re_rank(query, top_texts, top_ids, externalSim=externalSim)

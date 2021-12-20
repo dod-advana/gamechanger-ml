@@ -78,7 +78,7 @@ async def textExtract_infer(body: dict, extractType: str, response: Response) ->
 
 @router.post("/transSentenceSearch", status_code=200)
 async def trans_sentence_infer(
-    body: dict, response: Response, num_results: int = 5
+        body: dict, response: Response, num_results: int = 5, externalSim: bool = False
 ) -> dict:
     """trans_sentence_infer - endpoint for sentence transformer inference
     Args:
@@ -92,7 +92,7 @@ async def trans_sentence_infer(
     results = {}
     try:
         query_text = body["text"]
-        results = MODELS.sentence_searcher.search(query_text, num_results)
+        results = MODELS.sentence_searcher.search(query_text, num_results, externalSim=False)
         logger.info(results)
     except Exception:
         logger.error(f"Unable to get results from sentence transformer for {body}")
