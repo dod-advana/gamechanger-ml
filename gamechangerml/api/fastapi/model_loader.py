@@ -66,7 +66,7 @@ class ModelLoader:
             logger.warning(
                 "word_sim was not set and was attempted to be used. Running init"
             )
-            #ModelLoader.initWordSim()
+            # ModelLoader.initWordSim()
         return ModelLoader.__word_sim
 
     def getSentence_searcher(self):
@@ -174,7 +174,7 @@ class ModelLoader:
         logger.info(f"Loading Query Expansion Model from {model_path}")
         try:
             if MODEL_LOAD_FLAG:
-                #ModelLoader.__word_sim = WordSim(model_path)
+                ModelLoader.__word_sim = WordSim(model_path)
                 logger.info("** Loaded Word Sim Model")
         except Exception as e:
             logger.warning("** Could not load Word Sim model")

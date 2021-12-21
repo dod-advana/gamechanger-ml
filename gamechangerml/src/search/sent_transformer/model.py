@@ -195,11 +195,9 @@ class SimilarityRanker(object):
 
     def re_rank(self, query, texts, ids, externalSim=True):
         results = []
-        start = time.time()
         if externalSim or self.embedder==None:
             scores = self.similarity(query,texts)
         else:
-            print("here")
             scores = self.embedder.similarity(query,texts)
         for idx, score in scores:
             doc = {}
@@ -208,8 +206,6 @@ class SimilarityRanker(object):
             doc["text"] = texts[idx]
             results.append(doc)
 
-        end = time.time()
-        print("rerank: ", end-start)
         return results
 
 class SentenceSearcher(object):
@@ -248,10 +244,7 @@ class SentenceSearcher(object):
             self.similarity = SimilarityRanker(sim_model_name, transformer_path, embedder= self.embedder)
 
     def retrieve_topn(self, query, num_results):
-        start = time.time()
         retrieved = self.embedder.search(query, limit=num_results)
-        end = time.time()
-        print("search time: ", end-start)
         doc_ids = []
         doc_texts = []
         doc_scores = []
@@ -262,8 +255,6 @@ class SentenceSearcher(object):
                              == str(doc_id)].iloc[0]["text"]
             doc_texts.append(text)
 
-        print(doc_ids)
-        print(doc_texts)
         return doc_texts, doc_ids, doc_scores
 
     def search(self, query, num_results=5, externalSim=True):
