@@ -3,9 +3,6 @@ from datetime import datetime
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
-from gamechangerml.src.search.ranking import search_data as meta
-from gamechangerml.src.search.ranking import rank
-from gamechangerml import REPO_PATH
 import pandas as pd
 from tqdm import tqdm
 import logging
@@ -121,6 +118,9 @@ class ESUtils:
 
 logger = logging.getLogger("gamechanger")
 
+GC_USER_DATA = os.path.join(
+    DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
+)
 LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
 LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
 os.makedirs(LTR_MODEL_PATH, exist_ok=True)
@@ -184,17 +184,18 @@ class LTR:
         except Exception as e:
             logger.error("Could not read in data for training")
 
-    def read_mappings(self, path=os.path.join(DATA_PATH, "SearchPdfMapping.csv")):
+    def read_mappings(self, path=GC_USER_DATA):
         """read mappings: reads search pdf mappings
         params: path to file
         returns:
             mappings file
         """
+        mappings = None
         try:
-            self.mappings = pd.read_csv(path)
+            mappings = pd.read_csv(path)
         except Exception as e:
             logger.error("Could not read in mappings to make judgement list")
-        return self.mappings
+        return mappings
 
     def train(self, data=None, params=None, write=True):
         """train - train a xgboost model with parameters

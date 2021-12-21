@@ -21,8 +21,6 @@ from gamechangerml.src.featurization.topic_modeling import Topics
 # All variables and methods are static so you
 # reference them by ModelLoader().example_method()
 
-# SENT_INDEX_PATH.value = 'gamechangerml/models/sent_index_TEST'
-
 
 class ModelLoader:
     # private model variables

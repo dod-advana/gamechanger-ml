@@ -5,6 +5,8 @@ import os
 import shutil
 import glob
 import tarfile
+import typing as t
+from pathlib import Path
 from gamechangerml.src.utilities.aws_helper import *
 from gamechangerml.configs.config import S3Config
 from gamechangerml import REPO_PATH
@@ -495,3 +497,22 @@ def download_eval_data(dataset_name, save_dir, version=None):
             bucket.download_file(obj.key, save_name)
     except:
         logger.debug(f"Failed to download {obj.key}")
+
+def create_tgz_from_dir(
+    src_dir: t.Union[str, Path],
+    dst_archive: t.Union[str, Path],
+    exclude_junk: bool = False,
+) -> None:
+    with tarfile.open(dst_archive, "w:gz") as tar:
+        tar.add(src_dir, arcname=os.path.basename(src_dir))
+
+def upload(s3_path, local_path, model_prefix, model_name):
+    # Loop through each file and upload to S3
+    logger.info(f"Uploading files to {s3_path}")
+    logger.info(f"\tUploading: {local_path}")
+    # local_path = os.path.join(dst_path)
+    s3_path = os.path.join(
+        s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
+    upload_file(local_path, s3_path)
+    logger.info(f"Successfully uploaded files to {s3_path}")
+    logger.info("-------------- Finished Uploading --------------")
