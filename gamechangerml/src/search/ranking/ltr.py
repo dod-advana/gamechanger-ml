@@ -1,4 +1,5 @@
 import spacy
+from datetime import datetime
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
@@ -30,8 +31,10 @@ class ESUtils:
         port: str = os.environ.get("ES_PORT", 443),
         user: str = os.environ.get("ES_USER", ""),
         password: str = os.environ.get("ES_PASSWORD", ""),
-        enable_ssl: bool = os.environ.get("ES_ENABLE_SSL", "True").lower() == "true",
-        enable_auth: bool = os.environ.get("ES_ENABLE_AUTH", "False").lower() == "true",
+        enable_ssl: bool = os.environ.get(
+            "ES_ENABLE_SSL", "True").lower() == "true",
+        enable_auth: bool = os.environ.get(
+            "ES_ENABLE_AUTH", "False").lower() == "true",
     ):
 
         self.host = host
@@ -60,7 +63,10 @@ class ESUtils:
                 }
             ]
         )
-        auth_args = dict(http_auth=(self.user, self.password)) if self.enable_auth else {}
+        auth_args = (
+            dict(http_auth=(self.user, self.password)
+                 ) if self.enable_auth else {}
+        )
         ssl_args = dict(use_ssl=self.enable_ssl)
 
         es_args = dict(
@@ -94,7 +100,10 @@ class ESUtils:
     def request(self, method: str, url: str, **request_opts) -> requests.Response:
         complete_url = urljoin(self.root_url, url.lstrip("/"))
         return requests.request(
-            method=method, url=complete_url, headers=self.default_headers, **request_opts
+            method=method,
+            url=complete_url,
+            headers=self.default_headers,
+            **request_opts,
         )
 
     def post(self, url: str, **request_opts) -> requests.Response:
@@ -205,9 +214,16 @@ class LTR:
             fmap=os.path.join(LTR_DATA_PATH, "featmap.txt"), dump_format="json"
         )
         if write:
+            metadata = {}
             self.write_model(model)
             path = os.path.join(LTR_MODEL_PATH, "ltr_evals.csv")
             cv.to_csv(path, index=False)
+            metadata["name"] = "ltr_model"
+            metadata["evals"] = cv.mean().to_dict()
+            metadata["params"] = params
+            metadata["date"] = datetime.today()
+            with open(os.path.join(LTR_MODEL_PATH, "metadata.json"), "w") as f:
+                f.write(json.dumps(metadata))
         return bst, model
 
     def post_model(self, model, model_name):
