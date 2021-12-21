@@ -181,7 +181,7 @@ async def files_in_corpus(response: Response):
     """
     number_files = 0
     try:
-        logger.info("Attempting to download dependencies from S3")
+        logger.info("Reading files from local corpus")
         number_files = len(
             [
                 name
@@ -190,7 +190,7 @@ async def files_in_corpus(response: Response):
             ]
         )
     except:
-        logger.warning(f"Could not get dependencies from S3")
+        logger.warning(f"Could not get files in corpus")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return json.dumps(number_files)
 
@@ -239,12 +239,12 @@ async def s3_func(function, response: Response):
     """
     models = []
     try:
-        logger.info("Attempting to download dependencies from S3")
+        logger.info("Retrieving model list from s3::")
         s3_path = "bronze/gamechanger/models/"
         if function == "models":
             models = utils.get_models_list(s3_path)
     except:
-        logger.warning(f"Could not get dependencies from S3")
+        logger.warning(f"Could not get model list from s3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return models
 
@@ -321,6 +321,7 @@ async def download_corpus(corpus_dict: dict, response: Response):
         # grabs the s3 path to the corpus from the post in "corpus"
         # then passes in where to dowload the corpus locally.
         args = {"corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+        logger.info(f"S3 CORPUS = {args['corpus_dir]} \n OUTPUTDIR = {args['output_dir']}")
         processmanager.update_status(processmanager.corpus_download)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()
