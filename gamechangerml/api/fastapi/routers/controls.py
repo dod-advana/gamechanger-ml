@@ -65,6 +65,7 @@ def get_downloaded_models_list():
     qexp_list = {}
     sent_index_list = {}
     transformer_list = {}
+    ltr_list = {}
     try:
         for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
             if ("qexp_" in f) and ("tar" not in f):
@@ -125,10 +126,28 @@ def get_downloaded_models_list():
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get Sentence Index model path")
+    # LTR
+    try:
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("ltr" in f) and ("tar" not in f):
+                logger.info(f"LTR: {str(f)}")
+                ltr_list[f] = {}
+                meta_path = os.path.join(
+                    Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json"
+                )
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    ltr_list[f] = json.load(meta_file)
+                    meta_file.close()
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get Sentence Index model path")
+
     model_list = {
         "transformers": transformer_list,
         "sentence": sent_index_list,
         "qexp": qexp_list,
+        "ltr": ltr_list,
     }
     return model_list
 
