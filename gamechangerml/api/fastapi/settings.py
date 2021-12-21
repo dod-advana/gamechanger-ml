@@ -4,6 +4,7 @@ from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.redisdriver import *
 from gamechangerml import CORPUS_PATH
+
 # get environ vars
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
 
@@ -18,6 +19,7 @@ if GC_ML_HOST == "":
 ignore_files = ["._.DS_Store", ".DS_Store", "index"]
 
 CORPUS_DIR = CORPUS_PATH
+S3_CORPUS_PATH = os.environ.get("S3_CORPUS_PATH")
 
 # Redis Cache Variables
 latest_intel_model_sent = CacheVariable("latest_intel_model_sent", True)
