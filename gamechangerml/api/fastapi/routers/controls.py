@@ -320,6 +320,8 @@ async def download_corpus(corpus_dict: dict, response: Response):
         logger.info("Attempting to download corpus from S3")
         # grabs the s3 path to the corpus from the post in "corpus"
         # then passes in where to dowload the corpus locally.
+        if not corpus_dict["corpus"]:
+            corpus_dict = S3_CORPUS_PATH
         args = {
             "s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
         logger.info(args)

@@ -221,7 +221,7 @@ class LTR:
             metadata["name"] = "ltr_model"
             metadata["evals"] = cv.mean().to_dict()
             metadata["params"] = params
-            metadata["date"] = datetime.today()
+            metadata["date"] = str(datetime.today())
             with open(os.path.join(LTR_MODEL_PATH, "metadata.json"), "w") as f:
                 f.write(json.dumps(metadata))
         return bst, model
