@@ -320,7 +320,8 @@ async def download_corpus(corpus_dict: dict, response: Response):
         logger.info("Attempting to download corpus from S3")
         # grabs the s3 path to the corpus from the post in "corpus"
         # then passes in where to dowload the corpus locally.
-        args = {"s3_corpus_dir": S3_CORPUS_PATH, "output_dir": CORPUS_DIR}
+        args = {
+            "s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
         logger.info(args)
         processmanager.update_status(processmanager.corpus_download)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
