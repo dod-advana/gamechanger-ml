@@ -78,7 +78,7 @@ async def textExtract_infer(body: dict, extractType: str, response: Response) ->
 
 @router.post("/transSentenceSearch", status_code=200)
 async def trans_sentence_infer(
-        body: dict, response: Response, num_results: int = 5, externalSim: bool = False
+        body: dict, response: Response, num_results: int = 10, externalSim: bool = False
 ) -> dict:
     """trans_sentence_infer - endpoint for sentence transformer inference
     Args:

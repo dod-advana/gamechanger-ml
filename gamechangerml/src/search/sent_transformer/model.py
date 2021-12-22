@@ -16,6 +16,7 @@ from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
+
 class SentenceEncoder(object):
     """
     Handles text encoding and creating of ANNOY index
@@ -31,7 +32,7 @@ class SentenceEncoder(object):
         self,
         encoder_model_name,
         min_token_len,
-        return_id, 
+        return_id,
         verbose,
         transformer_path,
         model=None,
@@ -42,8 +43,7 @@ class SentenceEncoder(object):
             self.encoder_model = model
         else:
             self.encoder_model = os.path.join(
-            transformer_path, encoder_model_name
-        )
+                transformer_path, encoder_model_name)
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
@@ -77,7 +77,7 @@ class SentenceEncoder(object):
         with open(stream, "rb") as queue:
             for x in range(embeddings.shape[0]):
                 embeddings[x] = pickle.load(queue)
-        
+
         # Remove temporary file
         logger.info("Removing temporary file")
         os.remove(stream)
@@ -88,10 +88,8 @@ class SentenceEncoder(object):
 
         df = pd.DataFrame(all_text, columns=["text", "paragraph_id"])
 
-        embedding_path = os.path.join(
-            index_path, "embeddings.npy")
-        dataframe_path = os.path.join(
-            index_path, "data.csv")
+        embedding_path = os.path.join(index_path, "embeddings.npy")
+        dataframe_path = os.path.join(index_path, "data.csv")
         ids_path = os.path.join(index_path, "doc_ids.txt")
 
         # Load new data
@@ -163,7 +161,9 @@ class SentenceEncoder(object):
             )
             corpus = [(para_id, " ".join(tokens), None)
                       for tokens, para_id in corp]
-            logger.info(f"\nLength of batch (in par ids) for indexing : {str(len(corpus))}")
+            logger.info(
+                f"\nLength of batch (in par ids) for indexing : {str(len(corpus))}"
+            )
         else:
             logger.info(
                 "Did not include path to corpus, making test index with msmarco data"
@@ -171,42 +171,41 @@ class SentenceEncoder(object):
             data = MSMarcoData()
             corpus = data.corpus
 
-        processmanager.update_status(processmanager.training, 0, 1, "building sent index")
+        processmanager.update_status(
+            processmanager.training, 0, 1, "building sent index"
+        )
 
         self._index(corpus, index_path)
-        processmanager.update_status(processmanager.training, 1, 1, "finished building sent index")
+        processmanager.update_status(
+            processmanager.training, 1, 1, "finished building sent index"
+        )
 
         self.embedder.save(index_path)
         logger.info(f"Saved embedder to {index_path}")
 
 
 class SimilarityRanker(object):
-    def __init__(
-        self,
-        sim_model_name,
-        transformer_path,
-        embedder= None
-    ):
+    def __init__(self, sim_model_name, transformer_path, embedder=None):
 
-        self.sim_model = os.path.join(
-            transformer_path, sim_model_name)
+        self.sim_model = os.path.join(transformer_path, sim_model_name)
         self.similarity = Similarity(self.sim_model)
         self.embedder = embedder
 
     def re_rank(self, query, texts, ids, externalSim=True):
         results = []
-        if externalSim or self.embedder==None:
-            scores = self.similarity(query,texts)
+        if externalSim or self.embedder == None:
+            scores = self.similarity(query, texts)
         else:
-            scores = self.embedder.similarity(query,texts)
+            scores = self.embedder.similarity(query, texts)
         for idx, score in scores:
             doc = {}
             doc["score"] = score
             doc["id"] = ids[idx]
             doc["text"] = texts[idx]
             results.append(doc)
-
+        print(results)
         return results
+
 
 class SentenceSearcher(object):
     """
@@ -224,13 +223,7 @@ class SentenceSearcher(object):
             and txtai to calculate similarity between query and document
     """
 
-    def __init__(
-        self,
-        sim_model_name,
-        index_path,
-        transformer_path,
-        sim_model=None
-    ):
+    def __init__(self, sim_model_name, index_path, transformer_path, sim_model=None):
 
         self.embedder = Embeddings()
         self.embedder.load(index_path)
@@ -241,9 +234,11 @@ class SentenceSearcher(object):
         if sim_model:
             self.similarity = sim_model
         else:
-            self.similarity = SimilarityRanker(sim_model_name, transformer_path, embedder= self.embedder)
+            self.similarity = SimilarityRanker(
+                sim_model_name, transformer_path, embedder=self.embedder
+            )
 
-    def retrieve_topn(self, query, num_results):
+    def retrieve_topn(self, query, num_results=10):
         retrieved = self.embedder.search(query, limit=num_results)
         doc_ids = []
         doc_texts = []
@@ -268,4 +263,8 @@ class SentenceSearcher(object):
                 paragraph_text) format ranked based on similarity with query
         """
         top_texts, top_ids, top_scores = self.retrieve_topn(query, num_results)
-        return self.similarity.re_rank(query, top_texts, top_ids, externalSim=externalSim)
+        print(top_texts)
+        print(top_scores)
+        return self.similarity.re_rank(
+            query, top_texts, top_ids, externalSim=externalSim
+        )
