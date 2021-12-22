@@ -185,25 +185,21 @@ class SentenceEncoder(object):
 
 
 class SimilarityRanker(object):
-    def __init__(self, sim_model_name, transformer_path, embedder=None):
+    def __init__(self, sim_model_name, transformer_path):
 
         self.sim_model = os.path.join(transformer_path, sim_model_name)
         self.similarity = Similarity(self.sim_model)
-        self.embedder = embedder
 
-    def re_rank(self, query, texts, ids, externalSim=True):
+    def re_rank(self, query, top_docs):
         results = []
-        if externalSim or self.embedder == None:
-            scores = self.similarity(query, texts)
-        else:
-            scores = self.embedder.similarity(query, texts)
+        texts = [x["text"] for x in top_docs]
+        scores = self.similarity(query, texts)
         for idx, score in scores:
             doc = {}
             doc["score"] = score
-            doc["id"] = ids[idx]
-            doc["text"] = texts[idx]
+            doc["id"] = top_docs[idx]["id"]
+            doc["text"] = top_docs[idx]["text"]
             results.append(doc)
-        print(results)
         return results
 
 
@@ -235,24 +231,23 @@ class SentenceSearcher(object):
             self.similarity = sim_model
         else:
             self.similarity = SimilarityRanker(
-                sim_model_name, transformer_path, embedder=self.embedder
-            )
+                sim_model_name, transformer_path)
 
     def retrieve_topn(self, query, num_results=10):
         retrieved = self.embedder.search(query, limit=num_results)
-        doc_ids = []
-        doc_texts = []
-        doc_scores = []
+        results = []
         for doc_id, score in retrieved:
-            doc_ids.append(doc_id)
-            doc_scores.append(score)
+            doc = {}
             text = self.data[self.data["paragraph_id"]
                              == str(doc_id)].iloc[0]["text"]
-            doc_texts.append(text)
+            doc["id"] = doc_id
+            doc["text"] = text
+            doc["text_length"] = len(text)
+            doc["score"] = score
+            results.append(doc)
+        return results
 
-        return doc_texts, doc_ids, doc_scores
-
-    def search(self, query, num_results=5, externalSim=True):
+    def search(self, query, num_results=10, externalSim=True):
         """
         Search the index and perform a similarity scoring reranker at
         the topn returned documents
@@ -262,9 +257,22 @@ class SentenceSearcher(object):
             rerank (list): List of tuples following a (score, paragraph_id,
                 paragraph_text) format ranked based on similarity with query
         """
-        top_texts, top_ids, top_scores = self.retrieve_topn(query, num_results)
-        print(top_texts)
-        print(top_scores)
-        return self.similarity.re_rank(
-            query, top_texts, top_ids, externalSim=externalSim
-        )
+        top_results = self.retrieve_topn(query, num_results)
+        # choose to use an external similarity transformer
+        if externalSim:
+            return self.similarity.re_rank(query, top_results)
+        else:
+            # adding normalize text length to score and sorting
+            finalResults = []
+            result_text = [len(x["text"]) for x in top_results]
+            length_scores = np.interp(
+                result_text, (min(result_text), max(result_text)), (0, 0.2)
+            )
+            for idx, doc in enumerate(top_results):
+                doc["text_length"] = length_scores[idx]
+                doc["score"] = doc["score"] + length_scores[idx]
+                finalResults.append(doc)
+            finalResults = sorted(
+                finalResults, key=lambda i: i["score"], reverse=True)
+
+            return finalResults
