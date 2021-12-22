@@ -64,7 +64,7 @@ class ModelLoader:
             logger.warning(
                 "word_sim was not set and was attempted to be used. Running init"
             )
-            ModelLoader.initWordSim()
+            # ModelLoader.initWordSim()
         return ModelLoader.__word_sim
 
     def getSentence_searcher(self):

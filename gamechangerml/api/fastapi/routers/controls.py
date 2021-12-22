@@ -46,6 +46,7 @@ def get_downloaded_models_list():
     qexp_list = {}
     sent_index_list = {}
     transformer_list = {}
+    ltr_list = {}
     try:
         for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
             if ("qexp_" in f) and ("tar" not in f):
@@ -106,10 +107,28 @@ def get_downloaded_models_list():
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get Sentence Index model path")
+    # LTR
+    try:
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("ltr" in f) and ("tar" not in f):
+                logger.info(f"LTR: {str(f)}")
+                ltr_list[f] = {}
+                meta_path = os.path.join(
+                    Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json"
+                )
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    ltr_list[f] = json.load(meta_file)
+                    meta_file.close()
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get Sentence Index model path")
+
     model_list = {
         "transformers": transformer_list,
         "sentence": sent_index_list,
         "qexp": qexp_list,
+        "ltr": ltr_list,
     }
     return model_list
 
@@ -162,7 +181,7 @@ async def files_in_corpus(response: Response):
     """
     number_files = 0
     try:
-        logger.info("Attempting to download dependencies from S3")
+        logger.info("Reading files from local corpus")
         number_files = len(
             [
                 name
@@ -171,7 +190,7 @@ async def files_in_corpus(response: Response):
             ]
         )
     except:
-        logger.warning(f"Could not get dependencies from S3")
+        logger.warning(f"Could not get files in corpus")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return json.dumps(number_files)
 
@@ -220,12 +239,12 @@ async def s3_func(function, response: Response):
     """
     models = []
     try:
-        logger.info("Attempting to download dependencies from S3")
+        logger.info("Retrieving model list from s3::")
         s3_path = "bronze/gamechanger/models/"
         if function == "models":
             models = utils.get_models_list(s3_path)
     except:
-        logger.warning(f"Could not get dependencies from S3")
+        logger.warning(f"Could not get model list from s3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return models
 
@@ -299,7 +318,11 @@ async def download_corpus(corpus_dict: dict, response: Response):
         logger.info("Attempting to download corpus from S3")
         # grabs the s3 path to the corpus from the post in "corpus"
         # then passes in where to dowload the corpus locally.
-        args = {"corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+        if not corpus_dict["corpus"]:
+            corpus_dict = S3_CORPUS_PATH
+        args = {
+            "s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+        logger.info(args)
         processmanager.update_status(processmanager.corpus_download)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()

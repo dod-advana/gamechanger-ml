@@ -22,8 +22,8 @@ function setup_prod() {
     export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-data-zone/bronze/gamechanger/models/qexp_model/v3/qexp_20201217.tar.gz}"
     export S3_QEXP_JBOOK_PATH="${S3_QEXP_JBOOK_PATH:-s3://advana-data-zone/bronze/gamechanger/models/jbook_qexp_model/v1/jbook_qexp_20211029.tar.gz}"
     export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-data-zone/bronze/gamechanger/models/topic_model/v1/20210208.tar.gz}"
-    export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20211202.tar.gz}"
-    
+    export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20211018.tar.gz}"
+    export S3_CORPUS_PATH="${S3_CORPUS_PATH:-s3://advana-data-zone/bronze/gamechanger/json}"
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-true}"
 
     export ES_HOST="${ES_HOST:-}"
@@ -46,7 +46,8 @@ function setup_dev() {
     export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-data-zone/bronze/gamechanger/models/qexp_model/v4/qexp_20211001.tar.gz}"
     export S3_QEXP_JBOOK_PATH="${S3_QEXP_JBOOK_PATH:-s3://advana-data-zone/bronze/gamechanger/models/jbook_qexp_model/v1/jbook_qexp_20211029.tar.gz}"
     export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-data-zone/bronze/gamechanger/models/topic_model/v1/20210208.tar.gz}"
-    export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20211202.tar.gz}"
+    export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20211018.tar.gz}"
+    export S3_CORPUS_PATH="${S3_CORPUS_PATH:-s3://advana-data-zone/bronze/gamechanger/json}"
 
     export DEV_ENV="DEV"
     export PULL_MODELS="${PULL_MODELS:-latest}"
