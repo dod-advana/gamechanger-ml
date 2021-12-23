@@ -26,7 +26,9 @@ from gamechangerml.src.model_testing.evaluation import (
 from gamechangerml.scripts.finetune_sentence_retriever import STFinetuner
 from gamechangerml.scripts.run_evaluation import eval_qa, eval_sent, eval_sim, eval_qe
 from gamechangerml.src.featurization.make_meta import (
-    make_pop_docs, make_combined_entities, make_corpus_meta
+    make_pop_docs,
+    make_combined_entities,
+    make_corpus_meta,
 )
 from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 from gamechangerml.scripts.make_training_data import make_training_data
@@ -80,7 +82,9 @@ model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 FEATURES_DATA_PATH = os.path.join(DATA_PATH, "features")
 USER_DATA_PATH = os.path.join(DATA_PATH, "user_data")
-PROD_DATA_FILE = os.path.join(DATA_PATH, "features", "generated_files", "prod_test_data.csv")
+PROD_DATA_FILE = os.path.join(
+    DATA_PATH, "features", "generated_files", "prod_test_data.csv"
+)
 CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 SENT_INDEX = model_path_dict["sentence"]
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
@@ -92,21 +96,32 @@ except Exception as e:
     logger.warning(e)
     logger.warning("MLFLOW may not be installed")
 
+
 class Pipeline:
     def __init__(self):
 
         self.model_suffix = datetime.now().strftime("%Y%m%d")
-        ## read in input data files
+        # read in input data files
         try:
-            self.search_history = pd.read_csv(os.path.join(USER_DATA_PATH, "search_history", "SearchPdfMapping.csv"))
-            self.topics = pd.read_csv(os.path.join(FEATURES_DATA_PATH, "topics_wiki.csv"))
-            self.orgs = pd.read_csv(os.path.join(FEATURES_DATA_PATH, "agencies.csv"))
+            self.search_history = pd.read_csv(
+                os.path.join(USER_DATA_PATH, "search_history",
+                             "SearchPdfMapping.csv")
+            )
+            self.topics = pd.read_csv(
+                os.path.join(FEATURES_DATA_PATH, "topics_wiki.csv")
+            )
+            self.orgs = pd.read_csv(os.path.join(
+                FEATURES_DATA_PATH, "agencies.csv"))
         except Exception as e:
             logger.info(e)
-        
-        ## set paths for output data files
-        self.pop_docs_path = Path(os.path.join(FEATURES_DATA_PATH, "popular_documents.csv"))
-        self.combined_ents_path = Path(os.path.join(FEATURES_DATA_PATH, "combined_entities.csv"))
+
+        # set paths for output data files
+        self.pop_docs_path = Path(
+            os.path.join(FEATURES_DATA_PATH, "popular_documents.csv")
+        )
+        self.combined_ents_path = Path(
+            os.path.join(FEATURES_DATA_PATH, "combined_entities.csv")
+        )
 
     def run_pipeline(self, steps={}):
         """
@@ -124,29 +139,33 @@ class Pipeline:
         for step in steps:
             try:
                 logger.info("Running step %s in pipeline." % step)
-                self.run(build_type=step, run_name=str(date.today()), params=steps[step])
+                self.run(
+                    build_type=step, run_name=str(date.today()), params=steps[step]
+                )
             except Exception as e:
                 logger.info(f"Could not run {step}")
                 logger.info(e)
-    
+
     def create_metadata(
         self,
         meta_steps,
-        corpus_dir:t.Union[str,os.PathLike]=CORPUS_DIR,
-        index_path:t.Union[str,os.PathLike]=os.path.join(MODEL_PATH, "sent_index_20210715"),
-        days: int=80,
+        corpus_dir: t.Union[str, os.PathLike] = CORPUS_DIR,
+        index_path: t.Union[str, os.PathLike] = os.path.join(
+            MODEL_PATH, "sent_index_20210715"
+        ),
+        days: int = 80,
         prod_data_file=PROD_DATA_FILE,
-        n_returns: int=15,
-        n_matching: int=3,
-        level: str='silver',
-        update_eval_data: bool=False,
+        n_returns: int = 15,
+        n_matching: int = 3,
+        level: str = "silver",
+        update_eval_data: bool = False,
         retriever=None,
-        upload:bool=True,
-        version:str="v1"
+        upload: bool = True,
+        version: str = "v1",
     ) -> None:
         """
         create_metadata: combines datasets to create readable sets for ingest
-        Args: 
+        Args:
             corpus_dir [Union[str,os.PathLike]]: path to corpus JSONs
             meta_steps [List[str]]: list of metadata steps to execute (
                 options: ["pop_docs", "combined_ents", "rank_features", "update_sent_data"])
@@ -164,11 +183,14 @@ class Pipeline:
         if "pop_docs" in meta_steps:
             make_pop_docs(self.search_history, self.pop_docs_path)
         if "combined_ents" in meta_steps:
-            make_combined_entities(self.topics, self.orgs, self.combined_ents_path)
+            make_combined_entities(
+                self.topics, self.orgs, self.combined_ents_path)
         if "rank_features" in meta_steps:
             make_corpus_meta(corpus_dir, days, prod_data_file, upload)
         if "update_sent_data" in meta_steps:
-            make_training_data(index_path, n_returns, n_matching, level, update_eval_data, retriever)
+            make_training_data(
+                index_path, n_returns, n_matching, level, update_eval_data, retriever
+            )
         if upload:
             s3_path = os.path.join(S3_DATA_PATH, f"{version}")
             logger.info(f"****    Saving new data files to S3: {s3_path}")
@@ -180,13 +202,13 @@ class Pipeline:
 
     def finetune_sent(
         self,
-        batch_size: int=32,
-        epochs: int=3,
-        warmup_steps: int=100,
-        testing_only: bool=False,
-        version: str="v5"
-    ) -> t.Dict[str,str]:
-        """finetune_sent: finetunes the sentence transformer - saves new model, 
+        batch_size: int = 32,
+        epochs: int = 3,
+        warmup_steps: int = 100,
+        testing_only: bool = False,
+        version: str = "v5",
+    ) -> t.Dict[str, str]:
+        """finetune_sent: finetunes the sentence transformer - saves new model,
            a csv file of old/new cos sim scores, and a metadata file.
         Args:
             batch_size [int]: batch_size
@@ -204,7 +226,8 @@ class Pipeline:
         logger.info(
             f"Setting {str(model_save_path)} as save path for new model")
         data_path = get_most_recent_dir(
-            os.path.join(DATA_PATH, "training", "sent_transformer"))
+            os.path.join(DATA_PATH, "training", "sent_transformer")
+        )
         logger.info(f"Loading in domain data to finetune from {data_path}")
         finetuner = STFinetuner(
             model_load_path=model_load_path,
@@ -216,18 +239,18 @@ class Pipeline:
         )
         logger.info("Loaded finetuner class...")
         logger.info(f"Testing only is set to: {testing_only}")
-       
+
         return finetuner.retrain(data_path, testing_only, version)
 
     def evaluate(
         self,
         model_name: str,
         sample_limit: int,
-        validation_data: str="latest",
-        eval_type: str="original",
-        upload: bool=True,
-        version:str="v1"
-    ) -> t.Dict[str,str]:
+        validation_data: str = "latest",
+        eval_type: str = "original",
+        upload: bool = True,
+        version: str = "v1",
+    ) -> t.Dict[str, str]:
         """Evaluates models/sent index
         Args:
             model_name [str]: name of the model or sent index to evaluate
@@ -461,7 +484,8 @@ class Pipeline:
             # Create .tgz file
             dst_path = local_sent_index_dir + ".tar.gz"
             utils.create_tgz_from_dir(
-                src_dir=local_sent_index_dir, dst_archive=dst_path)
+                src_dir=local_sent_index_dir, dst_archive=dst_path
+            )
 
             logger.info(f"Created tgz file and saved to {dst_path}")
             logger.info("-------------- Running Evaluation --------------")
@@ -496,7 +520,7 @@ class Pipeline:
         if upload:
             S3_MODELS_PATH = "bronze/gamechanger/models"
             s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
-            utils.upload(s3_path, dst_path, "sentence_index", model_id, version)
+            utils.upload(s3_path, dst_path, "sentence_index", model_id)
         return metadata, evals
 
     def init_ltr(self):
@@ -564,7 +588,7 @@ class Pipeline:
         metadata = evals = {}
         try:
             with mlflow.start_run(run_name=run_name) as run:
-                if build_type == "sent_finetune": 
+                if build_type == "sent_finetune":
                     metadata = self.finetune_sent(**params)
                 elif build_type == "sentence":
                     metadata, evals = self.create_embedding(**params)
@@ -588,7 +612,7 @@ class Pipeline:
             logger.warning(e)
             logger.warning(f"Trying without MLFlow")
             try:
-                if build_type == "sent_finetune": 
+                if build_type == "sent_finetune":
                     metadata = self.finetune_sent(**params)
                 elif build_type == "sentence":
                     metadata, evals = self.create_embedding(**params)
