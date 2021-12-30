@@ -200,6 +200,20 @@ async def post_word_sim(body: dict, response: Response) -> dict:
         logger.error(f"Error with query expansion on {terms}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
+@router.post("/recommender", status_code=200)
+async def post_recommender(body: dict, response: Response) -> dict:
+    filename = body["filename"]
+    logger.info(f"Recommending similar documents to {filename}")
+    similar_docs = []
+    try:
+        similar_docs = MODELS.recommender.get_recs(filename)
+        logger.info(f"Found similar docs: \n {str(similar_docs)}")
+    except Exception as e:
+        logger.warning(f"Could not get similar docs for {filename}")
+        logger.warning(e)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    
+    return similar_docs
 
 def unquoted(term):
     """unquoted - unquotes string

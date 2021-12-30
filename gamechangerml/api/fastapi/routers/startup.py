@@ -15,9 +15,9 @@ async def load_models():
     MODELS.initQEJBook()
     MODELS.initSentenceEncoder()
     MODELS.initSentenceSearcher()
-    MODELS.initWordSim()
+    #MODELS.initWordSim()
     MODELS.initTopics()
-
+    MODELS.initRecommender()
 
 @router.on_event("startup")
 @repeat_every(seconds=120, wait_first=True)
