@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 helpFunction()
 {
@@ -20,29 +20,20 @@ function download_transformers() {
   local pkg_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../" >/dev/null 2>&1 && pwd )"
   local models_dest_dir="$pkg_dir/models"
   local S3_TRANS_MODEL_PATH="s3://advana-data-zone/bronze/gamechanger/models/transformers/v${version}/transformers.tar.gz"
-  declare -A TransformerDict
 
-  TransformerDict["bert-base-cased-squad2"]="https://huggingface.co/deepset/bert-base-cased-squad2"
-  TransformerDict["distilbart-mnli-12-3"]="https://huggingface.co/valhalla/distilbart-mnli-12-3"
-  TransformerDict["distilbert-base-uncased-distilled-squad"]="https://huggingface.co/distilbert-base-uncased-distilled-squad"
-  TransformerDict["distilroberta-base"]="https://huggingface.co/distilroberta-base"
-  TransformerDict["msmarco-distilbert-base-v2"]="https://huggingface.co/sentence-transformers/msmarco-distilbert-base-v2"
-  
   echo "Creating transformers folder"
   git lfs install
-  for repo in "${!TransformerDict[@]}"; do
-    if [ ! -d "$models_dest_dir/transformers/$repo" ] ; then
-      echo "$repo"
-      git clone "${TransformerDict[$repo]}" "$models_dest_dir/transformers/$repo"
-    else
-      echo "$repo folder already exists"
-      rm -r -f "$models_dest_dir/transformers/$repo"
-      git clone "${TransformerDict[$repo]}" "$models_dest_dir/transformers/$repo"
-    fi
-    rm -r -f "$models_dest_dir/transformers/$repo/.git"
+  rm -rf "$models_dest_dir/transformers/"
+  mkdir "$models_dest_dir/transformers/"
+  echo "Cloning transformers folder"
 
-    done
-
+  git clone https://huggingface.co/deepset/bert-base-cased-squad2 "$models_dest_dir/transformers/bert-base-cased-squad2"
+  git clone https://huggingface.co/valhalla/distilbart-mnli-12-3 "$models_dest_dir/transformers/distilbart-mnli-12-3"
+  git clone https://huggingface.co/distilbert-base-uncased-distilled-squad "$models_dest_dir/transformers/distilbert-base-uncased-distilled-squad"
+  git clone https://huggingface.co/distilroberta-base "$models_dest_dir/transformers/distilroberta-base"
+  git clone https://huggingface.co/sentence-transformers/msmarco-distilbert-base-v2 "$models_dest_dir/transformers/msmarco-distilbert-base-v2"
+  
+  echo "Tar files"
   tar -zcvf "$models_dest_dir/transformers.tar.gz" "$models_dest_dir/transformers/"
   echo "uploading to s3 $S3_TRANS_MODEL_PATH"
   aws s3 cp "$models_dest_dir/transformers.tar.gz" $S3_TRANS_MODEL_PATH
