@@ -176,7 +176,7 @@ class Recommender:
     def _lookup_cluster(self, doc, rank_method=['importance', 'nearness']):
     
         try:
-            if doc['label_prop_total'] < doc['louv_total']:
+            if doc['label_prop_total'] < doc['louv_total'] and doc['label_prop_total'] > 1:
                 col = 'label_prop'
                 community = doc['label_prop']
             else:
@@ -244,33 +244,34 @@ class Recommender:
             logger.warning(e)
             return []
     
-    def get_recs(self, filename, rank_method='importance', verbose=True):
+    def get_recs(self, filename=None, rank_method='importance'):
+
+        if not filename:
+            filename = self.data.sample()['Name'].tolist()[0]
+            logger.info(f" ****    RANDOM SAMPLE: {filename}")
 
         if filename in list(self.data['Name']):
             doc = get_file_data(filename, self.data)
+            title = doc['title']
             biggest_group = np.max([doc['louv_total'], doc['label_prop_total']])
             betweenness = np.round(float(doc['betweenness_perc'])*100, 3)
-            if verbose:
-                logger.info(f"*** Looking up {filename}: \n {str(doc)} ***\n")
-                if betweenness > self.data['betweenness_perc'].min()*100 + 1:
-                    logger.info(f"This doc is more important than {betweenness}% of docs \
-                        (based on betweenness)")
-                else:
-                    logger.info(f"This doc is one of the least connected docs in the \
-                        corpus based on betweenness (same as ~{betweenness}% of docs)\n")
+            logger.info(f"*** Looking up {filename}: \n {str(doc)} ***\n")
+            if betweenness > self.data['betweenness_perc'].min()*100 + 1:
+                message = (f"This doc is more important than {betweenness}% of docs (based on betweenness)")
+            else:
+                message = (f"This doc is one of the least connected docs in the corpus based on betweenness (same as ~{betweenness}% of docs)\n")
                 
             results = self._lookup_history(filename)
             method = 'search_history'
             if len(results) < 1:
                 if biggest_group > 1:
-                    logger.info("Didn't find the the document in user search history; getting clusters.") 
                     results = self._lookup_cluster(doc, rank_method)
                     method = 'clusters'
                 else:
                     results = self._lookup_other(filename)
                     method = 'backup'
-            logger.info(f"method: {method}, \nresults: {str(results)}")
-            return {"method": method, "results": results}
+            #logger.info(f"method: {method}, \nresults: {str(results)}")
+            return {"filename": filename, "title": title, "method": method, "doc_comparison": message, "results": results}
         else:
             logger.warning("This document is not in the corpus")
             return {}
