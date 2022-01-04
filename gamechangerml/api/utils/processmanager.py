@@ -10,6 +10,7 @@ loading_corpus = "training: load_corpus"
 training = "training: train_model"
 reloading = "models: reloading_models"
 ltr_creation = "models: ltr_creation"
+loading_data = "training: loading_data"
 
 # the dictionary that holds all the progress values
 try:
@@ -23,6 +24,7 @@ try:
         loading_corpus: False,
         reloading: False,
         ltr_creation: False,
+        loading_data: False
     }
 
     PROCESS_STATUS.value = {"flags": default_flags}

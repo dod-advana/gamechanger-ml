@@ -47,7 +47,8 @@ def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, sim, n_matc
     try:
         if len(ids) > 1:
             logger.info(f"Re-ranking {str(len(ids))} paragraphs retrieved for {doc_id}")
-            ranked = sim.re_rank(query=query, texts=pars, ids=ids)
+            top_docs = [{"text": x, "id": y} for (x, y) in zip(pars, ids)]
+            ranked = sim.re_rank(query=query, top_docs=top_docs)
         elif len(ids) == 1:
             ranked = [{"score": 'na', "id": ids[0], "text": pars[0]}]
     except Exception as e:
@@ -307,6 +308,7 @@ def make_training_data(
     save_dir = make_timestamp_directory(training_dir)
     
     logger.info("Loading sim model")
+    sim_model_name = "distilbart-mnli-12-6"
     sim = SimilarityRanker(sim_model_name, transformers_dir)
 
     if not retriever:
@@ -314,7 +316,7 @@ def make_training_data(
         retriever = SentenceSearcher(
             sim_model_name=sim_model_name, 
             index_path=index_path, 
-            transformer_path=transformers_dir,
+            transformer_path=transformers_dir
             )
     ## read in sent_index data
     logger.info("****   Loading in sent index data from retriever")

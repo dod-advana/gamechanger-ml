@@ -196,28 +196,34 @@ class Pipeline:
         Returns:
             metadata: meta information on finetuning
         """
-        model_load_path = os.path.join(
-            LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
-        )
-        model_id = datetime.now().strftime("%Y%m%d")
-        model_save_path = model_load_path + "_" + model_id
-        logger.info(
-            f"Setting {str(model_save_path)} as save path for new model")
-        data_path = get_most_recent_dir(
-            os.path.join(DATA_PATH, "training", "sent_transformer"))
-        logger.info(f"Loading in domain data to finetune from {data_path}")
-        finetuner = STFinetuner(
-            model_load_path=model_load_path,
-            model_save_path=model_save_path,
-            shuffle=True,
-            batch_size=batch_size,
-            epochs=epochs,
-            warmup_steps=warmup_steps,
-        )
-        logger.info("Loaded finetuner class...")
-        logger.info(f"Testing only is set to: {testing_only}")
-       
-        return finetuner.retrain(data_path, testing_only, version)
+        try:
+            model_load_path = os.path.join(
+                LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
+            )
+            model_id = datetime.now().strftime("%Y%m%d")
+            model_save_path = model_load_path + "_" + model_id
+            logger.info(
+                f"Setting {str(model_save_path)} as save path for new model")
+            finetune_data_path = os.path.join(DATA_PATH, "training", "sent_transformer") 
+            data_path = get_most_recent_dir(os.path.join(DATA_PATH, "training", "sent_transformer"))
+            if not data_path:
+                quit()
+            logger.info(f"Loading in domain data to finetune from {data_path}")
+            finetuner = STFinetuner(
+                model_load_path=model_load_path,
+                model_save_path=model_save_path,
+                shuffle=True,
+                batch_size=batch_size,
+                epochs=epochs,
+                warmup_steps=warmup_steps,
+            )
+            logger.info("Loaded finetuner class...")
+            logger.info(f"Testing only is set to: {testing_only}")
+        
+            return finetuner.retrain(data_path, testing_only, version)
+        except Exception as e:
+            logger.warning("Could not finetune sentence model - pipeline")
+            logger.error(e, exc_info=True)
 
     def evaluate(
         self,
