@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 helpFunction()
 {
@@ -19,7 +19,7 @@ function download_transformers() {
 
   local pkg_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../" >/dev/null 2>&1 && pwd )"
   local models_dest_dir="$pkg_dir/models"
-  local S3_TRANS_MODEL_PATH="s3://advana-data-zone/bronze/gamechanger/models/transformers/v$version/transformers.tar.gz"
+  local S3_TRANS_MODEL_PATH="s3://advana-data-zone/bronze/gamechanger/models/transformers/v${version}/transformers.tar.gz"
   declare -A TransformerDict
 
   TransformerDict["bert-base-cased-squad2"]="https://huggingface.co/deepset/bert-base-cased-squad2"
