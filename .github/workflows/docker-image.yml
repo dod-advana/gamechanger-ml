@@ -1,0 +1,20 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+    branches: [ dev ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: 
+      image: jaredbooz/gamechanger_base_ml:latest
+      credentials:
+        username: jaredbooz
+        password: ${{ secrets.BoozGamechanger1 }}
+    steps:
+     - uses: actions/checkout@v2
+     - name: Testing
+       run: less ./gamechangerml/api/tests/api_tests.py
