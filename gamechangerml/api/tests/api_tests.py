@@ -86,14 +86,14 @@ def getCurrentTrans():
     return resp.json()
 
 
-def test_changeModels():
+# def test_changeModels():
 
-    test_index = "sent_index_20210715"
-    model_dict = {"sentence": test_index}
-    resp = requests.post(API_URL + "/reloadModels", json=model_dict)
-    time.sleep(20)
-    curr = getCurrentTrans()
-    assert curr["sentence_index"] == "gamechangerml/models/sent_index_20210715"
+#     test_index = "sent_index_20210715"
+#     model_dict = {"sentence": test_index}
+#     resp = requests.post(API_URL + "/reloadModels", json=model_dict)
+#     time.sleep(20)
+#     curr = getCurrentTrans()
+#     assert curr["sentence_index"] == "gamechangerml/models/sent_index_20210715"
 
 ## Search Tests
 
