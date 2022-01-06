@@ -541,7 +541,11 @@ class Pipeline:
             ltr = LTR()
             processmanager.update_status(processmanager.ltr_creation, 0, 4)
             logger.info("Attempting to create judgement list")
-            judgements = ltr.generate_judgement(ltr.mappings)
+            remote_mappings = False
+            if os.environ.get("ENV_TYPE") == "PROD":
+                remote_mappings = True
+            judgements = ltr.generate_judgement(
+                remote_mappings=remote_mappings)
             processmanager.update_status(processmanager.ltr_creation, 1, 4)
             logger.info("Attempting to get features")
             fts = ltr.generate_ft_txt_file(judgements)
