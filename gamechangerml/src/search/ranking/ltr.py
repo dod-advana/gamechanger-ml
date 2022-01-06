@@ -14,105 +14,7 @@ from gamechangerml import MODEL_PATH, DATA_PATH
 import typing as t
 import base64
 from urllib.parse import urljoin
-from gamechangerml.src.utilities import gc_web_api
-
-
-ES_INDEX = os.environ.get("ES_INDEX", "gamechanger")
-
-
-class ESUtils:
-    def __init__(
-        self,
-        host: str = os.environ.get("ES_HOST", "localhost"),
-        port: str = os.environ.get("ES_PORT", 443),
-        user: str = os.environ.get("ES_USER", ""),
-        password: str = os.environ.get("ES_PASSWORD", ""),
-        enable_ssl: bool = os.environ.get(
-            "ES_ENABLE_SSL", "True").lower() == "true",
-        enable_auth: bool = os.environ.get(
-            "ES_ENABLE_AUTH", "False").lower() == "true",
-    ):
-
-        self.host = host
-        self.port = port
-        self.user = user
-        self.password = password
-        self.enable_ssl = enable_ssl
-        self.enable_auth = enable_auth
-
-        self.auth_token = base64.b64encode(
-            f"{self.user}:{self.password}".encode()
-        ).decode()
-
-    @property
-    def client(self) -> Elasticsearch:
-        if hasattr(self, "_client"):
-            return getattr(self, "_client")
-
-        host_args = dict(
-            hosts=[
-                {
-                    "host": self.host,
-                    "port": self.port,
-                    "http_compress": True,
-                    "timeout": 60,
-                }
-            ]
-        )
-        auth_args = (
-            dict(http_auth=(self.user, self.password)
-                 ) if self.enable_auth else {}
-        )
-        ssl_args = dict(use_ssl=self.enable_ssl)
-
-        es_args = dict(
-            **host_args,
-            **auth_args,
-            **ssl_args,
-        )
-
-        self._es_client = Elasticsearch(**es_args)
-        return self._es_client
-
-    @property
-    def auth_headers(self) -> t.Dict[str, str]:
-        return {"Authorization": f"Basic {self.auth_token}"} if self.enable_auth else {}
-
-    @property
-    def content_headers(self) -> t.Dict[str, str]:
-        return {"Content-Type": "application/json"}
-
-    @property
-    def default_headers(self) -> t.Dict[str, str]:
-        if self.enable_auth:
-            return dict(**self.auth_headers, **self.content_headers)
-        else:
-            return dict(**self.content_headers)
-
-    @property
-    def root_url(self) -> str:
-        return ("https" if self.enable_ssl else "http") + f"://{self.host}:{self.port}/"
-
-    def request(self, method: str, url: str, **request_opts) -> requests.Response:
-        complete_url = urljoin(self.root_url, url.lstrip("/"))
-        return requests.request(
-            method=method,
-            url=complete_url,
-            headers=self.default_headers,
-            **request_opts,
-        )
-
-    def post(self, url: str, **request_opts) -> requests.Response:
-        return self.request(method="POST", url=url, **request_opts)
-
-    def put(self, url: str, **request_opts) -> requests.Response:
-        return self.request(method="PUT", url=url, **request_opts)
-
-    def get(self, url: str, **request_opts) -> requests.Response:
-        return self.request(method="GET", url=url, **request_opts)
-
-    def delete(self, url: str, **request_opts) -> requests.Response:
-        return self.request(method="DELETE", url=url, **request_opts)
+from gamechangerml.src.utilities import gc_web_api, es_utils
 
 
 logger = logging.getLogger("gamechanger")
@@ -125,6 +27,8 @@ LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
 os.makedirs(LTR_MODEL_PATH, exist_ok=True)
 os.makedirs(LTR_DATA_PATH, exist_ok=True)
 gcClient = gc_web_api.GCWebClient()
+
+esu = es_utils.ESUtils()
 
 
 class LTR:
@@ -154,7 +58,6 @@ class LTR:
             "rmse",
             "error",
         ]
-        self.esu = ESUtils()
         self.mappings = pd.DataFrame()
 
     def write_model(self, model):
@@ -250,7 +153,7 @@ class LTR:
             }
         }
         endpoint = "/_ltr/_featureset/doc_features/_createmodel"
-        r = self.esu.post(endpoint, data=json.dumps(query))
+        r = esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def search(self, terms, rescore=True):
@@ -332,7 +235,7 @@ class LTR:
                     }
                 }
             }
-        r = self.esu.client.search(index=ES_INDEX, body=dict(query))
+        r = esu.client.search(index=es_utils.ES_INDEX, body=dict(query))
         return r
 
     def generate_judgement(self, remote_mappings=False):
@@ -398,10 +301,10 @@ class LTR:
             for docs in tmp.itertuples():
                 doc = docs.Index
                 q = self.construct_query(doc, kw)
-                query_list.append(json.dumps({"index": ES_INDEX}))
+                query_list.append(json.dumps({"index": es_utils.ES_INDEX}))
                 query_list.append(json.dumps(q))
         query = "\n".join(query_list)
-        res = self.esu.client.msearch(body=query)
+        res = esu.client.msearch(body=query)
         ltr_log = [x["hits"]["hits"] for x in res["responses"]]
         return ltr_log
 
@@ -613,17 +516,17 @@ class LTR:
             }
         }
         endpoint = "/_ltr/_featureset/doc_features"
-        r = self.esu.post(endpoint, data=json.dumps(query))
+        r = esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def post_init_ltr(self):
         endpoint = "/_ltr"
-        r = self.esu.put(endpoint)
+        r = esu.put(endpoint)
         return r.content
 
     def delete_ltr(self, model_name="ltr_model"):
         endpoint = "/_ltr/_model/{model_name}"
-        r = self.esu.delete(endpoint)
+        r = esu.delete(endpoint)
         return r.content
 
     def normalize(self, arr, start=0, end=4):
