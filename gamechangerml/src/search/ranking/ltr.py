@@ -1,5 +1,3 @@
-import spacy
-from datetime import datetime
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
@@ -16,6 +14,7 @@ from gamechangerml import MODEL_PATH, DATA_PATH
 import typing as t
 import base64
 from urllib.parse import urljoin
+from gamechangerml.src.utilities import gc_web_api
 
 
 ES_INDEX = os.environ.get("ES_INDEX", "gamechanger")
@@ -125,6 +124,7 @@ LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
 LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
 os.makedirs(LTR_MODEL_PATH, exist_ok=True)
 os.makedirs(LTR_DATA_PATH, exist_ok=True)
+gcClient = gc_web_api.GCWebClient()
 
 
 class LTR:
@@ -138,7 +138,6 @@ class LTR:
     ):
         self.data = self.read_xg_data()
         self.params = params
-        self.mappings = self.read_mappings()
         self.judgement = None
         self.eval_metrics = [
             "map",
@@ -156,6 +155,7 @@ class LTR:
             "error",
         ]
         self.esu = ESUtils()
+        self.mappings = pd.DataFrame()
 
     def write_model(self, model):
         """write model: writes model to file
@@ -184,17 +184,32 @@ class LTR:
         except Exception as e:
             logger.error("Could not read in data for training")
 
-    def read_mappings(self, path=GC_USER_DATA):
+    def read_mappings(self, path=GC_USER_DATA, remote_mappings=False):
         """read mappings: reads search pdf mappings
         params: path to file
         returns:
             mappings file
         """
+        try:
+            if remote_mappings:
+                self.mappings = self.request_mappings()
+            else:
+                logger.info(
+                    "Not production environment, defaulting to local mappings")
+                self.mappings = pd.read_csv(path)
+        except Exception as e:
+            logger.warning("Could not request or read mappings")
+            logger.warning(e)
+        return self.mappings
+
+    def request_mappings(self, daysBack=180):
         mappings = None
         try:
-            mappings = pd.read_csv(path)
+            mappings = gcClient.getSearchMappings(daysBack=daysBack)
+            mappings = json.loads(mappings)
+            mappings = mappings["data"]
         except Exception as e:
-            logger.error("Could not read in mappings to make judgement list")
+            logger.warning("Could not request mappings from GC Web")
         return mappings
 
     def train(self, data=None, params=None, write=True):
@@ -215,16 +230,9 @@ class LTR:
             fmap=os.path.join(LTR_DATA_PATH, "featmap.txt"), dump_format="json"
         )
         if write:
-            metadata = {}
             self.write_model(model)
             path = os.path.join(LTR_MODEL_PATH, "ltr_evals.csv")
             cv.to_csv(path, index=False)
-            metadata["name"] = "ltr_model"
-            metadata["evals"] = cv.mean().to_dict()
-            metadata["params"] = params
-            metadata["date"] = str(datetime.today())
-            with open(os.path.join(LTR_MODEL_PATH, "metadata.json"), "w") as f:
-                f.write(json.dumps(metadata))
         return bst, model
 
     def post_model(self, model, model_name):
@@ -327,14 +335,15 @@ class LTR:
         r = self.esu.client.search(index=ES_INDEX, body=dict(query))
         return r
 
-    def generate_judgement(self, mappings):
+    def generate_judgement(self, remote_mappings=False):
         """generate judgement - generates judgement list from user mapping data
         params:
             mappings: dataframe of user data extracted from pdf mapping table
         returns:
             count_df: cleaned dataframe with search mapped data
         """
-        searches = mappings[["search", "document"]]
+        self.read_mappings(remote_mappings=remote_mappings)
+        searches = self.mappings[["search", "document"]]
         searches.dropna(inplace=True)
         searches.search.replace("&quot;", "", regex=True, inplace=True)
         word_tuples = []
@@ -613,7 +622,7 @@ class LTR:
         return r.content
 
     def delete_ltr(self, model_name="ltr_model"):
-        endpoint = f"/_ltr/_model/{model_name}"
+        endpoint = "/_ltr/_model/{model_name}"
         r = self.esu.delete(endpoint)
         return r.content
 
