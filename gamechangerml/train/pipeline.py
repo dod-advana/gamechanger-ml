@@ -1,6 +1,8 @@
 import argparse
 from gamechangerml import MODEL_PATH
+from gamechangerml.api.fastapi.settings import CORPUS_DIR
 from gamechangerml.src.search.ranking.ltr import LTR
+from gamechangerml.src.featurization.topic_modeling import Topics
 import logging
 import os
 from datetime import datetime, date
@@ -42,9 +44,7 @@ import typing as t
 import subprocess
 
 
-from gamechangerml.src.search.query_expansion.build_ann_cli import (
-    build_qe_model as bqe,
-)
+from gamechangerml.src.search.query_expansion.build_ann_cli import build_qe_model as bqe
 from gamechangerml.src.utilities import utils
 from gamechangerml.configs.config import (
     DefaultConfig,
@@ -66,8 +66,7 @@ os.environ["PYTHONWARNINGS"] = "ignore:Unverified HTTPS request"
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
-formatter = logging.Formatter(
-    "%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s")
+formatter = logging.Formatter("%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
@@ -81,11 +80,13 @@ ORGS_FILE = "gamechangerml/data/agencies/agencies_in_corpus.csv"
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 
 data_path = "gamechangerml/data"
+
 try:
     import mlflow
-    from mlflow.tracking import MlflowClient
+
+    # from mlflow.tracking import MlflowClient
 except Exception as e:
-    logger.warning(e)
+    # logger.warning(e)
     logger.warning("MLFLOW may not be installed")
 
 try:
@@ -99,7 +100,7 @@ def lookup_wiki_summary(query):
     try:
         return wikipedia.summary(query).replace("\n", "")
     except:
-        print(f"Could not retrieve description for {query}")
+        logger.info(f"Could not retrieve description for {query}")
         return ""
 
 
@@ -110,8 +111,7 @@ class Pipeline:
         if POP_DOCS_PATH.is_file():
             self.popular_docs = pd.read_csv(POP_DOCS_PATH)
         else:
-            logger.info(
-                "popular_documents.csv does not exist - generating meta data")
+            logger.info("popular_documents.csv does not exist - generating meta data")
             self.create_metadata()
             self.popular_docs = pd.read_csv(POP_DOCS_PATH)
 
@@ -139,15 +139,13 @@ class Pipeline:
             if step == "meta":
                 self.create_metadata()
             if step == "qexp":
-                self.run(build_type="qexp", run_name=str(
-                    date.today()), params=params)
+                self.run(build_type="qexp", run_name=str(date.today()), params=params)
             if step == "eval":
-                self.run(build_type="eval", run_name=str(
-                    date.today()), params=params)
+                self.run(build_type="eval", run_name=str(date.today()), params=params)
+            if step == "topics":
+                self.run(build_type="topics", run_name=str(date.today()), params=params)
 
-    def create_metadata(
-        self,
-    ):
+    def create_metadata(self,):
         """
         create_metadata: combines datasets to create a readable set for ingest
         Args:
@@ -158,8 +156,7 @@ class Pipeline:
         except Exception as e:
             logger.info(e)
         mappings = self.process_mappings(mappings)
-        mappings.to_csv(os.path.join(
-            data_path, "popular_documents.csv"), index=False)
+        mappings.to_csv(os.path.join(data_path, "popular_documents.csv"), index=False)
         try:
             topics = pd.read_csv(TOPICS_FILE)
             orgs = pd.read_csv(ORGS_FILE)
@@ -176,8 +173,7 @@ class Pipeline:
             lambda x: lookup_wiki_summary(x)
         )
         combined_ents["information_source"] = "Wikipedia"
-        combined_ents["information_retrieved"] = date.today().strftime(
-            "%Y-%m-%d")
+        combined_ents["information_retrieved"] = date.today().strftime("%Y-%m-%d")
         combined_ents.to_csv(
             os.path.join(data_path, "combined_entities.csv"), index=False
         )
@@ -187,8 +183,7 @@ class Pipeline:
 
     def process_mappings(self, data):
         data = data.document.value_counts().to_frame().reset_index()
-        data.rename(columns={"document": "pop_score",
-                    "index": "doc"}, inplace=True)
+        data.rename(columns={"document": "pop_score", "index": "doc"}, inplace=True)
         return data
 
     def finetune_sent(
@@ -206,10 +201,8 @@ class Pipeline:
             LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
         )
         model_save_path = model_load_path + "_" + str(date.today())
-        logger.info(
-            f"Setting {str(model_save_path)} as save path for new model")
-        data_path = get_most_recent_dir(
-            "gamechangerml/data/training/sent_transformer")
+        logger.info(f"Setting {str(model_save_path)} as save path for new model")
+        data_path = get_most_recent_dir("gamechangerml/data/training/sent_transformer")
         logger.info(f"Loading in domain data to finetune from {data_path}")
         finetuner = STFinetuner(
             model_load_path=model_load_path,
@@ -256,8 +249,7 @@ class Pipeline:
 
         def eval_sent(model_name, validation_data, eval_type="domain"):
             metadata = open_json(
-                "metadata.json", os.path.join(
-                    "gamechangerml/models", model_name)
+                "metadata.json", os.path.join("gamechangerml/models", model_name)
             )
             encoder = metadata["encoder_model"]
             logger.info(f"Evaluating {model_name} created with {encoder}")
@@ -288,8 +280,7 @@ class Pipeline:
                 )
                 results = originalEval.results
             else:
-                logger.info(
-                    "No eval_type selected. Options: ['original', 'domain'].")
+                logger.info("No eval_type selected. Options: ['original', 'domain'].")
 
             return results
 
@@ -305,11 +296,9 @@ class Pipeline:
                 logger.info(f"Evals: {str(results)}")
                 return results
             elif eval_type == "domain":
-                logger.info(
-                    "No in-domain evaluation available for the sim model.")
+                logger.info("No in-domain evaluation available for the sim model.")
             else:
-                logger.info(
-                    "No eval_type selected. Options: ['original', 'domain'].")
+                logger.info("No eval_type selected. Options: ['original', 'domain'].")
 
         def eval_qe(model_name):
             domainEval = QexpEvaluator(
@@ -326,8 +315,7 @@ class Pipeline:
             logger.info(f"Attempting to evaluate model {model_name}")
 
             if "bert-base-cased-squad2" in model_name:
-                results[eval_type] = eval_qa(
-                    model_name, sample_limit, eval_type)
+                results[eval_type] = eval_qa(model_name, sample_limit, eval_type)
             elif "msmarco-distilbert-base-v2" in model_name:
                 results["original"] = eval_sent(
                     model_name, validation_data, eval_type="original"
@@ -337,8 +325,7 @@ class Pipeline:
                     model_name, validation_data, eval_type="domain"
                 )
             elif "distilbart-mnli-12-3" in model_name:
-                results[eval_type] = eval_sim(
-                    model_name, sample_limit, eval_type)
+                results[eval_type] = eval_sim(model_name, sample_limit, eval_type)
             elif "qexp" in model_name:
                 results["domain"] = eval_qe(model_name)
             else:
@@ -386,8 +373,7 @@ class Pipeline:
             # build ANN indices
             index_dir = os.path.join(model_dest, model_path)
             bqe.main(corpus, index_dir, **QexpConfig.MODEL_ARGS["bqe"])
-            logger.info(
-                "-------------- Model Training Complete --------------")
+            logger.info("-------------- Model Training Complete --------------")
             # Create .tgz file
             dst_path = index_dir + ".tar.gz"
             self.create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
@@ -406,8 +392,7 @@ class Pipeline:
                 # qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
                 # evals = qxpeval.results
 
-                logger.info(
-                    "-------------- Assessment is not available--------------")
+                logger.info("-------------- Assessment is not available--------------")
                 """
                 results = mau.assess_model(
                     model_name=model_id,
@@ -422,8 +407,7 @@ class Pipeline:
                             key=metric, value=results[metric])
                 """
 
-                logger.info(
-                    "-------------- Finished Assessment --------------")
+                logger.info("-------------- Finished Assessment --------------")
             else:
                 logger.info("-------------- No Assessment Ran --------------")
         except Exception as e:
@@ -469,8 +453,7 @@ class Pipeline:
         # GPU check
         use_gpu = gpu
         if use_gpu and not torch.cuda.is_available:
-            logger.info(
-                "GPU is not available. Setting `gpu` argument to False")
+            logger.info("GPU is not available. Setting `gpu` argument to False")
             use_gpu = False
 
         # Define model saving directories
@@ -484,8 +467,7 @@ class Pipeline:
         # Define new index directory
         if not os.path.isdir(local_sent_index_dir):
             os.mkdir(local_sent_index_dir)
-        logger.info(
-            "-------------- Building Sentence Embeddings --------------")
+        logger.info("-------------- Building Sentence Embeddings --------------")
         logger.info("Loading Encoder Model...")
 
         # If existing index exists, copy content from reference index
@@ -505,8 +487,7 @@ class Pipeline:
             )
             logger.info("-------------- Indexing Documents--------------")
             start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            encoder.index_documents(
-                corpus_path=corpus, index_path=local_sent_index_dir)
+            encoder.index_documents(corpus_path=corpus, index_path=local_sent_index_dir)
             end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             logger.info("-------------- Completed Indexing --------------")
             user = get_user(logger)
@@ -545,8 +526,7 @@ class Pipeline:
             logger.info(f"Saved metadata.json to {metadata_path}")
             # Create .tgz file
             dst_path = local_sent_index_dir + ".tar.gz"
-            self.create_tgz_from_dir(
-                src_dir=local_sent_index_dir, dst_archive=dst_path)
+            self.create_tgz_from_dir(src_dir=local_sent_index_dir, dst_archive=dst_path)
 
             logger.info(f"Created tgz file and saved to {dst_path}")
             logger.info("-------------- Running Evaluation --------------")
@@ -572,8 +552,7 @@ class Pipeline:
                 )
                 logger.error(e)
 
-            logger.info(
-                "-------------- Finished Sentence Embedding--------------")
+            logger.info("-------------- Finished Sentence Embedding--------------")
         except Exception as e:
             logger.warning("Error with creating embedding")
             logger.error(e)
@@ -624,13 +603,57 @@ class Pipeline:
         except Exception as e:
             logger.error("Could not create LTR")
 
+    def create_topics(self, sample_rate, upload=False):
+        try:
+
+            version = "v2"
+            model_id = datetime.now().strftime("%Y%m%d")
+            model_name = "topics_" + model_id
+            model_dir = model_path_dict["topics"]
+
+            local_dir = os.path.join(model_dir, model_name)
+            # Define new index directory
+            if not os.path.isdir(local_dir):
+                os.mkdir(local_dir)
+
+            # Train topics
+            # TODO unwrap this like sentence encoder??
+            topics_model = Topics()
+            metadata = topics_model.train_from_files(
+                corpus_dir=CORPUS_DIR, sample_rate=sample_rate, local_dir=local_dir
+            )
+
+            # Create metadata file
+            metadata_path = os.path.join(local_dir, "metadata.json")
+            with open(metadata_path, "w") as fp:
+                json.dump(metadata, fp)
+
+            logger.info(f"Saved metadata.json to {metadata_path}")
+            # Create .tgz file
+            tar_path = local_dir + ".tar.gz"
+            self.create_tgz_from_dir(src_dir=local_dir, dst_archive=tar_path)
+
+            evals = None  # TODO: figure out how to evaluate this
+            logger.info("\n\n create_topics complete \n")
+
+            # Upload to S3
+            ## DAKOTA NOTE
+            # # option on ml dash, is option b/c not needed running locally
+            if upload:
+                S3_MODELS_PATH = "bronze/gamechanger/models"
+                s3_path = os.path.join(S3_MODELS_PATH, f"topics/{version}")
+                self.upload(s3_path, tar_path, "topics", model_id, version)
+            return metadata, evals
+
+        except Exception as e:
+            logger.error("Could not create topics", e)
+
     def upload(self, s3_path, local_path, model_prefix, model_name, version):
         # Loop through each file and upload to S3
         logger.info(f"Uploading files to {s3_path}")
         logger.info(f"\tUploading: {local_path}")
         # local_path = os.path.join(dst_path)
-        s3_path = os.path.join(
-            s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
+        s3_path = os.path.join(s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
         utils.upload_file(local_path, s3_path)
         logger.info(f"Successfully uploaded files to {s3_path}")
         logger.info("-------------- Finished Uploading --------------")
@@ -644,8 +667,9 @@ class Pipeline:
         try:
             mlflow.create_experiment(str(date.today()))
         except Exception as e:
-            logger.warning(e)
-            logger.warning("Could not create experiment")
+            # logger.warning(e)
+            # logger.warning("Could not create experiment")
+            pass
         try:
             with mlflow.start_run(run_name=run_name) as run:
                 if build_type == "sent_finetune":
@@ -656,6 +680,8 @@ class Pipeline:
                     metadata, evals = self.create_qexp(**params)
                 elif build_type == "eval":
                     metadata, evals = {}, self.evaluate(**params)
+                elif build_type == "topics":
+                    metadata, evals = self.create_topics(**params)
                 self.mlflow_record(metadata, evals)
                 processmanager.update_status(
                     processmanager.training, 0, 1, "training" + build_type + " model"
@@ -666,8 +692,8 @@ class Pipeline:
                 processmanager.training, 1, 1, "trained" + build_type + " model"
             )
         except Exception as e:
-            logger.warning(f"Error building {build_type} with MLFlow")
-            logger.warning(e)
+            # logger.warning(f"Error building {build_type} with MLFlow")
+            # logger.warning(e)
             logger.warning(f"Trying without MLFlow")
             try:
                 if build_type == "sent_finetune":
@@ -678,6 +704,8 @@ class Pipeline:
                     metadata, evals = self.create_qexp(**params)
                 elif build_type == "eval":
                     metadata, evals = {}, self.evaluate(**params)
+                elif build_type == "topics":
+                    metadata, evals = self.create_topics(**params)
                 else:
                     logger.info(
                         f"Started pipeline with unknown build_type: {build_type}"
@@ -690,6 +718,7 @@ class Pipeline:
                 )
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
+                logger.error(err)
                 processmanager.update_status(
                     processmanager.loading_corpus,
                     message="failed to load corpus",
@@ -713,4 +742,5 @@ class Pipeline:
             try:
                 mlflow.log_metric(metric, evals[metric])
             except Exception as e:
-                logger.warning(f"could not log metric: {metric}")
+                # logger.warning(f"could not log metric: {metric}")
+                pass

@@ -67,6 +67,7 @@ async def check_health():
     logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
     logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")
+    logger.info(f"-- Topics model name: {TOPICS_MODEL.value}")
 
 
 def check_dep_exist():
@@ -82,10 +83,10 @@ def check_dep_exist():
     if not os.path.isdir(QEXP_MODEL_NAME.value):
         logger.warning(f"{QEXP_MODEL_NAME.value} does NOT exist")
         healthy = False
-    # topics_dir = os.path.join(QEXP_MODEL_NAME, "topic_models/models")
-    # if not os.path.isdir(topics_dir):
-    #    logger.warning(f"{topics_dir} does NOT exist")
-    #    healthy = False
+
+    if not os.path.isdir(TOPICS_MODEL.value):
+        logger.warning(f"{TOPICS_MODEL.value} does NOT exist")
+        healthy = False
 
     if not os.path.isdir(QEXP_JBOOK_MODEL_NAME.value):
         logger.warning(f"{QEXP_JBOOK_MODEL_NAME.value} does NOT exist")

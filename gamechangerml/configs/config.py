@@ -144,4 +144,6 @@ class TrainingConfig:
 
 
 class TopicsConfig:
-    DATA_ARGS = {"LOCAL_MODEL_DIR": os.path.join(REPO_PATH, "gamechangerml/models")}
+    DATA_ARGS = {
+        "LOCAL_MODEL_DIR": os.path.join(REPO_PATH, "gamechangerml/models/topic_models")
+    }
