@@ -136,7 +136,7 @@ class Pipeline:
         index_path:t.Union[str,os.PathLike]=os.path.join(MODEL_PATH, "sent_index_20210715"),
         days: int=80,
         prod_data_file=PROD_DATA_FILE,
-        n_returns: int=15,
+        n_returns: int=50,
         n_matching: int=3,
         level: str='silver',
         update_eval_data: bool=False,

@@ -343,6 +343,3 @@ def get_most_recent_dir(parent_dir):
         return max(subdirs, key=os.path.getctime)
     else:
         logger.error("There are no subdirectories to retrieve most recent data from")
-
-
-

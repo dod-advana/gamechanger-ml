@@ -5,8 +5,11 @@ import os
 import json
 from datetime import date
 from typing import List, Union, Dict, Tuple
+import spacy
+nlp = spacy.load("en_core_web_lg")
+
 from gamechangerml.configs.config import TrainingConfig, ValidationConfig, SimilarityConfig
-from gamechangerml.src.search.sent_transformer.model import SentenceSearcher, SimilarityRanker
+from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.utilities.text_utils import normalize_query
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.logger import logger
@@ -25,7 +28,7 @@ gold_standard_path = os.path.join(
     "gamechangerml/data/user_data", ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"]
     )
 
-def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, sim, n_matching: int) -> List[Dict[str,str]]:
+def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, n_matching: int, min_score: float=0.65) -> List[Dict[str,str]]:
     """Retrieves the best paragraphs for expected doc using similarity model
     Args:
         data [pd.DataFrame]: data df with processed text at paragraph_id level for sent_index
@@ -39,23 +42,28 @@ def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, sim, n_matc
     pars = []
     ids = []
     ranked = []
-    for i in data[data["doc_id"]==doc_id].index[:20]:
-        ids.append(data.loc[i, 'paragraph_id'])
-        short = ' '.join(data.loc[i, 'text'].split(' ')[:150])
+    doc1 = nlp(query)
+    sents = data[data['doc_id']==doc_id].T.to_dict()
+    for i in sents:
+        short = ' '.join(i'text'].split(' ')[:200])
         pars.append(short)
 
     try:
-        if len(ids) > 1:
-            logger.info(f"Re-ranking {str(len(ids))} paragraphs retrieved for {doc_id}")
-            top_docs = [{"text": x, "id": y} for (x, y) in zip(pars, ids)]
-            ranked = sim.re_rank(query=query, top_docs=top_docs)
-        elif len(ids) == 1:
-            ranked = [{"score": 'na', "id": ids[0], "text": pars[0]}]
+        if len(sents) > 1:
+            logger.info(f"Re-ranking {str(len(sents))} paragraphs retrieved for {doc_id}")
+            comparisons = []
+            for sent in sents:
+                doc2 = nlp(sent['text'])
+                sim = doc1.similarity(doc2)
+                if sim >= min_score:
+                    record = {"score": sim, "id": sent['paragraph_id'], "text": sent['text']}
+                    comparisons.append(record)
+            ranked = sorted(comparisons, key = lambda z: z['score'], reverse=True)
+        elif len(sents) == 1:
+            ranked = [{"score": 'na', "id": sents[0]['paragraph_id'], "text": sents[0]['text']}]
     except Exception as e:
         logger.info(f"****   Could not re-rank the paragraphs for {query}")
-        logger.warning(e)
-
-    return ranked[:n_matching]
+        logger.warning(e) 
 
 def check_no_match(expected_id: str, par_id: str) -> bool:
     """Checks if paragraph ID matches the expected doc ID"""
@@ -86,7 +94,7 @@ def get_negative_paragraphs(
             logger.info(f"PAR ID: {par_id}")
             par = data[data["paragraph_id"]==par_id].iloc[0]["text"]
             logger.info(f"PAR: {par}")
-            par = ' '.join(par.split(' ')[:150])
+            par = ' '.join(par.split(' ')[:200])
             if check_no_match(doc_id, par_id):
                 results.append({"query": query, "doc": par_id, "paragraph": par, "label": 0})
         logger.info(results)
@@ -308,7 +316,6 @@ def make_training_data(
     save_dir = make_timestamp_directory(training_dir)
     
     logger.info("Loading sim model")
-    sim_model_name = "distilbart-mnli-12-6"
     sim = SimilarityRanker(sim_model_name, transformers_dir)
 
     if not retriever:
@@ -330,7 +337,7 @@ def make_training_data(
     ## get matching paragraphs
     try:
         correct_found, correct_notfound = collect_matches(
-        data=data, sim=sim, n_matching=n_matching, queries=intel['queries'], collection=intel['collection'],
+        data=data, sim=None, n_matching=n_matching, queries=intel['queries'], collection=intel['collection'],
         relations=intel['correct'], label=1)
         logger.info(f"---Number of correct query/result pairs that were not found: {str(len(correct_notfound))}")
     except Exception as e:
@@ -338,7 +345,7 @@ def make_training_data(
         logger.warning("\nCould not retrieve positive matches\n")
     try:
         incorrect_found, incorrect_notfound = collect_matches(
-        data=data, sim=sim, n_matching=n_matching, queries=intel['queries'], collection=intel['collection'],
+        data=data, sim=None, n_matching=n_matching, queries=intel['queries'], collection=intel['collection'],
         relations=intel['incorrect'], label=-1)
         logger.info(f"---Number of incorrect query/result pairs that were not found: {str(len(incorrect_notfound))}")
     except Exception as e:

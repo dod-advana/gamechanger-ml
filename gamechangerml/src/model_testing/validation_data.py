@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, get_tokens
+from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, get_tokens, filter_title_queries
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.configs.config import ValidationConfig, TrainingConfig
 from gamechangerml.api.utils.logger import logger
@@ -480,7 +480,7 @@ class IntelSearchData(SearchValidationData):
     def make_intel(self):
         
         intel = self.data
-        intel = intel[~intel['search_text'].isin(self.exclude_searches)]
+        intel = intel[~intel['search_text_clean'].isin(self.exclude_searches)]
         
         int_queries = set(intel['search_text_clean'])
         intel_search_queries = update_dictionary(old_dict = {}, new_additions = int_queries, prefix ='S')
