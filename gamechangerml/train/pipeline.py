@@ -101,6 +101,7 @@ class Pipeline:
     def __init__(self):
 
         self.model_suffix = datetime.now().strftime("%Y%m%d")
+        self.ltr = LTR()
         # read in input data files
         try:
             self.search_history = pd.read_csv(
@@ -525,7 +526,6 @@ class Pipeline:
 
     def init_ltr(self):
         try:
-            ltr = LTR()
             logger.info("attempting to init LTR")
             resp = ltr.post_init_ltr()
             logger.info(resp)
@@ -536,7 +536,7 @@ class Pipeline:
             logger.warning(e)
             logger.warning("Could not initialize LTR")
 
-    def create_ltr(self):
+    def create_ltr(self, daysBack: int = 180):
         try:
             ltr = LTR()
             processmanager.update_status(processmanager.ltr_creation, 0, 4)
@@ -545,7 +545,8 @@ class Pipeline:
             if os.environ.get("ENV_TYPE") == "PROD":
                 remote_mappings = True
             judgements = ltr.generate_judgement(
-                remote_mappings=remote_mappings)
+                remote_mappings=remote_mappings, daysBack=daysBack
+            )
             processmanager.update_status(processmanager.ltr_creation, 1, 4)
             logger.info("Attempting to get features")
             fts = ltr.generate_ft_txt_file(judgements)

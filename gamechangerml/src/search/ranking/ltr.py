@@ -87,7 +87,9 @@ class LTR:
         except Exception as e:
             logger.error("Could not read in data for training")
 
-    def read_mappings(self, path=GC_USER_DATA, remote_mappings=False):
+    def read_mappings(
+        self, path=GC_USER_DATA, remote_mappings: bool = False, daysBack: int = 180
+    ):
         """read mappings: reads search pdf mappings
         params: path to file
         returns:
@@ -95,7 +97,7 @@ class LTR:
         """
         try:
             if remote_mappings:
-                self.mappings = self.request_mappings()
+                self.mappings = self.request_mappings(daysBack)
             else:
                 logger.info(
                     "Not production environment, defaulting to local mappings")
@@ -105,7 +107,7 @@ class LTR:
             logger.warning(e)
         return self.mappings
 
-    def request_mappings(self, daysBack=180):
+    def request_mappings(self, daysBack: int = 180):
         mappings = None
         try:
             mappings = gcClient.getSearchMappings(daysBack=daysBack)
@@ -235,17 +237,17 @@ class LTR:
                     }
                 }
             }
-        r = esu.client.search(index=es_utils.ES_INDEX, body=dict(query))
+        r = esu.client.search(index=esu.es_index, body=dict(query))
         return r
 
-    def generate_judgement(self, remote_mappings=False):
+    def generate_judgement(self, remote_mappings: bool = False, daysBack: int = 180):
         """generate judgement - generates judgement list from user mapping data
         params:
             mappings: dataframe of user data extracted from pdf mapping table
         returns:
             count_df: cleaned dataframe with search mapped data
         """
-        self.read_mappings(remote_mappings=remote_mappings)
+        self.read_mappings(remote_mappings=remote_mappings, daysBack=daysBack)
         searches = self.mappings[["search", "document"]]
         searches.dropna(inplace=True)
         searches.search.replace("&quot;", "", regex=True, inplace=True)
@@ -301,7 +303,7 @@ class LTR:
             for docs in tmp.itertuples():
                 doc = docs.Index
                 q = self.construct_query(doc, kw)
-                query_list.append(json.dumps({"index": es_utils.ES_INDEX}))
+                query_list.append(json.dumps({"index": esu.es_index}))
                 query_list.append(json.dumps(q))
         query = "\n".join(query_list)
         res = esu.client.msearch(body=query)
