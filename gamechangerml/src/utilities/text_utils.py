@@ -189,7 +189,116 @@ def normalize_query(s):
         return text.lower()
     return white_space_fix(lower(s))
 
+def clean_query(query):
+
+    stop = ['and', 'or']
+    query = [i for i in query.lower().split() if i not in stop]
+    query = re.sub(r'[^ a-zA-Z]', '', ' '.join(query))
+    query = ' '.join(query.strip().lstrip().split())
+    
+    return query 
+
 def get_tokens(s):
     '''Get tokens from normalized answer.'''
     if not s: return []
     return s.split()
+
+# https://www.datacamp.com/community/tutorials/fuzzy-string-python
+def levenshtein_ratio_and_distance(s, t, ratio_calc = False):
+    """ levenshtein_ratio_and_distance:
+        Calculates levenshtein distance between two strings.
+        If ratio_calc = True, the function computes the
+        levenshtein distance ratio of similarity between two strings
+        For all i and j, distance[i,j] will contain the Levenshtein
+        distance between the first i characters of s and the
+        first j characters of t
+    """
+    # Initialize matrix of zeros
+    rows = len(s)+1
+    cols = len(t)+1
+    distance = np.zeros((rows,cols),dtype = int)
+
+    # Populate matrix of zeros with the indeces of each character of both strings
+    for i in range(1, rows):
+        for k in range(1,cols):
+            distance[i][0] = i
+            distance[0][k] = k
+
+    # Iterate over the matrix to compute the cost of deletions,insertions and/or substitutions    
+    for col in range(1, cols):
+        for row in range(1, rows):
+            if s[row-1] == t[col-1]:
+                cost = 0 # If the characters are the same in the two strings in a given position [i,j] then the cost is 0
+            else:
+                # In order to align the results with those of the Python Levenshtein package, if we choose to calculate the ratio
+                # the cost of a substitution is 2. If we calculate just distance, then the cost of a substitution is 1.
+                if ratio_calc == True:
+                    cost = 2
+                else:
+                    cost = 1
+            distance[row][col] = min(distance[row-1][col] + 1,      # Cost of deletions
+                                 distance[row][col-1] + 1,          # Cost of insertions
+                                 distance[row-1][col-1] + cost)     # Cost of substitutions
+    Ratio = ((len(s)+len(t)) - distance[row][col]) / (len(s)+len(t))
+    
+    return distance[row][col], Ratio
+
+def string_contains(str1, str2):
+    
+    set1 = str1.lower().split()
+    set2 = str2.lower().split()
+    if len(set(set1).intersection(set2)) == len(set1):
+        return True
+    else:
+        return False
+
+def check_majority_numbers(query, ratio=0.6):
+    
+    if len(re.sub(r'[0-9]', '', query))/len(query) <= ratio:
+        return True
+    else:
+        return False
+
+def sort_first(samples):
+
+    samples = list(set(samples))
+    first_letters = [i[0] for i in samples]
+    zipped = dict(zip())
+    for x in docs_only['doc_start'].unique():
+        doc_dict[x] = set(docs_only[docs_only['doc_start']==x]['document'].tolist())
+
+def filter_title_queries(queries, doc_ids, doc_dict):
+    
+    remove = []
+    for i in queries:
+        if not re.search('[a-zA-Z]', i):  ## if the query has no letters, remove
+            logger.info(f"*** Removing query: {i} // (contains no characters)")
+            remove.append(i)
+        elif re.search('[0-9]', i):       ## if there are numbers in the query, compare to titles
+            if i.lower() in list(set([q.lower() for q in doc_ids])):
+                logger.info(f"*** Removing query: {i} // (in doc ids)")
+                remove.append(i)
+            elif check_majority_numbers(i):
+                logger.info(f"*** Removing query: {i} // (majority numbers)")
+                remove.append(i)
+            else:
+                cleaned = i.upper().replace("'", "")
+                start = cleaned[0].lower() # starting letter
+                sub = doc_dict[start]
+                for x in sub:
+                    if string_contains(cleaned, x):
+                        logger.info(f"*** Removing query: {i} // (string inside string)")
+                        remove.append(i)
+                        break
+                    else:
+                        dist, ratio = levenshtein_ratio_and_distance(cleaned.lower(),x.lower())
+                        if len(i) > 12 and ratio >= 0.75:
+                            logger.info(f"*** Removing query: {i} // ({dist} char, {ratio} ratio diff from doc title)")
+                            remove.append(i)
+                            break
+                        elif len(i) < 12 and dist <= 2:
+                            logger.info(f"*** Removing query: {i} // ({dist} char, {ratio} ratio diff from doc title)")
+                            remove.append(i)
+                            break
+    logger.info(f"*** Collected {str(len(remove))} queries to remove")
+    return remove

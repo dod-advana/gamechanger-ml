@@ -335,7 +335,8 @@ class SearchHistory():
         self, 
         start_date,
         end_date,
-        exclude_searches
+        exclude_searches,
+        filter_titles=True
         ):
     
         self.history = concat_search_hist()
@@ -374,8 +375,21 @@ class SearchHistory():
         df.rename(columns = {'documenttime': 'date', 'search': 'search_text', 'document': 'title_returned'}, inplace = True)
         df['search_text'] = df['search_text'].apply(lambda x: clean_quot(x))
         df['search_text_clean'] = df['search_text'].apply(lambda x: normalize_query(x))
-        df = df[df['search_text_clean'] != ''].copy()
+        df = df[~df['search_text_clean'] == '']
+        df['doc_start'] = df['document'].apply(lambda x: x[0].lower())
         df.drop(columns = ['idvisit', 'idaction_name', 'search_cat', 'searchtime'], inplace = True)
+
+        ## filtering out titles
+        if self.filter_titles:
+            logger.info(f"Removing titles from queries")
+            docs_only = df.drop_duplicates(subset = ['document'])
+            docs = list(set(docs_only['document']))
+            searches = df['search_text_clean'].unique()
+            doc_dict = {}
+            for x in docs_only['doc_start'].unique():
+                doc_dict[x] = set(docs_only[docs_only['doc_start']==x]['document'].tolist())
+            remove = filter_title_queries(searches, docs, doc_dict)
+            df = df[~df['search_text_clean'].isin(remove)]
         
         matched = df[~df['title_returned'].isnull()].copy()
         matched['correct_match'] = True

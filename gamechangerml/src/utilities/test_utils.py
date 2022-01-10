@@ -270,7 +270,7 @@ def filter_rels(metadata, min_correct_matches, max_results):
     
     correct_rels = {}
     incorrect_rels = {}
-    logger.info(f"Generating data for {str(len(metadata))} queries with {str(max_results)} max results and {str(min_correct_matches)} min correct matches")
+    logger.info(f"Generating data for {str(len(metadata))} queries with {str(max_results)} max results and {str(min_correct_matches)} min correct matches (filtering titles: {filter_titles})")
     for key in metadata:
         acceptable_positive_results = []
         negative_results = []
@@ -320,11 +320,11 @@ def filter_date_range(df, start_date, end_date):
     return subset
 
 def concat_csvs(directory):
-    '''Combines csvs in directory into one df; drops entirly null columns'''
+    '''Combines csvs in directory into one df; drops entirely null columns'''
     df = pd.DataFrame()
     logger.info(str(directory))
     csvs = [i for i in os.listdir(directory) if i.split('.')[-1]=='csv']
-    logger.info(f"CSVs: {str(csvs)}")
+    logger.info(f"Combining csvs: {str(csvs)}")
     for i in csvs:
         f = pd.read_csv(os.path.join(directory, i))
         df = pd.concat([df, f])
@@ -343,3 +343,6 @@ def get_most_recent_dir(parent_dir):
         return max(subdirs, key=os.path.getctime)
     else:
         logger.error("There are no subdirectories to retrieve most recent data from")
+
+
+
