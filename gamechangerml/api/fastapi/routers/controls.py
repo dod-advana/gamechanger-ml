@@ -65,6 +65,7 @@ def get_downloaded_models_list():
     qexp_list = {}
     sent_index_list = {}
     transformer_list = {}
+    topic_models = {}
     try:
         for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
             if ("qexp_" in f) and ("tar" not in f):
@@ -125,10 +126,41 @@ def get_downloaded_models_list():
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get Sentence Index model path")
+
+    # TOPICS MODELS
+    try:
+
+        topic_dirs = [
+            name
+            for name in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            if os.path.isdir(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
+            and "topic_model_" in name
+        ]
+        for topic_model_name in topic_dirs:
+            topic_models[topic_model_name] = {}
+            try:
+                with open(
+                    os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        topic_model_name,
+                        "metadata.json",
+                    )
+                ) as mf:
+                    topic_models[topic_model_name] = json.load(mf)
+            except:
+                topic_models[topic_model_name] = {
+                    "Error": "Failed to load metadata file for this model"
+                }
+
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get QEXP model path")
+
     model_list = {
         "transformers": transformer_list,
         "sentence": sent_index_list,
         "qexp": qexp_list,
+        "topic_models": topic_models,
     }
     return model_list
 
@@ -402,9 +434,9 @@ def train_qexp(model_dict):
 
 
 def train_topics(model_dict):
-    logger.info("\n\n\n\nAttemtping to train topic model")
+    logger.info("Attempting to train topic model")
     logger.info(model_dict)
-    args = {"sample_rate": model_dict.get("sample_rate")}
+    args = {"sample_rate": model_dict["sample_rate"], "upload": model_dict["upload"]}
     pipeline.run(
         build_type=model_dict["build_type"],
         run_name=datetime.now().strftime("%Y%m%d"),

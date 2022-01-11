@@ -102,18 +102,22 @@ def get_model_paths():
 
     # TOPICS
     try:
-        topics_dir = os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, "topics")
-        topics_names = [
-            f for f in os.listdir(topics_dir) if ("topics_" in f) and ("tar" not in f)
+
+        topic_model_dirs = [
+            name
+            for name in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            if "topic_model_" in name
+            and os.path.isdir(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
         ]
-        topics_names.sort(reverse=True)
-        if len(topics_names) > 0:
+        topic_model_dirs.sort(reverse=True)
+
+        if len(topic_model_dirs) > 0:
             TOPICS_PATH = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, topics_names[0]
+                Config.LOCAL_PACKAGED_MODELS_DIR, topic_model_dirs[0]
             )
         else:
-            print("defaulting TOPICS_PATH to topics")
-            TOPICS_PATH = os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, "topics")
+            raise f"No topic_model_<date> folders in {Config.LOCAL_PACKAGED_MODELS_DIR}"
+
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get Topics model path")

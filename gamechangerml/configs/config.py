@@ -145,5 +145,7 @@ class TrainingConfig:
 
 class TopicsConfig:
     DATA_ARGS = {
-        "LOCAL_MODEL_DIR": os.path.join(REPO_PATH, "gamechangerml/models/topic_models")
+        # topic models should be in folders named gamechangerml/models/topic_model_<date>
+        # this path will look for bigrams.phr, tfidf.model, tfidf_dictionary.dic in gamechangerml/models folder as a last resort
+        "LOCAL_MODEL_DIR": os.path.join(REPO_PATH, "gamechangerml/models",)
     }

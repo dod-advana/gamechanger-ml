@@ -1,6 +1,5 @@
 import argparse
-from gamechangerml import MODEL_PATH
-from gamechangerml.api.fastapi.settings import CORPUS_DIR
+from gamechangerml import MODEL_PATH, CORPUS_DIR
 from gamechangerml.src.search.ranking.ltr import LTR
 from gamechangerml.src.featurization.topic_modeling import Topics
 import logging
@@ -603,13 +602,16 @@ class Pipeline:
         except Exception as e:
             logger.error("Could not create LTR")
 
-    def create_topics(self, sample_rate, upload=False):
+    def create_topics(self, sample_rate=None, upload=False, corpus_dir=CORPUS_DIR):
         try:
-
             version = "v2"
-            model_id = datetime.now().strftime("%Y%m%d")
-            model_name = "topics_" + model_id
-            model_dir = model_path_dict["topics"]
+            model_id = datetime.now().strftime("%Y%m%d%H%M%S")
+            model_dir = DefaultConfig.LOCAL_MODEL_DIR
+
+            # get model name schema
+            model_name = "topic_model_" + model_id
+            logger.info(f"model dir {model_dir}")
+            logger.info(f"model_name {model_name}")
 
             local_dir = os.path.join(model_dir, model_name)
             # Define new index directory
@@ -617,11 +619,11 @@ class Pipeline:
                 os.mkdir(local_dir)
 
             # Train topics
-            # TODO unwrap this like sentence encoder??
             topics_model = Topics()
             metadata = topics_model.train_from_files(
-                corpus_dir=CORPUS_DIR, sample_rate=sample_rate, local_dir=local_dir
+                corpus_dir=corpus_dir, sample_rate=sample_rate, local_dir=local_dir
             )
+            logger.info(f"metadata {metadata}")
 
             # Create metadata file
             metadata_path = os.path.join(local_dir, "metadata.json")
@@ -633,16 +635,15 @@ class Pipeline:
             tar_path = local_dir + ".tar.gz"
             self.create_tgz_from_dir(src_dir=local_dir, dst_archive=tar_path)
 
-            evals = None  # TODO: figure out how to evaluate this
-            logger.info("\n\n create_topics complete \n")
-
+            logger.info(f"create_topics complete, should upload? {upload}")
             # Upload to S3
-            ## DAKOTA NOTE
-            # # option on ml dash, is option b/c not needed running locally
             if upload:
                 S3_MODELS_PATH = "bronze/gamechanger/models"
-                s3_path = os.path.join(S3_MODELS_PATH, f"topics/{version}")
-                self.upload(s3_path, tar_path, "topics", model_id, version)
+                s3_path = os.path.join(S3_MODELS_PATH, f"topic_model/{version}")
+                logger.info(f"Topics uploading to {s3_path}")
+                self.upload(s3_path, tar_path, "topic_model", model_id, version)
+
+            evals = None  # TODO: figure out how to evaluate this
             return metadata, evals
 
         except Exception as e:
@@ -654,6 +655,7 @@ class Pipeline:
         logger.info(f"\tUploading: {local_path}")
         # local_path = os.path.join(dst_path)
         s3_path = os.path.join(s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
+        logger.info(f"s3_path {s3_path}")
         utils.upload_file(local_path, s3_path)
         logger.info(f"Successfully uploaded files to {s3_path}")
         logger.info("-------------- Finished Uploading --------------")
@@ -666,9 +668,10 @@ class Pipeline:
         """
         try:
             mlflow.create_experiment(str(date.today()))
+
         except Exception as e:
-            # logger.warning(e)
-            # logger.warning("Could not create experiment")
+            logger.warning(e)
+            logger.warning("Could not create experiment")
             pass
         try:
             with mlflow.start_run(run_name=run_name) as run:
@@ -684,12 +687,12 @@ class Pipeline:
                     metadata, evals = self.create_topics(**params)
                 self.mlflow_record(metadata, evals)
                 processmanager.update_status(
-                    processmanager.training, 0, 1, "training" + build_type + " model"
+                    processmanager.training, 0, 1, f"training {build_type} model"
                 )
 
             mlflow.end_run()
             processmanager.update_status(
-                processmanager.training, 1, 1, "trained" + build_type + " model"
+                processmanager.training, 1, 1, f"trained {build_type} model"
             )
         except Exception as e:
             # logger.warning(f"Error building {build_type} with MLFlow")
@@ -711,10 +714,10 @@ class Pipeline:
                         f"Started pipeline with unknown build_type: {build_type}"
                     )
                 processmanager.update_status(
-                    processmanager.training, 0, 1, "training" + build_type + " model"
+                    processmanager.training, 0, 1, f"training {build_type} model"
                 )
                 processmanager.update_status(
-                    processmanager.training, 1, 1, "trained" + build_type + " model"
+                    processmanager.training, 1, 1, f"trained {build_type} model"
                 )
             except Exception as err:
                 logger.error("Could not train %s" % build_type)

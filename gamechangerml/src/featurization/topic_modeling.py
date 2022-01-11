@@ -1,8 +1,6 @@
-from gamechangerml.src.text_handling import corpus
 from gamechangerml.src.text_handling.custom_stopwords import custom_stopwords
 from gamechangerml.src.text_handling.process import topic_processing
 from gamechangerml.api.utils import processmanager, status_updater
-from gamechangerml.configs.config import TopicsConfig
 from gamechangerml.src.utilities.test_utils import get_user
 
 import gensim
@@ -17,11 +15,15 @@ import json
 import typing as t
 from pathlib import Path
 import random
-import nltk
+
+# import nltk
 from datetime import datetime
+import math
 
 # nltk.download("averaged_perceptron_tagger")
 logger = logging.getLogger("gamechanger")
+# turn off gensim logging for lifecycle events like loading etc
+logging.getLogger(gensim.__name__).setLevel(logging.ERROR)
 
 
 class Topics(object):
@@ -84,6 +86,8 @@ class Topics(object):
         Returns:
             None
         """
+        logger.info(f"Topics loading from {directory}")
+
         dictionary_path = os.path.join(directory, "tfidf_dictionary.dic")
         tfidf_path = os.path.join(directory, "tfidf.model")
         bigrams_path = os.path.join(directory, "bigrams.phr")
@@ -103,6 +107,8 @@ class Topics(object):
         Returns:
             None
         """
+        logger.info(f"Topics model saving files to {directory}")
+
         dictionary_path = os.path.join(directory, "tfidf_dictionary.dic")
         tfidf_path = os.path.join(directory, "tfidf.model")
         bigrams_path = os.path.join(directory, "bigrams.phr")
@@ -137,7 +143,7 @@ class Topics(object):
                     tokenized_raw_texts
                 ]
 
-                ## TODO figure out how to get nltk download inside docker
+                ## TODO figure out how to get nltk download inside docker if needed
                 # filter for nouns using tagger
                 # position_tags = nltk.pos_tag(phrasified_tokenized_raw_texts)
                 # nouns = [
@@ -146,6 +152,7 @@ class Topics(object):
                 #     if word[1] == "NN" and len(word[0]) > 2 and word[0] not in STOPWORDS
                 # ]
                 # yield nouns
+
                 yield [
                     w
                     for w in phrasified_tokenized_raw_texts
@@ -153,29 +160,17 @@ class Topics(object):
                 ]
 
     def sample_corpus_files(
-        self, corpus_dir: t.Union[str, Path], sample_rate: t.Union[float, int, None]
+        self, corpus_dir: t.Union[str, Path], sample_rate: t.Union[float, None]
     ) -> t.List[t.Union[str, Path]]:
+
         corpus_files = list(Path(corpus_dir).glob("**/*.json"))
-
-        # random.sample()
-
         if sample_rate is None:
-            return list(corpus_files)
+            return corpus_files
 
-        if isinstance(sample_rate, float):
-            rate_int = sample_rate * 100
-        elif isinstance(sample_rate, int):
-            rate_int = sample_rate
-        else:
-            raise RuntimeError("Unknown sample rate type")
+        sample_size: int = math.floor(len(corpus_files) * sample_rate)
 
-        file_list = []
-        for filepath in corpus_files:
-            print(filepath)
-            r = random.randint(0, 100)
-            if r <= rate_int:
-                file_list.append(filepath)
-        return file_list
+        # sample without replacement
+        return random.sample(corpus_files, sample_size)
 
     def train_from_files(self, corpus_dir, sample_rate, local_dir):
         start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -216,40 +211,13 @@ class Topics(object):
         tfidf = TfidfModel(dictionary=dictionary)
         status.next_step(message="Topics model created")
 
-        # set to active
+        # set to active for self.save
+        # this isn't the instance used in ml api
+        # should've been empty init for training
         self.bigrams = phrase_detector_model
         self.dictionary = dictionary
         self.tfidf = tfidf
 
-        # TODO
-        # save locally, names follow schema
-        # tar and upload
-        #
-
-        # save files
-        ## Dont overwrite current models after training
-        ## Will use reload to apply them
-
-        # model_dir = model_dest
-
-        # if not model_id:
-        #     model_id = datetime.now().strftime("%Y%m%d")
-
-        # # get model name schema
-        # model_name = "qexp_" + model_id
-        # model_path = utils.create_model_schema(model_dir, model_name)
-        # evals = {"results": ""}
-        # params = D2VConfig.MODEL_ARGS
-        # try:
-        #     # build ANN indices
-        #     index_dir = os.path.join(model_dest, model_path)
-        #     bqe.main(corpus, index_dir, **QexpConfig.MODEL_ARGS["bqe"])
-        #     logger.info("-------------- Model Training Complete --------------")
-        #     # Create .tgz file
-        #     dst_path = index_dir + ".tar.gz"
-        #     self.create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
-
-        # mdir = TopicsConfig.DATA_ARGS["LOCAL_MODEL_DIR"]
         self.save(local_dir)
         status.next_step(message="Topic model saved")
 
@@ -259,6 +227,9 @@ class Topics(object):
             "date_started": start_time,
             "date_finished": end_time,
             "corpus_name": str(corpus_dir),
+            "actual_sample_size": len(file_list),
+            "corpus_size": len(corpus_dir),
+            "sample_rate_used": sample_rate,
         }
 
         return metadata
