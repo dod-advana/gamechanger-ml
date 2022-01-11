@@ -396,7 +396,7 @@ class LTR:
         ltr_log = [x["hits"]["hits"] for x in res["responses"]]
         return ltr_log
 
-    def process_ltr_log(self, ltr_log, num_fts=6):
+    def process_ltr_log(self, ltr_log, num_fts=8):
         """process ltr log: extracts features from ES logs for judgement list
         params:
             ltr_log: results from ES
@@ -436,6 +436,8 @@ class LTR:
             columns=[
                 "title",
                 "keyw_5",
+                "topics",
+                "entities",
                 "textlength",
                 "paragraph",
                 "popscore",
