@@ -2,7 +2,7 @@ from fastapi import APIRouter, Response, status
 import subprocess
 import os
 import json
-from datetime import datetime, date
+from datetime import datetime
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
@@ -14,26 +14,7 @@ from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.src.utilities.test_utils import (
     collect_evals,
-    open_json,
-    get_most_recent_dir,
-    collect_sent_evals_gc,
     handle_sent_evals,
-)
-
-from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
-from gamechangerml.src.model_testing.evaluation import (
-    SQuADQAEvaluator,
-    IndomainQAEvaluator,
-    IndomainRetrieverEvaluator,
-    MSMarcoRetrieverEvaluator,
-    NLIEvaluator,
-    QexpEvaluator,
-)
-from gamechangerml.configs.config import (
-    QAConfig,
-    EmbedderConfig,
-    SimilarityConfig,
-    QexpConfig,
 )
 
 router = APIRouter()
@@ -66,6 +47,7 @@ def get_downloaded_models_list():
     sent_index_list = {}
     transformer_list = {}
     topic_models = {}
+    ltr_list = {}
     try:
         for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
             if ("qexp_" in f) and ("tar" not in f):
@@ -156,11 +138,29 @@ def get_downloaded_models_list():
         logger.error(e)
         logger.info("Cannot get QEXP model path")
 
+    # LTR
+    try:
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("ltr" in f) and ("tar" not in f):
+                logger.info(f"LTR: {str(f)}")
+                ltr_list[f] = {}
+                meta_path = os.path.join(
+                    Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json"
+                )
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    ltr_list[f] = json.load(meta_file)
+                    meta_file.close()
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get Sentence Index model path")
+
     model_list = {
         "transformers": transformer_list,
         "sentence": sent_index_list,
         "qexp": qexp_list,
         "topic_models": topic_models,
+        "ltr": ltr_list,
     }
     return model_list
 
@@ -213,7 +213,7 @@ async def files_in_corpus(response: Response):
     """
     number_files = 0
     try:
-        logger.info("Attempting to download dependencies from S3")
+        logger.info("Reading files from local corpus")
         number_files = len(
             [
                 name
@@ -222,7 +222,7 @@ async def files_in_corpus(response: Response):
             ]
         )
     except:
-        logger.warning(f"Could not get dependencies from S3")
+        logger.warning(f"Could not get files in corpus")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return json.dumps(number_files)
 
@@ -270,12 +270,12 @@ async def s3_func(function, response: Response):
     """
     models = []
     try:
-        logger.info("Attempting to download dependencies from S3")
+        logger.info("Retrieving model list from s3::")
         s3_path = "bronze/gamechanger/models/"
         if function == "models":
             models = utils.get_models_list(s3_path)
     except:
-        logger.warning(f"Could not get dependencies from S3")
+        logger.warning(f"Could not get model list from s3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return models
 
@@ -288,7 +288,6 @@ async def reload_models(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
         model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
-
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -356,7 +355,6 @@ async def download_corpus(corpus_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
         model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
-
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -364,7 +362,10 @@ async def download_corpus(corpus_dict: dict, response: Response):
         logger.info("Attempting to download corpus from S3")
         # grabs the s3 path to the corpus from the post in "corpus"
         # then passes in where to dowload the corpus locally.
-        args = {"corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+        if not corpus_dict["corpus"]:
+            corpus_dict = S3_CORPUS_PATH
+        args = {"s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+        logger.info(args)
         processmanager.update_status(processmanager.corpus_download)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()
@@ -376,6 +377,44 @@ async def download_corpus(corpus_dict: dict, response: Response):
 
 # Create a mapping between the training methods and input from the api
 # Methods for all the different models we can train
+# Defined outside the function so they arent recreated each time its called
+
+
+def update_metadata(model_dict):
+    logger.info("Attempting to update feature metadata")
+    pipeline = Pipeline()
+    model_dict["build_type"] = "meta"
+    try:
+        corpus_dir = model_dict["corpus_dir"]
+    except:
+        corpus_dir = CORPUS_DIR
+    try:
+        retriever = MODELS.sentence_searcher
+        logger.info("Using pre-loaded SentenceSearcher")
+    except:
+        retriever = None
+        logger.info("Setting SentenceSearcher to None")
+    try:
+        meta_steps = model_dict["meta_steps"]
+    except:
+        meta_steps = [
+            "pop_docs",
+            "combined_ents",
+            "rank_features",
+            "update_sent_data",
+        ]
+    args = {
+        "meta_steps": meta_steps,
+        "corpus_dir": corpus_dir,
+        "retriever": retriever,
+    }
+    pipeline.run(
+        build_type=model_dict["build_type"],
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
+
+
 def finetune_sentence(model_dict):
     logger.info("Attempting to finetune the sentence transformer")
     try:
@@ -411,6 +450,7 @@ def train_sentence(model_dict):
         "upload": bool(model_dict["upload"]),
         "version": model_dict["version"],
     }
+    logger.info(args)
     pipeline.run(
         build_type=model_dict["build_type"],
         run_name=datetime.now().strftime("%Y%m%d"),
@@ -433,17 +473,6 @@ def train_qexp(model_dict):
     )
 
 
-def train_topics(model_dict):
-    logger.info("Attempting to train topic model")
-    logger.info(model_dict)
-    args = {"sample_rate": model_dict["sample_rate"], "upload": model_dict["upload"]}
-    pipeline.run(
-        build_type=model_dict["build_type"],
-        run_name=datetime.now().strftime("%Y%m%d"),
-        params=args,
-    )
-
-
 def run_evals(model_dict):
     logger.info("Attempting to run evaluation")
     args = {
@@ -459,11 +488,23 @@ def run_evals(model_dict):
     )
 
 
+def train_topics(model_dict):
+    logger.info("Attempting to train topic model")
+    logger.info(model_dict)
+    args = {"sample_rate": model_dict["sample_rate"], "upload": model_dict["upload"]}
+    pipeline.run(
+        build_type=model_dict["build_type"],
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
+
+
 training_switch = {
     "sentence": train_sentence,
     "qexp": train_qexp,
     "sent_finetune": finetune_sentence,
     "eval": run_evals,
+    "meta": update_metadata,
     "topics": train_topics,
 }
 
@@ -473,7 +514,6 @@ async def train_model(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
         model_dict: dict; {"encoder_model":"msmarco-distilbert-base-v2", "gpu":true, "upload":false,"version": "v5"}
-
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -485,6 +525,7 @@ async def train_model(model_dict: dict, response: Response):
         if not training_method:
             raise Exception(f"No training method mapped for build type {build_type}")
 
+        # Set the training method to be loaded onto the thread
         training_thread = MlThread(training_method, args={"model_dict": model_dict})
         training_thread.start()
 
