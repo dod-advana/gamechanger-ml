@@ -511,6 +511,18 @@ class LTR:
                         "template": {"match": {"keyw_5": "{{keywords}}"}},
                     },
                     {
+                        "name": "topics",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match": {"topics_s": "{{keywords}}"}},
+                    },
+                    {
+                        "name": "entities",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match": {"top_entities_t": "{{keywords}}"}},
+                    },
+                    {
                         "name": "textlength",
                         "params": ["keywords"],
                         "template_language": "mustache",
