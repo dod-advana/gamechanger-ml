@@ -693,5 +693,4 @@ class Pipeline:
             try:
                 mlflow.log_metric(metric, evals[metric])
             except Exception as e:
-                # logger.warning(f"could not log metric: {metric}")
-                pass
+                logger.warning(f"could not log metric: {metric}")
