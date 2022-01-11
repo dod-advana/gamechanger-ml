@@ -526,6 +526,7 @@ class Pipeline:
 
     def init_ltr(self):
         try:
+            ltr = self.ltr
             logger.info("attempting to init LTR")
             resp = ltr.post_init_ltr()
             logger.info(resp)
@@ -538,7 +539,7 @@ class Pipeline:
 
     def create_ltr(self, daysBack: int = 180):
         try:
-            ltr = LTR()
+            ltr = self.ltr
             processmanager.update_status(processmanager.ltr_creation, 0, 4)
             logger.info("Attempting to create judgement list")
             remote_mappings = False
