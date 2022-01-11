@@ -1,8 +1,6 @@
-0 na q
-1 title q
-2 title-phrase q
-3 keyw_5 q
-4 textlength q
-5 paragraph q
-6 popscore q
-7 paragraph-phrase q
+0 title q
+1 keyw_5 q
+2 textlength q
+3 paragraph q
+4 popscore q
+5 paragraph-phrase q
