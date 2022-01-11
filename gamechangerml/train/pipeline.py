@@ -641,8 +641,8 @@ class Pipeline:
                 processmanager.training, 1, 1, f"trained {build_type} model"
             )
         except Exception as e:
-            # logger.warning(f"Error building {build_type} with MLFlow")
-            # logger.warning(e)
+            logger.warning(f"Error building {build_type} with MLFlow")
+            logger.warning(e)
             logger.warning(f"Trying without MLFlow")
             try:
                 if build_type == "sent_finetune":
