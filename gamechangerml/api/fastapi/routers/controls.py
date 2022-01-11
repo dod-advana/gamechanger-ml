@@ -136,7 +136,7 @@ def get_downloaded_models_list():
 
     except Exception as e:
         logger.error(e)
-        logger.info("Cannot get QEXP model path")
+        logger.info("Cannot get Topic model path")
 
     # LTR
     try:
