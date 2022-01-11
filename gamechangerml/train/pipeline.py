@@ -90,9 +90,9 @@ S3_DATA_PATH = "bronze/gamechanger/ml-data"
 try:
     import mlflow
 
-    # from mlflow.tracking import MlflowClient
+    from mlflow.tracking import MlflowClient
 except Exception as e:
-    # logger.warning(e)
+    logger.warning(e)
     logger.warning("MLFLOW may not be installed")
 
 
@@ -557,8 +557,6 @@ class Pipeline:
 
             # get model name schema
             model_name = "topic_model_" + model_id
-            logger.info(f"model dir {model_dir}")
-            logger.info(f"model_name {model_name}")
 
             local_dir = os.path.join(model_dir, model_name)
             # Define new index directory
@@ -570,17 +568,15 @@ class Pipeline:
             metadata = topics_model.train_from_files(
                 corpus_dir=corpus_dir, sample_rate=sample_rate, local_dir=local_dir
             )
-            logger.info(f"metadata {metadata}")
 
             # Create metadata file
             metadata_path = os.path.join(local_dir, "metadata.json")
             with open(metadata_path, "w") as fp:
                 json.dump(metadata, fp)
 
-            logger.info(f"Saved metadata.json to {metadata_path}")
-            # Create .tgz file
+            # Create .tar.gz file from dir
             tar_path = local_dir + ".tar.gz"
-            self.create_tgz_from_dir(src_dir=local_dir, dst_archive=tar_path)
+            utils.create_tgz_from_dir(src_dir=local_dir, dst_archive=tar_path)
 
             logger.info(f"create_topics complete, should upload? {upload}")
             # Upload to S3
@@ -594,7 +590,7 @@ class Pipeline:
             return metadata, evals
 
         except Exception as e:
-            logger.error("Could not create topics", e)
+            logger.error(f"Could not create topics {e}")
 
     def upload(self, s3_path, local_path, model_prefix, model_name, version):
         # Loop through each file and upload to S3

@@ -13,14 +13,18 @@ class StatusUpdater:
         will not stop updating if steps > nsteps but the output will be nonsense, e.g. 'step 6 of 4'
     """
 
-    def __init__(self, process_key: str, nsteps: int):
+    def __init__(self, process_key: str, nsteps: int, log_messages=True):
         self.key = process_key
         self.current_step = 1
         self.nsteps = nsteps
         self.last_message = None
+        self.log_messages = log_messages
 
     def next_step(self, message: str = "") -> None:
         try:
+            if self.log_messages:
+                logger.info(message)
+
             processmanager.update_status(
                 self.key,
                 progress=self.current_step,
