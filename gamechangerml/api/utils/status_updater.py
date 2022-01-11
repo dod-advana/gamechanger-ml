@@ -13,13 +13,13 @@ class StatusUpdater:
         will not stop updating if steps > nsteps but the output will be nonsense, e.g. 'step 6 of 4'
     """
 
-    def __init__(self, process_key: str, nsteps: int) -> t.Iterable:
+    def __init__(self, process_key: str, nsteps: int):
         self.key = process_key
         self.current_step = 1
         self.nsteps = nsteps
         self.last_message = None
 
-    def next_step(self, message="") -> None:
+    def next_step(self, message: str = "") -> None:
         try:
             processmanager.update_status(
                 self.key,
@@ -38,7 +38,7 @@ class StatusUpdater:
             self.current_step += 1
             self.last_message = message
 
-    def current(self) -> t.Dict:
+    def current(self) -> dict:
         return {
             "key": self.key,
             "current_step": self.current_step,
