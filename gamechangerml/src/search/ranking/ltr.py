@@ -396,7 +396,7 @@ class LTR:
         ltr_log = [x["hits"]["hits"] for x in res["responses"]]
         return ltr_log
 
-    def process_ltr_log(self, ltr_log, num_fts=7):
+    def process_ltr_log(self, ltr_log, num_fts=8):
         """process ltr log: extracts features from ES logs for judgement list
         params:
             ltr_log: results from ES
@@ -435,8 +435,9 @@ class LTR:
             vals,
             columns=[
                 "title",
-                "title-phrase",
                 "keyw_5",
+                "topics",
+                "entities",
                 "textlength",
                 "paragraph",
                 "popscore",
@@ -504,16 +505,22 @@ class LTR:
                         },
                     },
                     {
-                        "name": "title-phrase",
-                        "params": ["keywords"],
-                        "template_language": "mustache",
-                        "template": {"match_phrase": {"title": "{{keywords}}"}},
-                    },
-                    {
                         "name": "keyw_5",
                         "params": ["keywords"],
                         "template_language": "mustache",
                         "template": {"match": {"keyw_5": "{{keywords}}"}},
+                    },
+                    {
+                        "name": "topics",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match": {"topics_s": "{{keywords}}"}},
+                    },
+                    {
+                        "name": "entities",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match": {"top_entities_t": "{{keywords}}"}},
                     },
                     {
                         "name": "textlength",

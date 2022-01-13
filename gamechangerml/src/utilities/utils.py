@@ -498,6 +498,7 @@ def download_eval_data(dataset_name, save_dir, version=None):
     except:
         logger.debug(f"Failed to download {obj.key}")
 
+
 def create_tgz_from_dir(
     src_dir: t.Union[str, Path],
     dst_archive: t.Union[str, Path],
@@ -505,6 +506,7 @@ def create_tgz_from_dir(
 ) -> None:
     with tarfile.open(dst_archive, "w:gz") as tar:
         tar.add(src_dir, arcname=os.path.basename(src_dir))
+
 
 def upload(s3_path, local_path, model_prefix, model_name):
     # Loop through each file and upload to S3
