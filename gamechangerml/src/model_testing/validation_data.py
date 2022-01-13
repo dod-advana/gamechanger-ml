@@ -488,9 +488,9 @@ class IntelSearchData(SearchValidationData):
         intel = map_ids(intel_search_queries, intel, 'search_text_clean', 'key')
         intel = map_ids(intel_search_results, intel, 'title_returned', 'value')
 
-        # create new intel search metadata rels 
-        intel_metadata = {} ## TODO: option to add to existing data
-        new_intel_metadata = update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned', )
+        # create new intel search metadata rels
+        intel_metadata = {} # TODO: add option to add existing metadata
+        new_intel_metadata = update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned')
 
         # filtere the metadata to only get relations we want to test against
         logger.info(f"min_correct_matches: {(str(self.min_correct_matches))}")
