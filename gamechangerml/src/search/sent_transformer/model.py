@@ -57,7 +57,7 @@ class SentenceEncoder(object):
             {"method": "transformers", "path": self.encoder_model, "gpu": self.use_gpu}
         )
 
-    def _index(self, corpus, index_path, overwrite=False):
+    def _index(self, corpus, index_path, overwrite=False, save_embedding=False):
         """
         Builds an embeddings index.
         Args:
@@ -116,7 +116,8 @@ class SentenceEncoder(object):
 
         # Store embeddings and document index
         # for future reference
-        np.save(embedding_path, embeddings)
+        if save_embedding:
+            np.save(embedding_path, embeddings)
         with open(ids_path, "w") as fp:
             fp.writelines([i + "\n" for i in ids])
 
