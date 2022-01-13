@@ -326,8 +326,12 @@ def concat_csvs(directory):
     csvs = [i for i in os.listdir(directory) if i.split('.')[-1]=='csv']
     logger.info(f"Combining csvs: {str(csvs)}")
     for i in csvs:
-        f = pd.read_csv(os.path.join(directory, i))
-        df = pd.concat([df, f])
+        try:
+            f = pd.read_csv(os.path.join(directory, i))
+            df = pd.concat([df, f])
+        except Exception as e:
+            logger.warning(e)
+            pass
     return df
 
 def concat_matamo():
