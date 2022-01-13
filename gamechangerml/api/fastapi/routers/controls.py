@@ -16,6 +16,7 @@ from gamechangerml.src.utilities.test_utils import (
     collect_evals,
     handle_sent_evals,
 )
+from gamechangerml import MODEL_PATH
 
 router = APIRouter()
 MODELS = ModelLoader()
@@ -365,11 +366,21 @@ async def train_model(model_dict: dict, response: Response):
                     "rank_features",
                     "update_sent_data",
                 ]
+            try:
+                index_path = model_dict["index_path"]
+            except:
+                index_path = os.path.join(MODEL_PATH, "sent_index_20210715")
+
             args = {
                 "meta_steps": meta_steps,
                 "corpus_dir": corpus_dir,
                 "retriever": retriever,
+                "index_path": index_path 
             }
+            for i in ['update_eval_data', 'upload', 'version']:
+                if model_dict[i]:
+                    args[i] = model_dict[i]
+                
             pipeline.run(
                 build_type=model_dict["build_type"],
                 run_name=datetime.now().strftime("%Y%m%d"),

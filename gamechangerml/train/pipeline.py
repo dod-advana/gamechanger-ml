@@ -160,7 +160,7 @@ class Pipeline:
         level: str='silver',
         update_eval_data: bool=False,
         retriever=None,
-        upload:bool=False,
+        upload:bool=True,
         version:str="v1"
     ) -> None:
         """

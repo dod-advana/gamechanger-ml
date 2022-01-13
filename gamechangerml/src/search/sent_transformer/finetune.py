@@ -106,14 +106,16 @@ class STFinetuner():
 
             ## finetune on samples
             processmanager.update_status(processmanager.loading_data, 0, 1)
-            logger.info("Loading data for finetuning")
+            logger.info("Starting to load data for finetuning...")
             train_dataloader = DataLoader(train_samples, shuffle=self.shuffle, batch_size=self.batch_size) #pin_memory=self.pin_memory)
             train_loss = losses.CosineSimilarityLoss(model=self.model)
             processmanager.update_status(processmanager.loading_data, 1, 0)
+            logger.info("Finished loading data for the encoder model")
             processmanager.update_status(processmanager.training, 0, 1) 
-            logger.info("Finetuning the encoder model")
+            logger.info("Finetuning the encoder model...")
             self.model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
             processmanager.update_status(processmanager.training, 1, 0)
+            logger.info("Finished finetuning the encoder model") 
             ## save model
             self.model.save(self.model_save_path)
             logger.info("Finetuned model saved to {}".format(str(self.model_save_path)))
@@ -179,5 +181,5 @@ class STFinetuner():
             return ft_metadata
         
         except Exception as e:
-            logger.warning("Could not finetune - finetune.py")
-            logger.error(e, exc_info=True)
+            logger.warning("Could not complete finetuning")
+            logger.error(e)

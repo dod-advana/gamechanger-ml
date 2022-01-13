@@ -100,7 +100,7 @@ def make_tiered_eval_data(index_path):
     
     gold_data = save_data(
         level='gold',
-        filter_queries = False, 
+        filter_queries = False, # should use same (updated) exclude list of queries as silver_data
         **ValidationConfig.TRAINING_ARGS
         )
     

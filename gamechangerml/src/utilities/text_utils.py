@@ -3,7 +3,7 @@ import re
 import numpy as np
 from itertools import groupby
 from string import punctuation
-from typing import Union, List
+from typing import Union, List, Dict, Tuple
 
 from spacy.lang.en import English
 
@@ -31,7 +31,7 @@ def translate_to_ascii_string(_s: Union[str, bytes]) -> str:
     return _str_bytes.decode("ascii", errors="ignore")
 
 
-def simple_clean(text):
+def simple_clean(text: str) -> str:
     """
     Performs a simple text cleaning: removes newline characters, square and
     curly braces, insures `utf-8` encoding, and reduces inter-word spacing to
@@ -138,7 +138,7 @@ def summary_clean(text: str, min_par_len=15) -> str:
         raise
 
 
-def utf8_pass(text):
+def utf8_pass(text: str) -> str:
     return text.encode("utf-8", "ignore").decode("utf-8")
 
 
@@ -162,7 +162,7 @@ def clean_text(doc_text: str) -> str:
     return text
 
 # Source: https://rajpurkar.github.io/SQuAD-explorer/
-def normalize_answer(s):
+def normalize_answer(s: str) -> str:
     """
     Normalize answers for QA evaluation.
     Lower text and remove punctuation, articles and extra whitespace.
@@ -179,7 +179,7 @@ def normalize_answer(s):
         return text.lower()
     return white_space_fix(remove_articles(remove_punc(lower(s))))
 
-def normalize_query(s):
+def normalize_query(s: str) -> str:
     """
     Normalize queries.
     Lower text and remove extra whitespace.
@@ -190,7 +190,8 @@ def normalize_query(s):
         return text.lower()
     return white_space_fix(lower(s))
 
-def clean_query(query):
+def clean_query(query: str) -> str:
+    '''Removes all non alphanumeric characters and 'and' / 'or' from query string'''
 
     stop = ['and', 'or']
     query = [i for i in query.lower().split() if i not in stop]
@@ -199,13 +200,13 @@ def clean_query(query):
     
     return query 
 
-def get_tokens(s):
+def get_tokens(s: str) -> List[str]:
     '''Get tokens from normalized answer.'''
     if not s: return []
     return s.split()
 
-# https://www.datacamp.com/community/tutorials/fuzzy-string-python
-def levenshtein_ratio_and_distance(s, t, ratio_calc = False):
+# Adapted from https://www.datacamp.com/community/tutorials/fuzzy-string-python
+def levenshtein_ratio_and_distance(s: str, t: str, ratio_calc: bool=False) -> Tuple[int,float]:
     """ levenshtein_ratio_and_distance:
         Calculates levenshtein distance between two strings.
         If ratio_calc = True, the function computes the
@@ -244,8 +245,8 @@ def levenshtein_ratio_and_distance(s, t, ratio_calc = False):
     
     return distance[row][col], Ratio
 
-def string_contains(str1, str2):
-    
+def string_contains(str1: str, str2: str) -> bool:
+    '''Checks if a str2 contains str1'''
     set1 = str1.lower().split()
     set2 = str2.lower().split()
     if len(set(set1).intersection(set2)) == len(set1):
@@ -253,14 +254,16 @@ def string_contains(str1, str2):
     else:
         return False
 
-def check_majority_numbers(query, ratio=0.6):
+def check_majority_numbers(query: str, ratio: float=0.6) -> bool:
+    '''Checks ratio of numerical characters in a string, True if ratio is less than ratio threshold'''
     
     if len(re.sub(r'[0-9]', '', query))/len(query) <= ratio:
         return True
     else:
         return False
 
-def sort_first(samples):
+def sort_first(samples: List[str]) -> Dict[str,List[str]]:
+    '''Makes a dictionary of first letter: string for faster lookup of strings'''
 
     doc_dict = {}
     docs = []
@@ -275,7 +278,8 @@ def sort_first(samples):
 
     return doc_dict
 
-def filter_title_queries(queries, doc_ids):
+def filter_title_queries(queries: List[str], doc_ids: List[str]) -> List[str]:
+    '''Collects list of queries that appear in a list of doc_ids/appear to look like doc_ids'''
     
     remove = []
     logger.info("Making dictionary for doc titles")
@@ -314,7 +318,6 @@ def filter_title_queries(queries, doc_ids):
                                 break
                 except Exception as e:
                     logger.info(f"Skipping {i}")
-                    logger.warning(e)
 
     logger.info(f"*** Collected {str(len(remove))} queries to remove")
     return remove

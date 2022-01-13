@@ -32,6 +32,7 @@ CORPUS_DIR = "gamechangerml/corpus"
 corpus_docs = [i.split('.json')[0] for i in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, i))]
 
 def get_sample_paragraphs(pars, par_limit=100, min_length=150):
+    '''Collect sample paragraphs longer than min_length (char), up to par_limit paragraphs'''
     
     count = 0
     collected_pars = []
@@ -56,17 +57,17 @@ def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, nlp, min_sc
     Returns:
         [List[Dict[str,str]]]: List of dictionaries of paragraph matches
     """
-    logger.info(f"query: {query}, expected doc: {doc_id}")
+    logger.info(f"Retrieving matches for query: {query}, expected doc: {doc_id}")
     pars = []
     doc1 = nlp(query)
     if doc_id not in corpus_docs:
-        logger.warning(f"Did not find {doc_id} in the corpus")
+        logger.warning(f"---Did not find {doc_id} in the corpus")
 
     json = open_json(doc_id + '.json', CORPUS_DIR)
     paragraphs = json['paragraphs']
-    sents = get_sample_paragraphs(paragraphs)[:50]
+    sents = get_sample_paragraphs(paragraphs)[:50] # get top 50 paragraphs
     for sent in sents:
-        short = ' '.join(sent['text'].split(' ')[:200])
+        short = ' '.join(sent['text'].split(' ')[:400]) # shorten paragraphs
         pars.append(short)
 
     ranked = []
@@ -76,22 +77,19 @@ def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, nlp, min_sc
         elif len(sents) == 1:
             ranked = [{"score": 'na', "id": sents[0]['id'], "text": sents[0]['text']}]
         else:
-            logger.info(f"Re-ranking {str(len(sents))} paragraphs retrieved for {doc_id}")
             comparisons = []
             for sent in sents:
                 doc2 = nlp(sent['text'])
-                logger.info(f"doc: {doc2}")
                 sim = doc1.similarity(doc2)
-                logger.info(f"sim: {sim}")
                 if sim >= min_score:
                     record = {"score": sim, "id": sent['id'], "text": sent['text']}
                     comparisons.append(record)
                 else:
-                    logger.info("---Skipping paragraph, sim score too low")
+                    pass
             ranked = sorted(comparisons, key = lambda z: z['score'], reverse=True)
-
+        logger.info(f"*** Collected {str(len(ranked))} / {str(len(sents))} paragraphs (passing sim threshold) retrieved for {doc_id}")
     except Exception as e:
-        logger.info(f"****   Could not re-rank the paragraphs for {query}")
+        logger.info(f"---Could not re-rank the paragraphs for {query}")
         logger.warning(e) 
     
     return ranked
@@ -120,17 +118,15 @@ def get_negative_paragraphs(
     checked_results = []
     try:
         results = retriever.retrieve_topn(query, n_returns)
+        logger.info(f"Retrieved {str(len(results))} negative samples for query: {query} / doc: {doc_id}")
         for result in results:
-            #logger.info(f"PAR ID: {result['id']}")
             par = data[data["paragraph_id"]==result['id']].iloc[0]["text"]
-            #logger.info(f"PAR: {par}")
-            par = ' '.join(par.split(' ')[:200])
+            par = ' '.join(par.split(' ')[:400])
             if check_no_match(doc_id, result['id']):
                 checked_results.append({"query": query, "doc": result['id'], "paragraph": par, "label": 0})
-        #logger.info(checked_results)
     except Exception as e:
         logger.warning("Could not get negative paragraphs")
-        logger.warning(e, exc_info=True)
+        logger.warning(e)
     
     return checked_results
 
@@ -230,31 +226,24 @@ def collect_matches(
     """
     found = {}
     not_found = {}
-    logger.info(f"****    Looking up matches (should be {str(len(relations))}")
     count = 0
     for i in relations.keys():
         count += 1
         logger.info(count)
         query = queries[i]
-        logger.info(f"\n-----------Searching for {query}")
         for k in relations[i]:
             doc = collection[k]
-            logger.info(f" - expected doc: {doc}")
             uid = str(i) + '_' + str(k) # backup UID, overwritten if there are results
             try:
                 matching = get_best_paragraphs(data, query, doc, nlp)
-                logger.info(f"matching: {matching}")
                 for match in matching:
                     uid =  str(i) + '_' + str(match['id'])
                     text = ' '.join(match['text'].split(' ')[:400]) # truncate to 400 tokens
                     found[uid] = {"query": query, "doc": doc, "paragraph": text, "label": label}
-                    #logger.info(f" - MATCH: {found[uid]}")
             except Exception as e:
                 logger.warning("Could not get positive matches")
-                logger.warning(e, exc_info=True)
+                logger.warning(e)
                 not_found[uid] = {"query": query, "doc": doc, "label": label}
-    #logger.info(f"\nfound: {str(len(found))}")
-    #logger.info(f"\nnot found: {str(len(not_found))}")
     return found, not_found
 
 def collect_negative_samples(
@@ -279,13 +268,10 @@ def collect_negative_samples(
     """
     found = {}
     not_found = {}
-    #logger.info("****    Looking up negative samples")
     for i in relations.keys():
         query = queries[i]
-        #logger.info(f"-----------Searching for:  {query}")
         for k in relations[i]:
             doc = collection[k]
-            #logger.info(f" - expected doc: {doc}")
             uid = str(i) + '_' + str(k) + '_neg' # backup UID, overwritten if there are results
             try:
                 not_matching = get_negative_paragraphs(data=data, query=query, doc_id=k, retriever=retriever, n_returns=n_returns)
@@ -293,10 +279,8 @@ def collect_negative_samples(
                     uid =  str(i) + '_' + str(match['doc'])
                     text = ' '.join(match['paragraph'].split(' ')[:400]) # truncate to 400 tokens
                     found[uid] = {"query": query, "doc": doc, "paragraph": text, "label": 0}
-                    #logger.info(f" - UNMATCH: {found[uid]}")
             except Exception as e:
-                #logger.warning("Could not get negative samples")
-                #logger.warning(e, exc_info=True)
+                logger.warning(e)
                 not_found[uid] = {"query": query, "doc": doc, "label": 0}
                 
     return found, not_found
@@ -330,20 +314,20 @@ def make_training_data(
     """    
     ## open json files
     if not os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")) or update_eval_data:
-        #logger.info("****    Updating the evaluation data")
+        logger.info("****    Updating the evaluation data")
         make_tiered_eval_data(index_path)
     validation_dir = get_most_recent_dir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
     directory = os.path.join(validation_dir, level)
-    #logger.info(f"****    Loading in intelligent search data from {str(directory)}")
+    logger.info(f"****    Loading in intelligent search data from {str(directory)}")
     try:
         f = open_json('intelligent_search_data.json', directory)
         intel = json.loads(f)
     except Exception as e:
         logger.warning("Could not load intelligent search data")
-        #logger.warning(e, exc_info=True)
+        logger.warning(e)
 
     ## add gold standard samples
-    #logger.info("****   Adding gold standard examples")
+    logger.info("****   Adding gold standard examples")
     intel = add_gold_standard(intel, gold_standard_path)
 
     ## set up save dir

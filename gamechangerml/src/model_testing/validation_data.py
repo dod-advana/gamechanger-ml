@@ -1,10 +1,9 @@
 import pandas as pd
 import numpy as np
-from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, get_tokens, filter_title_queries
+from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, filter_title_queries
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.configs.config import ValidationConfig, TrainingConfig
+from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.api.utils.logger import logger
-from gamechangerml.src.utilities.es_search_utils import get_paragraph_results, connect_es
 from gamechangerml.src.utilities.test_utils import filter_date_range, open_txt
 from gamechangerml import REPO_PATH
 
@@ -475,6 +474,7 @@ class IntelSearchData(SearchValidationData):
         
         int_queries = set(intel['search_text_clean'])
 
+        # if filter queries == True, remove queries that are titles/fuzzy match titles
         if self.filter_queries:
             docs = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
             docs= [x.split('.pdf')[0] for x in docs]
