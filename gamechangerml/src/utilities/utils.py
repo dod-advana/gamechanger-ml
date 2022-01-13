@@ -41,7 +41,7 @@ def save_all_s3(models_path, model_name, s3_model_dir=S3Config.S3_MODELS_DIR):
     logger.debug("Saved {model_name} files to S3")
 
 
-def get_model_s3(filename, s3_model_dir):
+def get_model_s3(filename, s3_model_dir,download_dir=""):
     """
     read_model_s3 - read from s3 bucket
         params: filename (with ext)
@@ -51,11 +51,11 @@ def get_model_s3(filename, s3_model_dir):
     model_path = os.path.join(s3_model_dir, filename)
     try:
         for obj in bucket.objects.filter(Prefix=model_path):
-            print(obj.key)
-            bucket.download_file(obj.key, obj.key.split("/")[-1])
+            logger.info(obj.key)
+            bucket.download_file(obj.key, os.path.join(download_dir,obj.key.split("/")[-1]))
     except RuntimeError:
         # print("cant download")
-        logger.debug(filename + " failed to download from S3")
+        logger.error(filename + " failed to download from S3")
 
 
 def store_corpus_s3(data, filename):
