@@ -141,7 +141,7 @@ class Pipeline:
         level: str='silver',
         update_eval_data: bool=False,
         retriever=None,
-        upload:bool=True,
+        upload:bool=False,
         version:str="v1"
     ) -> None:
         """
@@ -168,7 +168,10 @@ class Pipeline:
         if "rank_features" in meta_steps:
             make_corpus_meta(corpus_dir, days, prod_data_file, upload)
         if "update_sent_data" in meta_steps:
-            make_training_data(index_path, n_returns, n_matching, level, update_eval_data, retriever)
+            try:
+                make_training_data(index_path, n_returns, n_matching, level, update_eval_data, retriever)
+            except Exception as e:
+                logger.warning(e, exc_info=True) 
         if upload:
             s3_path = os.path.join(S3_DATA_PATH, f"{version}")
             logger.info(f"****    Saving new data files to S3: {s3_path}")
@@ -184,7 +187,7 @@ class Pipeline:
         epochs: int=3,
         warmup_steps: int=100,
         testing_only: bool=False,
-        version: str="v5"
+        version: str="v100"
     ) -> t.Dict[str,str]:
         """finetune_sent: finetunes the sentence transformer - saves new model, 
            a csv file of old/new cos sim scores, and a metadata file.

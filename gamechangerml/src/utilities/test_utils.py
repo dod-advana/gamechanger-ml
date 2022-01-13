@@ -270,7 +270,7 @@ def filter_rels(metadata, min_correct_matches, max_results):
     
     correct_rels = {}
     incorrect_rels = {}
-    logger.info(f"Generating data for {str(len(metadata))} queries with {str(max_results)} max results and {str(min_correct_matches)} min correct matches (filtering titles: {filter_titles})")
+    logger.info(f"Generating data for {str(len(metadata))} queries with {str(max_results)} max results and {str(min_correct_matches)} min correct matches")
     for key in metadata:
         acceptable_positive_results = []
         negative_results = []

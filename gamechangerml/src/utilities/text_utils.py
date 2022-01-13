@@ -1,5 +1,6 @@
 import logging
 import re
+import numpy as np
 from itertools import groupby
 from string import punctuation
 from typing import Union, List
@@ -261,15 +262,25 @@ def check_majority_numbers(query, ratio=0.6):
 
 def sort_first(samples):
 
-    samples = list(set(samples))
-    first_letters = [i[0] for i in samples]
-    zipped = dict(zip())
-    for x in docs_only['doc_start'].unique():
-        doc_dict[x] = set(docs_only[docs_only['doc_start']==x]['document'].tolist())
+    doc_dict = {}
+    docs = []
+    first_letters = []
+    for i in list(set(samples)):
+        if type(i)==str:
+            first_letters.append(str(i)[0].lower())
+            docs.append(i)
+    zipped = dict(zip(docs, first_letters))
+    for i, v in zipped.items():
+        doc_dict[v] = [i] if v not in doc_dict.keys() else doc_dict[v] + [i]
 
-def filter_title_queries(queries, doc_ids, doc_dict):
+    return doc_dict
+
+def filter_title_queries(queries, doc_ids):
     
     remove = []
+    logger.info("Making dictionary for doc titles")
+    doc_dict = sort_first(doc_ids)
+    logger.info("*** Comparing queries to doc titles\n")
     for i in queries:
         if not re.search('[a-zA-Z]', i):  ## if the query has no letters, remove
             logger.info(f"*** Removing query: {i} // (contains no characters)")
@@ -282,23 +293,28 @@ def filter_title_queries(queries, doc_ids, doc_dict):
                 logger.info(f"*** Removing query: {i} // (majority numbers)")
                 remove.append(i)
             else:
-                cleaned = i.upper().replace("'", "")
-                start = cleaned[0].lower() # starting letter
-                sub = doc_dict[start]
-                for x in sub:
-                    if string_contains(cleaned, x):
-                        logger.info(f"*** Removing query: {i} // (string inside string)")
-                        remove.append(i)
-                        break
-                    else:
-                        dist, ratio = levenshtein_ratio_and_distance(cleaned.lower(),x.lower())
-                        if len(i) > 12 and ratio >= 0.75:
-                            logger.info(f"*** Removing query: {i} // ({dist} char, {ratio} ratio diff from doc title)")
+                try:
+                    cleaned = i.upper().replace("'", "")
+                    start = cleaned[0].lower() # starting letter
+                    sub = doc_dict[start]
+                    for x in sub:
+                        if string_contains(cleaned, x):
+                            logger.info(f"*** Removing query: {i} // (string inside string)")
                             remove.append(i)
                             break
-                        elif len(i) < 12 and dist <= 2:
-                            logger.info(f"*** Removing query: {i} // ({dist} char, {ratio} ratio diff from doc title)")
-                            remove.append(i)
-                            break
+                        else:
+                            dist, ratio = levenshtein_ratio_and_distance(cleaned.lower(),x.lower())
+                            if len(i) > 12 and ratio >= 0.75:
+                                logger.info(f"*** Removing query: {i} // ({dist} char, {ratio} ratio diff from doc title)")
+                                remove.append(i)
+                                break
+                            elif len(i) < 12 and dist <= 2:
+                                logger.info(f"*** Removing query: {i} // ({dist} char, {ratio} ratio diff from doc title)")
+                                remove.append(i)
+                                break
+                except Exception as e:
+                    logger.info(f"Skipping {i}")
+                    logger.warning(e)
+
     logger.info(f"*** Collected {str(len(remove))} queries to remove")
     return remove

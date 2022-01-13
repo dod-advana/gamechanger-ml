@@ -2,16 +2,23 @@ from sentence_transformers import SentenceTransformer, InputExample, util, losse
 from torch.utils.data import DataLoader
 import pandas as pd
 from datetime import date
+import sys
 import os
 import json
-
-S3_DATA_PATH = "bronze/gamechanger/ml-data"
-
+import torch
+import logging
 from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename, cos_sim
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.logger import logger
+from datetime import datetime
 from gamechangerml import DATA_PATH
+
+S3_DATA_PATH = "bronze/gamechanger/ml-data"
+
+logging.root.addHandler(logging.StreamHandler(sys.stdout))
+logging.basicConfig(force=True)
+logger.setLevel(logging.INFO)
 
 def fix_model_config(model_load_path):
     """Workaround for error with sentence_transformers==0.4.1 (vs. version 2.0.0 which our model was trained on)"""
@@ -75,6 +82,7 @@ class STFinetuner():
         self.batch_size = batch_size
         self.epochs = epochs
         self.warmup_steps = warmup_steps
+        #self.pin_memory = True if torch.cuda.is_available() else False 
     
     def retrain(self, data_dir, testing_only, version):
 
@@ -85,8 +93,8 @@ class STFinetuner():
 
             if testing_only:
                 logger.info("Creating smaller dataset just for testing finetuning.")
-                train_keys = list(train.keys())[:3]
-                test_keys = list(test.keys())[:3]
+                train_keys = list(train.keys())[:10]
+                test_keys = list(test.keys())[:10]
                 train = {k:train[k] for k in train_keys}
                 test = {k:test[k] for k in test_keys}
 
@@ -99,7 +107,7 @@ class STFinetuner():
             ## finetune on samples
             processmanager.update_status(processmanager.loading_data, 0, 1)
             logger.info("Loading data for finetuning")
-            train_dataloader = DataLoader(train_samples, shuffle=self.shuffle, batch_size=self.batch_size)
+            train_dataloader = DataLoader(train_samples, shuffle=self.shuffle, batch_size=self.batch_size) #pin_memory=self.pin_memory)
             train_loss = losses.CosineSimilarityLoss(model=self.model)
             processmanager.update_status(processmanager.loading_data, 1, 0)
             processmanager.update_status(processmanager.training, 0, 1) 
@@ -115,13 +123,14 @@ class STFinetuner():
                 dst_path = self.model_save_path + ".tar.gz"
                 utils.create_tgz_from_dir(src_dir=self.model_save_path, dst_archive=dst_path)
                 model_id = self.model_save_path.split('_')[1]
-                logger.info(f"Created tgz file and saved to {dst_path}")
+                logger.info(f"*** Created tgz file and saved to {dst_path}")
 
                 S3_MODELS_PATH = "bronze/gamechanger/models"
                 s3_path = os.path.join(S3_MODELS_PATH, str(version))
-                utils.upload(s3_path, dst_path, "transformers", model_id, version)
-                logger.info(f"Saved model to S3: {s3_path}")
+                utils.upload(s3_path, dst_path, "transformers", model_id)
+                logger.info(f"*** Saved model to S3: {s3_path}")
 
+            logger.info("*** Making finetuning results csv")
             ## get new cosine sim
             df["new_cos_sim"] = df["pair"].apply(lambda x: get_cos_sim(self.model, x))
             df["change_cos_sim"] = df["new_cos_sim"] - df["original_cos_sim"]
@@ -160,9 +169,12 @@ class STFinetuner():
             if not testing_only:
                 s3_path = os.path.join(S3_DATA_PATH, f"{version}")
                 logger.info(f"****    Saving new data files to S3: {s3_path}")
-                dst_path = DATA_PATH + ".tar.gz"
-                utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
-                utils.upload_data(s3_path, dst_path)
+                dst_path = data_dir + ".tar.gz"
+                model_name = datetime.now().strftime("%Y%m%d")
+                logger.info("*** Attempting to save data tar")
+                utils.create_tgz_from_dir(data_dir, dst_path)
+                logger.info("*** Attempting to upload data to s3")
+                utils.upload(s3_path, dst_path, "data", model_name)
 
             return ft_metadata
         

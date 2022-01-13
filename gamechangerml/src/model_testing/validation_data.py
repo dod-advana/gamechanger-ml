@@ -5,9 +5,10 @@ from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.configs.config import ValidationConfig, TrainingConfig
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.es_search_utils import get_paragraph_results, connect_es
-from gamechangerml.src.utilities.test_utils import filter_date_range
+from gamechangerml.src.utilities.test_utils import filter_date_range, open_txt
+from gamechangerml import REPO_PATH
 
-ES_URL = 'https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com'
+CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 
 class ValidationData():
 
@@ -335,8 +336,7 @@ class SearchHistory():
         self, 
         start_date,
         end_date,
-        exclude_searches,
-        filter_titles=True
+        exclude_searches
         ):
     
         self.history = concat_search_hist()
@@ -351,9 +351,6 @@ class SearchHistory():
         if self.start_date or self.end_date:
             df = filter_date_range(df, self.start_date, self.end_date)
         df.dropna(subset = ['search'], inplace = True) # drop all rows where is no search
-        if self.exclude_searches:
-            logger.info(f"Excluding searches: {str(self.exclude_searches)}")
-            df = df[~df['search'].isin(self.exclude_searches)] # remove searches we don't want to use
         df.drop_duplicates(subset = ['idvisit', 'document', 'search'], inplace = True) # drop duplicates
         df['source'] = 'user_history'
         
@@ -375,21 +372,12 @@ class SearchHistory():
         df.rename(columns = {'documenttime': 'date', 'search': 'search_text', 'document': 'title_returned'}, inplace = True)
         df['search_text'] = df['search_text'].apply(lambda x: clean_quot(x))
         df['search_text_clean'] = df['search_text'].apply(lambda x: normalize_query(x))
-        df = df[~df['search_text_clean'] == '']
-        df['doc_start'] = df['document'].apply(lambda x: x[0].lower())
+        df['search_text_clean'].fillna('', inplace = True)
+        df = df[df['search_text_clean']!='']
+        if self.exclude_searches:
+            logger.info(f"Excluding searches: {str(self.exclude_searches)}")
+            df = df[~df['search_text_clean'].isin(self.exclude_searches)] # remove searches we don't want to use
         df.drop(columns = ['idvisit', 'idaction_name', 'search_cat', 'searchtime'], inplace = True)
-
-        ## filtering out titles
-        if self.filter_titles:
-            logger.info(f"Removing titles from queries")
-            docs_only = df.drop_duplicates(subset = ['document'])
-            docs = list(set(docs_only['document']))
-            searches = df['search_text_clean'].unique()
-            doc_dict = {}
-            for x in docs_only['doc_start'].unique():
-                doc_dict[x] = set(docs_only[docs_only['doc_start']==x]['document'].tolist())
-            remove = filter_title_queries(searches, docs, doc_dict)
-            df = df[~df['search_text_clean'].isin(remove)]
         
         matched = df[~df['title_returned'].isnull()].copy()
         matched['correct_match'] = True
@@ -467,7 +455,9 @@ class IntelSearchData(SearchValidationData):
         end_date,
         exclude_searches,
         min_correct_matches,
-        max_results
+        max_results,
+        filter_queries,
+        index_path
         ):
         
         super().__init__(start_date, end_date, exclude_searches)
@@ -475,14 +465,24 @@ class IntelSearchData(SearchValidationData):
         self.data = pd.concat([self.matamo_data.intel, self.history_data.intel_matched]).reset_index()
         self.min_correct_matches = min_correct_matches
         self.max_results = max_results
+        self.filter_queries = filter_queries
+        self.index_path = index_path
         self.queries, self.collection, self.all_relations, self.correct, self.incorrect = self.make_intel()
         
     def make_intel(self):
         
         intel = self.data
-        intel = intel[~intel['search_text_clean'].isin(self.exclude_searches)]
         
         int_queries = set(intel['search_text_clean'])
+
+        if self.filter_queries:
+            docs = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
+            docs= [x.split('.pdf')[0] for x in docs]
+            remove = filter_title_queries(int_queries, docs)
+            self.exclude_searches.extend(remove)
+            logger.info(f"**** Removing {str(len(self.exclude_searches))} queries.")
+        int_queries = [i for i in int_queries if i not in self.exclude_searches]
+
         intel_search_queries = update_dictionary(old_dict = {}, new_additions = int_queries, prefix ='S')
         
         int_docs = set(intel['title_returned'])
@@ -492,9 +492,9 @@ class IntelSearchData(SearchValidationData):
         intel = map_ids(intel_search_queries, intel, 'search_text_clean', 'key')
         intel = map_ids(intel_search_results, intel, 'title_returned', 'value')
 
-        # create new intel search metadata rels
-        intel_metadata = {} # TODO: add option to add existing metadata
-        new_intel_metadata = update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned')
+        # create new intel search metadata rels 
+        intel_metadata = {} ## TODO: option to add to existing data
+        new_intel_metadata = update_meta_relations(intel_metadata, intel, 'search_text', 'title_returned', )
 
         # filtere the metadata to only get relations we want to test against
         logger.info(f"min_correct_matches: {(str(self.min_correct_matches))}")
