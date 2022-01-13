@@ -373,15 +373,11 @@ class SearchHistory():
         df['search_text_clean'] = df['search_text'].apply(lambda x: normalize_query(x))
         df['search_text_clean'].fillna('', inplace = True)
         df = df[df['search_text_clean']!='']
-        if self.exclude_searches:
-            logger.info(f"Excluding searches: {str(self.exclude_searches)}")
-            df = df[~df['search_text_clean'].isin(self.exclude_searches)] # remove searches we don't want to use
         df.drop(columns = ['idvisit', 'idaction_name', 'search_cat', 'searchtime'], inplace = True)
         
         matched = df[~df['title_returned'].isnull()].copy()
         matched['correct_match'] = True
         matched['title_returned'] = matched['title_returned'].apply(lambda x: clean_doc(x))
-        #matched['is_question'] = matched['search'].apply(lambda x: is_question(x))
         
         unmatched = df[df['title_returned'].isnull()].copy()
         unmatched['correct_match'] = False
