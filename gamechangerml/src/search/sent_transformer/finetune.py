@@ -6,10 +6,11 @@ import sys
 import os
 import json
 import torch
+torch.cuda.empty_cache()
+import gc
 import logging
 from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename, cos_sim
 from gamechangerml.src.utilities import utils as utils
-from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.logger import logger
 from datetime import datetime
 from gamechangerml import DATA_PATH
@@ -91,6 +92,9 @@ class STFinetuner():
             train = data["train"]
             test = data["test"]
 
+            del data
+            gc.collect()
+
             if testing_only:
                 logger.info("Creating smaller dataset just for testing finetuning.")
                 train_keys = list(train.keys())[:10]
@@ -100,7 +104,7 @@ class STFinetuner():
 
             ## make formatted training data
             train_samples, df = format_inputs(train, test)
-            
+
             ## get cosine sim before finetuning
             df["original_cos_sim"] = df["pair"].apply(lambda x: get_cos_sim(self.model, x))
 
@@ -109,6 +113,8 @@ class STFinetuner():
             train_dataloader = DataLoader(train_samples, shuffle=self.shuffle, batch_size=self.batch_size) #pin_memory=self.pin_memory)
             train_loss = losses.CosineSimilarityLoss(model=self.model)
             logger.info("Finished loading data for the encoder model")
+            del train_samples
+            gc.collect()
             logger.info("Finetuning the encoder model...")
             self.model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
             logger.info("Finished finetuning the encoder model") 
