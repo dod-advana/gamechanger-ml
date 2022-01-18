@@ -534,7 +534,7 @@ class LTR:
         return r.content
 
     def delete_ltr(self, model_name="ltr_model"):
-        endpoint = "/_ltr/_model/{model_name}"
+        endpoint = f"/_ltr/_model/{model_name}"
         r = esu.delete(endpoint)
         return r.content
 
