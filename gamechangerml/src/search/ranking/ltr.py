@@ -35,7 +35,7 @@ class LTR:
     def __init__(
         self,
         params={
-            "max_depth": 6,
+            "max_depth": 8,
             "eta": 0.3,
             "objective": "rank:pairwise",
         },

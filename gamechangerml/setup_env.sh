@@ -32,6 +32,11 @@ function setup_prod() {
     export ES_PASSWORD="${ES_PASSWORD:-}"
     export ES_ENABLE_SSL="${ES_ENABLE_SSL:-true}"
     export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-true}"
+  
+    export GC_WEB_HOST="${GC_WEB_HOST:-gamechanger.advana.data.mil}"
+    export GC_WEB_PORT="${GC_WEB_PORT:-8990}"
+    export GC_WEB_USER="${GC_WEB_USER:-steve}"
+    
 
     export DEV_ENV="PROD"
 }
@@ -62,6 +67,11 @@ function setup_dev() {
     export ES_PASSWORD="${ES_PASSWORD:-}"
     export ES_ENABLE_SSL="${ES_ENABLE_SSL:-true}"
     export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-false}"
+      
+    export GC_WEB_HOST="${GC_WEB_HOST:-10.194.9.112}"
+    export GC_WEB_PORT="${GC_WEB_PORT:-8990}"
+    export GC_WEB_USER="${GC_WEB_USER:-steve}"
+    
 }
 
 
