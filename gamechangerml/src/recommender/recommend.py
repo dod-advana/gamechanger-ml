@@ -2,21 +2,34 @@ import numpy as np
 import pandas as pd 
 import os
 import csv
+import random
 from collections import Counter
 import networkx as nx
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.test_utils import open_json
-from gamechangerml import DATA_PATH
+from gamechangerml import DATA_PATH, REPO_PATH
 
-CORPUS_DIR = "/Users/katherinedowdy/Desktop/parsed_docs"
+CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
+corpus_list = [i.lower().strip('.json') for i in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, i))]
+
+def in_corpus(filename, corpus_list):
+
+    if filename.lower().lstrip().strip('.pdf') in corpus_list:
+        return True
+    else:
+        logger.warning(f"{filename} not found in corpus")
+        return False
 
 def get_file_data(filename, df):
 
     try:
         filename = filename.strip('.pdf')
-        idx = df.index[df['Name']==filename].tolist()[0]
-        row = df.loc[idx]
-        return row.to_dict()
+        if in_corpus(filename, corpus_list):
+            idx = df.index[df['Name']==filename].tolist()[0]
+            row = df.loc[idx]
+            return row.to_dict()
+        else:
+            return None
     except Exception as e:
         logger.warning(f"Couldn't retrieve data for file: {filename}")
         logger.warning(e)
@@ -227,29 +240,14 @@ class Recommender:
             logger.warning(e)
             return []
     
-    def _lookup_other(self, filename):
-
-        try:
-            filename = filename.strip('.pdf')
-            dd = self.data.sort_values(by = ['org_doc', 'display_org_s', 'publication_date_dt']).reset_index().copy()
-            idx = dd.index[dd['Name']==filename].tolist()[0]
-            start = int(idx) - 3
-            end = int(idx) + 3
-            sub = dd.loc[start:end]
-            if idx in sub.index.tolist():
-                sub = sub.drop(idx)
-            return [sub.loc[i].to_dict() for i in sub.index]
-        except Exception as e:
-            logger.warning("Could not collect backup cluster results")
-            logger.warning(e)
-            return []
-    
     def get_recs(self, filename=None, rank_method='importance'):
 
         if not filename:
-            filename = self.data.sample()['Name'].tolist()[0]
+            filename = random.choice(corpus_list)
             logger.info(f" ****    RANDOM SAMPLE: {filename}")
 
+        filename = filename.lower()
+        self.data['Name'] = self.data['Name'].map(lambda x: str(x).lower())
         if filename in list(self.data['Name']):
             doc = get_file_data(filename, self.data)
             title = doc['title']
@@ -268,9 +266,8 @@ class Recommender:
                     results = self._lookup_cluster(doc, rank_method)
                     method = 'clusters'
                 else:
-                    results = self._lookup_other(filename)
-                    method = 'backup'
-            #logger.info(f"method: {method}, \nresults: {str(results)}")
+                    logger.warning("This document is in too small a cluster to recommend similar docs.")
+                    return {}
             return {"filename": filename, "title": title, "method": method, "doc_comparison": message, "results": results}
         else:
             logger.warning("This document is not in the corpus")
