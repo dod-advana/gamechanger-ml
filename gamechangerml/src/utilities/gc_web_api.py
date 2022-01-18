@@ -8,13 +8,13 @@ class GCWebClient:
         host: str = os.environ.get("GC_WEB_HOST", "localhost"),
         port: str = os.environ.get("GC_WEB_PORT", 8990),
         user: str = os.environ.get("GC_WEB_USER", "steve"),
-        enable_ssl: str = os.environ.get(
-            "ES_ENABLE_SSL", "True").lower() == "true",
+        gc_enable_ssl: str = os.environ.get(
+            "GC_ENABLE_SSL", "True").lower() == "true",
     ):
         self.host = host
         self.port = port
         self.user = user
-        self.enable_ssl = enable_ssl
+        self.enable_ssl = gc_enable_ssl
 
     @property
     def getURL(self):

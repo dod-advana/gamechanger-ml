@@ -36,6 +36,7 @@ function setup_prod() {
     export GC_WEB_HOST="${GC_WEB_HOST:-gamechanger.advana.data.mil}"
     export GC_WEB_PORT="${GC_WEB_PORT:-8990}"
     export GC_WEB_USER="${GC_WEB_USER:-steve}"
+    export GC_ENABLE_SSL="${GC_ENABLE_SSL:-true}"
     
 
     export DEV_ENV="PROD"
@@ -68,9 +69,10 @@ function setup_dev() {
     export ES_ENABLE_SSL="${ES_ENABLE_SSL:-true}"
     export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-false}"
       
-    export GC_WEB_HOST="${GC_WEB_HOST:-10.194.9.112}"
+    export GC_WEB_HOST="${GC_WEB_HOST:-10.194.9.88}"
     export GC_WEB_PORT="${GC_WEB_PORT:-8990}"
     export GC_WEB_USER="${GC_WEB_USER:-steve}"
+    export GC_ENABLE_SSL="${GC_ENABLE_SSL:-false}"
     
 }
 
@@ -150,4 +152,6 @@ cat <<EOF
   * S3_TOPICS_PATH: ${S3_TOPICS_PATH:-<unset>}"
   * DOWNLOAD_DEP: ${DOWNLOAD_DEP:-<unset>}"
   * ES_HOST: ${ES_HOST:-<unset>}"
+  * GC_WEB_HOST: ${GC_WEB_HOST:-<unset>}"
+  * GC_WEB_USER: ${GC_WEB_USER:-<unset>}"
 EOF

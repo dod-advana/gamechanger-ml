@@ -112,7 +112,7 @@ class LTR:
         try:
             mappings = gcClient.getSearchMappings(daysBack=daysBack)
             mappings = json.loads(mappings)
-            mappings = mappings["data"]
+            mappings = pd.DataFrame(mappings["data"])
         except Exception as e:
             logger.warning("Could not request mappings from GC Web")
         return mappings
@@ -343,6 +343,7 @@ class LTR:
         returns:
             outputs a file
         """
+        print(df)
         ltr_log = self.query_es_fts(df)
         vals = self.process_ltr_log(ltr_log)
         ft_df = pd.DataFrame(
