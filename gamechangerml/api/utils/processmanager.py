@@ -6,6 +6,8 @@ from gamechangerml.api.utils.redisdriver import CacheVariable
 clear_corpus = "corpus: corpus_download"
 corpus_download = "corpus: corpus_download"
 delete_corpus = "corpus: delete_corpus"
+s3_file_download = "s3: file_download"
+s3_dependency = "s3: dependency_download"
 loading_corpus = "training: load_corpus"
 training = "training: train_model"
 reloading = "models: reloading_models"
@@ -25,6 +27,9 @@ try:
         reloading: False,
         ltr_creation: False,
         topics_creation: False,
+        s3_file_download: False,
+        s3_dependency: False,
+
     }
 
     PROCESS_STATUS.value = {"flags": default_flags}

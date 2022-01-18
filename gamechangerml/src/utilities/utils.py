@@ -47,16 +47,22 @@ def get_model_s3(filename, s3_model_dir,download_dir=""):
         params: filename (with ext)
         output:
     """
+    files = []
     bucket = s3_connect()
     model_path = os.path.join(s3_model_dir, filename)
+    logger.info(model_path)
     try:
         for obj in bucket.objects.filter(Prefix=model_path):
-            logger.info(obj.key)
-            bucket.download_file(obj.key, os.path.join(download_dir,obj.key.split("/")[-1]))
-    except RuntimeError:
+            if obj.size != 0:
+                logger.info(f'Downloading {obj.key}')
+                bucket.download_file(obj.key, os.path.join(download_dir,obj.key.split("/")[-1]))
+                files.append(os.path.join(download_dir,obj.key.split("/")[-1]))
+    except RuntimeError as e:
         # print("cant download")
-        logger.error(filename + " failed to download from S3")
+        logger.info(e)
 
+        logger.error(filename + " failed to download from S3")
+    return files
 
 def store_corpus_s3(data, filename):
     """
