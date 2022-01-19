@@ -542,9 +542,10 @@ class Pipeline:
             ltr = self.ltr
             processmanager.update_status(processmanager.ltr_creation, 0, 4)
             logger.info("Attempting to create judgement list")
+            # NOTE: always set it false right now since there needs to be API changes in the WEB
             remote_mappings = False
-            if os.environ.get("ENV_TYPE") == "PROD":
-                remote_mappings = True
+            # if os.environ.get("ENV_TYPE") == "PROD":
+            #    remote_mappings = True
             judgements = ltr.generate_judgement(
                 remote_mappings=remote_mappings, daysBack=daysBack
             )
