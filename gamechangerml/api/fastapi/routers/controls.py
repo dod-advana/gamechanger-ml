@@ -323,8 +323,8 @@ async def download_s3_file(file_dict: dict, response: Response):
         logger.info(f'downloading file {file_dict["file"]}')
         try:
         
-            path = "gamechangerml/models/" if file_dict['dir'] == "models" else "gamechangerml/"
-            downloaded_files = utils.get_model_s3(file_dict['file'],f"bronze/gamechanger/{file_dict['dir']}/",path)
+            path = "gamechangerml/models/" if file_dict['type'] == "models" else "gamechangerml/"
+            downloaded_files = utils.get_model_s3(file_dict['file'],f"bronze/gamechanger/{file_dict['type']}/",path)
             # downloaded_files = ['gamechangerml/models/20210223.tar.gz']
             processmanager.update_status(processmanager.s3_file_download, 0, len(downloaded_files))
             i = 0
@@ -358,7 +358,7 @@ async def download_s3_file(file_dict: dict, response: Response):
                 except Exception as e:
                     failedExtracts.append(member.name)
 
-            logger.warning(f'Could not extract {failedExtracts}')
+            logger.warning(f'Could not extract {failedExtracts} with permission errors')
 
         except Exception as e:
             logger.warning(e)
