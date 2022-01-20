@@ -49,11 +49,14 @@ def get_downloaded_data_list():
     files = []
     dir_arr = []
     logger.info(DATA_PATH)
-    for dirpath, dirnames, filenames in os.walk(DATA_PATH):
 
-        dir_arr = dir_arr + [ {'name':d,'path':dirpath.replace(DATA_PATH,'data')} for d in dirnames]
-        files = files + [{'name':file,'path':dirpath} for file in filenames if not ('DS_Store' in file or '.git' in file)]
-    return {'files':files,'dirs':dir_arr}
+    for dir in os.listdir(DATA_PATH):
+        temp_path = os.path.join(DATA_PATH,dir)
+        if os.path.isdir(temp_path):
+            for dirpath, dirnames, filenames in os.walk(temp_path):
+                dir_arr.append({'name':dirpath.replace(temp_path,''),'path':dir,'files':filenames,'subdirectories':dirnames})
+
+    return {'dirs':dir_arr}
 
 @router.get("/getModelsList")
 def get_downloaded_models_list():
@@ -317,37 +320,52 @@ async def download_s3_file(file_dict: dict, response: Response):
     """
     processmanager.update_status(processmanager.s3_file_download, 0, 1)
     def download_s3_thread():
-        # try:
-        downloaded_files = utils.get_model_s3(file_dict['file'],"bronze/gamechanger/models/","gamechangerml/models/")
-        # downloaded_files = ['gamechangerml/models/20210223.tar.gz']
-        processmanager.update_status(processmanager.s3_file_download, 0, len(downloaded_files))
-        i = 0
-        for f in downloaded_files:
-            i+=1
-            processmanager.update_status(processmanager.s3_file_download, 0,i)
-            logger.info(f)
-            if '.tar' in  f:
-                path = "gamechangerml/models/"
-                tar = tarfile.open(f)
-                logger.info(tar.getmembers())
-                if tar.getmembers()[0].name == '.':
-                    if 'sentence_index' in file_dict['file']:
-                        path += 'sent_index_'
-                    elif 'jbook_qexp_model' in file_dict['file']: 
-                        path += 'jbook_qexp_'
-                    elif 'qexp_model' in file_dict['file']: 
-                        path += 'qexp_'
-                    path += f.split('/')[-1].split('.')[0]
+        logger.info(f'downloading file {file_dict["file"]}')
+        try:
+        
+            path = "gamechangerml/models/" if file_dict['dir'] == "models" else "gamechangerml/"
+            downloaded_files = utils.get_model_s3(file_dict['file'],f"bronze/gamechanger/{file_dict['dir']}/",path)
+            # downloaded_files = ['gamechangerml/models/20210223.tar.gz']
+            processmanager.update_status(processmanager.s3_file_download, 0, len(downloaded_files))
+            i = 0
+            for f in downloaded_files:
+                i+=1
+                processmanager.update_status(processmanager.s3_file_download, 0,i)
+                logger.info(f)
+                if '.tar' in  f:
+                    tar = tarfile.open(f)
+                    if tar.getmembers()[0].name == '.':
+                        if 'sentence_index' in file_dict['file']:
+                            path += 'sent_index_'
+                        elif 'jbook_qexp_model' in file_dict['file']: 
+                            path += 'jbook_qexp_'
+                        elif 'qexp_model' in file_dict['file']: 
+                            path += 'qexp_'
+                        elif 'topic_model' in file_dict['file']:
+                            path += 'topic_models'
 
-                logger.info(f'Extracting {f} to {path}')
-                tar.extractall(path=path, members=[member for member in tar.getmembers() if('.git' not in member.name and '.DS_Store' not in member.name)])
-                tar.close()
+                        path += f.split('/')[-1].split('.')[0]
 
-        # except Exception as e:
-        #     logger.warning(e)
-        #     logger.warning(f"Could not get dependencies from S3")
-        #     response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        #     processmanager.update_status(processmanager.s3_file_download, failed=True)
+                    logger.info(f'Extracting {f} to {path}')
+                    tar.extractall(path=path, members=[member for member in tar.getmembers() if('.git' not in member.name and '.DS_Store' not in member.name)])
+                    tar.close()
+
+        except PermissionError:
+            failedExtracts = []
+            for member in tar.getmembers():
+                try:
+                    tar.extract(member,path=path)
+                except Exception as e:
+                    failedExtracts.append(member.name)
+
+            logger.warning(f'Could not extract {failedExtracts}')
+
+        except Exception as e:
+            logger.warning(e)
+            logger.warning(f"Could download {file_dict['file']} from S3")
+            response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            processmanager.update_status(processmanager.s3_file_download, failed=True)
+
         processmanager.update_status(processmanager.s3_file_download, len(downloaded_files),len(downloaded_files))
 
     thread = MlThread(download_s3_thread)
@@ -365,8 +383,11 @@ async def s3_func(function, response: Response):
     models = []
     try:
         logger.info("Retrieving model list from s3::")
-        s3_path = "bronze/gamechanger/models/"
         if function == "models":
+            s3_path = "bronze/gamechanger/models/"
+            models = utils.get_models_list(s3_path)
+        elif function == "data":
+            s3_path = "bronze/gamechanger/ml-data/"
             models = utils.get_models_list(s3_path)
     except:
         logger.warning(f"Could not get model list from s3")
