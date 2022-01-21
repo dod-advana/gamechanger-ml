@@ -218,17 +218,44 @@ async def download(response: Response):
     Args:
     Returns:
     """
+    processmanager.update_status(processmanager.s3_download, 0, 1)
+    def download_s3_thread():
+        try:
+            logger.info("Attempting to download dependencies from S3")
+            output = subprocess.call(
+                ["gamechangerml/scripts/download_dependencies.sh"])
+            # get_transformers(overwrite=False)
+            # get_sentence_index(overwrite=False)
+            processmanager.update_status(processmanager.s3_download, 1, 1)
+        except:
+
+            logger.warning(f"Could not get dependencies from S3")
+            response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            processmanager.update_status(processmanager.s3_download, failed=True)
+
+    thread = MlThread(download_s3_thread)
+    thread.start()
+    return await get_process_status()
+
+@router.post("/downloadS3File", status_code=200)
+async def download_s3_file(file_dict:dict, response: Response):
+    """download - downloads dependencies from s3
+    Args:
+    Returns:
+    """
+    # processmanager.update_status(processmanager.s3_download, 0, 1)
+    logger.info(file_dict)
     try:
-        logger.info("Attempting to download dependencies from S3")
-        output = subprocess.call(
-            ["gamechangerml/scripts/download_dependencies.sh"])
-        # get_transformers(overwrite=False)
-        # get_sentence_index(overwrite=False)
+        utils.get_model_s3(file_dict['file'],"bronze/gamechanger/models/","gamechangerml/models/")
     except:
+
         logger.warning(f"Could not get dependencies from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    return
+        # processmanager.update_status(processmanager.s3_download, failed=True)
 
+    # thread = MlThread(download_s3_thread)
+    # thread.start()
+    return {}
 
 @router.get("/s3", status_code=200)
 async def s3_func(function, response: Response):
