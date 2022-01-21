@@ -46,6 +46,11 @@ async def get_process_status():
 
 @router.get("/getDataList")
 def get_downloaded_data_list():
+    """
+    Gets a list of the data in the local data folder
+    Args: 
+    Returns: dict {"dirs":[ array of dicts {"name":(name of file):"path":(base directory), "files":(arr of files in directory),"subdirectories":(arr of subdirectories)}]}
+    """
     files = []
     dir_arr = []
     logger.info(DATA_PATH)
@@ -60,6 +65,16 @@ def get_downloaded_data_list():
 
 @router.get("/getModelsList")
 def get_downloaded_models_list():
+    """
+    Gets a list of the models in the local model folder
+    Args: 
+    Returns:{
+        "transformers": (list of transformers),
+        "sentence": (list of sentence indexes),
+        "qexp": (list of query expansion indexes),
+        "ltr": (list of learn to rank),
+    }
+    """
     qexp_list = {}
     sent_index_list = {}
     transformer_list = {}
@@ -183,6 +198,11 @@ def get_downloaded_models_list():
 
 @router.post("/deleteLocalModel")
 async def delete_local_model(model: dict, response:Response):
+    """
+    Delete a model from the local model folder
+    Args: model: dict; {"model":(model you want to delete), "type":(type of model being deleted)}
+    Returns: process statuses
+    """
     def removeDirectory(dir):
         try:
             logger.info(f'Removing directory {os.path.join(dir,model["model"])}')
@@ -313,10 +333,11 @@ async def download(response: Response):
 
 
 @router.post("/downloadS3File", status_code=200)
-async def download_s3_file(file_dict: dict, response: Response):
-    """download - downloads dependencies from s3
-    Args:
-    Returns:
+async def download_s3_file(file_dict:dict, response: Response):
+    """
+    download a s3 file from the given path. If folder is given download all files recursively from the folder and untar all .tar files
+    Args:file_dict - dict {"file":(file or folder path),"type":"whether from ml-data or models)}
+    Returns: process status
     """
     processmanager.update_status(processmanager.s3_file_download, 0, 1)
     def download_s3_thread():
