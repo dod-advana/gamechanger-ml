@@ -10,11 +10,39 @@ from gamechangerml.src.utilities.test_utils import open_json
 from gamechangerml import DATA_PATH, REPO_PATH
 
 CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
-corpus_list = [i.lower().strip('.json') for i in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, i))]
+corpus_list = [i.strip('.json') for i in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, i))]
+
+## neo queries 
+##TODO: update neo4j graph if scores don't exist 
+graphName = 'docGraph'
+make_graph = f'''
+CALL gds.graph.create.cypher(
+  "{graphName}"
+  "MATCH (n) WHERE n:Document OR n:Entity OR n:Topic OR n:Responsibility RETURN id(n) AS id, labels(n) AS labels",
+  "MATCH (n)-[r:REFERENCES|MENTIONS|IS_IN|CONTAINS|CHILD_OF]->(m) RETURN id(n) AS source, id(m) AS target, type(r) AS type")
+YIELD
+  graphName AS graph, nodeQuery, nodeCount AS nodes, relationshipCount AS rels
+'''
+
+write_label_prop = '''
+CALL gds.labelPropagation.write({}, {})
+YIELD communityCount, ranIterations, didConverge
+'''.format(graphName, '''writeProperty: "lp_community"''')
+
+write_louvain = '''
+CALL gds.louvain.write({}, {})
+YIELD communityCount, modularity, modularities
+'''.format(graphName, '''writeProperty: "louvain_community"''')
+
+write_betweenness = '''
+CALL gds.betweenness.write({}, {})
+YIELD centralityDistribution, nodePropertiesWritten
+RETURN centralityDistribution.min AS minimumScore, centralityDistribution.mean AS meanScore, nodePropertiesWritten
+'''.format(graphName, '''writeProperty: "betweenness"''')
 
 def in_corpus(filename, corpus_list):
 
-    if filename.lower().lstrip().strip('.pdf') in corpus_list:
+    if filename.split('.pdf')[0].strip().lstrip() in corpus_list:
         return True
     else:
         logger.warning(f"{filename} not found in corpus")
@@ -239,8 +267,47 @@ class Recommender:
             logger.warning("Could not lookup docs from similar searches")
             logger.warning(e)
             return []
-    
-    def get_recs(self, filename=None, rank_method='importance'):
+
+    def _lookup_neo(self, filename, driver):
+
+        # get clusters
+        name = '{name: "' + filename + '"}'
+        query = f"MATCH (n:Document {name}) RETURN n.filename, n.louvain_community, n.lp_community"
+        with driver.session() as session:
+            resp = session.run(query).data()
+            logger.info(resp)
+            lp = resp[0]['n.lp_community']
+            louv = resp[0]['n.louvain_community']
+
+        # get counts for each group
+        louv_q = "{louvain_community: " + str(louv) + "}"
+        query = f"MATCH (n:Document {louv_q}) RETURN count(n)"
+        with driver.session() as session:
+            resp = session.run(query).data()
+            logger.info(resp)
+            louv_count = resp[0]['count(n)']
+
+        lp_q = "{lp_community: " + str(lp) + "}"
+        query = f"MATCH (n:Document {lp_q}) RETURN count(n)"
+        with driver.session() as session:
+            resp = session.run(query).data()
+            logger.info(resp)
+            lp_count = resp[0]['count(n)']
+
+        if lp_count == louv_count == 1:
+            results = []
+        elif lp_count > louv_count:
+            query = f"MATCH (n:Document {louv_q}) RETURN n.filename, n.louvain_community ORDER BY n.betweenness LIMIT 10"
+        else:
+            query = f"MATCH (n:Document {lp_q}) RETURN n.filename, n.lp_community ORDER BY n.betweenness LIMIT 10"
+        with driver.session() as session:
+            resp = session.run(query).data()
+            logger.info(resp)
+            results = [i['n.filename'] for i in resp if i is not filename]
+
+        return results
+            
+    def get_recs_csv(self, filename=None, rank_method='importance'):
 
         if not filename:
             filename = random.choice(corpus_list)
@@ -272,3 +339,27 @@ class Recommender:
         else:
             logger.warning("This document is not in the corpus")
             return {}
+
+    def get_recs(self, driver, sample, filename=None):
+
+        if not filename and sample:
+            filename = random.choice(corpus_list)
+            logger.info(f" ****    RANDOM SAMPLE: {filename}")
+        results = []
+        try:
+            results = self._lookup_history(filename.lower())
+            method = 'search_history'
+            if len(results) < 1:
+                results = self._lookup_neo(filename, driver)
+                method = 'graph_communities'
+            results = [i.split('.pdf')[0].strip() for i in results]
+            #results = [i for i in results if in_corpus(i, corpus_list)]
+            if len(results) < 1:
+                method = "none"
+        except Exception as e:
+            logger.warning(e, exc_info=True)
+
+        return {"filename": filename, "method": method, "results": results}
+
+
+

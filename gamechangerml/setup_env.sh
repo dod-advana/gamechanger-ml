@@ -32,6 +32,9 @@ function setup_prod() {
     export ES_PASSWORD="${ES_PASSWORD:-}"
     export ES_ENABLE_SSL="${ES_ENABLE_SSL:-true}"
     export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-true}"
+    export NEO4J_URL="neo4j://10.194.9.69:7687"
+    export NEO4J_USER="neo4j"
+    export NEO4J_PASSWORD="admin"
 
     export DEV_ENV="PROD"
 }
@@ -62,6 +65,10 @@ function setup_dev() {
     export ES_PASSWORD="${ES_PASSWORD:-}"
     export ES_ENABLE_SSL="${ES_ENABLE_SSL:-true}"
     export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-false}"
+
+    export NEO4J_URL="neo4j://10.194.9.69:7687"
+    export NEO4J_USER="neo4j"
+    export NEO4J_PASSWORD="admin"
 }
 
 
@@ -80,6 +87,10 @@ function setup_devlocal() {
   export ES_PASSWORD="${ES_PASSWORD:-}"
   export ES_ENABLE_SSL="${ES_ENABLE_SSL:-true}"
   export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-false}"
+
+  export NEO4J_URL="neo4j://10.194.9.69:7687"
+  export NEO4J_USER="neo4j"
+  export NEO4J_PASSWORD="admin"
 
   export DEV_ENV="DEVLOCAL"
 }

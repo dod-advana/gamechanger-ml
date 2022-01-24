@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Response, status
 import time
+import os
+from neo4j import GraphDatabase
 
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
@@ -202,18 +204,28 @@ async def post_word_sim(body: dict, response: Response) -> dict:
 
 @router.post("/recommender", status_code=200)
 async def post_recommender(body: dict, response: Response) -> dict:
-    filename = body["filename"]
-    logger.info(f"Recommending similar documents to {filename}")
-    similar_docs = []
+    results = {}
+    sample = False
     try:
-        similar_docs = MODELS.recommender.get_recs(filename)
-        logger.info(f"Found similar docs: \n {str(similar_docs)}")
+        filename = body["filename"]
+        if not filename:
+            if body["sample"]:
+                sample = body["sample"]
+        logger.info(f"Recommending similar documents to {filename}")
+        uri = os.environ.get("NEO4J_URL")
+        user = os.environ.get("NEO4J_USER")
+        password = os.environ.get("NEO4J_PASSWORD")
+        logger.info(f"user: {user}, password: {password}, uri: {uri}")
+        driver = GraphDatabase.driver(uri, auth=(user, password))
+        results = MODELS.recommender.get_recs(filename=filename, driver=driver, sample=sample)
+        logger.info(f"Found similar docs: \n {str(results)}")
+        driver.close()  # close the driver object
     except Exception as e:
         logger.warning(f"Could not get similar docs for {filename}")
         logger.warning(e)
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     
-    return similar_docs
+    return results
 
 def unquoted(term):
     """unquoted - unquotes string
