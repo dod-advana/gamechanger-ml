@@ -5,13 +5,14 @@ import csv
 import random
 from collections import Counter
 import networkx as nx
+from typing import List, Dict, Union
 from gamechangerml.api.utils.logger import logger
 from gamechangerml import DATA_PATH, REPO_PATH
 
 CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 corpus_list = [i.strip('.json').strip().lstrip() for i in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, i))]
 
-def in_corpus(filename, corpus_list):
+def in_corpus(filename: str, corpus_list: List[str]) -> bool:
 
     if filename in corpus_list:
         return True
@@ -26,6 +27,7 @@ class Recommender:
         self.graph = self.get_user_graph()
 
     def get_user_graph(self):
+        '''Makes graph out of user searches + docs opened'''
 
         logger.info(" ****    BUILDING RECOMMENDER: Making user graph")
         try:
@@ -44,7 +46,8 @@ class Recommender:
             logger.warning(e)
             return nx.Graph()
 
-    def _lookup_history(self, filename):
+    def _lookup_history(self, filename: str) ->List[str]:
+        '''Looks up similar docs by search history'''
 
         try:
             searches = list(self.graph.adj[filename])
@@ -65,8 +68,11 @@ class Recommender:
             logger.warning(e)
             return []
 
-    def get_recs(self, sample, limit = 5, filename=None):
-
+    def get_recs(self, sample: bool, limit: int=5, filename: Union[str,None]=None):
+        '''
+        Gets similar docs by filename up to the limit.
+        When sample=True and filename=None, creates random search for testing.
+        '''
         if not filename and sample:
             filename = random.choice(corpus_list)
             logger.info(f" ****    RANDOM SAMPLE: {filename}")
