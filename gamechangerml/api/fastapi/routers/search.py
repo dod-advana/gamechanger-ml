@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Response, status
 import time
-import os
-from neo4j import GraphDatabase
 
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
@@ -212,14 +210,11 @@ async def post_recommender(body: dict, response: Response) -> dict:
             if body["sample"]:
                 sample = body["sample"]
         logger.info(f"Recommending similar documents to {filename}")
-        uri = os.environ.get("NEO4J_URL")
-        user = os.environ.get("NEO4J_USER")
-        password = os.environ.get("NEO4J_PASSWORD")
-        logger.info(f"user: {user}, password: {password}, uri: {uri}")
-        driver = GraphDatabase.driver(uri, auth=(user, password))
-        results = MODELS.recommender.get_recs(filename=filename, driver=driver, sample=sample)
-        logger.info(f"Found similar docs: \n {str(results)}")
-        driver.close()  # close the driver object
+        results = MODELS.recommender.get_recs(filename=filename, sample=sample)
+        if results['results'] != []:
+            logger.info(f"Found similar docs: \n {str(results)}")
+        else:
+            logger.info("Did not find any similar docs")
     except Exception as e:
         logger.warning(f"Could not get similar docs for {filename}")
         logger.warning(e)
