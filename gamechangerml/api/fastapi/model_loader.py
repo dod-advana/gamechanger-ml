@@ -13,7 +13,20 @@ from gamechangerml.src.search.sent_transformer.model import (
     SentenceEncoder,
 )
 from gamechangerml.src.search.embed_reader import sparse
-from gamechangerml.api.fastapi.settings import *
+from gamechangerml.api.fastapi.settings import (
+    logger,
+    TOPICS_MODEL,
+    MODEL_LOAD_FLAG,
+    QEXP_JBOOK_MODEL_NAME,
+    QEXP_MODEL_NAME,
+    WORD_SIM_MODEL,
+    LOCAL_TRANSFORMERS_DIR,
+    SENT_INDEX_PATH,
+    latest_intel_model_encoder,
+    latest_intel_model_sim,
+    latest_intel_model_trans,
+    latest_qa_model,
+)
 from gamechangerml.src.featurization.word_sim import WordSim
 from gamechangerml.src.featurization.topic_modeling import Topics
 
@@ -187,8 +200,7 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(
-            f"Loading Sentence Searcher with sent index path: {index_path}")
+        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
             if MODEL_LOAD_FLAG:
                 ModelLoader.__sentence_searcher = SentenceSearcher(
@@ -236,8 +248,7 @@ class ModelLoader:
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
             if MODEL_LOAD_FLAG:
-                ModelLoader.__sparse_reader = sparse.SparseReader(
-                    model_name=model_name)
+                ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
                 logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
@@ -253,9 +264,7 @@ class ModelLoader:
             if MODEL_LOAD_FLAG:
                 logger.info("Starting Topic pipeline")
                 logger.info(TopicsConfig.DATA_ARGS)
-                ModelLoader.__topic_model = Topics(
-                    TopicsConfig.DATA_ARGS["LOCAL_MODEL_DIR"]
-                )
+                ModelLoader.__topic_model = Topics(directory=TOPICS_MODEL.value)
                 logger.info("Finished loading Topic Model")
         except Exception as e:
             logger.warning("** Could not load Topic model")

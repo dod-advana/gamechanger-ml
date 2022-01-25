@@ -48,7 +48,7 @@ def parse_readme(readme: Path) -> str:
 
 setuptools.setup(
     name="gamechangerml",
-    version="1.1.0",
+    version="1.2.0",
     author="Booz Allen Hamilton",
     author_email="gamechanger@advana",
     description="Package for GAMECHANGER ML modules",
@@ -63,10 +63,11 @@ setuptools.setup(
     ],
     python_requires=">=3.8.0",
     install_requires=[
-        p for p in parse_requirements(REQUIREMENTS_PATH)
-        if re.split(r'\s*[@=]\s*', p)[0].lower()
-        not in EXCLUDE_PACKAGES
-    ] + SUBSTITUTE_PACKAGES,
+        p
+        for p in parse_requirements(REQUIREMENTS_PATH)
+        if re.split(r"\s*[@=]\s*", p)[0].lower() not in EXCLUDE_PACKAGES
+    ]
+    + SUBSTITUTE_PACKAGES,
     include_package_data=True,
     extras_require={"dev": parse_requirements(DEV_REQUIREMENTS_PATH)},
 )
