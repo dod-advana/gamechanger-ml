@@ -1,5 +1,3 @@
-import spacy
-from datetime import datetime
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
@@ -16,104 +14,7 @@ from gamechangerml import MODEL_PATH, DATA_PATH
 import typing as t
 import base64
 from urllib.parse import urljoin
-
-
-ES_INDEX = os.environ.get("ES_INDEX", "gamechanger")
-
-
-class ESUtils:
-    def __init__(
-        self,
-        host: str = os.environ.get("ES_HOST", "localhost"),
-        port: str = os.environ.get("ES_PORT", 443),
-        user: str = os.environ.get("ES_USER", ""),
-        password: str = os.environ.get("ES_PASSWORD", ""),
-        enable_ssl: bool = os.environ.get(
-            "ES_ENABLE_SSL", "True").lower() == "true",
-        enable_auth: bool = os.environ.get(
-            "ES_ENABLE_AUTH", "False").lower() == "true",
-    ):
-
-        self.host = host
-        self.port = port
-        self.user = user
-        self.password = password
-        self.enable_ssl = enable_ssl
-        self.enable_auth = enable_auth
-
-        self.auth_token = base64.b64encode(
-            f"{self.user}:{self.password}".encode()
-        ).decode()
-
-    @property
-    def client(self) -> Elasticsearch:
-        if hasattr(self, "_client"):
-            return getattr(self, "_client")
-
-        host_args = dict(
-            hosts=[
-                {
-                    "host": self.host,
-                    "port": self.port,
-                    "http_compress": True,
-                    "timeout": 60,
-                }
-            ]
-        )
-        auth_args = (
-            dict(http_auth=(self.user, self.password)
-                 ) if self.enable_auth else {}
-        )
-        ssl_args = dict(use_ssl=self.enable_ssl)
-
-        es_args = dict(
-            **host_args,
-            **auth_args,
-            **ssl_args,
-        )
-
-        self._es_client = Elasticsearch(**es_args)
-        return self._es_client
-
-    @property
-    def auth_headers(self) -> t.Dict[str, str]:
-        return {"Authorization": f"Basic {self.auth_token}"} if self.enable_auth else {}
-
-    @property
-    def content_headers(self) -> t.Dict[str, str]:
-        return {"Content-Type": "application/json"}
-
-    @property
-    def default_headers(self) -> t.Dict[str, str]:
-        if self.enable_auth:
-            return dict(**self.auth_headers, **self.content_headers)
-        else:
-            return dict(**self.content_headers)
-
-    @property
-    def root_url(self) -> str:
-        return ("https" if self.enable_ssl else "http") + f"://{self.host}:{self.port}/"
-
-    def request(self, method: str, url: str, **request_opts) -> requests.Response:
-        complete_url = urljoin(self.root_url, url.lstrip("/"))
-        return requests.request(
-            method=method,
-            url=complete_url,
-            headers=self.default_headers,
-            **request_opts,
-        )
-
-    def post(self, url: str, **request_opts) -> requests.Response:
-        return self.request(method="POST", url=url, **request_opts)
-
-    def put(self, url: str, **request_opts) -> requests.Response:
-        return self.request(method="PUT", url=url, **request_opts)
-
-    def get(self, url: str, **request_opts) -> requests.Response:
-        return self.request(method="GET", url=url, **request_opts)
-
-    def delete(self, url: str, **request_opts) -> requests.Response:
-        return self.request(method="DELETE", url=url, **request_opts)
+from gamechangerml.src.utilities import gc_web_api, es_utils
 
 
 logger = logging.getLogger("gamechanger")
@@ -125,20 +26,22 @@ LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
 LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
 os.makedirs(LTR_MODEL_PATH, exist_ok=True)
 os.makedirs(LTR_DATA_PATH, exist_ok=True)
+gcClient = gc_web_api.GCWebClient()
+
+esu = es_utils.ESUtils()
 
 
 class LTR:
     def __init__(
         self,
         params={
-            "max_depth": 6,
+            "max_depth": 8,
             "eta": 0.3,
             "objective": "rank:pairwise",
         },
     ):
         self.data = self.read_xg_data()
         self.params = params
-        self.mappings = self.read_mappings()
         self.judgement = None
         self.eval_metrics = [
             "map",
@@ -155,7 +58,7 @@ class LTR:
             "rmse",
             "error",
         ]
-        self.esu = ESUtils()
+        self.mappings = pd.DataFrame()
 
     def write_model(self, model):
         """write model: writes model to file
@@ -184,17 +87,34 @@ class LTR:
         except Exception as e:
             logger.error("Could not read in data for training")
 
-    def read_mappings(self, path=GC_USER_DATA):
+    def read_mappings(
+        self, path=GC_USER_DATA, remote_mappings: bool = False, daysBack: int = 180
+    ):
         """read mappings: reads search pdf mappings
         params: path to file
         returns:
             mappings file
         """
+        try:
+            if remote_mappings:
+                self.mappings = self.request_mappings(daysBack)
+            else:
+                logger.info(
+                    "Not production environment, defaulting to local mappings")
+                self.mappings = pd.read_csv(path)
+        except Exception as e:
+            logger.warning("Could not request or read mappings")
+            logger.warning(e)
+        return self.mappings
+
+    def request_mappings(self, daysBack: int = 180):
         mappings = None
         try:
-            mappings = pd.read_csv(path)
+            mappings = gcClient.getSearchMappings(daysBack=daysBack)
+            mappings = json.loads(mappings)
+            mappings = pd.DataFrame(mappings["data"])
         except Exception as e:
-            logger.error("Could not read in mappings to make judgement list")
+            logger.warning("Could not request mappings from GC Web")
         return mappings
 
     def train(self, data=None, params=None, write=True):
@@ -215,16 +135,9 @@ class LTR:
             fmap=os.path.join(LTR_DATA_PATH, "featmap.txt"), dump_format="json"
         )
         if write:
-            metadata = {}
             self.write_model(model)
             path = os.path.join(LTR_MODEL_PATH, "ltr_evals.csv")
             cv.to_csv(path, index=False)
-            metadata["name"] = "ltr_model"
-            metadata["evals"] = cv.mean().to_dict()
-            metadata["params"] = params
-            metadata["date"] = str(datetime.today())
-            with open(os.path.join(LTR_MODEL_PATH, "metadata.json"), "w") as f:
-                f.write(json.dumps(metadata))
         return bst, model
 
     def post_model(self, model, model_name):
@@ -242,7 +155,7 @@ class LTR:
             }
         }
         endpoint = "/_ltr/_featureset/doc_features/_createmodel"
-        r = self.esu.post(endpoint, data=json.dumps(query))
+        r = esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def search(self, terms, rescore=True):
@@ -324,17 +237,18 @@ class LTR:
                     }
                 }
             }
-        r = self.esu.client.search(index=ES_INDEX, body=dict(query))
+        r = esu.client.search(index=esu.es_index, body=dict(query))
         return r
 
-    def generate_judgement(self, mappings):
+    def generate_judgement(self, remote_mappings: bool = False, daysBack: int = 180):
         """generate judgement - generates judgement list from user mapping data
         params:
             mappings: dataframe of user data extracted from pdf mapping table
         returns:
             count_df: cleaned dataframe with search mapped data
         """
-        searches = mappings[["search", "document"]]
+        self.read_mappings(remote_mappings=remote_mappings, daysBack=daysBack)
+        searches = self.mappings[["search", "document"]]
         searches.dropna(inplace=True)
         searches.search.replace("&quot;", "", regex=True, inplace=True)
         word_tuples = []
@@ -389,14 +303,14 @@ class LTR:
             for docs in tmp.itertuples():
                 doc = docs.Index
                 q = self.construct_query(doc, kw)
-                query_list.append(json.dumps({"index": ES_INDEX}))
+                query_list.append(json.dumps({"index": esu.es_index}))
                 query_list.append(json.dumps(q))
         query = "\n".join(query_list)
-        res = self.esu.client.msearch(body=query)
+        res = esu.client.msearch(body=query)
         ltr_log = [x["hits"]["hits"] for x in res["responses"]]
         return ltr_log
 
-    def process_ltr_log(self, ltr_log, num_fts=7):
+    def process_ltr_log(self, ltr_log, num_fts=8):
         """process ltr log: extracts features from ES logs for judgement list
         params:
             ltr_log: results from ES
@@ -429,14 +343,16 @@ class LTR:
         returns:
             outputs a file
         """
+        print(df)
         ltr_log = self.query_es_fts(df)
         vals = self.process_ltr_log(ltr_log)
         ft_df = pd.DataFrame(
             vals,
             columns=[
                 "title",
-                "title-phrase",
                 "keyw_5",
+                "topics",
+                "entities",
                 "textlength",
                 "paragraph",
                 "popscore",
@@ -504,16 +420,22 @@ class LTR:
                         },
                     },
                     {
-                        "name": "title-phrase",
-                        "params": ["keywords"],
-                        "template_language": "mustache",
-                        "template": {"match_phrase": {"title": "{{keywords}}"}},
-                    },
-                    {
                         "name": "keyw_5",
                         "params": ["keywords"],
                         "template_language": "mustache",
                         "template": {"match": {"keyw_5": "{{keywords}}"}},
+                    },
+                    {
+                        "name": "topics",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match": {"topics_s": "{{keywords}}"}},
+                    },
+                    {
+                        "name": "entities",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match": {"top_entities_t": "{{keywords}}"}},
                     },
                     {
                         "name": "textlength",
@@ -604,17 +526,17 @@ class LTR:
             }
         }
         endpoint = "/_ltr/_featureset/doc_features"
-        r = self.esu.post(endpoint, data=json.dumps(query))
+        r = esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def post_init_ltr(self):
         endpoint = "/_ltr"
-        r = self.esu.put(endpoint)
+        r = esu.put(endpoint)
         return r.content
 
     def delete_ltr(self, model_name="ltr_model"):
         endpoint = f"/_ltr/_model/{model_name}"
-        r = self.esu.delete(endpoint)
+        r = esu.delete(endpoint)
         return r.content
 
     def normalize(self, arr, start=0, end=4):

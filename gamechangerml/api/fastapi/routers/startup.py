@@ -28,7 +28,6 @@ async def check_health():
     """
     logger.info("API Health Check")
     try:
-        new_trans_model_name = str(latest_intel_model_trans.value)
         new_sim_model_name = str(latest_intel_model_sim.value)
         new_encoder_model_name = str(latest_intel_model_encoder.value)
         new_sent_model_name = str(latest_intel_model_sent.value)
@@ -36,20 +35,6 @@ async def check_health():
     except Exception as e:
         logger.info("Could not get one of the model names from redis")
         logger.info(e)
-    try:
-        good_health = True
-
-        # this never triggers because the sparse_reader is never set.
-        if (MODELS.sparse_reader != None) and (
-            MODELS.sparse_reader.model_name != new_trans_model_name
-        ):
-            MODELS.initSparse(new_trans_model_name)
-            good_health = False
-    except Exception as e:
-        logger.info("Model Health: POOR")
-        logger.warn(
-            f"Model Health: BAD - Error with reloading model {new_trans_model_name}"
-        )
     if check_dep_exist:
         good_health = True
     else:
