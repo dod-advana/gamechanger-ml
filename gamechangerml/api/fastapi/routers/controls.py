@@ -46,6 +46,7 @@ def get_downloaded_models_list():
     qexp_list = {}
     sent_index_list = {}
     transformer_list = {}
+    topic_models = {}
     ltr_list = {}
     try:
         for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
@@ -107,6 +108,36 @@ def get_downloaded_models_list():
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get Sentence Index model path")
+
+    # TOPICS MODELS
+    try:
+
+        topic_dirs = [
+            name
+            for name in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            if os.path.isdir(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
+            and "topic_model_" in name
+        ]
+        for topic_model_name in topic_dirs:
+            topic_models[topic_model_name] = {}
+            try:
+                with open(
+                    os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        topic_model_name,
+                        "metadata.json",
+                    )
+                ) as mf:
+                    topic_models[topic_model_name] = json.load(mf)
+            except:
+                topic_models[topic_model_name] = {
+                    "Error": "Failed to load metadata file for this model"
+                }
+
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get Topic model path")
+
     # LTR
     try:
         for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
@@ -128,6 +159,7 @@ def get_downloaded_models_list():
         "transformers": transformer_list,
         "sentence": sent_index_list,
         "qexp": qexp_list,
+        "topic_models": topic_models,
         "ltr": ltr_list,
     }
     return model_list
@@ -219,11 +251,11 @@ async def download(response: Response):
     Returns:
     """
     processmanager.update_status(processmanager.s3_download, 0, 1)
+
     def download_s3_thread():
         try:
             logger.info("Attempting to download dependencies from S3")
-            output = subprocess.call(
-                ["gamechangerml/scripts/download_dependencies.sh"])
+            output = subprocess.call(["gamechangerml/scripts/download_dependencies.sh"])
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)
             processmanager.update_status(processmanager.s3_download, 1, 1)
@@ -237,8 +269,9 @@ async def download(response: Response):
     thread.start()
     return await get_process_status()
 
+
 @router.post("/downloadS3File", status_code=200)
-async def download_s3_file(file_dict:dict, response: Response):
+async def download_s3_file(file_dict: dict, response: Response):
     """download - downloads dependencies from s3
     Args:
     Returns:
@@ -246,7 +279,9 @@ async def download_s3_file(file_dict:dict, response: Response):
     # processmanager.update_status(processmanager.s3_download, 0, 1)
     logger.info(file_dict)
     try:
-        utils.get_model_s3(file_dict['file'],"bronze/gamechanger/models/","gamechangerml/models/")
+        utils.get_model_s3(
+            file_dict["file"], "bronze/gamechanger/models/", "gamechangerml/models/"
+        )
     except:
 
         logger.warning(f"Could not get dependencies from S3")
@@ -256,6 +291,7 @@ async def download_s3_file(file_dict:dict, response: Response):
     # thread = MlThread(download_s3_thread)
     # thread.start()
     return {}
+
 
 @router.get("/s3", status_code=200)
 async def s3_func(function, response: Response):
@@ -319,10 +355,23 @@ async def reload_models(model_dict: dict, response: Response):
                     processmanager.update_status(
                         processmanager.reloading, progress, total
                     )
+
+                if "topics" in model_dict:
+                    topics_name = os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["topics"]
+                    )
+
+                    logger.info("Attempting to load Topics")
+                    MODELS.initTopics(topics_name)
+                    TOPICS_MODEL.value = topics_name
+                    progress += 1
+                    processmanager.update_status(
+                        processmanager.reloading, progress, total
+                    )
+
             except Exception as e:
                 logger.warning(e)
-                processmanager.update_status(
-                    processmanager.reloading, failed=True)
+                processmanager.update_status(processmanager.reloading, failed=True)
 
         args = {"model_dict": model_dict}
         thread = MlThread(reload_thread, args)
@@ -347,8 +396,7 @@ async def download_corpus(corpus_dict: dict, response: Response):
         # then passes in where to dowload the corpus locally.
         if not corpus_dict["corpus"]:
             corpus_dict = S3_CORPUS_PATH
-        args = {
-            "s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+        args = {"s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
         logger.info(args)
         processmanager.update_status(processmanager.corpus_download)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
@@ -357,6 +405,140 @@ async def download_corpus(corpus_dict: dict, response: Response):
         logger.warning(f"Could not get corpus from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     return await get_process_status()
+
+
+# Create a mapping between the training methods and input from the api
+# Methods for all the different models we can train
+# Defined outside the function so they arent recreated each time its called
+
+
+def update_metadata(model_dict):
+    logger.info("Attempting to update feature metadata")
+    pipeline = Pipeline()
+    model_dict["build_type"] = "meta"
+    try:
+        corpus_dir = model_dict["corpus_dir"]
+    except:
+        corpus_dir = CORPUS_DIR
+    try:
+        retriever = MODELS.sentence_searcher
+        logger.info("Using pre-loaded SentenceSearcher")
+    except:
+        retriever = None
+        logger.info("Setting SentenceSearcher to None")
+    try:
+        meta_steps = model_dict["meta_steps"]
+    except:
+        meta_steps = [
+            "pop_docs",
+            "combined_ents",
+            "rank_features",
+            "update_sent_data",
+        ]
+    args = {
+        "meta_steps": meta_steps,
+        "corpus_dir": corpus_dir,
+        "retriever": retriever,
+    }
+    pipeline.run(
+        build_type=model_dict["build_type"],
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
+
+
+def finetune_sentence(model_dict):
+    logger.info("Attempting to finetune the sentence transformer")
+    try:
+        testing_only = model_dict["testing_only"]
+    except:
+        testing_only = False
+    args = {
+        "batch_size": model_dict["batch_size"],
+        "epochs": model_dict["epochs"],
+        "warmup_steps": model_dict["warmup_steps"],
+        "testing_only": testing_only,
+    }
+    pipeline.run(
+        build_type="sent_finetune",
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
+
+
+def train_sentence(model_dict):
+    logger.info("Attempting to start sentence pipeline")
+    try:
+        corpus_dir = model_dict["corpus_dir"]
+    except:
+        corpus_dir = CORPUS_DIR
+    if not os.path.exists(corpus_dir):
+        logger.warning(f"Corpus is not in local directory {str(corpus_dir)}")
+        raise Exception("Corpus is not in local directory")
+    args = {
+        "corpus": corpus_dir,
+        "encoder_model": model_dict["encoder_model"],
+        "gpu": bool(model_dict["gpu"]),
+        "upload": bool(model_dict["upload"]),
+        "version": model_dict["version"],
+    }
+    logger.info(args)
+    pipeline.run(
+        build_type=model_dict["build_type"],
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
+
+
+def train_qexp(model_dict):
+    logger.info("Attempting to start qexp pipeline")
+    args = {
+        "model_id": model_dict["model_id"],
+        "validate": bool(model_dict["validate"]),
+        "upload": bool(model_dict["upload"]),
+        "version": model_dict["version"],
+    }
+    pipeline.run(
+        build_type=model_dict["build_type"],
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
+
+
+def run_evals(model_dict):
+    logger.info("Attempting to run evaluation")
+    args = {
+        "model_name": model_dict["model_name"],
+        "eval_type": model_dict["eval_type"],
+        "sample_limit": model_dict["sample_limit"],
+        "validation_data": model_dict["validation_data"],
+    }
+    pipeline.run(
+        build_type=model_dict["build_type"],
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
+
+
+def train_topics(model_dict):
+    logger.info("Attempting to train topic model")
+    logger.info(model_dict)
+    args = {"sample_rate": model_dict["sample_rate"], "upload": model_dict["upload"]}
+    pipeline.run(
+        build_type=model_dict["build_type"],
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
+
+
+training_switch = {
+    "sentence": train_sentence,
+    "qexp": train_qexp,
+    "sent_finetune": finetune_sentence,
+    "eval": run_evals,
+    "meta": update_metadata,
+    "topics": train_topics,
+}
 
 
 @router.post("/trainModel", status_code=200)
@@ -368,127 +550,15 @@ async def train_model(model_dict: dict, response: Response):
     Returns:
     """
     try:
-        # Methods for all the different models we can train
-        def update_metadata(model_dict=model_dict):
-            logger.info("Attempting to update feature metadata")
-            pipeline = Pipeline()
-            model_dict["build_type"] = "meta"
-            try:
-                corpus_dir = model_dict["corpus_dir"]
-            except:
-                corpus_dir = CORPUS_DIR
-            try:
-                retriever = MODELS.sentence_searcher
-                logger.info("Using pre-loaded SentenceSearcher")
-            except:
-                retriever = None
-                logger.info("Setting SentenceSearcher to None")
-            try:
-                meta_steps = model_dict["meta_steps"]
-            except:
-                meta_steps = [
-                    "pop_docs",
-                    "combined_ents",
-                    "rank_features",
-                    "update_sent_data",
-                ]
-            args = {
-                "meta_steps": meta_steps,
-                "corpus_dir": corpus_dir,
-                "retriever": retriever,
-            }
-            pipeline.run(
-                build_type=model_dict["build_type"],
-                run_name=datetime.now().strftime("%Y%m%d"),
-                params=args,
-            )
 
-        def finetune_sentence(model_dict=model_dict):
-            logger.info("Attempting to finetune the sentence transformer")
-            try:
-                testing_only = model_dict["testing_only"]
-            except:
-                testing_only = False
-            args = {
-                "batch_size": model_dict["batch_size"],
-                "epochs": model_dict["epochs"],
-                "warmup_steps": model_dict["warmup_steps"],
-                "testing_only": testing_only,
-            }
-            pipeline.run(
-                build_type="sent_finetune",
-                run_name=datetime.now().strftime("%Y%m%d"),
-                params=args,
-            )
+        build_type = model_dict.get("build_type")
+        training_method = training_switch.get(build_type)
 
-        def train_sentence(model_dict=model_dict):
-            logger.info("Attempting to start sentence pipeline")
-            try:
-                corpus_dir = model_dict["corpus_dir"]
-            except:
-                corpus_dir = CORPUS_DIR
-            if not os.path.exists(corpus_dir):
-                logger.warning(
-                    f"Corpus is not in local directory {str(corpus_dir)}")
-                raise Exception("Corpus is not in local directory")
-            args = {
-                "corpus": corpus_dir,
-                "encoder_model": model_dict["encoder_model"],
-                "gpu": bool(model_dict["gpu"]),
-                "upload": bool(model_dict["upload"]),
-                "version": model_dict["version"],
-            }
-            logger.info(args)
-            pipeline.run(
-                build_type=model_dict["build_type"],
-                run_name=datetime.now().strftime("%Y%m%d"),
-                params=args,
-            )
+        if not training_method:
+            raise Exception(f"No training method mapped for build type {build_type}")
 
-        def train_qexp(model_dict=model_dict):
-            logger.info("Attempting to start qexp pipeline")
-            args = {
-                "model_id": model_dict["model_id"],
-                "validate": bool(model_dict["validate"]),
-                "upload": bool(model_dict["upload"]),
-                "version": model_dict["version"],
-            }
-            pipeline.run(
-                build_type=model_dict["build_type"],
-                run_name=datetime.now().strftime("%Y%m%d"),
-                params=args,
-            )
-
-        def run_evals(model_dict=model_dict):
-            logger.info("Attempting to run evaluation")
-            args = {
-                "model_name": model_dict["model_name"],
-                "eval_type": model_dict["eval_type"],
-                "sample_limit": model_dict["sample_limit"],
-                "validation_data": model_dict["validation_data"],
-            }
-            pipeline.run(
-                build_type=model_dict["build_type"],
-                run_name=datetime.now().strftime("%Y%m%d"),
-                params=args,
-            )
-
-        # Create a mapping between the training methods and input from the api
-        training_switch = {
-            "sentence": train_sentence,
-            "qexp": train_qexp,
-            "sent_finetune": finetune_sentence,
-            "eval": run_evals,
-            "meta": update_metadata,
-        }
         # Set the training method to be loaded onto the thread
-        if "build_type" in model_dict and model_dict["build_type"] in training_switch:
-            training_method = training_switch[model_dict["build_type"]]
-        else:  # PLACEHOLDER
-            model_dict["build_type"] = "sentence"
-            training_method = training_switch[model_dict["build_type"]]
-
-        training_thread = MlThread(training_method)
+        training_thread = MlThread(training_method, args={"model_dict": model_dict})
         training_thread.start()
 
     except:

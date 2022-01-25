@@ -88,7 +88,9 @@ class SimilarityConfig:
 class QexpConfig:
     MODEL_ARGS = {
         "init": {  # args for creating QE object
-            "qe_files_dir": os.path.join(REPO_PATH, "gamechangerml", "src", "search", "query_expansion"),
+            "qe_files_dir": os.path.join(
+                REPO_PATH, "gamechangerml", "src", "search", "query_expansion"
+            ),
             "method": "emb",
         },
         "expansion": {  # configs for getting expanded terms
@@ -113,8 +115,8 @@ class ValidationConfig:
         # location with smaller set of corpus JSONs
         "test_corpus_dir": "gamechangerml/test_corpus",
         "squad": {
-            "dev": "original/squad2.0/dev-v2.0.json", 
-            "train": "original/squad2.0/train-v2.0.json"
+            "dev": "original/squad2.0/dev-v2.0.json",
+            "train": "original/squad2.0/train-v2.0.json",
         },
         "nli": {
             "matched": "original/multinli_1.0/multinli_1.0_dev_matched.jsonl",
@@ -134,20 +136,13 @@ class ValidationConfig:
     }
 
     TRAINING_ARGS = {
-        "start_date": "2020-12-01", # earliest date to include search hist/feedback data from
-        "end_date": "2025-12-01", # last date to include search hist/feedback data from
+        "start_date": "2020-12-01",  # earliest date to include search hist/feedback data from
+        "end_date": "2025-12-01",  # last date to include search hist/feedback data from
         "exclude_searches": ["pizza", "shark"],
-        "min_correct_matches": {
-            "gold": 3,
-            "silver": 2,
-            "any": 0
-        },
-        "max_results": {
-            "gold": 7,
-            "silver": 10,
-            "any": 100
-        }
+        "min_correct_matches": {"gold": 3, "silver": 2, "any": 0},
+        "max_results": {"gold": 7, "silver": 10, "any": 100},
     }
+
 
 class TrainingConfig:
     DATA_ARGS = {
@@ -157,4 +152,7 @@ class TrainingConfig:
 
 
 class TopicsConfig:
+
+    # topic models should be in folders named gamechangerml/models/topic_model_<date>
+    # this path will look for bigrams.phr, tfidf.model, tfidf_dictionary.dic in gamechangerml/models folder as a last resort
     DATA_ARGS = {"LOCAL_MODEL_DIR": MODEL_PATH}
