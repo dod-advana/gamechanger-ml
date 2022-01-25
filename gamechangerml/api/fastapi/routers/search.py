@@ -8,7 +8,7 @@ from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.fastapi.version import __version__
 
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
-from gamechangerml.src.featurization.summary import GensimSumm
+# from gamechangerml.src.featurization.summary import GensimSumm
 from gamechangerml.api.fastapi.settings import *
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
@@ -61,10 +61,12 @@ async def textExtract_infer(body: dict, extractType: str, response: Response) ->
             logger.info(topics)
             results["extracted"] = topics
         elif extractType == "summary":
-            summary = GensimSumm(
-                query_text, long_doc=False, word_count=30
-            ).make_summary()
-            results["extracted"] = summary
+            # gensim upgrade breaks GensimSumm class
+            # summary = GensimSumm(
+            #     query_text, long_doc=False, word_count=30
+            # ).make_summary()
+            # results["extracted"] = summary
+            results["extracted"] = "Summary is not supported at this time"
         elif extractType == "keywords":
             logger.debug("keywords - predicting query: " + str(body))
             results["extracted"] = get_keywords(query_text)
@@ -78,7 +80,7 @@ async def textExtract_infer(body: dict, extractType: str, response: Response) ->
 
 @router.post("/transSentenceSearch", status_code=200)
 async def trans_sentence_infer(
-        body: dict, response: Response, num_results: int = 10, externalSim: bool = False
+    body: dict, response: Response, num_results: int = 10, externalSim: bool = False
 ) -> dict:
     """trans_sentence_infer - endpoint for sentence transformer inference
     Args:
@@ -92,7 +94,9 @@ async def trans_sentence_infer(
     results = {}
     try:
         query_text = body["text"]
-        results = MODELS.sentence_searcher.search(query_text, num_results, externalSim=False)
+        results = MODELS.sentence_searcher.search(
+            query_text, num_results, externalSim=False
+        )
         logger.info(results)
     except Exception:
         logger.error(f"Unable to get results from sentence transformer for {body}")

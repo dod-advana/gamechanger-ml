@@ -27,7 +27,6 @@ async def check_health():
     """
     logger.info("API Health Check")
     try:
-        new_trans_model_name = str(latest_intel_model_trans.value)
         new_sim_model_name = str(latest_intel_model_sim.value)
         new_encoder_model_name = str(latest_intel_model_encoder.value)
         new_sent_model_name = str(latest_intel_model_sent.value)
@@ -35,20 +34,6 @@ async def check_health():
     except Exception as e:
         logger.info("Could not get one of the model names from redis")
         logger.info(e)
-    try:
-        good_health = True
-
-        # this never triggers because the sparse_reader is never set.
-        if (MODELS.sparse_reader != None) and (
-            MODELS.sparse_reader.model_name != new_trans_model_name
-        ):
-            MODELS.initSparse(new_trans_model_name)
-            good_health = False
-    except Exception as e:
-        logger.info("Model Health: POOR")
-        logger.warn(
-            f"Model Health: BAD - Error with reloading model {new_trans_model_name}"
-        )
     if check_dep_exist:
         good_health = True
     else:
@@ -66,6 +51,7 @@ async def check_health():
     logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
     logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")
+    logger.info(f"-- Topics model name: {TOPICS_MODEL.value}")
 
 
 def check_dep_exist():
@@ -81,10 +67,10 @@ def check_dep_exist():
     if not os.path.isdir(QEXP_MODEL_NAME.value):
         logger.warning(f"{QEXP_MODEL_NAME.value} does NOT exist")
         healthy = False
-    # topics_dir = os.path.join(QEXP_MODEL_NAME, "topic_models/models")
-    # if not os.path.isdir(topics_dir):
-    #    logger.warning(f"{topics_dir} does NOT exist")
-    #    healthy = False
+
+    if not os.path.isdir(TOPICS_MODEL.value):
+        logger.warning(f"{TOPICS_MODEL.value} does NOT exist")
+        healthy = False
 
     if not os.path.isdir(QEXP_JBOOK_MODEL_NAME.value):
         logger.warning(f"{QEXP_JBOOK_MODEL_NAME.value} does NOT exist")

@@ -4,6 +4,7 @@
 *pkl
 *npy
 *.tar
+*.tar.gz
 *sent_index*
 *transformers*
 qe**
