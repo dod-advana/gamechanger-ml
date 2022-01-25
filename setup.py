@@ -65,7 +65,7 @@ setuptools.setup(
     install_requires=[
         p
         for p in parse_requirements(REQUIREMENTS_PATH)
-        if re.split(r"\s*[@=]\s*", p)[0].lower() not in EXCLUDE_PACKAGES
+        if re.split(r"\~s*[@=]\s*", p)[0].lower() not in EXCLUDE_PACKAGES
     ]
     + SUBSTITUTE_PACKAGES,
     include_package_data=True,
