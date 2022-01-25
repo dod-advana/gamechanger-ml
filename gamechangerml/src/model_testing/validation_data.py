@@ -1,28 +1,13 @@
 import pandas as pd
 import numpy as np
-<<<<<<< HEAD
 from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, filter_title_queries
-=======
-from gamechangerml.src.utilities.text_utils import (
-    normalize_answer,
-    normalize_query,
-    get_tokens,
-)
->>>>>>> 218ca2b7a52c5744115fd0a10140ea2b9198872d
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.api.utils.logger import logger
-<<<<<<< HEAD
 from gamechangerml.src.utilities.test_utils import filter_date_range, open_txt
 from gamechangerml import REPO_PATH
 
 CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
-=======
-from gamechangerml.src.utilities.es_utils import get_paragraph_results, connect_es
-from gamechangerml.src.utilities.test_utils import filter_date_range
-
-ES_URL = "https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com"
->>>>>>> 218ca2b7a52c5744115fd0a10140ea2b9198872d
 
 
 class ValidationData:
