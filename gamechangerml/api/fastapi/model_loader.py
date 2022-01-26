@@ -12,6 +12,7 @@ from gamechangerml.src.search.sent_transformer.model import (
     SentenceSearcher,
     SentenceEncoder,
 )
+from gamechangerml.src.recommender.recommend import Recommender
 from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import (
     logger,
@@ -46,6 +47,7 @@ class ModelLoader:
         __word_sim = None
         __sparse_reader = None
         __topic_model = None
+        __recommender = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -106,6 +108,14 @@ class ModelLoader:
             )
             ModelLoader.initTopics()
         return ModelLoader.__topic_model
+    
+    def getRecommender(self):
+        if ModelLoader.__recommender is None:
+            logger.warning(
+                "recommender was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initRecommender()
+        return ModelLoader.__recommender
 
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
@@ -120,6 +130,7 @@ class ModelLoader:
     sentence_encoder = property(getSentence_encoder, set_error)
     word_sim = property(getWordSim, set_error)
     topic_model = property(getTopicModel, set_error)
+    recommender = property(getRecommender, set_error)
 
     @staticmethod
     def initQA():
@@ -269,3 +280,17 @@ class ModelLoader:
         except Exception as e:
             logger.warning("** Could not load Topic model")
             logger.warning(e)
+
+    @staticmethod
+    def initRecommender():
+        """initRecommender - loads recommender class on start
+        Args:
+        Returns:
+        """
+        try:
+            if MODEL_LOAD_FLAG:
+                logger.info("Starting Recommender pipeline")
+                ModelLoader.__recommender = Recommender()
+                logger.info("Finished loading Recommender")
+        except OSError:
+            logger.error(f"** Could not load Recommender") 
