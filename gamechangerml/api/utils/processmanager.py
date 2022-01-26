@@ -36,7 +36,10 @@ try:
     # COMPLETED_PROCESS.value = []
 except Exception as e:
     print(e)
-
+if PROCESS_STATUS.value == None:
+    PROCESS_STATUS.value = {"flags": default_flags}
+if COMPLETED_PROCESS.value == None:
+    COMPLETED_PROCESS.value = []
 
 def update_status(key, progress=0, total=100, message="", failed=False):
 
