@@ -32,8 +32,8 @@ try:
 
     }
 
-    PROCESS_STATUS.value = {"flags": default_flags}
-    COMPLETED_PROCESS.value = []
+    # PROCESS_STATUS.value = {"flags": default_flags}
+    # COMPLETED_PROCESS.value = []
 except Exception as e:
     print(e)
 
@@ -58,6 +58,8 @@ def update_status(key, progress=0, total=100, message="", failed=False):
                     PROCESS_STATUS.value = temp
                 if not failed:
                     completed_list = COMPLETED_PROCESS.value
+                    if len(completed_list) == 20:
+                        completed_list.pop(0)
                     completed_list.append(completed)
                     COMPLETED_PROCESS.value = completed_list
         else:
