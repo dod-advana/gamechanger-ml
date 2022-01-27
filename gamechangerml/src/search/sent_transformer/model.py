@@ -92,6 +92,7 @@ class SentenceEncoder(object):
         dataframe_path = os.path.join(index_path, "data.csv")
         ids_path = os.path.join(index_path, "doc_ids.txt")
 
+        '''
         # Load new data
         if os.path.isfile(embedding_path) and (overwrite is False):
             logger.info(f"Loading new data from {embedding_path}")
@@ -113,6 +114,7 @@ class SentenceEncoder(object):
             # Append new dataframe
             old_df = pd.read_csv(dataframe_path)
             df = pd.concat([old_df, df])
+        '''
 
         # Store embeddings and document index
         # for future reference
