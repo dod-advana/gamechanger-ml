@@ -706,8 +706,12 @@ async def train_model(model_dict: dict, response: Response):
                 testing_only = model_dict["testing_only"]
             except:
                 testing_only = False
+            try:
+                batch_size = model_dict["batch_size"]
+            except:
+                batch_size = 8
             args = {
-                "batch_size": int(model_dict["batch_size"]),
+                "batch_size": batch_size,
                 "epochs": int(model_dict["epochs"]),
                 "warmup_steps": int(model_dict["warmup_steps"]),
                 "testing_only": bool(testing_only),
