@@ -6,9 +6,14 @@ import sys
 import os
 import json
 import torch
+from torch.optim import Adam
+import torch.nn.functional as F
+from torch import nn
 torch.cuda.empty_cache()
 import gc
 import logging
+import tqdm
+from time import sleep
 from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename, cos_sim
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.api.utils.logger import logger
@@ -56,6 +61,7 @@ def format_inputs(train, test):
     train_samples = []
     all_data = []
     count = 0
+    total = len(train.keys()) + len(test.keys())
     for i in train.keys():
         texts = [train[i]["query"], train[i]["paragraph"]]
         score = float(train[i]["label"])
@@ -63,11 +69,14 @@ def format_inputs(train, test):
         train_samples.append(inputex)
         all_data.append([i, texts, score, "train"])
         count += 1
+        #processmanager.update_status(processmanager.loading_data, count, total)
     
     for x in test.keys():
         texts = [test[x]["query"], test[x]["paragraph"]]
         score = float(test[x]["label"])
         all_data.append([x, texts, score, "test"])
+        count += 1
+        #processmanager.update_status(processmanager.loading_data, count, total)
 
     df = pd.DataFrame(all_data, columns = ["key", "pair", "score", "label"])
     
@@ -84,6 +93,7 @@ class STFinetuner():
         self.batch_size = batch_size
         self.epochs = epochs
         self.warmup_steps = warmup_steps
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         #self.pin_memory = True if torch.cuda.is_available() else False 
     
     def retrain(self, data_dir, testing_only, version):
@@ -103,6 +113,8 @@ class STFinetuner():
                 train = {k:train[k] for k in train_keys}
                 test = {k:test[k] for k in test_keys}
 
+            processmanager.update_status(processmanager.training, 0, 1) 
+            sleep(0.1)
             ## make formatted training data
             train_samples, df = format_inputs(train, test)
 
@@ -110,16 +122,12 @@ class STFinetuner():
             df["original_cos_sim"] = df["pair"].apply(lambda x: get_cos_sim(self.model, x))
 
             ## finetune on samples
-            logger.info("Starting to load data for finetuning...")
-            processmanager.update_status(processmanager.loading_data, 0, 1)
+            logger.info("Starting dataloader...")
             train_dataloader = DataLoader(train_samples, shuffle=self.shuffle, batch_size=self.batch_size) #pin_memory=self.pin_memory)
             train_loss = losses.CosineSimilarityLoss(model=self.model)
-            processmanager.update_status(processmanager.loading_data, 1, 0)
-            logger.info("Finished loading data for the encoder model")
             del train_samples
             gc.collect()
             logger.info("Finetuning the encoder model...")
-            processmanager.update_status(processmanager.training, 0, 1) 
             self.model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
             processmanager.update_status(processmanager.training, 1, 0)
             logger.info("Finished finetuning the encoder model") 
