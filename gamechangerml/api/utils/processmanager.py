@@ -1,7 +1,7 @@
 import threading
 from datetime import datetime
 from gamechangerml.api.utils.redisdriver import CacheVariable
-
+from gamechangerml.api.fastapi.settings import logger
 # Process Keys
 clear_corpus = "corpus: corpus_download"
 corpus_download = "corpus: corpus_download"
@@ -13,6 +13,8 @@ training = "training: train_model"
 reloading = "models: reloading_models"
 ltr_creation = "models: ltr_creation"
 topics_creation = "models: topics_creation"
+
+running_threads = {}
 
 # the dictionary that holds all the progress values
 try:
@@ -38,7 +40,7 @@ except Exception as e:
     print(e)
 
 
-def update_status(key, progress=0, total=100, message="", failed=False):
+def update_status(key, progress=0, total=100, message="", failed=False,thread_id=""):
 
     try:
         if progress == total or failed:
@@ -53,10 +55,18 @@ def update_status(key, progress=0, total=100, message="", failed=False):
             with thread_lock:
                 if key in PROCESS_STATUS.value:
                     temp = PROCESS_STATUS.value
-                    temp.pop(key, None)
-                    temp["flags"][key] = False
+                    tempProcess = temp.pop(key, None)
+                    if key in temp["flags"]:
+                        temp["flags"][key] = False
                     PROCESS_STATUS.value = temp
+                    if tempProcess['thread_id'] in running_threads:
+                        del running_threads[tempProcess['thread_id']]
                 if not failed:
+                    completed_list = COMPLETED_PROCESS.value
+                    completed_list.append(completed)
+                    COMPLETED_PROCESS.value = completed_list
+                else:
+                    completed['date'] = 'Failed'
                     completed_list = COMPLETED_PROCESS.value
                     completed_list.append(completed)
                     COMPLETED_PROCESS.value = completed_list
@@ -64,8 +74,15 @@ def update_status(key, progress=0, total=100, message="", failed=False):
             status = {"progress": progress, "total": total}
             with thread_lock:
                 status_dict = PROCESS_STATUS.value
-                status_dict[key] = status
-                status_dict["flags"][key] = True
+                
+                if key not in status_dict:
+                    status['thread_id'] = thread_id
+                    status_dict[key] = status
+                else:
+                    status_dict[key].update(status)
+
+                if key in status_dict["flags"]:
+                    status_dict["flags"][key] = True
                 PROCESS_STATUS.value = status_dict
     except Exception as e:
         print(e)

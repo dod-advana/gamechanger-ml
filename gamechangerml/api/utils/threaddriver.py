@@ -1,6 +1,9 @@
 import threading
 import json
+import sys
 from gamechangerml.api.utils.logger import logger
+from gamechangerml.api.utils import processmanager
+
 # A class that takes in a function and a dictionary of arguments.
 # The keys in args have to match the parameters in the function.
 class MlThread(threading.Thread):
@@ -8,13 +11,31 @@ class MlThread(threading.Thread):
         super(MlThread, self).__init__()
         self.function = function
         self.args = args
+        self.killed = False
+   
     def run(self):
         try:
+            sys.settrace(self.globaltrace)
             self.function(**self.args)
         except Exception as e:
             logger.error(e)
             logger.info("Thread errored out attempting " + self.function.__name__ + " with parameters: " + json.dumps(self.args))
 
+    def globaltrace(self, frame, why, arg):
+        if why == 'call':
+            return self.localtrace
+        else:
+            return None
+
+    def localtrace(self, frame, why, arg):
+        if self.killed:
+            if why == 'line':
+                raise SystemExit()
+        return self.localtrace
+
+    def kill(self):
+        logger.info(f'killing {self.function}')
+        self.killed = True
 
 # Pass in a function and args which is an array of dicts
 # A way to load mulitple jobs and run them on threads.
