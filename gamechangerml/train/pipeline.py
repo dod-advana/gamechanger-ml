@@ -227,7 +227,6 @@ class Pipeline:
             model_save_path = model_load_path + "_" + model_id
             logger.info(
                 f"Setting {str(model_save_path)} as save path for new model")
-            finetune_data_path = os.path.join(DATA_PATH, "training", "sent_transformer") 
             data_path = get_most_recent_dir(os.path.join(DATA_PATH, "training", "sent_transformer"))
             if not data_path:
                 quit()
