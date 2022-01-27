@@ -603,10 +603,10 @@ async def train_model(model_dict: dict, response: Response):
             except:
                 testing_only = False
             args = {
-                "batch_size": model_dict["batch_size"],
-                "epochs": model_dict["epochs"],
-                "warmup_steps": model_dict["warmup_steps"],
-                "testing_only": testing_only,
+                "batch_size": int(model_dict["batch_size"]),
+                "epochs": int(model_dict["epochs"]),
+                "warmup_steps": int(model_dict["warmup_steps"]),
+                "testing_only": bool(testing_only),
             }
             pipeline.run(
                 build_type="sent_finetune",
