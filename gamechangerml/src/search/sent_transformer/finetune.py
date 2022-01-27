@@ -13,6 +13,7 @@ from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.api.utils.logger import logger
 from datetime import datetime
+from gamechangerml.api.utils import processmanager
 from gamechangerml import DATA_PATH
 
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
@@ -110,13 +111,17 @@ class STFinetuner():
 
             ## finetune on samples
             logger.info("Starting to load data for finetuning...")
+            processmanager.update_status(processmanager.loading_data, 0, 1)
             train_dataloader = DataLoader(train_samples, shuffle=self.shuffle, batch_size=self.batch_size) #pin_memory=self.pin_memory)
             train_loss = losses.CosineSimilarityLoss(model=self.model)
+            processmanager.update_status(processmanager.loading_data, 1, 0)
             logger.info("Finished loading data for the encoder model")
             del train_samples
             gc.collect()
             logger.info("Finetuning the encoder model...")
+            processmanager.update_status(processmanager.training, 0, 1) 
             self.model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
+            processmanager.update_status(processmanager.training, 1, 0)
             logger.info("Finished finetuning the encoder model") 
             ## save model
             self.model.save(self.model_save_path)
