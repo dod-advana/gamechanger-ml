@@ -2,7 +2,11 @@ from fastapi import APIRouter, Response, status
 import subprocess
 import os
 import json
+import tarfile
+import shutil
+
 from datetime import datetime
+from gamechangerml import DATA_PATH
 from gamechangerml.src.utilities import utils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
@@ -41,9 +45,37 @@ async def get_process_status():
         "completed_process": processmanager.COMPLETED_PROCESS.value,
     }
 
+@router.get("/getDataList")
+def get_downloaded_data_list():
+    """
+    Gets a list of the data in the local data folder
+    Args: 
+    Returns: dict {"dirs":[ array of dicts {"name":(name of file):"path":(base directory), "files":(arr of files in directory),"subdirectories":(arr of subdirectories)}]}
+    """
+    files = []
+    dir_arr = []
+    logger.info(DATA_PATH)
+
+    for dir in os.listdir(DATA_PATH):
+        temp_path = os.path.join(DATA_PATH,dir)
+        if os.path.isdir(temp_path):
+            for dirpath, dirnames, filenames in os.walk(temp_path):
+                dir_arr.append({'name':dirpath.replace(temp_path,''),'path':dir,'files':filenames,'subdirectories':dirnames})
+
+    return {'dirs':dir_arr}
 
 @router.get("/getModelsList")
 def get_downloaded_models_list():
+    """
+    Gets a list of the models in the local model folder
+    Args: 
+    Returns:{
+        "transformers": (list of transformers),
+        "sentence": (list of sentence indexes),
+        "qexp": (list of query expansion indexes),
+        "ltr": (list of learn to rank),
+    }
+    """
     qexp_list = {}
     sent_index_list = {}
     transformer_list = {}
@@ -165,7 +197,38 @@ def get_downloaded_models_list():
     }
     return model_list
 
+@router.post("/deleteLocalModel")
+async def delete_local_model(model: dict, response:Response):
+    """
+    Delete a model from the local model folder
+    Args: model: dict; {"model":(model you want to delete), "type":(type of model being deleted)}
+    Returns: process statuses
+    """
+    def removeDirectory(dir):
+        try:
+            logger.info(f'Removing directory {os.path.join(dir,model["model"])}')
+            shutil.rmtree(os.path.join(dir,model['model']))
+        except OSError as e:
+            logger.error(e)
 
+    def removeFiles(dir):
+        for f in os.listdir(dir):
+            if model['model'] in f:
+                logger.info(f'Removing file {f}')
+                try:
+                    os.remove(os.path.join(dir,f))
+                except OSError as e:
+                    logger.error(e)
+
+    logger.info(model)
+    if model['type'] == 'transformers':
+        removeDirectory(LOCAL_TRANSFORMERS_DIR.value)
+    elif model['type'] == 'sentence' or model['type'] == 'qexp':
+        removeDirectory(Config.LOCAL_PACKAGED_MODELS_DIR)
+        removeFiles(Config.LOCAL_PACKAGED_MODELS_DIR)
+
+    return await get_process_status()
+    
 @router.get("/LTR/initLTR", status_code=200)
 async def initLTR(response: Response):
     """generate judgement - checks how many files are in the corpus directory
@@ -251,20 +314,19 @@ async def download(response: Response):
     Args:
     Returns:
     """
-    processmanager.update_status(processmanager.s3_download, 0, 1)
-
+    processmanager.update_status(processmanager.s3_dependency, 0, 1)
     def download_s3_thread():
         try:
             logger.info("Attempting to download dependencies from S3")
             output = subprocess.call(["gamechangerml/scripts/download_dependencies.sh"])
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)
-            processmanager.update_status(processmanager.s3_download, 1, 1)
+            processmanager.update_status(processmanager.s3_dependency, 1, 1)
         except:
 
             logger.warning(f"Could not get dependencies from S3")
             response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-            processmanager.update_status(processmanager.s3_download, failed=True)
+            processmanager.update_status(processmanager.s3_dependency, failed=True)
 
     thread = MlThread(download_s3_thread)
     thread.start()
@@ -272,26 +334,65 @@ async def download(response: Response):
 
 
 @router.post("/downloadS3File", status_code=200)
-async def download_s3_file(file_dict: dict, response: Response):
-    """download - downloads dependencies from s3
-    Args:
-    Returns:
+async def download_s3_file(file_dict:dict, response: Response):
     """
-    # processmanager.update_status(processmanager.s3_download, 0, 1)
-    logger.info(file_dict)
-    try:
-        utils.get_model_s3(
-            file_dict["file"], "bronze/gamechanger/models/", "gamechangerml/models/"
-        )
-    except:
+    download a s3 file from the given path. If folder is given download all files recursively from the folder and untar all .tar files
+    Args:file_dict - dict {"file":(file or folder path),"type":"whether from ml-data or models)}
+    Returns: process status
+    """
+    processmanager.update_status(processmanager.s3_file_download, 0, 1)
+    def download_s3_thread():
+        logger.info(f'downloading file {file_dict["file"]}')
+        try:
+        
+            path = "gamechangerml/models/" if file_dict['type'] == "models" else "gamechangerml/"
+            downloaded_files = utils.get_model_s3(file_dict['file'],f"bronze/gamechanger/{file_dict['type']}/",path)
+            # downloaded_files = ['gamechangerml/models/20210223.tar.gz']
+            processmanager.update_status(processmanager.s3_file_download, 0, len(downloaded_files))
+            i = 0
+            for f in downloaded_files:
+                i+=1
+                processmanager.update_status(processmanager.s3_file_download, 0,i)
+                logger.info(f)
+                if '.tar' in  f:
+                    tar = tarfile.open(f)
+                    if tar.getmembers()[0].name == '.':
+                        if 'sentence_index' in file_dict['file']:
+                            path += 'sent_index_'
+                        elif 'jbook_qexp_model' in file_dict['file']: 
+                            path += 'jbook_qexp_'
+                        elif 'qexp_model' in file_dict['file']: 
+                            path += 'qexp_'
+                        elif 'topic_model' in file_dict['file']:
+                            path += 'topic_models'
 
-        logger.warning(f"Could not get dependencies from S3")
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        # processmanager.update_status(processmanager.s3_download, failed=True)
+                        path += f.split('/')[-1].split('.')[0]
 
-    # thread = MlThread(download_s3_thread)
-    # thread.start()
-    return {}
+                    logger.info(f'Extracting {f} to {path}')
+                    tar.extractall(path=path, members=[member for member in tar.getmembers() if('.git' not in member.name and '.DS_Store' not in member.name)])
+                    tar.close()
+
+        except PermissionError:
+            failedExtracts = []
+            for member in tar.getmembers():
+                try:
+                    tar.extract(member,path=path)
+                except Exception as e:
+                    failedExtracts.append(member.name)
+
+            logger.warning(f'Could not extract {failedExtracts} with permission errors')
+
+        except Exception as e:
+            logger.warning(e)
+            logger.warning(f"Could download {file_dict['file']} from S3")
+            response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            processmanager.update_status(processmanager.s3_file_download, failed=True)
+
+        processmanager.update_status(processmanager.s3_file_download, len(downloaded_files),len(downloaded_files))
+
+    thread = MlThread(download_s3_thread)
+    thread.start()
+    return await get_process_status()
 
 
 @router.get("/s3", status_code=200)
@@ -304,8 +405,11 @@ async def s3_func(function, response: Response):
     models = []
     try:
         logger.info("Retrieving model list from s3::")
-        s3_path = "bronze/gamechanger/models/"
         if function == "models":
+            s3_path = "bronze/gamechanger/models/"
+            models = utils.get_models_list(s3_path)
+        elif function == "data":
+            s3_path = "bronze/gamechanger/ml-data/"
             models = utils.get_models_list(s3_path)
     except:
         logger.warning(f"Could not get model list from s3")

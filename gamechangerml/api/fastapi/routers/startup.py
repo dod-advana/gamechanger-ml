@@ -7,7 +7,6 @@ from gamechangerml.api.fastapi.model_loader import ModelLoader
 router = APIRouter()
 MODELS = ModelLoader()
 
-
 @router.on_event("startup")
 async def load_models():
     MODELS.initQA()
@@ -17,7 +16,7 @@ async def load_models():
     MODELS.initSentenceSearcher()
     MODELS.initWordSim()
     MODELS.initTopics()
-
+    MODELS.initRecommender()
 
 @router.on_event("startup")
 @repeat_every(seconds=120, wait_first=True)

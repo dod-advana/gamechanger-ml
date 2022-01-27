@@ -160,3 +160,9 @@
 - What if I can't download the dependencies since I am external?
   - We are working on making models publically available. However you can use download pretrained transformers from HuggingFace to include in the models/transformers directory, which will enable you to use some functionality of the API. Without any models, there is still functionality available like text extraction avaiable. 
 
+## PULL REQUESTS
+*Please provide:*
+1. Description - what is the purpose, what are the different features added i.e. bugfix, added upload capability to model, model improving
+2. Reviewer Test - how to test it manually and if it is on a dev/test server. (if applicable) 
+ ` i.e. hit post endpoint /search with payload {"query": "military"}`
+3. Unit/Integration tests - screenshot or copy output of unit tests from GC_ML_TESTS_119, any other tests or metrics applicable
