@@ -704,23 +704,4 @@ async def stop_process(thread_dict: dict, response: Response):
     processmanager.update_status(thread_dict['process'],failed=True,message='Killed by user')
 
 
-    return {}
-
-        
-@router.get("/testThreads")
-async def test_process(response: Response):
-
-    def testRunThread():
-        for i in range(0,5):
-            logger.info(i)
-            time.sleep(5)
-        processmanager.update_status("thread: test", 1, 1)
-        # processmanager.update_status("thread: test", failed=True)
-
-    thread = MlThread(testRunThread)
-    thread.start()
-    logger.info(thread.ident)
-    processmanager.running_threads[thread.ident] = thread
-    logger.info(processmanager.running_threads)
-    processmanager.update_status("thread: test", 0, 1,thread_id=thread.ident)
-    return {}
+    return {'stopped':thread_dict['thread_id']}
