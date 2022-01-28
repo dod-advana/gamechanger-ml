@@ -115,7 +115,7 @@ def test_postSentSearch():
     #     assert abs(resp.json()[i]['score'] - verified[i]['score']) < .01
     assert len(resp.json()) > 5
 
-def test_recommender_results():
+def test_recommender():
     test_data = TestSet.recommender_data
     expected = TestSet.recommender_results
 
