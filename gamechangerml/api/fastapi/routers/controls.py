@@ -696,6 +696,13 @@ async def train_model(model_dict: dict, response: Response):
 
 @router.post("/stopProcess")
 async def stop_process(thread_dict: dict, response: Response):
+    """stop_process - endpoint for stopping a process in a thread
+    Args:
+        thread_dict: dict; {"thread_id":(int of thread id), "process":(name of the process so we can also update it in redis)}
+        Response: Response class; for status codes(apart of fastapi do not need to pass param)
+    Returns:
+        Stopped thread id
+    """
     logger.info(processmanager.running_threads)
     with processmanager.thread_lock:
         if thread_dict['thread_id'] in  processmanager.running_threads:
