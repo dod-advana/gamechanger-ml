@@ -83,7 +83,7 @@ class TestSet:
     }
 
     recommender_data = {"filename": "Title 10"}
-    recommender_results = {'filename': 'Title 10', 'results': ['AACP 02.1', 'Title 50', 'AFH 10-644', 'AFI 36-2710', 'AFMAN 11-2HH-60V3CL-1', 'ARMY DIR 2017-32']}
+    recommender_results = {'filename': 'Title 10', 'results':  ['Title 50', 'AACP 02.1', 'DoDD 5143.01 CH 2', 'DoDD S-5230.28', 'DoDI 5000.89']}
 
     # extraction_data = {"text": "Carbon emissions trading is poised to go global, and billions of dollars — maybe even trillions — could be at stake. That's thanks to last month's U.N. climate summit in Glasgow Scotland, which approved a new international trading system where companies pay for cuts in greenhouse gas emissions somewhere else, rather than doing it themselves."}
     # extraction_keywords_expect = {

@@ -82,7 +82,7 @@ class Recommender:
             g_results = self._lookup_history(filename)
             if len(g_results) > 0:
                 for x in g_results:
-                    if len(results) <= limit:
+                    if len(results) < limit:
                         if in_corpus(x, corpus_list):
                             results.append(x)
                     else:
