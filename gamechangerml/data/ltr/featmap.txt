@@ -1,7 +1,7 @@
-0 title q
-1 keyw_5 q
-2 topics q
-3 entities q
+0 na q
+1 title q
+2 title-phrase q
+3 keyw_5 q
 4 textlength q
 5 paragraph q
 6 popscore q

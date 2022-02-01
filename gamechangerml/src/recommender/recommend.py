@@ -77,7 +77,7 @@ class Recommender:
             logger.warning(e)
             return []
 
-    def get_recs(self, sample: bool, limit: int = 5, filenames: Union[str, None] = None):
+    def get_recs(self, sample: bool, limit: int = 5, filenames: list = []):
         '''
         Gets similar docs by filename up to the limit.
         When sample=True and filename=None, creates random search for testing.
@@ -90,6 +90,7 @@ class Recommender:
         results = []
         for filename in filenames:
             filename = filename.split('.pdf')[0]
+            print(filename)
             try:
                 g_results = self._lookup_history(filename)
                 if len(g_results) > 0:
