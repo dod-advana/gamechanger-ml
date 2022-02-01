@@ -93,13 +93,7 @@ class Recommender:
             print(filename)
             try:
                 g_results = self._lookup_history(filename)
-                if len(g_results) > 0:
-                    for x in g_results:
-                        if len(results) < limit:
-                            if in_corpus(x, corpus_list):
-                                results.append(x)
-                        else:
-                            break
+                results.append(g_results[:limit])
             except Exception as e:
                 logger.warning(e, exc_info=True)
 
