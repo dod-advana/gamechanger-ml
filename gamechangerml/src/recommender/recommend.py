@@ -90,7 +90,6 @@ class Recommender:
         results = []
         for filename in filenames:
             filename = filename.split('.pdf')[0]
-            print(filename)
             try:
                 g_results = self._lookup_history(filename)
                 results.append(g_results[:limit])
