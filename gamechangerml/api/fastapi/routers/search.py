@@ -155,7 +155,7 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
     logger.info(f"Expanding: {body}")
     query_expander = (
         MODELS.query_expander
-        if body.get("qe_model", "gc_core") != "jbook"
+        if body.get("qe_model", "gc_core") != "jbook" or MODELS.query_expander_jbook==None
         else MODELS.query_expander_jbook
     )
     try:
