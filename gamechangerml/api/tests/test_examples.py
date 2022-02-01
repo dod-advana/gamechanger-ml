@@ -1,6 +1,7 @@
 class TestSet:
     qa_test_data = {"text": "How manysides does a pentagon have?"}
-    qa_expect = {"answers":["five"],"question":"How many sides does a pentagon have?"}
+    qa_expect = {"answers": ["five"],
+                 "question": "How many sides does a pentagon have?"}
     text_extract_test_data = {
         "text": "In a major policy revision intended to encourage more schools to welcome children back to in-person instruction, federal health officials on Friday relaxed the six-foot distancing rule for elementary school students, saying they need only remain three feet apart in classrooms as long as everyone is wearing a mask. The three-foot rule also now applies to students in middle schools and high schools, as long as community transmission is not high, officials said. When transmission is high, however, these students must be at least six feet apart, unless they are taught in cohorts, or small groups that are kept separate from others. The six-foot rule still applies in the community at large, officials emphasized, and for teachers and other adults who work in schools, who must maintain that distance from other adults and from students. Most schools are already operating at least partially in person, and evidence suggests they are doing so relatively safely. Research shows in-school spread can be mitigated with simple safety measures such as masking, distancing, hand-washing and open windows. EDUCATION BRIEFING: The pandemic is upending education. Get the latest news and tips."
     }
@@ -74,16 +75,17 @@ class TestSet:
     ]
 
     word_sim_data = {"text": "naval command"}
-    word_sim_except ={
+    word_sim_except = {
         "naval": [
             "navy",
             "maritime"
         ],
-        'command':[]
+        'command': []
     }
 
-    recommender_data = {"filename": "Title 10"}
-    recommender_results = {'filename': 'Title 10', 'results':  ['Title 50', 'AACP 02.1', 'DoDD 5143.01 CH 2', 'DoDD S-5230.28', 'DoDI 5000.89']}
+    recommender_data = {"filenames": ["Title 10"]}
+    recommender_results = {'filename': ['Title 10'], 'results':  [
+        'Title 50', 'AACP 02.1', 'DoDD 5143.01 CH 2', 'DoDD S-5230.28', 'DoDI 5000.89']}
 
     # extraction_data = {"text": "Carbon emissions trading is poised to go global, and billions of dollars — maybe even trillions — could be at stake. That's thanks to last month's U.N. climate summit in Glasgow Scotland, which approved a new international trading system where companies pay for cuts in greenhouse gas emissions somewhere else, rather than doing it themselves."}
     # extraction_keywords_expect = {
@@ -148,7 +150,7 @@ class TestSet:
             },
         ],
     }
-    transformer_list_expect =  {
+    transformer_list_expect = {
         'bert-base-cased-squad2',
         'distilbart-mnli-12-3',
         'distilbert-base-uncased-distilled-squad',
@@ -157,4 +159,4 @@ class TestSet:
         'msmarco-distilbert-base-v2_20220105'
         # 'msmarco-distilbert-base-v2_2021-10-17',
         # 'msmarco-distilbert-base-v2_20211210',
-        }
+    }
