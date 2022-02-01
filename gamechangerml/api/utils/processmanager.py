@@ -32,13 +32,15 @@ try:
 
     }
 
-    PROCESS_STATUS.value = {"flags": default_flags}
-    COMPLETED_PROCESS.value = []
 except Exception as e:
     print(e)
 
+if PROCESS_STATUS.value == None:
+    PROCESS_STATUS.value = {"flags": default_flags}
+if COMPLETED_PROCESS.value == None:
+    COMPLETED_PROCESS.value = []
 
-def update_status(key, progress=0, total=100, message="", failed=False):
+def update_status(key, progress=0, total=100, message="", failed=False, completed_max = 20):
 
     try:
         if progress == total or failed:
@@ -58,6 +60,8 @@ def update_status(key, progress=0, total=100, message="", failed=False):
                     PROCESS_STATUS.value = temp
                 if not failed:
                     completed_list = COMPLETED_PROCESS.value
+                    if len(completed_list) == completed_max :
+                        completed_list.pop(0)
                     completed_list.append(completed)
                     COMPLETED_PROCESS.value = completed_list
         else:
