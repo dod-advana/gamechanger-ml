@@ -3,7 +3,7 @@ import json
 
 # import pandas as pd
 from gensim.models.doc2vec import TaggedDocument
-from gamechangerml.src.text_handling.process import preprocess
+from gamechangerml.src.text_handling.process import preprocess, simple_clean_preprocess
 from gamechangerml.api.utils import processmanager
 from tqdm import tqdm
 
@@ -39,6 +39,7 @@ class LocalCorpus(object):
                 paragraphs = [p["par_raw_text_t"] for p in doc["paragraphs"]]
                 paragraph_ids = [p["id"] for p in doc["paragraphs"]]
                 for para_text, para_id in zip(paragraphs, paragraph_ids):
+                    #tokens = simple_clean_preprocess(para_text)
                     tokens = preprocess(para_text, min_len=1)
                     if len(tokens) > self.min_token_len:
                         if self.return_id:

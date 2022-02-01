@@ -17,6 +17,7 @@ from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
 
+
 class SentenceEncoder(object):
     """
     Handles text encoding and creating of ANNOY index
@@ -163,10 +164,11 @@ class SentenceEncoder(object):
                 verbose=self.verbose,
             )
             corpus = [(para_id, " ".join(tokens), None)
-                      for tokens, para_id in corp]
+                    for tokens, para_id in corp]
             logger.info(
                 f"\nLength of batch (in par ids) for indexing : {str(len(corpus))}"
             )
+
         else:
             logger.info(
                 "Did not include path to corpus, making test index with msmarco data"
@@ -180,7 +182,7 @@ class SentenceEncoder(object):
 
         self._index(corpus, index_path)
         processmanager.update_status(
-            processmanager.training, 1, 1, "finished building sent index"
+            processmanager.training, 1, 0, "finished building sent index"
         )
 
         self.embedder.save(index_path)

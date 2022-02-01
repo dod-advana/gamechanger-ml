@@ -1,5 +1,6 @@
 from gensim.parsing.preprocessing import STOPWORDS
 from gensim.utils import simple_preprocess
+from gamechangerml.src.utilities.text_utils import simple_clean
 
 from transformers import BertTokenizer
 
@@ -35,6 +36,10 @@ def preprocess(
 
     return tokens
 
+def simple_clean_preprocess(text):
+
+    text = simple_clean(text)
+    return text.split(' ')
 
 def topic_processing(text: str, phrase_model: object):
     """
