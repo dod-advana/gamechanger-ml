@@ -37,11 +37,11 @@ function download_and_unpack_deps() {
   find "$models_dest_dir" -maxdepth 1 -type f -name "*.tar.gz" | while IFS=$'\n' read -r f; do
     tar kxzvf "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C "$models_dest_dir"
   done
-
-  echo "Uncompressing all tar files in data"
-  find "$data_dest_dir" -maxdepth 1 -type f -name "*.tar.gz" | while IFS=$'\n' read -r f; do
-    tar xzvf "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C "$data_dest_dir"
-  done
+  # no longer pulling data files right now
+  #echo "Uncompressing all tar files in data"
+  #find "$data_dest_dir" -maxdepth 1 -type f -name "*.tar.gz" | while IFS=$'\n' read -r f; do
+  #  tar xzvf "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C "$data_dest_dir"
+  #done
 }
 
 download_and_unpack_deps
