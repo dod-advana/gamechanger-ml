@@ -1,4 +1,7 @@
+from ast import parse
+from ftplib import parse150
 import random
+from sys import exc_info
 import torch
 import pandas as pd
 import os
@@ -71,26 +74,26 @@ def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, nlp, min_sc
     for sent in sents:
         processed = ' '.join(simple_preprocess(sent['text'], min_len=2, max_len=100))
         logger.info(f"NEW PARAGRAPH POST-GENSIM: {processed}")
-        pars.append(processed)
+        pars.append({"id": sent["id"], "text": processed})
 
     ranked = []
     try:
-        if len(sents) == 0:
+        if len(pars) == 0:
             logger.info("---No paragraphs retrieved for this expected doc")
-        elif len(sents) == 1:
-            ranked = [{"score": 'na', "id": sents[0]['id'], "text": sents[0]['text']}]
+        elif len(pars) == 1:
+            ranked = [{"score": 'na', "id": pars[0]['id'], "text": pars[0]['text']}]
         else:
             comparisons = []
-            for sent in sents:
-                doc2 = nlp(sent['text'])
+            for par in pars:
+                doc2 = nlp(par['text'])
                 sim = doc1.similarity(doc2)
                 if sim >= min_score:
-                    record = {"score": sim, "id": sent['id'], "text": sent['text']}
+                    record = {"score": sim, "id": par['id'], "text": par['text']}
                     comparisons.append(record)
                 else:
                     pass
             ranked = sorted(comparisons, key = lambda z: z['score'], reverse=True)
-        logger.info(f"*** Collected {str(len(ranked))} / {str(len(sents))} paragraphs (passing sim threshold) retrieved for {doc_id}")
+        logger.info(f"*** Collected {str(len(ranked))} / {str(len(pars))} paragraphs (passing sim threshold) retrieved for {doc_id}")
     except Exception as e:
         logger.info(f"---Could not re-rank the paragraphs for {query}")
         logger.warning(e) 
@@ -125,21 +128,24 @@ def get_negative_paragraphs(
 
     checked_results = []
     try:
-        results = retriever.retrieve_topn(query, n_returns)
         single_matching_docs = [i for i in any_matches[query] if check_no_match(i, doc_id)]
+    except:
+        single_matching_docs = []
+    try:
+        results = retriever.retrieve_topn(query, n_returns)
         logger.info(f"Retrieved {str(len(results))} negative samples for query: {query} / doc: {doc_id}")
         for result in results:
             par = data[data["paragraph_id"]==result['id']].iloc[0]["text"]
             par = ' '.join(par.split(' ')[:400])
             if check_no_match(doc_id, result['id']):            
                 for s in single_matching_docs:
-                    if check_no_match(s, result['id']):
+                    if s and check_no_match(s, result['id']):
                         checked_results.append({"query": query, "doc": result['id'], "paragraph": par, "label": 0})
                     else:
                         checked_results.append({"query": query, "doc": result['id'], "paragraph": par, "label": 0.5}) 
     except Exception as e:
         logger.warning("Could not get negative paragraphs")
-        logger.warning(e)
+        logger.warning(e, exc_info=True)
     
     return checked_results
 
@@ -348,6 +354,7 @@ def make_training_data(
     if not os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")) or update_eval_data:
         logger.info("****    Updating the evaluation data")
         make_tiered_eval_data(index_path)
+
     validation_dir = get_most_recent_dir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
     directory = os.path.join(validation_dir, level)
     logger.info(f"****    Loading in intelligent search data from {str(directory)}")
@@ -357,6 +364,7 @@ def make_training_data(
     except Exception as e:
         logger.warning("Could not load intelligent search data")
         logger.warning(e)
+        intel = {}
 
     ## add gold standard samples
     logger.info("****   Adding gold standard examples")
