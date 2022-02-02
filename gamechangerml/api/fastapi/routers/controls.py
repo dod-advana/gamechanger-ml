@@ -682,17 +682,19 @@ async def train_model(model_dict: dict, response: Response):
             try:
                 index_path = model_dict["index_path"]
             except:
-                index_path = os.path.join(MODEL_PATH, "sent_index_20210715")
+                index_path = os.path.join(MODEL_PATH, "sent_index_20220103")
+            try:
+                update_eval_data = model_dict["update_eval_data"]
+            except:
+                update_eval_data = False
 
             args = {
                 "meta_steps": meta_steps,
                 "corpus_dir": corpus_dir,
                 "retriever": retriever,
-                "index_path": index_path 
+                "index_path": index_path,
+                "update_eval_data": update_eval_data
             }
-            for i in ['update_eval_data', 'upload', 'version']:
-                if model_dict[i]:
-                    args[i] = model_dict[i]
                 
             pipeline.run(
                 build_type=model_dict["build_type"],
