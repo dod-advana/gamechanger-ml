@@ -84,7 +84,7 @@ class TestSet:
     }
 
     recommender_data = {"filenames": ["Title 10"]}
-    recommender_results = {'filename': ['Title 10'], 'results':  [
+    recommender_results = {'filenames': ['Title 10'], 'results':  [
         'Title 50', 'AACP 02.1', 'DoDD 5143.01 CH 2', 'DoDD S-5230.28', 'DoDI 5000.89']}
 
     # extraction_data = {"text": "Carbon emissions trading is poised to go global, and billions of dollars — maybe even trillions — could be at stake. That's thanks to last month's U.N. climate summit in Glasgow Scotland, which approved a new international trading system where companies pay for cuts in greenhouse gas emissions somewhere else, rather than doing it themselves."}
