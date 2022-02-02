@@ -36,11 +36,6 @@ def preprocess(
 
     return tokens
 
-def simple_clean_preprocess(text):
-
-    text = simple_clean(text)
-    return text.split(' ')
-
 def topic_processing(text: str, phrase_model: object):
     """
     topic_processing - simple preprocessing model to be used in conjunction with the TF-iDF topic model

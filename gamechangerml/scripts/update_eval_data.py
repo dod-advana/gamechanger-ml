@@ -108,4 +108,4 @@ def make_tiered_eval_data(index_path):
 
 if __name__ == '__main__':
 
-    make_tiered_eval_data()
+    make_tiered_eval_data(index_path)

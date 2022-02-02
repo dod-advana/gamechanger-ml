@@ -15,6 +15,8 @@ from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
+from gamechangerml.src.text_handling.corpus import LocalCorpus
+from gensim.utils import simple_preprocess
 from gamechangerml import DATA_PATH
 
 model_path_dict = get_model_paths()
@@ -67,8 +69,9 @@ def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, nlp, min_sc
     paragraphs = json['paragraphs']
     sents = get_sample_paragraphs(paragraphs)[:50] # get top 50 paragraphs
     for sent in sents:
-        short = ' '.join(sent['text'].split(' ')[:400]) # shorten paragraphs
-        pars.append(short)
+        processed = ' '.join(simple_preprocess(sent['text'], min_len=2, max_len=100))
+        logger.info(f"NEW PARAGRAPH POST-GENSIM: {processed}")
+        pars.append(processed)
 
     ranked = []
     try:
@@ -91,18 +94,23 @@ def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, nlp, min_sc
     except Exception as e:
         logger.info(f"---Could not re-rank the paragraphs for {query}")
         logger.warning(e) 
+
+    # if no paragraphs are returned, get the title
+    if len(ranked)==0:
+        clean_title = ' '.join(simple_preprocess(json['title'], min_len=2, max_len=100)) 
+        ranked.append({"score": 1, "id": doc_id + ".pdf_0", "text": clean_title})
     
     return ranked
 
-def check_no_match(expected_id: str, par_id: str) -> bool:
+def check_no_match(id_1: str, id_2: str) -> bool:
     """Checks if paragraph ID matches the expected doc ID"""
-    if par_id.split('.pdf')[0].upper().strip().lstrip() == expected_id.upper().strip().lstrip():
+    if id_1.split('.pdf')[0].upper().strip().lstrip() == id_2.split('.pdf')[0].upper().strip().lstrip():
         return False
     else:
         return True
 
 def get_negative_paragraphs(
-    data: pd.DataFrame, query: str, doc_id: str, retriever, n_returns: int) -> List[Dict[str,str]]:
+    data: pd.DataFrame, query: str, doc_id: str, retriever, n_returns: int, any_matches: Dict[str,str]) -> List[Dict[str,str]]:
     """Looks up negative (not matching) paragraphs for each query
     Args:
         data [pd.DataFrame]: data df with processed text at paragraph_id level for sent_index
@@ -118,12 +126,17 @@ def get_negative_paragraphs(
     checked_results = []
     try:
         results = retriever.retrieve_topn(query, n_returns)
+        single_matching_docs = [i for i in any_matches[query] if check_no_match(i, doc_id)]
         logger.info(f"Retrieved {str(len(results))} negative samples for query: {query} / doc: {doc_id}")
         for result in results:
             par = data[data["paragraph_id"]==result['id']].iloc[0]["text"]
             par = ' '.join(par.split(' ')[:400])
-            if check_no_match(doc_id, result['id']):
-                checked_results.append({"query": query, "doc": result['id'], "paragraph": par, "label": 0})
+            if check_no_match(doc_id, result['id']):            
+                for s in single_matching_docs:
+                    if check_no_match(s, result['id']):
+                        checked_results.append({"query": query, "doc": result['id'], "paragraph": par, "label": 0})
+                    else:
+                        checked_results.append({"query": query, "doc": result['id'], "paragraph": par, "label": 0.5}) 
     except Exception as e:
         logger.warning("Could not get negative paragraphs")
         logger.warning(e)
@@ -253,6 +266,7 @@ def collect_negative_samples(
     relations: Dict[str, str],
     queries: Dict[str, str],
     collection: Dict[str, str],
+    any_matches: Dict[str, str],
     ) -> Tuple[Dict[str, str]]:
     """Gets negative samples each query/docid pair
     Args:
@@ -274,7 +288,7 @@ def collect_negative_samples(
             doc = collection[k]
             uid = str(i) + '_' + str(k) + '_neg' # backup UID, overwritten if there are results
             try:
-                not_matching = get_negative_paragraphs(data=data, query=query, doc_id=k, retriever=retriever, n_returns=n_returns)
+                not_matching = get_negative_paragraphs(data=data, query=query, doc_id=k, retriever=retriever, n_returns=n_returns, any_matches=any_matches)
                 for match in not_matching:
                     uid =  str(i) + '_' + str(match['doc'])
                     text = ' '.join(match['paragraph'].split(' ')[:400]) # truncate to 400 tokens
@@ -284,6 +298,24 @@ def collect_negative_samples(
                 not_found[uid] = {"query": query, "doc": doc, "label": 0}
                 
     return found, not_found
+
+def get_all_single_matches():
+    validation_dir = get_most_recent_dir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
+    directory = os.path.join(validation_dir, "any")
+    any_matches = {}
+    try:
+        f = open_json('intelligent_search_data.json', directory)
+        intel = json.loads(f)
+        for x in intel['correct'].keys():
+            query = intel['queries'][x]
+            doc_keys = intel['correct'][x]
+            docs = [intel['collection'][k] for k in doc_keys]
+            any_matches[query] = docs
+    except Exception as e:
+        logger.warning("Could not load all validation data")
+        logger.warning(e)
+
+    return any_matches
 
 def make_training_data(
     index_path: Union[str, os.PathLike],
@@ -354,6 +386,7 @@ def make_training_data(
         logger.info("Could not load in data from retriever")
         logger.warning(e)
 
+    any_matches = get_all_single_matches()
     ## get matching paragraphs
     try:
         correct_found, correct_notfound = collect_matches(
@@ -377,7 +410,7 @@ def make_training_data(
         all_relations = {**intel['correct'], **intel['incorrect']}
         neutral_found, neutral_notfound = collect_negative_samples(
         data=data, retriever=retriever, n_returns=n_returns, queries=intel['queries'], collection=intel['collection'],
-        relations=all_relations)
+        relations=all_relations, any_matches=any_matches)
         logger.info(f"---Number of negative sample pairs that were not found: {str(len(neutral_notfound))}")
     except Exception as e:
         logger.warning(e)
@@ -442,5 +475,5 @@ def make_training_data(
 if __name__ == '__main__':
 
     make_training_data(
-        index_path="gamechangerml/models/sent_index_20210715", n_returns=50, n_matching=3, level="silver", 
-        update_eval_data=False)
+        index_path="gamechangerml/models/sent_index_20220103", n_returns=50, n_matching=3, level="silver", 
+        update_eval_data=True)
