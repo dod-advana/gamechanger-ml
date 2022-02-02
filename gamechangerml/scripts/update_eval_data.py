@@ -1,6 +1,8 @@
 import os
 import json
 from datetime import date
+from pickle import NONE
+from sys import exc_info
 from typing import List, Union, Tuple, Dict
 from gamechangerml.src.model_testing.validation_data import IntelSearchData
 from gamechangerml.configs.config import ValidationConfig
@@ -8,8 +10,18 @@ from gamechangerml.src.utilities.test_utils import (
     make_timestamp_directory, check_directory, CustomJSONizer
     )
 from gamechangerml import DATA_PATH
+from gamechangerml.api.utils.pathselect import get_model_paths
+import logging
+logger = logging.getLogger()
+
+model_path_dict = get_model_paths()
+SENT_INDEX = model_path_dict['sentence']
+
 
 def make_tiered_eval_data(index_path):
+ 
+    if not index_path:
+        index_path = SENT_INDEX
 
     if not os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")):
         os.mkdir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
@@ -83,7 +95,8 @@ def make_tiered_eval_data(index_path):
         
         with open(metafile, "w") as outfile:
             json.dump(metadata, outfile)
-        
+        logger.info(f"***Saved intelligent search validation data to: {intel_path}")        
+
         return metadata
 
     all_data = save_data(
@@ -107,5 +120,8 @@ def make_tiered_eval_data(index_path):
     return all_data, silver_data, gold_data
 
 if __name__ == '__main__':
-
-    make_tiered_eval_data(index_path)
+    
+    try:
+        make_tiered_eval_data(index_path=None)
+    except Exception as e:
+        logger.warning(e, exc_info=True)
