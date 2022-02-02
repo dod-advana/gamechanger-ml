@@ -92,7 +92,7 @@ class Recommender:
             filename = filename.split('.pdf')[0]
             try:
                 g_results = self._lookup_history(filename)
-                results.append(g_results[:limit])
+                results = results + g_results[:limit]
             except Exception as e:
                 logger.warning(e, exc_info=True)
 

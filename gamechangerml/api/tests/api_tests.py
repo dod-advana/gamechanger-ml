@@ -123,6 +123,7 @@ def test_recommender():
 
     resp = http.post(API_URL + "/recommender", json=test_data)
     data = resp.json()
+    print(data)
     assert len(data['results']) == 5
     assert len(set(expected['results']).intersection(data['results'])) > 0
 
