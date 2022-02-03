@@ -435,8 +435,8 @@ def make_training_data(
     correct_train, correct_test = train_test_split(correct_found, tts_ratio)
     incorrect_train, incorrect_test = train_test_split(incorrect_found, tts_ratio)
     neutral_train, neutral_test = train_test_split(neutral_found, tts_ratio)
-    train = {**correct_train, **incorrect_train, **neutral_train}
-    test = {**correct_test, **incorrect_test, **neutral_test}
+    train = {**neutral_train, **incorrect_train, **correct_train}
+    test = {**neutral_test, **incorrect_test,  **correct_test}
 
     try:## check labels
         pos = len([i for i in train if train[i]['label'] == 1])
