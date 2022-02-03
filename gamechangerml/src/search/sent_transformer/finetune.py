@@ -67,18 +67,18 @@ def format_inputs(train, test):
         score = float(train[i]["label"])
         inputex = InputExample(str(count), texts, score)
         train_samples.append(inputex)
-        all_data.append([i, texts, score, "train"])
+        all_data.append([train[i]["query"], i, texts, score, "train"])
         count += 1
-        #processmanager.update_status(processmanager.loading_data, count, total)
+        processmanager.update_status(processmanager.loading_data, count, total)
     
     for x in test.keys():
         texts = [test[x]["query"], test[x]["paragraph"]]
         score = float(test[x]["label"])
-        all_data.append([x, texts, score, "test"])
+        all_data.append([test[x]["query"], x, texts, score, "test"])
         count += 1
-        #processmanager.update_status(processmanager.loading_data, count, total)
+        processmanager.update_status(processmanager.loading_data, count, total)
 
-    df = pd.DataFrame(all_data, columns = ["key", "pair", "score", "label"])
+    df = pd.DataFrame(all_data, columns = ["query", "key", "pair", "score", "label"])
     
     return train_samples, df
 
@@ -94,7 +94,6 @@ class STFinetuner():
         self.epochs = epochs
         self.warmup_steps = warmup_steps
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        #self.pin_memory = True if torch.cuda.is_available() else False 
     
     def retrain(self, data_dir, testing_only, version):
 
@@ -113,13 +112,14 @@ class STFinetuner():
                 train = {k:train[k] for k in train_keys}
                 test = {k:test[k] for k in test_keys}
 
-            processmanager.update_status(processmanager.training, 0, 1) 
-            sleep(0.1)
             ## make formatted training data
+            logger.info("Formatting the inputs...")
             train_samples, df = format_inputs(train, test)
-
+            
             ## get cosine sim before finetuning
             df["original_cos_sim"] = df["pair"].apply(lambda x: get_cos_sim(self.model, x))
+            processmanager.update_status(processmanager.training, 0, 1) 
+            sleep(0.1)
 
             ## finetune on samples
             logger.info("Starting dataloader...")
