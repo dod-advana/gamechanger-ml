@@ -6,11 +6,13 @@ services:
     image: redis
     ports:
       - "6380:6380"
-    command: --port 6380
+    command: ["redis-server", "--appendonly", "yes","--port 6380"]
     expose:
       - "6380"
     networks:
       - app-net
+    volumes:
+      - ../redis-data:/data
   gamechanger-ml-gpu:
     container_name: gc-ml-gpu
     image: gamechanger-ml-gpu

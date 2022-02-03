@@ -99,7 +99,8 @@ async def trans_sentence_infer(
         )
         logger.info(results)
     except Exception:
-        logger.error(f"Unable to get results from sentence transformer for {body}")
+        logger.error(
+            f"Unable to get results from sentence transformer for {body}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise
     return results
@@ -155,7 +156,7 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
     logger.info(f"Expanding: {body}")
     query_expander = (
         MODELS.query_expander
-        if body.get("qe_model", "gc_core") != "jbook"
+        if body.get("qe_model", "gc_core") != "jbook" or MODELS.query_expander_jbook==None
         else MODELS.query_expander_jbook
     )
     try:
@@ -204,27 +205,30 @@ async def post_word_sim(body: dict, response: Response) -> dict:
         logger.error(f"Error with query expansion on {terms}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
+
 @router.post("/recommender", status_code=200)
 async def post_recommender(body: dict, response: Response) -> dict:
     results = {}
     sample = False
     try:
-        filename = body["filename"]
-        if not filename:
+        filenames = body["filenames"]
+        if not filenames:
             if body["sample"]:
                 sample = body["sample"]
-        logger.info(f"Recommending similar documents to {filename}")
-        results = MODELS.recommender.get_recs(filename=filename, sample=sample)
+        logger.info(f"Recommending similar documents to {filenames}")
+        results = MODELS.recommender.get_recs(
+            filenames=filenames, sample=sample)
         if results['results'] != []:
             logger.info(f"Found similar docs: \n {str(results)}")
         else:
             logger.info("Did not find any similar docs")
     except Exception as e:
-        logger.warning(f"Could not get similar docs for {filename}")
+        logger.warning(f"Could not get similar docs for {filenames}")
         logger.warning(e)
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    
+
     return results
+
 
 def unquoted(term):
     """unquoted - unquotes string

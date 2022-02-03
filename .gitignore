@@ -245,5 +245,6 @@ models/sent_index*
 models/qexp_model*
 models/transformers
 models/
+redis-data/
 # Ignore override for non local deployment
 docker-compose.override.yml
