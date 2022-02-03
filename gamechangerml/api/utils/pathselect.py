@@ -12,7 +12,7 @@ def get_model_paths():
         qexp_names = [
             f
             for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if ("qexp_" in f) and (all(substr not in f for substr in ["tar","jbook"]))
+            if ("qexp_" in f) and (all(substr not in f for substr in ["tar","jbook","ngram"]))
         ]
         qexp_names.sort(reverse=True)
         if len(qexp_names) > 0:
@@ -51,29 +51,29 @@ def get_model_paths():
         logger.info("Cannot get QEXP JBOOK model path")
         QEXP_JBOOK_MODEL_PATH = "gamechangerml/models/"
 
-    # QEXP JBOOK NGRAM MODEL
+    # QEXP NGRAM MODEL
     try:
-        qexp_jbook_ngram_names = [
+        qexp_ngram_names = [
             f
             for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if (all(substr in f for substr in ["qexp_","jbook","ngram"])) and ("tar" not in f)
+            if (all(substr in f for substr in ["qexp_","ngram"])) and (all(substr not in f for substr in ["jbook","tar"]))
         ]
-        qexp_jbook_ngram_names.sort(reverse=True)
-        if len(qexp_jbook_names) > 0:
-            QEXP_JBOOK_NGRAM_MODEL_PATH_LIST = ",".join([os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, qexp_jbook_ngram_name
+        qexp_ngram_names.sort(reverse=True)
+        if len(qexp_ngram_names) > 0:
+            QEXP_NGRAM_MODEL_PATH_LIST = ",".join([os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, qexp_ngram_name
             )
-            for qexp_jbook_ngram_name in qexp_jbook_ngram_names])
-            print(f"QEXP_JBOOK_NGRAM_MODEL_PATH_LIST: {QEXP_JBOOK_NGRAM_MODEL_PATH_LIST}")
+            for qexp_ngram_name in qexp_ngram_names])
+            print(f"QEXP_NGRAM_MODEL_PATH_LIST: {QEXP_NGRAM_MODEL_PATH_LIST}")
         else:
-            print("defaulting INDEX_PATH to JBOOK n-gram qexp")
-            QEXP_JBOOK_NGRAM_MODEL_PATH_LIST = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, "jbook_qexp_1_3_ngram_2021202"
+            print("defaulting INDEX_PATH to n-gram qexp")
+            QEXP_NGRAM_MODEL_PATH_LIST = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, "qexp_ngram_1_3"
             )
     except Exception as e:
         logger.error(e)
-        logger.info("Cannot get QEXP JBOOK NGRAM model path")
-        QEXP_JBOOK_MODEL_PATH = "gamechangerml/models/"
+        logger.info("Cannot get QEXP NGRAM model path")
+        QEXP_NGRAM_MODEL_PATH_LIST = "gamechangerml/models/"
 
     # TRANSFORMER MODEL PATH
     try:
@@ -125,7 +125,7 @@ def get_model_paths():
         "sentence": INDEX_PATH,
         "qexp": QEXP_MODEL_PATH,
         "qexp_jbook": QEXP_JBOOK_MODEL_PATH,
-        "qexp_jbook_ngram": QEXP_JBOOK_NGRAM_MODEL_PATH_LIST,
+        "qexp_ngram": QEXP_NGRAM_MODEL_PATH_LIST,
         "word_sim": WORD_SIM_MODEL_PATH,
     }
     return model_dict

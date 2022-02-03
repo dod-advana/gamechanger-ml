@@ -23,7 +23,7 @@ LOCAL_TRANSFORMERS_DIR = CacheVariable("LOCAL_TRANSFORMERS_DIR")
 SENT_INDEX_PATH = CacheVariable("SENT_INDEX_PATH")
 QEXP_MODEL_NAME = CacheVariable("QEXP_MODEL_NAME")
 QEXP_JBOOK_MODEL_NAME = CacheVariable("QEXP_JBOOK_MODEL_NAME")
-QEXP_JBOOK_NGRAM_MODEL_PATH_LIST = CacheVariable("QEXP_JBOOK_NGRAM_MODEL_PATH_LIST")
+QEXP_NGRAM_MODEL_PATH_LIST = CacheVariable("QEXP_NGRAM_MODEL_PATH_LIST")
 WORD_SIM_MODEL = CacheVariable("WORD_SIM_MODEL")
 # LTR_MODEL = CacheVariable("LTR_MODEL")
 
@@ -32,7 +32,7 @@ LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]
 SENT_INDEX_PATH.value = model_path_dict["sentence"]
 QEXP_MODEL_NAME.value = model_path_dict["qexp"]
 QEXP_JBOOK_MODEL_NAME.value = model_path_dict["qexp_jbook"]
-QEXP_JBOOK_NGRAM_MODEL_PATH_LIST.value = model_path_dict["qexp_jbook_ngram"]
+QEXP_NGRAM_MODEL_PATH_LIST.value = model_path_dict["qexp_ngram"]
 WORD_SIM_MODEL.value = model_path_dict["word_sim"]
 # LTR_MODEL.value = model_path_dict["ltr_model"]
 
