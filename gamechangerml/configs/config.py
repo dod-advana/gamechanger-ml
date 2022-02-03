@@ -93,7 +93,7 @@ class QexpConfig:
             "method": "emb",
         },
         "expansion": {  # configs for getting expanded terms
-            "topn": 5,
+            "topn": 2,
             "threshold": 0.2,
             "min_tokens": 3,
         },
