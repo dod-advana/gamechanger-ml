@@ -100,13 +100,15 @@ class STFinetuner():
 
         df["new_cos_sim"] = df["pair"].apply(lambda x: get_cos_sim(self.model, x))
         df["change_cos_sim"] = df["new_cos_sim"] - df["original_cos_sim"]
+        df['score'] = df['score'].apply(lambda x: int(x))
 
         ## save all results to CSV
         df.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
 
         queries = list(set(df['query']))
-        df['score'] = df['score'].apply(lambda x: int(x))
-            
+        train_queries = list(set(df[df['label']=='train']['query'].tolist()))
+        test_queries = [i for i in queries if i not in train_queries]
+        
         def get_stats(df, query):
         
             mydict = {}
@@ -138,13 +140,23 @@ class STFinetuner():
         summary.drop(columns = 'index', inplace = True)
         dev_only = summary[summary['balance']!={0:50}]
         num_queries = dev_only.shape[0]
-        old_MRR = get_MRR(dev_only['original_RR'])
+
+        # getting old MRR
+        original_MRR = get_MRR(dev_only['original_RR'])
         new_MRR = get_MRR(dev_only['new_RR'])
+
+        train_only = dev_only[dev_only['query'].isin(train_queries)]
+        test_only = dev_only[dev_only['query'].isin(test_queries)]
+
+        train_original_MRR = get_MRR(train_only['original_RR'])
+        test_original_MRR = get_MRR(test_only['original_RR'])
+        test_new_MRR = get_MRR(test_only['new_RR'])
+        train_new_MRR = get_MRR(train_only['new_RR'])
         
         logger.info(f"Number of unique queries tested: {str(num_queries)}")
-        logger.info(f"Old MRR: {str(old_MRR)}")
+        logger.info(f"Old MRR: {str(original_MRR)}")
         logger.info(f"New MRR: {str(new_MRR)}")
-        if new_MRR < old_MRR:
+        if new_MRR < original_MRR:
             logger.warning("WARNING! Model did not improve MRR")
             
         summary.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
@@ -152,8 +164,8 @@ class STFinetuner():
         ft_metadata = {
             "date_finetuned": str(date.today()),
             "data_dir": str(data_dir),
-            "old_MRR": str(old_MRR),
-            "new_MRR": str(new_MRR)
+            "old_MRR": f"{str(original_MRR)} ({str(train_original_MRR)} train / {str(test_original_MRR)} test)",
+            "new_MRR": f"{str(new_MRR)} ({str(train_new_MRR)} train / {str(test_new_MRR)} test)"
         }
 
         return ft_metadata

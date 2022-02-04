@@ -254,6 +254,8 @@ def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, s
         "n_negative_samples": f"{str(len(neg_train_keys))} train queries / {str(len(neg_test_keys))} test queries",
         "total_train_samples_size": len(train),
         "total_test_samples_size": len(test),
+        "train_queries": pos_train_keys + neg_train_keys,
+        "test_queries": pos_test_keys + neg_test_keys,
         "split_ratio": tts_ratio
     }
 
