@@ -139,8 +139,8 @@ def get_model_paths():
             TOPICS_PATH = os.path.join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, topic_model_dirs[0]
             )
-        else:
-            raise f"No topic_model_<date> folders in {Config.LOCAL_PACKAGED_MODELS_DIR}"
+        # else:
+        #     # raise f"No topic_model_<date> folders in {Config.LOCAL_PACKAGED_MODELS_DIR}"
 
     except Exception as e:
         logger.error(e)
