@@ -220,12 +220,12 @@ def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, s
     neg_passing = {}
     pos_passing = {}
     for q in queries:
-        subset = [i for i in data if data[i]['query']==q]
-        pos_sample = bool([i for i in subset if subset[i]['label']==1])
-        neg_sample = bool([i for i in subset if subset[i]['label']==-1])
-        if neg_sample: # since we have so few negative samples, add to neg list if it has a negative ex
+        subset = {i:data[i] for i in data.keys() if data[i]['query']==q}
+        pos_sample = [i for i in subset.keys() if subset[i]['label']==1]
+        neg_sample = [i for i in subset.keys() if subset[i]['label']==-1]
+        if len(neg_sample)>0: #since we have so few negative samples, add to neg list if it has a negative ex
             neg_passing[q] = subset
-        elif pos_sample: # only add the other samples if they have a positive matching sample
+        elif len(pos_sample)>0: # only add the other samples if they have a positive matching sample
             pos_passing[q] = subset
 
     pos_train_size = round(len(pos_passing.keys()) * tts_ratio)
@@ -237,16 +237,19 @@ def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, s
     pos_test_keys = [i for i in pos_passing.keys() if i not in pos_train_keys]
     neg_test_keys = [i for i in neg_passing.keys() if i not in neg_train_keys]
 
-    train = []
-    test = []
+    train_keys = []
+    test_keys = []
     for x in pos_train_keys:
-        train.extend(pos_passing[x])
+        train_keys.extend(pos_passing[x])
     for x in pos_test_keys:
-        test.extend(pos_passing[x])
+        test_keys.extend(pos_passing[x])
     for x in neg_train_keys:
-        train.extend(neg_passing[x])
+        train_keys.extend(neg_passing[x])
     for x in neg_test_keys:
-        test.extend(neg_passing[x])
+        test_keys.extend(neg_passing[x])
+    
+    train = {i:data[i] for i in train_keys}
+    test = {i:data[i] for i in test_keys}
 
     metadata = {
         "date_created": str(date.today()),

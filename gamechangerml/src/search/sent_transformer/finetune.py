@@ -221,14 +221,14 @@ class STFinetuner():
 
             logger.info("Metadata saved to {}".format(ft_metadata_path))
 
-            evals_dir = os.path.join(self.model_save_dir, "evals_gc")
+            evals_dir = os.path.join(self.model_save_path, "evals_gc")
             if not os.path.isdir(evals_dir):
                 os.mkdir(os.path.join(evals_dir))
-            ft_metadata_path = os.path.join(evals_dir, timestamp_filename("finetuning_evals", ".json"))
-            with open(ft_metadata_path, "w") as outfile:
+            ft_evals_path = os.path.join(evals_dir, timestamp_filename("finetuning_evals", ".json"))
+            with open(ft_evals_path, "w") as outfile:
                 json.dump(ft_metadata, outfile)
             
-            logger.info("Metadata saved to {}".format(ft_metadata_path))
+            logger.info("Metadata saved to {}".format(ft_evals_path))
             
             # when not testing only, save to S3
             if not testing_only:
