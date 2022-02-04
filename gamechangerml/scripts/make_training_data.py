@@ -214,14 +214,50 @@ def add_gold_standard(intel: Dict[str,str], gold_standard_path: Union[str, os.Pa
 def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, str]]:
     """Splits a dictionary into train/test set based on split ratio"""
 
-    train_size = round(len(data) * tts_ratio)
-    train_keys = random.sample(data.keys(), train_size)
-    test_keys = [i for i in data.keys() if i not in train_keys]
+    queries = list(set([data[i]['query'] for i in data]))
 
-    train = {k: data[k] for k in train_keys}
-    test = {k: data[k] for k in test_keys}
+    # split the data into positive and negative examples grouped by query
+    neg_passing = {}
+    pos_passing = {}
+    for q in queries:
+        subset = [i for i in data if data[i]['query']==q]
+        pos_sample = bool([i for i in subset if subset[i]['label']==1])
+        neg_sample = bool([i for i in subset if subset[i]['label']==-1])
+        if neg_sample: # since we have so few negative samples, add to neg list if it has a negative ex
+            neg_passing[q] = subset
+        elif pos_sample: # only add the other samples if they have a positive matching sample
+            pos_passing[q] = subset
 
-    return train, test
+    pos_train_size = round(len(pos_passing.keys()) * tts_ratio)
+    neg_train_size = round(len(neg_passing.keys()) * tts_ratio)
+
+    pos_train_keys = random.sample(pos_passing.keys(), pos_train_size)
+    neg_train_keys = random.sample(neg_passing.keys(), neg_train_size) 
+    
+    pos_test_keys = [i for i in pos_passing.keys() if i not in pos_train_keys]
+    neg_test_keys = [i for i in neg_passing.keys() if i not in neg_train_keys]
+
+    train = []
+    test = []
+    for x in pos_train_keys:
+        train.extend(pos_passing[x])
+    for x in pos_test_keys:
+        test.extend(pos_passing[x])
+    for x in neg_train_keys:
+        train.extend(neg_passing[x])
+    for x in neg_test_keys:
+        test.extend(neg_passing[x])
+
+    metadata = {
+        "date_created": str(date.today()),
+        "n_positive_samples": f"{str(len(pos_train_keys))} train queries / {str(len(pos_test_keys))} test queries",
+        "n_negative_samples": f"{str(len(neg_train_keys))} train queries / {str(len(neg_test_keys))} test queries",
+        "total_train_samples_size": len(train),
+        "total_test_samples_size": len(test),
+        "split_ratio": tts_ratio
+    }
+
+    return train, test, metadata
 
 def collect_matches(
     data: pd.DataFrame, 
@@ -431,42 +467,13 @@ def make_training_data(
     with open(notfound_path, "w") as outfile:
         json.dump(notfound, outfile)
 
-    ## train/test split (separate on correct/incorrect for balance)
-    correct_train, correct_test = train_test_split(correct_found, tts_ratio)
-    incorrect_train, incorrect_test = train_test_split(incorrect_found, tts_ratio)
-    neutral_train, neutral_test = train_test_split(neutral_found, tts_ratio)
-    train = {**neutral_train, **incorrect_train, **correct_train}
-    test = {**neutral_test, **incorrect_test,  **correct_test}
+    all_examples = {**neutral_found, **incorrect_found, **correct_found}
+    logger.info(f"Total size of query-doc pairs: {str(len(all_examples))}")
 
-    try:## check labels
-        pos = len([i for i in train if train[i]['label'] == 1])
-        logger.info(f"*** {str(pos)} positive samples in TRAIN")
-        neutral = len([i for i in train if train[i]['label'] == 0])
-        logger.info(f"*** {str(neutral)} neutral samples in TRAIN")
-        neg = len([i for i in train if train[i]['label'] == -1])
-        logger.info(f"*** {str(neg)} negative samples in TRAIN")
-
-        ## check labels
-        pos_test = len([i for i in test if test[i]['label'] == 1])
-        logger.info(f"*** {str(pos_test)} positive samples in TEST")
-        neutral_test = len([i for i in test if test[i]['label'] == 0])
-        logger.info(f"*** {str(neutral_test)} neutral samples in TEST")
-        neg_test = len([i for i in test if test[i]['label'] == -1])
-        logger.info(f"*** {str(neg_test)} negative samples in TEST")
-    except Exception as e:
-        logger.warning("Could not check stats for train/test")
-        logger.warning(e)
+    ## train/test split  
+    train, test, metadata = train_test_split(all_examples, tts_ratio)
 
     data = {"train": train, "test": test}
-    metadata = {
-        "date_created": str(date.today()),
-        "n_positive_samples": f"{str(pos)} train / {str(pos_test)} test",
-        "n_neutral_samples": f"{str(neutral)} train / {str(neutral_test)} test",
-        "n_negative_samples": f"{str(neg)} train / {str(neg_test)} test",
-        "train_size": len(train),
-        "test_size": len(test),
-        "split_ratio": tts_ratio
-    }
 
     logger.info(f"**** Generated training data: \n {metadata}")
 
