@@ -9,95 +9,101 @@
 ```
 ├── gamechangerml
 │   ├── api
+│   │   ├── README.md
+│   │   ├── __init__.py
+│   │   ├── docker-compose.override.yml
+│   │   ├── docker-compose.yml
 │   │   ├── fastapi
-│   │   │   └── routers
+│   │   ├── getInitModels.py
 │   │   ├── kube
-│   │   │   └── gc-ml-workflow
-│   │   │       ├── charts
-│   │   │       └── templates
 │   │   ├── logs
 │   │   ├── tests
 │   │   └── utils
 │   ├── configs
 │   ├── corpus
 │   ├── data
-│   │   ├── agencies
+│   │   ├── features
+│   │   │   ├── abbcounts.json
+│   │   │   ├── abbreviations.csv
+│   │   │   ├── abbreviations.json
+│   │   │   ├── agencies.csv
+│   │   │   ├── classifier_entities.csv
+│   │   │   ├── combined_entities.csv
+│   │   │   ├── corpus_doctypes.csv
+│   │   │   ├── enwiki_vocab_min200.txt
+│   │   │   ├── generated_files
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── common_orgs.csv
+│   │   │   │   ├── corpus_meta.csv
+│   │   │   │   └── prod_test_data.csv
+│   │   │   ├── popular_documents.csv
+│   │   │   ├── topics_wiki.csv
+│   │   │   └── word-freq-corpus-20201101.txt
+│   │   ├── ltr
 │   │   ├── nltk_data
-│   │   │   └── tokenizers
-│   │   │       └── punkt
 │   │   ├── test_data
-│   │   └── test_output
-│   ├── experimental
-│   │   └── notebooks
-│   │       ├── evaluation
-│   │       │   ├── ablation_inputs
-│   │       │   ├── ablation_outputs
-│   │       │   ├── assets
-│   │       │   ├── eval_folder
-│   │       │   └── msmarco_1k
-│   │       ├── portion_marking_demo
-│   │       └── sentence-transformer
-│   │           ├── sample_corpus
-│   │           └── sample_index
+│   │   ├── training
+│   │   │   └── sent_transformer
+│   │   ├── user_data
+│   │   │   ├── gold_standard.csv
+│   │   │   ├── matamo_feedback
+│   │   │   │   ├── Feedback.csv
+│   │   │   │   └── matamo_feedback.csv
+│   │   │   └── search_history
+│   │   │       └── SearchPdfMapping.csv
+│   │   └── validation
+│   │       ├── domain
+│   │       │   ├── query_expansion
+│   │       │   ├── question_answer
+│   │       │   └── sent_transformer
+│   │       └── original
+│   │           ├── msmarco_1k
+│   │           ├── multinli_1.0
+│   │           └── squad2.0
 │   ├── mlflow
 │   ├── models
-│   │   ├── sent_index_20210728
+│   │   ├── ltr
+│   │   ├── msmarco_index
+│   │   ├── qexp_20211001
+│   │   ├── sent_index_20211108
 │   │   ├── topic_models
 │   │   └── transformers
 │   │       ├── bert-base-cased-squad2
 │   │       ├── distilbart-mnli-12-3
-│   │       ├── distilbert-base-uncased-distilled-squad
-│   │       ├── distilroberta-base
-│   │       └── msmarco-distilbert-base-v2
+│   │       ├── msmarco-distilbert-base-v2
 │   ├── scripts
-│   │   └── topic_model
 │   ├── src
 │   │   ├── featurization
-│   │   │   ├── data
+│   │   │   ├── abbreviation.py
+│   │   │   ├── abbreviations_utils.py
 │   │   │   ├── extract_improvement
+│   │   │   ├── generated_fts.py
 │   │   │   ├── keywords
-│   │   │   │   └── qe_mlm
-│   │   │   │       ├── example
-│   │   │   │       └── tests
+│   │   │   ├── make_meta.py
+│   │   │   ├── rank_features
+│   │   │   ├── ref_list.py
+│   │   │   ├── ref_utils.py
+│   │   │   ├── responsibilities.py
+│   │   │   ├── summary.py
+│   │   │   ├── table.py
 │   │   │   ├── term_extract
-│   │   │   └── tests
+│   │   │   ├── test_hf_ner.py
+│   │   │   ├── tests
+│   │   │   ├── topic_modeling.py
+│   │   │   └── word_sim.py
 │   │   ├── model_testing
 │   │   ├── search
 │   │   │   ├── QA
 │   │   │   ├── embed_reader
-│   │   │   │   ├── examples
-│   │   │   │   ├── schema_example
-│   │   │   │   └── test
-│   │   │   ├── evaluation
-│   │   │   │   ├── sample_data
-│   │   │   │   └── tests
 │   │   │   ├── query_expansion
-│   │   │   │   ├── aux_data
-│   │   │   │   ├── build_ann_cli
-│   │   │   │   └── tests
 │   │   │   ├── ranking
-│   │   │   │   ├── generated_files
-│   │   │   │   └── tests
 │   │   │   ├── semantic
 │   │   │   └── sent_transformer
-│   │   │       └── tests
 │   │   ├── text_classif
-│   │   │   ├── cli
-│   │   │   ├── examples
-│   │   │   ├── tests
-│   │   │   └── utils
 │   │   ├── text_handling
-│   │   │   └── assets
 │   │   └── utilities
-│   │       └── numpy_encoder
-│   │           └── tests
 │   ├── stresstest
 │   ├── train
-│   │   └── scripts
-│   └── unittest
-└── unittest
-
-127 directories
 ```
 
 ## Development Rules
@@ -137,7 +143,14 @@
 6. `docker-compose up`
 7. visit `localhost:5000/docs`
 
+## HELPFUL FLAGS FOR API
+- export CONTAINER_RELOAD=True to reload the container on code changes for development
+- export DOWNLOAD_DEP=True to get models and other deps from s3
+- export MODEL_LOAD=False to not load models on API start (only for development needs) 
+
 ## FAQ
+- I get an error with redis on API start
+  - export ENV_TYPE=DEV
 - Do I need to train models to use the API?
   - No, you can use the pretrained models within the dependencies. 
 - The API is crashing when trying to load the models.
@@ -146,3 +159,10 @@
   - No, but it will make training or inferring faster.
 - What if I can't download the dependencies since I am external?
   - We are working on making models publically available. However you can use download pretrained transformers from HuggingFace to include in the models/transformers directory, which will enable you to use some functionality of the API. Without any models, there is still functionality available like text extraction avaiable. 
+
+## PULL REQUESTS
+*Please provide:*
+1. Description - what is the purpose, what are the different features added i.e. bugfix, added upload capability to model, model improving
+2. Reviewer Test - how to test it manually and if it is on a dev/test server. (if applicable) 
+ ` i.e. hit post endpoint /search with payload {"query": "military"}`
+3. Unit/Integration tests - screenshot or copy output of unit tests from GC_ML_TESTS_119, any other tests or metrics applicable

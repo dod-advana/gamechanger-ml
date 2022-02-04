@@ -10,14 +10,12 @@ REQUIREMENTS_PATH = Path(ROOT_PATH, "requirements.txt")
 DEV_REQUIREMENTS_PATH = Path(ROOT_PATH, "dev.requirements.txt")
 README_PATH = Path(ROOT_PATH, "README.md")
 
-EXCLUDE_PACKAGES = [
-    "faiss-gpu",
-    "psycopg2"
-] if sys.platform.lower() != 'linux' else []
+EXCLUDE_PACKAGES = ["faiss-gpu",
+                    "psycopg2"] if sys.platform.lower() != "linux" else []
 
 SUBSTITUTE_PACKAGES = [
-    "psycopg2-binary"
-] if sys.platform.lower() != 'linux' else []
+    "psycopg2-binary"] if sys.platform.lower() != "linux" else []
+
 
 def parse_requirements(requirements: Path) -> List[str]:
     with requirements.open(mode="r") as fd:
@@ -41,14 +39,16 @@ def parse_requirements(requirements: Path) -> List[str]:
 
     return final_rlist
 
+
 def parse_readme(readme: Path) -> str:
     with readme.open("r") as fh:
         long_description = fh.read()
     return long_description
 
+
 setuptools.setup(
     name="gamechangerml",
-    version="1.0.0",
+    version="1.2.0",
     author="Booz Allen Hamilton",
     author_email="gamechanger@advana",
     description="Package for GAMECHANGER ML modules",
@@ -63,10 +63,11 @@ setuptools.setup(
     ],
     python_requires=">=3.8.0",
     install_requires=[
-        p for p in parse_requirements(REQUIREMENTS_PATH)
-        if re.split(r'\s*[@=]\s*')[0].lower()
-        not in EXCLUDE_PACKAGES
-    ] + SUBSTITUTE_PACKAGES,
+        p
+        for p in parse_requirements(REQUIREMENTS_PATH)
+        if re.split(r"\~s*[@=]\s*", p)[0].lower() not in EXCLUDE_PACKAGES
+    ]
+    + SUBSTITUTE_PACKAGES,
     include_package_data=True,
     extras_require={"dev": parse_requirements(DEV_REQUIREMENTS_PATH)},
 )

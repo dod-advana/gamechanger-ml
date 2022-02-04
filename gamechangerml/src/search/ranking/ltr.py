@@ -1,52 +1,64 @@
-import spacy
 from gamechangerml.src.text_handling.process import preprocess
 import numpy as np
 import re
-from gamechangerml.src.search.ranking import search_data as meta
-from gamechangerml.src.search.ranking import rank
-from gamechangerml import REPO_PATH
-import datetime
 import pandas as pd
 from tqdm import tqdm
-import argparse
 import logging
 import os
-from elasticsearch import Elasticsearch, helpers
-import pickle
+from elasticsearch import Elasticsearch
 import xgboost as xgb
-import matplotlib
-import math
 import requests
 import json
 from sklearn.preprocessing import LabelEncoder
+from gamechangerml import MODEL_PATH, DATA_PATH
+import typing as t
+import base64
+from urllib.parse import urljoin
+from gamechangerml.src.utilities import gc_web_api, es_utils
 
 
-ES_HOST = os.environ.get("ES_HOST", default="localhost")
-ES_INDEX = os.environ.get("ES_INDEX", default="gamechanger")
-
-client = Elasticsearch([ES_HOST], timeout=60)
 logger = logging.getLogger("gamechanger")
-GC_MODEL_PATH = "gamechangerml/models/ltr"
-if not os.path.exists(GC_MODEL_PATH):
-    os.mkdir(GC_MODEL_PATH)
-GC_DATA_PATH = "gamechangerml/data/ltr"
-if not os.path.exists(GC_DATA_PATH):
-    os.mkdir(GC_DATA_PATH)
+
+GC_USER_DATA = os.path.join(
+    DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
+)
+LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
+LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
+os.makedirs(LTR_MODEL_PATH, exist_ok=True)
+os.makedirs(LTR_DATA_PATH, exist_ok=True)
+gcClient = gc_web_api.GCWebClient()
+
+esu = es_utils.ESUtils()
 
 
 class LTR:
     def __init__(
         self,
         params={
-            "max_depth": 10,
+            "max_depth": 8,
             "eta": 0.3,
-            "objective": "rank:map",
+            "objective": "rank:pairwise",
         },
     ):
         self.data = self.read_xg_data()
         self.params = params
-        self.mappings = self.read_mappings()
         self.judgement = None
+        self.eval_metrics = [
+            "map",
+            "map@25",
+            "map@50",
+            "map@75",
+            "map@100",
+            "ndcg@1",
+            "ndcg@5",
+            "ndcg@10",
+            "ndcg@20",
+            "ndcg@50",
+            "ndcg@100",
+            "rmse",
+            "error",
+        ]
+        self.mappings = pd.DataFrame()
 
     def write_model(self, model):
         """write model: writes model to file
@@ -54,35 +66,58 @@ class LTR:
         returns:
         """
         # write model to json for LTR
-        path = os.path.join(GC_MODEL_PATH, "xgb-model.json")
+        path = os.path.join(LTR_MODEL_PATH, "xgb-model.json")
         with open(path, "w") as output:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
-    def read_xg_data(self, path=os.path.join(GC_DATA_PATH, "xgboost.txt")):
+    def read_xg_data(self, path=os.path.join(LTR_DATA_PATH, "xgboost.csv")):
         """read xg data: reads LTR formatted data
         params: path to file
         returns:
         """
         try:
-            self.data = xgb.DMatrix(path)
+            df = pd.read_csv(path)
+            fts = df[df.columns[5:]]
+            fts.index = df.qid
+
+            label = df["ranking"]
+            self.data = xgb.DMatrix(fts, label)
             return self.data
         except Exception as e:
             logger.error("Could not read in data for training")
 
-    def read_mappings(self, path="gamechangerml/data/SearchPdfMapping.csv"):
+    def read_mappings(
+        self, path=GC_USER_DATA, remote_mappings: bool = False, daysBack: int = 180
+    ):
         """read mappings: reads search pdf mappings
         params: path to file
         returns:
             mappings file
         """
         try:
-            self.mappings = pd.read_csv(path)
+            if remote_mappings:
+                self.mappings = self.request_mappings(daysBack)
+            else:
+                logger.info(
+                    "Not production environment, defaulting to local mappings")
+                self.mappings = pd.read_csv(path)
         except Exception as e:
-            logger.error("Could not read in mappings to make judgement list")
+            logger.warning("Could not request or read mappings")
+            logger.warning(e)
         return self.mappings
 
-    def train(self, write=True):
+    def request_mappings(self, daysBack: int = 180):
+        mappings = None
+        try:
+            mappings = gcClient.getSearchMappings(daysBack=daysBack)
+            mappings = json.loads(mappings)
+            mappings = pd.DataFrame(mappings["data"])
+        except Exception as e:
+            logger.warning("Could not request mappings from GC Web")
+        return mappings
+
+    def train(self, data=None, params=None, write=True):
         """train - train a xgboost model with parameters
         params:
             write: boolean to write to file
@@ -90,12 +125,19 @@ class LTR:
             bst: xgboost object
             model: model json
         """
-        bst = xgb.train(self.params, self.data)
+        if not data:
+            data = self.data
+        if not params:
+            params = self.params
+        bst = xgb.train(params, data)
+        cv = xgb.cv(params, dtrain=data, nfold=3, metrics=self.eval_metrics)
         model = bst.get_dump(
-            fmap=os.path.join(GC_DATA_PATH, "featmap.txt"), dump_format="json"
+            fmap=os.path.join(LTR_DATA_PATH, "featmap.txt"), dump_format="json"
         )
         if write:
             self.write_model(model)
+            path = os.path.join(LTR_MODEL_PATH, "ltr_evals.csv")
+            cv.to_csv(path, index=False)
         return bst, model
 
     def post_model(self, model, model_name):
@@ -106,15 +148,14 @@ class LTR:
         returns:
             r: results
         """
-        headers = {"Content-Type": "application/json"}
         query = {
             "model": {
                 "name": model_name,
                 "model": {"type": "model/xgboost+json", "definition": model},
             }
         }
-        endpoint = ES_HOST + "/_ltr/_featureset/doc_features/_createmodel"
-        r = requests.post(endpoint, data=json.dumps(query), headers=headers)
+        endpoint = "/_ltr/_featureset/doc_features/_createmodel"
+        r = esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def search(self, terms, rescore=True):
@@ -196,17 +237,18 @@ class LTR:
                     }
                 }
             }
-        r = client.search(index="gamechanger", body=dict(query))
+        r = esu.client.search(index=esu.es_index, body=dict(query))
         return r
 
-    def generate_judgement(self, mappings):
+    def generate_judgement(self, remote_mappings: bool = False, daysBack: int = 180):
         """generate judgement - generates judgement list from user mapping data
         params:
             mappings: dataframe of user data extracted from pdf mapping table
         returns:
             count_df: cleaned dataframe with search mapped data
         """
-        searches = mappings[["search", "document"]]
+        self.read_mappings(remote_mappings=remote_mappings, daysBack=daysBack)
+        searches = self.mappings[["search", "document"]]
         searches.dropna(inplace=True)
         searches.search.replace("&quot;", "", regex=True, inplace=True)
         word_tuples = []
@@ -261,14 +303,14 @@ class LTR:
             for docs in tmp.itertuples():
                 doc = docs.Index
                 q = self.construct_query(doc, kw)
-                query_list.append(json.dumps({"index": ES_INDEX}))
+                query_list.append(json.dumps({"index": esu.es_index}))
                 query_list.append(json.dumps(q))
         query = "\n".join(query_list)
-        res = client.msearch(body=query)
+        res = esu.client.msearch(body=query)
         ltr_log = [x["hits"]["hits"] for x in res["responses"]]
         return ltr_log
 
-    def process_ltr_log(self, ltr_log, num_fts=7):
+    def process_ltr_log(self, ltr_log, num_fts=8):
         """process ltr log: extracts features from ES logs for judgement list
         params:
             ltr_log: results from ES
@@ -301,53 +343,27 @@ class LTR:
         returns:
             outputs a file
         """
+        print(df)
         ltr_log = self.query_es_fts(df)
         vals = self.process_ltr_log(ltr_log)
         ft_df = pd.DataFrame(
             vals,
             columns=[
                 "title",
-                "title_phrase",
-                "kw",
+                "keyw_5",
+                "topics",
+                "entities",
                 "textlength",
                 "paragraph",
                 "popscore",
-                "paragraph_phr",
+                "paragraph-phrase",
             ],
         )
         df.reset_index(inplace=True)
         df = pd.concat([df, ft_df], axis=1)
 
-        logger.info("generating txt file")
-        for kw in tqdm(df.keyword.unique()):
-            rows = df[df.keyword == kw]
-            for i in rows.itertuples():
-                new_row = (
-                    str(int(i.ranking))
-                    + " qid:"
-                    + str(i.qid)
-                    + " 1:"
-                    + str(i.title)
-                    + " 2:"
-                    + str(i.title_phrase)
-                    + " 3:"
-                    + str(i.kw)
-                    + " 4:"
-                    + str(i.textlength)
-                    + " 5:"
-                    + str(i.paragraph)
-                    + " 6:"
-                    + str(i.popscore)
-                    + " 7:"
-                    + str(i.paragraph_phr)
-                    + " # "
-                    + kw
-                    + " "
-                    + str(i.document)
-                    + "\n"
-                )
-                with open(os.path.join(GC_DATA_PATH, "xgboost.txt"), "a") as f:
-                    f.writelines(new_row)
+        logger.info("generating csv file")
+        df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
         return df
 
     def construct_query(self, doc, kw):
@@ -404,16 +420,22 @@ class LTR:
                         },
                     },
                     {
-                        "name": "title-phrase",
-                        "params": ["keywords"],
-                        "template_language": "mustache",
-                        "template": {"match_phrase": {"title": "{{keywords}}"}},
-                    },
-                    {
                         "name": "keyw_5",
                         "params": ["keywords"],
                         "template_language": "mustache",
                         "template": {"match": {"keyw_5": "{{keywords}}"}},
+                    },
+                    {
+                        "name": "topics",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match": {"topics_s": "{{keywords}}"}},
+                    },
+                    {
+                        "name": "entities",
+                        "params": ["keywords"],
+                        "template_language": "mustache",
+                        "template": {"match": {"top_entities_t": "{{keywords}}"}},
                     },
                     {
                         "name": "textlength",
@@ -503,19 +525,18 @@ class LTR:
                 ],
             }
         }
-        headers = {"Content-Type": "application/json"}
-        endpoint = ES_HOST + "/_ltr/_featureset/doc_features"
-        r = requests.post(endpoint, data=json.dumps(query), headers=headers)
+        endpoint = "/_ltr/_featureset/doc_features"
+        r = esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def post_init_ltr(self):
-        endpoint = ES_HOST + "/_ltr"
-        r = requests.put(endpoint)
+        endpoint = "/_ltr"
+        r = esu.put(endpoint)
         return r.content
 
     def delete_ltr(self, model_name="ltr_model"):
-        endpoint = ES_HOST + f"/_ltr/_model/{model_name}"
-        r = requests.delete(endpoint)
+        endpoint = f"/_ltr/_model/{model_name}"
+        r = esu.delete(endpoint)
         return r.content
 
     def normalize(self, arr, start=0, end=4):

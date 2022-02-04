@@ -1,13 +1,13 @@
 from datetime import datetime
 from os import environ
 import os
-from gamechangerml import REPO_PATH
+from gamechangerml import REPO_PATH, DATA_PATH, MODEL_PATH
 
 
 class DefaultConfig:
 
     DATA_DIR = os.path.join(REPO_PATH, "common/data/processed")
-    LOCAL_MODEL_DIR = os.path.join(REPO_PATH, "gamechangerml/models")
+    LOCAL_MODEL_DIR = MODEL_PATH
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
 
 
@@ -76,20 +76,21 @@ class EmbedderConfig:
     MODEL_ARGS = {
         "min_token_len": 10,
         "verbose": True,  # for creating LocalCorpus
-        "return_id": True  # for creating LocalCorpus
+        "return_id": True,  # for creating LocalCorpus
     }
-    FINETUNE = {"shuffle": True, "batch_size": 32,
-                "epochs": 3, "warmup_steps": 100}
+    FINETUNE = {"shuffle": True, "batch_size": 32, "epochs": 3, "warmup_steps": 100}
 
 
 class SimilarityConfig:
-    BASE_MODEL = "distilbart-mnli-12-3" 
+    BASE_MODEL = "distilbart-mnli-12-3"
 
 
 class QexpConfig:
     MODEL_ARGS = {
         "init": {  # args for creating QE object
-            "qe_files_dir": "gamechangerml/src/search/query_expansion",
+            "qe_files_dir": os.path.join(
+                REPO_PATH, "gamechangerml", "src", "search", "query_expansion"
+            ),
             "method": "emb",
         },
         "expansion": {  # configs for getting expanded terms
@@ -109,42 +110,49 @@ class QexpConfig:
 class ValidationConfig:
     DATA_ARGS = {
         # need to have validation data in here
-        "validation_dir": "gamechangerml/data/validation",
-        "evaluation_dir": "gamechangerml/data/evaluation",
+        "validation_dir": os.path.join(DATA_PATH, "validation"),
+        "evaluation_dir": os.path.join(DATA_PATH, "evaluation"),
         # location with smaller set of corpus JSONs
-        "test_corpus_dir": "gamechanger/data/test_corpus",
-        "squad": {"dev": "squad2.0/dev-v2.0.json", "train": "squad2.0/train-v2.0.json"},
+        "test_corpus_dir": "gamechangerml/test_corpus",
+        "squad": {
+            "dev": "original/squad2.0/dev-v2.0.json",
+            "train": "original/squad2.0/train-v2.0.json",
+        },
         "nli": {
-            "matched": "multinli_1.0/multinli_1.0_dev_matched.jsonl",
-            "mismatched": "multinli_1.0/multinli_1.0_dev_mismatched.jsonl",
+            "matched": "original/multinli_1.0/multinli_1.0_dev_matched.jsonl",
+            "mismatched": "original/multinli_1.0/multinli_1.0_dev_mismatched.jsonl",
         },
         "msmarco": {
-            "collection": "msmarco_1k/collection.json",
-            "queries": "msmarco_1k/queries.json",
-            "relations": "msmarco_1k/relations.json",
-            "metadata": "msmarco_1k/metadata.json",
+            "collection": "original/msmarco_1k/collection.json",
+            "queries": "original/msmarco_1k/queries.json",
+            "relations": "original/msmarco_1k/relations.json",
+            "metadata": "original/msmarco_1k/metadata.json",
         },
-        "question_gc": {"queries": "QA_domain_data.json"},
+        "question_gc": {"queries": "domain/question_answer/QA_domain_data.json"},
         "retriever_gc": {"gold_standard": "gold_standard.csv"},
-        "matamo_dir": "gamechangerml/data/validation/matamo",
-        "search_hist_dir": "gamechangerml/data/validation/search_history",
-        "qe_gc": "QE_domain.json",
-        "start_date": "2020-12-01", # earliest date to include search hist/feedback data from
-        "end_date": "2025-12-01", # last date to include search hist/feedback data from
+        "matamo_dir": os.path.join(DATA_PATH, "user_data", "matamo_feedback"),
+        "search_hist_dir": os.path.join(DATA_PATH, "user_data", "search_history"),
+        "qe_gc": "domain/query_expansion/QE_domain.json",
+    }
+
+    TRAINING_ARGS = {
+        "start_date": "2020-12-01",  # earliest date to include search hist/feedback data from
+        "end_date": "2025-12-01",  # last date to include search hist/feedback data from
         "exclude_searches": ["pizza", "shark"],
-        "gold_level": {
-            "min_correct_matches": 3,
-            "max_results": 7
-        },
-        "silver_level": {
-            "min_correct_matches": 2,
-            "max_results": 10
-        }
+        "min_correct_matches": {"gold": 3, "silver": 2, "any": 0},
+        "max_results": {"gold": 7, "silver": 10, "any": 100},
     }
 
 
 class TrainingConfig:
     DATA_ARGS = {
-        "training_data_dir": "gamechangerml/data/training",
+        "training_data_dir": os.path.join(DATA_PATH, "training"),
         "train_test_split_ratio": 0.8,
     }
+
+
+class TopicsConfig:
+
+    # topic models should be in folders named gamechangerml/models/topic_model_<date>
+    # this path will look for bigrams.phr, tfidf.model, tfidf_dictionary.dic in gamechangerml/models folder as a last resort
+    DATA_ARGS = {"LOCAL_MODEL_DIR": MODEL_PATH}

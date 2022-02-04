@@ -3,6 +3,8 @@ import wikipedia
 from datetime import date
 import pandas as pd
 import argparse
+import os
+from gamechangerml import DATA_PATH
 
 def lookup_wiki_summary(query):
     try:
@@ -22,7 +24,7 @@ if __name__ == '__main__':
     if args.filepath:
         entities_filepath = args.filepath
     else:
-        entities_filepath = '../data/combined_entities.csv'
+        entities_filepath = os.path.join(DATA_PATH, "features", "combined_entities.csv")
     df = pd.read_csv(entities_filepath)
     df['information'] = df['entity_name'].apply(lambda x: lookup_wiki_summary(x))
     df['information_source'] = "Wikipedia"
