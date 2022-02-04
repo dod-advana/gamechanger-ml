@@ -16,6 +16,7 @@ import tqdm
 from time import sleep
 from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename, cos_sim
 from gamechangerml.src.utilities import utils as utils
+from gamechangerml.src.model_testing.metrics import reciprocal_rank_score, get_MRR
 from gamechangerml.api.utils.logger import logger
 from datetime import datetime
 from gamechangerml.api.utils import processmanager
@@ -94,6 +95,68 @@ class STFinetuner():
         self.epochs = epochs
         self.warmup_steps = warmup_steps
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def summarize_results(self, df, data_dir):
+
+        df["new_cos_sim"] = df["pair"].apply(lambda x: get_cos_sim(self.model, x))
+        df["change_cos_sim"] = df["new_cos_sim"] - df["original_cos_sim"]
+
+        ## save all results to CSV
+        df.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
+
+        queries = list(set(df['query']))
+        df['score'] = df['score'].apply(lambda x: int(x))
+            
+        def get_stats(df, query):
+        
+            mydict = {}
+            sub = df[df['query']==query].copy()
+            balance = sub['score'].value_counts().to_dict()
+            ## calculate original scores
+            sub = sub.sort_values(by = 'original_cos_sim', ascending = False)
+            original_RR = reciprocal_rank_score(list(sub['score']))
+
+            ## calculate new scores
+            sub = sub.sort_values(by = 'new_cos_sim', ascending = False)
+            new_RR = reciprocal_rank_score(list(sub['score']))
+
+            mydict["query"] = query
+            mydict["balance"] = balance
+            mydict["original_RR"] = original_RR
+            mydict["new_RR"] = new_RR
+
+            return mydict
+        
+        results_dict = {}
+        for q in queries:
+            results = get_stats(df, q)
+            results_dict[q] = results 
+        
+        summary = pd.DataFrame(results_dict)
+        
+        summary = summary.T.reset_index()
+        summary.drop(columns = 'index', inplace = True)
+        dev_only = summary[summary['balance']!={0:50}]
+        num_queries = dev_only.shape[0]
+        old_MRR = get_MRR(dev_only['original_RR'])
+        new_MRR = get_MRR(dev_only['new_RR'])
+        
+        logger.info(f"Number of unique queries tested: {str(num_queries)}")
+        logger.info(f"Old MRR: {str(old_MRR)}")
+        logger.info(f"New MRR: {str(new_MRR)}")
+        if new_MRR < old_MRR:
+            logger.warning("WARNING! Model did not improve MRR")
+            
+        summary.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
+        
+        ft_metadata = {
+            "date_finetuned": str(date.today()),
+            "data_dir": str(data_dir),
+            "old_MRR": str(old_MRR),
+            "new_MRR": str(new_MRR)
+        }
+
+        return ft_metadata
     
     def retrain(self, data_dir, testing_only, version):
 
@@ -135,8 +198,39 @@ class STFinetuner():
             self.model.save(self.model_save_path)
             logger.info("Finetuned model saved to {}".format(str(self.model_save_path)))
 
+            logger.info("*** Summarizing finetuning results ")
+            ## get new cosine sim
+            ft_metadata = self.summarize_results(df, data_dir)
+
+            ## save metadata file
+            ft_metadata_path = os.path.join(data_dir, timestamp_filename("finetuning_metadata", ".json"))
+            with open(ft_metadata_path, "w") as outfile:
+                json.dump(ft_metadata, outfile)
+
+            logger.info("Metadata saved to {}".format(ft_metadata_path))
+
+            evals_dir = os.path.join(self.model_save_dir, "evals_gc")
+            if not os.path.isdir(evals_dir):
+                os.mkdir(os.path.join(evals_dir))
+            ft_metadata_path = os.path.join(evals_dir, timestamp_filename("finetuning_evals", ".json"))
+            with open(ft_metadata_path, "w") as outfile:
+                json.dump(ft_metadata, outfile)
+            
+            logger.info("Metadata saved to {}".format(ft_metadata_path))
+            
             # when not testing only, save to S3
             if not testing_only:
+                logger.info("Saving data to S3...")
+                s3_path = os.path.join(S3_DATA_PATH, f"{version}")
+                logger.info(f"****    Saving new data files to S3: {s3_path}")
+                dst_path = data_dir + ".tar.gz"
+                model_name = datetime.now().strftime("%Y%m%d")
+                logger.info("*** Attempting to save data tar")
+                utils.create_tgz_from_dir(data_dir, dst_path)
+                logger.info("*** Attempting to upload data to s3")
+                utils.upload(s3_path, dst_path, "data", model_name)
+
+                logger.info("Saving model to S3...")
                 dst_path = self.model_save_path + ".tar.gz"
                 utils.create_tgz_from_dir(src_dir=self.model_save_path, dst_archive=dst_path)
                 model_id = self.model_save_path.split('_')[1]
@@ -147,54 +241,8 @@ class STFinetuner():
                 utils.upload(s3_path, dst_path, "transformers", model_id)
                 logger.info(f"*** Saved model to S3: {s3_path}")
 
-            logger.info("*** Making finetuning results csv")
-            ## get new cosine sim
-            df["new_cos_sim"] = df["pair"].apply(lambda x: get_cos_sim(self.model, x))
-            df["change_cos_sim"] = df["new_cos_sim"] - df["original_cos_sim"]
-
-            ## save all results to CSV
-            df.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
-
-            ## create training metadata
-            positive_change_train = df[(df["score"]==1.0) & (df["label"]=="train")]["change_cos_sim"].median()
-            negative_change_train = df[(df["score"]==-1.0) & (df["label"]=="train")]["change_cos_sim"].median()
-            neutral_change_train = df[(df["score"]==0.0) & (df["label"]=="train")]["change_cos_sim"].median() 
-            positive_change_test = df[(df["score"]==1.0) & (df["label"]=="test")]["change_cos_sim"].median()
-            negative_change_test = df[(df["score"]==-1.0) & (df["label"]=="test")]["change_cos_sim"].median()
-            neutral_change_test = df[(df["score"]==0.0) & (df["label"]=="test")]["change_cos_sim"].median() 
-
-            ft_metadata = {
-                "date_finetuned": str(date.today()),
-                "data_dir": str(data_dir),
-                "positive_change_train": positive_change_train,
-                "negative_change_train": negative_change_train,
-                "neutral_change_train": neutral_change_train,
-                "positive_change_test": positive_change_test,
-                "negative_change_test": negative_change_test,
-                "neutral_change_test": neutral_change_test
-            }
-
-            ## save metadata file
-            ft_metadata_path = os.path.join(data_dir, timestamp_filename("finetuning_metadata", ".json"))
-            with open(ft_metadata_path, "w") as outfile:
-                json.dump(ft_metadata, outfile)
-
-            logger.info("Metadata saved to {}".format(ft_metadata_path))
-            logger.info(str(ft_metadata))
-
-            # when not testing only, save to S3
-            if not testing_only:
-                s3_path = os.path.join(S3_DATA_PATH, f"{version}")
-                logger.info(f"****    Saving new data files to S3: {s3_path}")
-                dst_path = data_dir + ".tar.gz"
-                model_name = datetime.now().strftime("%Y%m%d")
-                logger.info("*** Attempting to save data tar")
-                utils.create_tgz_from_dir(data_dir, dst_path)
-                logger.info("*** Attempting to upload data to s3")
-                utils.upload(s3_path, dst_path, "data", model_name)
-
             return ft_metadata
         
         except Exception as e:
             logger.warning("Could not complete finetuning")
-            logger.error(e)
+            logger.error(e, exc_info=True)
