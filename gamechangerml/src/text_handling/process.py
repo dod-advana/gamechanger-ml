@@ -1,6 +1,5 @@
 from gensim.parsing.preprocessing import STOPWORDS
 from gensim.utils import simple_preprocess
-from gamechangerml.src.utilities.text_utils import simple_clean
 
 from transformers import BertTokenizer
 

@@ -1,8 +1,6 @@
 import os
 import json
 from datetime import date
-from pickle import NONE
-from sys import exc_info
 from typing import List, Union, Tuple, Dict
 from gamechangerml.src.model_testing.validation_data import IntelSearchData
 from gamechangerml.configs.config import ValidationConfig

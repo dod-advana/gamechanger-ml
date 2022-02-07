@@ -3,7 +3,7 @@ import json
 
 # import pandas as pd
 from gensim.models.doc2vec import TaggedDocument
-from gamechangerml.src.text_handling.process import preprocess 
+from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils import processmanager
 from tqdm import tqdm
 
