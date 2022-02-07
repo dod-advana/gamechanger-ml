@@ -32,6 +32,7 @@ RUN dnf install -y \
         libomp-devel \
         openblas \
         cairo \
+        cryptsetup-libs \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
