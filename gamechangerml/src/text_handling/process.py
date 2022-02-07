@@ -35,6 +35,7 @@ def preprocess(
 
     return tokens
 
+
 def topic_processing(text: str, phrase_model: object):
     """
     topic_processing - simple preprocessing model to be used in conjunction with the TF-iDF topic model
