@@ -24,6 +24,7 @@ RUN dnf install -y \
         libomp \
         libomp-devel \
         openblas \
+        cryptsetup-libs \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
