@@ -1,8 +1,4 @@
-from ast import parse
-from ftplib import parse150
 import random
-from sys import exc_info
-import torch
 import pandas as pd
 import os
 import json
@@ -51,14 +47,13 @@ def get_sample_paragraphs(pars, par_limit=100, min_length=150):
     
     return collected_pars
 
-def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, nlp, min_score: float=0.60) -> List[Dict[str,str]]:
+def get_best_paragraphs(query: str, doc_id: str, nlp, n_returns, min_score: float=0.60) -> List[Dict[str,str]]:
     """Retrieves the best paragraphs for expected doc using similarity model
     Args:
         data [pd.DataFrame]: data df with processed text at paragraph_id level for sent_index
         query [str]: query
         doc_id [str]: doc_id of the expected document to show up with the query
-        sim: SimilarityRanker class
-        n_matching [int]: number of matching paragraphs to retrieve for the expected doc
+        nlp: spacy nlp model for similarity reranking
     Returns:
         [List[Dict[str,str]]]: List of dictionaries of paragraph matches
     """
@@ -70,10 +65,9 @@ def get_best_paragraphs(data: pd.DataFrame, query: str, doc_id: str, nlp, min_sc
 
     json = open_json(doc_id + '.json', CORPUS_DIR)
     paragraphs = json['paragraphs']
-    sents = get_sample_paragraphs(paragraphs)[:50] # get top 50 paragraphs
+    sents = get_sample_paragraphs(paragraphs)[:n_returns] # get top n_returns
     for sent in sents:
         processed = ' '.join(simple_preprocess(sent['text'], min_len=2, max_len=100))
-        logger.info(f"NEW PARAGRAPH POST-GENSIM: {processed}")
         pars.append({"id": sent["id"], "text": processed})
 
     ranked = []
@@ -267,6 +261,7 @@ def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, s
 def collect_matches(
     data: pd.DataFrame, 
     nlp,
+    n_returns,
     relations: Dict[str, str],
     queries: Dict[str, str],
     collection: Dict[str, str],
@@ -275,12 +270,11 @@ def collect_matches(
     """Gets matching paragraphs for each query/docid pair
     Args:
         data [pd.DataFrame]: data df with processed text at paragraph_id level for sent_index
-        sim: SimilarityRanker class
+        nlp: spacy nlp model for sim model reranking
         relations [Dict[str, str]]: dictionary of query:doc matches from intelligent search data
         queries [Dict[str, str]]: dictionary of query ids : query text from intelligent search data
         collection [Dict[str, str]]: dictionary of match ids : match text (doc ids) from intelligent search data
         label [int]: label to assign paragraphs (1=correct, 0=neutral, -1=confirmed nonmatch)
-        n_matching [int]: number of matching paragraphs to retrieve for the expected doc
     Returns:
         [Tuple[Dict[str, str]]]: one dictionary of found search pairs, one dictionary of notfound search pairs
     """
@@ -295,7 +289,7 @@ def collect_matches(
             doc = collection[k]
             uid = str(i) + '_' + str(k) # backup UID, overwritten if there are results
             try:
-                matching = get_best_paragraphs(data, query, doc, nlp)
+                matching = get_best_paragraphs(data, query, doc, nlp, n_returns)
                 for match in matching:
                     uid =  str(i) + '_' + str(match['id'])
                     text = ' '.join(match['text'].split(' ')[:400]) # truncate to 400 tokens
@@ -367,7 +361,6 @@ def get_all_single_matches():
 def make_training_data(
     index_path: Union[str, os.PathLike],
     n_returns: int,
-    n_matching: int,
     level: str, 
     update_eval_data: bool, 
     retriever=None,
@@ -380,7 +373,6 @@ def make_training_data(
     Args:
         index_path [str|os.PathLike]: path to the sent index for retrieving the training data (should be most recent index)
         n_returns [int]: number of non-matching paragraphs to retrieve for each query
-        n_matching [int]: number of matching paragraphs to retrieve for the expected doc
         level [str]: level of eval tier to use for training data (options: ['all', 'silver', 'gold'])
         update_eval_data [bool]: whether or not to update the eval data before making training data
         sim_model_name [str]: name of sim model for loading SimilarityRanker
@@ -440,7 +432,7 @@ def make_training_data(
     try:
         correct_found, correct_notfound = collect_matches(
         data=data, queries=intel['queries'], collection=intel['collection'],
-        relations=intel['correct'], label=1, nlp = nlp)
+        relations=intel['correct'], label=1, nlp = nlp, n_returns=n_returns)
         logger.info(f"---Number of correct query/result pairs that were not found: {str(len(correct_notfound))}")
     except Exception as e:
         logger.warning(e)
@@ -448,7 +440,7 @@ def make_training_data(
     try:
         incorrect_found, incorrect_notfound = collect_matches(
         data=data, queries=intel['queries'], collection=intel['collection'],
-        relations=intel['incorrect'], label=-1, nlp = nlp)
+        relations=intel['incorrect'], label=-1, nlp = nlp, n_returns=n_returns)
         logger.info(f"---Number of incorrect query/result pairs that were not found: {str(len(incorrect_notfound))}")
     except Exception as e:
         logger.warning(e)
@@ -495,5 +487,5 @@ def make_training_data(
 if __name__ == '__main__':
 
     make_training_data(
-        index_path="gamechangerml/models/sent_index_20220103", n_returns=50, n_matching=3, level="silver", 
+        index_path="gamechangerml/models/sent_index_20220103", n_returns=50, level="silver", 
         update_eval_data=True)
