@@ -343,27 +343,30 @@ class LTR:
         returns:
             outputs a file
         """
-        print(df)
-        ltr_log = self.query_es_fts(df)
-        vals = self.process_ltr_log(ltr_log)
-        ft_df = pd.DataFrame(
-            vals,
-            columns=[
-                "title",
-                "keyw_5",
-                "topics",
-                "entities",
-                "textlength",
-                "paragraph",
-                "popscore",
-                "paragraph-phrase",
-            ],
-        )
-        df.reset_index(inplace=True)
-        df = pd.concat([df, ft_df], axis=1)
+        df = pd.DataFrame()
+        try:
+            ltr_log = self.query_es_fts(df)
+            vals = self.process_ltr_log(ltr_log)
+            ft_df = pd.DataFrame(
+                vals,
+                columns=[
+                    "title",
+                    "keyw_5",
+                    "topics",
+                    "entities",
+                    "textlength",
+                    "paragraph",
+                    "popscore",
+                    "paragraph-phrase",
+                ],
+            )
+            df.reset_index(inplace=True)
+            df = pd.concat([df, ft_df], axis=1)
 
-        logger.info("generating csv file")
-        df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
+            logger.info("generating csv file")
+            df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
+        except Exception as e:
+            logger.error(e)
         return df
 
     def construct_query(self, doc, kw):
