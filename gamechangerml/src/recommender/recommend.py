@@ -10,8 +10,10 @@ from gamechangerml.api.utils.logger import logger
 from gamechangerml import DATA_PATH, REPO_PATH
 
 CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
-corpus_list = [i.strip('.json').strip().lstrip() for i in os.listdir(
-    CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, i))]
+# corpus_list = [i.strip('.json').strip().lstrip() for i in os.listdir(
+#    CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, i))]
+corpus_list = ["Title 10", "Title 1" "Title 14",
+               "DI-MGMT-82160 Base Document 2017-10-02", "OPNAVNOTE 5450.4102"]
 
 
 def in_corpus(filename: str, corpus_list: List[str]) -> bool:
@@ -82,7 +84,6 @@ class Recommender:
         Gets similar docs by filename up to the limit.
         When sample=True and filename=None, creates random search for testing.
         '''
-
         if not filenames and sample:
             filename = random.choice(corpus_list)
             logger.info(f" ****    RANDOM SAMPLE: {filename}")
