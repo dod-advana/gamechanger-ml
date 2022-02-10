@@ -343,7 +343,6 @@ class LTR:
         returns:
             outputs a file
         """
-        df = pd.DataFrame()
         try:
             ltr_log = self.query_es_fts(df)
             vals = self.process_ltr_log(ltr_log)
