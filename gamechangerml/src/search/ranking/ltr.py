@@ -366,7 +366,7 @@ class LTR:
             df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
         except Exception as e:
             logger.error(e)
-            logger.info("LTR - Failed in generating feature text file"
+            logger.info("LTR - Failed in generating feature text file")
         return df
 
     def construct_query(self, doc, kw):
@@ -376,7 +376,7 @@ class LTR:
             kw: keyword to search on
         returns: query
         """
-        query={
+        query = {
             "_source": ["filename", "fields"],
             "query": {
                 "bool": {
@@ -405,7 +405,7 @@ class LTR:
 
     def post_features(self):
         """post features: post features to es"""
-        query={
+        query = {
             "featureset": {
                 "name": "doc_features",
                 "features": [
@@ -528,18 +528,18 @@ class LTR:
                 ],
             }
         }
-        endpoint="/_ltr/_featureset/doc_features"
-        r=esu.post(endpoint, data=json.dumps(query))
+        endpoint = "/_ltr/_featureset/doc_features"
+        r = esu.post(endpoint, data=json.dumps(query))
         return r.content
 
     def post_init_ltr(self):
-        endpoint="/_ltr"
-        r=esu.put(endpoint)
+        endpoint = "/_ltr"
+        r = esu.put(endpoint)
         return r.content
 
     def delete_ltr(self, model_name="ltr_model"):
-        endpoint=f"/_ltr/_model/{model_name}"
-        r=esu.delete(endpoint)
+        endpoint = f"/_ltr/_model/{model_name}"
+        r = esu.delete(endpoint)
         return r.content
 
     def normalize(self, arr, start=0, end=4):
@@ -550,7 +550,7 @@ class LTR:
             end: ending number integer
         returns: normalized array
         """
-        arr=np.log(arr)
-        width=end - start
-        res=(arr - arr.min()) / (arr.max() - arr.min()) * width + start
+        arr = np.log(arr)
+        width = end - start
+        res = (arr - arr.min()) / (arr.max() - arr.min()) * width + start
         return res
