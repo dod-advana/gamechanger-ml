@@ -90,7 +90,8 @@ def get_lg_vectors():
 
     """
     try:
-        c = _set_nlp("spacy-large", disable=["ner", "parser", "tagger"])
+        c = _set_nlp(
+            "spacy-large", disable=["ner", "parser", "tagger", "lemmatizer"])
         return c.config["nlp"]
     except ValueError as e:
         logger.exception("{}: {}".format(type(e), str(e)), exc_info=True)
