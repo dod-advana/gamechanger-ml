@@ -317,6 +317,8 @@ async def get_current_models():
         "sentence_index": SENT_INDEX_PATH.value,
         "qexp_model": QEXP_MODEL_NAME.value,
         "qa_model": latest_qa_model.value,
+        "jbook_model": QEXP_JBOOK_MODEL_NAME.value,
+        "wordsim_model": WORD_SIM_MODEL.value
     }
 
 
