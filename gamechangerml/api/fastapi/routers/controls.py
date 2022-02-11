@@ -303,9 +303,9 @@ async def files_in_corpus(response: Response):
     return json.dumps(number_files)
 
 
-@router.get("/getCurrentTransformer")
-async def get_trans_model():
-    """get_trans_model - endpoint for current transformer
+@router.get("/getLoadedModels")
+async def get_current_models():
+    """get_current_models - endpoint for current models
     Args:
     Returns:
         dict of model name
