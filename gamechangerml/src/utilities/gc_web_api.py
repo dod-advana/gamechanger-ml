@@ -33,13 +33,16 @@ class GCWebClient:
             "X-UA-SIGNATURE":hash,
             "SSL_CLIENT_S_DN_CN":"ml-api",
         }
+    def getHash(self,endpoint):
+        h = hmac.new(self.token.encode(), digestmod=hashlib.sha256)
+        h.update(endpoint.encode())
+        hash = base64.b64encode(h.digest())
+        return hash
 
     def getSearchMappings(self, daysBack=3):
         #endpoint needs to be hashed before adding query params since thats how the web backend calculates the hash
         endpoint = f"/api/gameChanger/admin/getSearchPdfMapping"
-        h = hmac.new(self.token.encode(), digestmod=hashlib.sha256)
-        h.update(endpoint.encode())
+        hash = self.getHash(endpoint)
         endpoint += f'?daysBack={daysBack}'
-        hash = base64.b64encode(h.digest())
         r = requests.get(self.getURL + endpoint, headers=self.getHeader(hash))
         return r.content
