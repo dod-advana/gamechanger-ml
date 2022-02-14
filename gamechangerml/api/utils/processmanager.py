@@ -9,6 +9,7 @@ delete_corpus = "corpus: delete_corpus"
 s3_file_download = "s3: file_download"
 s3_dependency = "s3: dependency_download"
 loading_corpus = "training: load_corpus"
+loading_data = "training: load_data"
 training = "training: train_model"
 reloading = "models: reloading_models"
 ltr_creation = "models: ltr_creation"
@@ -31,6 +32,7 @@ try:
         topics_creation: False,
         s3_file_download: False,
         s3_dependency: False,
+        loading_data: False
 
     }
 
