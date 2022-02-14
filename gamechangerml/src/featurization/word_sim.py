@@ -11,8 +11,9 @@ class WordSim:
         self.model_dir = model_dir
         try:
             self.model = gensim.models.KeyedVectors.load_word2vec_format(
-                self.model_dir)
+                self.model_dir, mmap='r')
         except Exception as e:
+            print(e)
             self.model = None
             print("Cannot load pretrained vector for Word Similarity")
 

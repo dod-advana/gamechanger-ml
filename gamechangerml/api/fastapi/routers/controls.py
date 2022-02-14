@@ -80,10 +80,12 @@ def get_downloaded_models_list():
     }
     """
     qexp_list = {}
+    jbook_qexp_list = {}
     sent_index_list = {}
     transformer_list = {}
     topic_models = {}
     ltr_list = {}
+    # QEXP MODEL PATH
     try:
         for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
             if ("qexp_" in f) and ("tar" not in f):
@@ -96,6 +98,25 @@ def get_downloaded_models_list():
                     qexp_list[f] = json.load(meta_file)
                     qexp_list[f]["evaluation"] = {}
                     qexp_list[f]["evaluation"] = collect_evals(
+                        os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
+                    )
+                    meta_file.close()
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get QEXP model path")
+    # JBOOK QEXP
+    try:
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("jbook_qexp_" in f) and ("tar" not in f):
+                jbook_qexp_list[f] = {}
+                meta_path = os.path.join(
+                    Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json"
+                )
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    jbook_qexp_list[f] = json.load(meta_file)
+                    jbook_qexp_list[f]["evaluation"] = {}
+                    jbook_qexp_list[f]["evaluation"] = collect_evals(
                         os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
                     )
                     meta_file.close()
@@ -121,7 +142,7 @@ def get_downloaded_models_list():
                     config_file.close()
     except Exception as e:
         logger.error(e)
-        logger.info("Cannot get TRANSFORMER model path")
+        logger.info("Cannot get JBook model path")
     # SENTENCE INDEX
     # get largest file name with sent_index prefix (by date)
     try:
@@ -195,6 +216,7 @@ def get_downloaded_models_list():
         "transformers": transformer_list,
         "sentence": sent_index_list,
         "qexp": qexp_list,
+        "jbook_qexp": jbook_qexp_list,
         "topic_models": topic_models,
         "ltr": ltr_list,
     }
@@ -318,6 +340,7 @@ async def get_current_models():
         "qexp_model": QEXP_MODEL_NAME.value,
         "qa_model": latest_qa_model.value,
         "jbook_model": QEXP_JBOOK_MODEL_NAME.value,
+        "topic_model": TOPICS_MODEL.value,
         "wordsim_model": WORD_SIM_MODEL.value
     }
 
@@ -488,6 +511,18 @@ async def reload_models(model_dict: dict, response: Response):
                     )
                     # uses QEXP_MODEL_NAME by default
                     logger.info("Attempting to load QE")
+                    MODELS.initQE(qexp_name)
+                    QEXP_MODEL_NAME.value = qexp_name
+                    progress += 1
+                    processmanager.update_status(
+                        processmanager.reloading, progress, total
+                    )
+                if "jbook_qexp" in model_dict:
+                    qexp_name = os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["jbook_qexp"]
+                    )
+                    # uses QEXP_MODEL_NAME by default
+                    logger.info("Attempting to load Jbook QE")
                     MODELS.initQE(qexp_name)
                     QEXP_MODEL_NAME.value = qexp_name
                     progress += 1
