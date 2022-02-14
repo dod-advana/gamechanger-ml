@@ -31,7 +31,7 @@ class GCWebClient:
     def getHeader(self,hash):
         return {
             "X-UA-SIGNATURE":hash,
-            "SSL_CLIENT_S_DN_CN":"ml-api"
+            "SSL_CLIENT_S_DN_CN":"ml-api",
         }
 
     def getSearchMappings(self, daysBack=3):

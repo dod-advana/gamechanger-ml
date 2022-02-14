@@ -245,9 +245,3 @@ def unquoted(term):
         return term[1:-1]
     else:
         return term
-
-@router.get('/testExternal', status_code=200)
-async def testExtRequest(response: Response) -> dict:
-    gcClient = gc_web_api.GCWebClient()
-    mappings = gcClient.getSearchMappings(daysBack=10)
-    return json.loads(mappings)
