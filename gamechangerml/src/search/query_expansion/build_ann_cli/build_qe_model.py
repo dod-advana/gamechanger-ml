@@ -47,10 +47,8 @@ from gamechangerml.src.utilities.text_generators import gen_json, child_doc_gen
 from gamechangerml.src.utilities.text_utils import simple_clean
 from gamechangerml.src.utilities.timer import Timer
 
-# from gamechangerml import MODEL_PATH, DATA_PATH
-# FEATURES_DATA_PATH = os.path.join(DATA_PATH, "features")
-MODEL_PATH = "/Users/austinmishoe/bah/advana/gamechanger-ml/gamechangerml/models"
-FEATURES_DATA_PATH = "/Users/austinmishoe/bah/advana/gamechanger-ml/gamechangerml/data/features"
+from gamechangerml import DATA_PATH, MODEL_PATH
+FEATURES_DATA_PATH = os.path.join(DATA_PATH, "features")
 logger = logging.getLogger(__name__)
 
 empty_dict = dict()
@@ -195,21 +193,24 @@ def main(
         logger.info("       items to index : {:9,d}".format(len(vec_dict)))
         vocab_map, ann_index = build_ann_index(nlp, vec_dict)
         vocab_map = list(vocab_map)
+        ## Merge in word similarity vocab/vectors to ann index
         if merge_word_sim:
             try:
                 from gamechangerml.src.featurization.word_sim import WordSim
-                ## ToDo: update pathing?
-                word_sim = WordSim(os.path.join(MODEL_PATH,"wordsim_20220214","wiki-news-300d-1M.vec"))
+                word_sim = WordSim(os.path.join(MODEL_PATH,"transformers","wiki-news-300d-1M.bin"))
                 word_sim_text_vec_dict = dict(zip(word_sim.model.index_to_key,
                                                 word_sim.model.vectors))
+                logger.info(f"Attempting to add in {len(word_sim.model.index_to_key)} total vocab/vectors from the "
+                            f"word similarity model")
                 current_idx = len(vocab_map)
                 for text, vec in word_sim_text_vec_dict.items():
                     ann_index.add_item(current_idx, vec)
                     vocab_map.append(text)
                     current_idx+=1
+                logger.info("Successfully added in word similarity results to ann index")
             except Exception as e:
                 logger.error(f"Exception thrown when attempting to merge in word similarity results: {e}, saving ANNOY "
-                             f"index without word sim included")
+                             f"index without word similarity included")
 
         with Timer():
             logger.info("building index...")
