@@ -640,7 +640,6 @@ def finetune_sentence(model_dict):
     except:
         testing_only = False
     args = {
-        "batch_size": model_dict["batch_size"],
         "epochs": model_dict["epochs"],
         "warmup_steps": model_dict["warmup_steps"],
         "testing_only": testing_only,
