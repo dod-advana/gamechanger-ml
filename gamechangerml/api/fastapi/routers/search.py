@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Response, status
 import time
+import requests
+import base64
+import hashlib
 
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.src.featurization.keywords.extract_keywords import get_keywords
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.fastapi.version import __version__
+from gamechangerml.src.utilities import gc_web_api
 
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
 # from gamechangerml.src.featurization.summary import GensimSumm
