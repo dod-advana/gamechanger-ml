@@ -518,21 +518,21 @@ async def reload_models(model_dict: dict, response: Response):
                         processmanager.reloading, progress, total
                     )
                 if "jbook_qexp" in model_dict:
-                    qexp_name = os.path.join(
+                    jbook_qexp_name = os.path.join(
                         Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["jbook_qexp"]
                     )
                     # uses QEXP_MODEL_NAME by default
                     logger.info("Attempting to load Jbook QE")
-                    MODELS.initQE(qexp_name)
-                    QEXP_MODEL_NAME.value = qexp_name
+                    MODELS.initQEJBook(jbook_qexp_name)
+                    QEXP_JBOOK_MODEL.value = jbook_qexp_name
                     progress += 1
                     processmanager.update_status(
                         processmanager.reloading, progress, total
                     )
 
-                if "topics" in model_dict:
+                if "topic_models" in model_dict:
                     topics_name = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["topics"]
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["topic_models"]
                     )
 
                     logger.info("Attempting to load Topics")
@@ -708,7 +708,8 @@ def train_topics(model_dict):
     logger.info("Attempting to train topic model")
     logger.info(model_dict)
     args = {"sample_rate": model_dict["sample_rate"],
-            "upload": model_dict["upload"]}
+            "upload": model_dict["upload"],
+            "version": model_dict["version"]}
     pipeline.run(
         build_type=model_dict["build_type"],
         run_name=datetime.now().strftime("%Y%m%d"),

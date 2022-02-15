@@ -570,9 +570,8 @@ class Pipeline:
         except Exception as e:
             logger.error("Could not create LTR")
 
-    def create_topics(self, sample_rate=None, upload=False, corpus_dir=CORPUS_DIR):
+    def create_topics(self, sample_rate=None, upload=False, corpus_dir=CORPUS_DIR, version="v2"):
         try:
-            version = "v2"
             model_id = datetime.now().strftime("%Y%m%d%H%M%S")
             model_dir = DefaultConfig.LOCAL_MODEL_DIR
 
