@@ -44,7 +44,7 @@ def get_model_paths():
         else:
             print("defaulting INDEX_PATH to qexp")
             QEXP_JBOOK_MODEL_PATH = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, "jbook_qexp_20211029"
+                Config.LOCAL_PACKAGED_MODELS_DIR, "jbook_qexp_20220131"
             )
     except Exception as e:
         logger.error(e)

@@ -11,31 +11,31 @@ function download_and_unpack_deps() {
 
   echo "Downloading Transformers Folder"
   echo "S3 MODEL PATH TRANSFORMERS: $S3_TRANS_MODEL_PATH"
-  aws s3 cp "$S3_TRANS_MODEL_PATH" "$models_dest_dir"
+  aws s3 cp "$S3_TRANS_MODEL_PATH" "$models_dest_dir" --no-progress
 
   echo "Downloading Sentence Index"
   echo "S3 MODEL PATH SENTENCE INDEX: $S3_SENT_INDEX_PATH"
-  aws s3 cp "$S3_SENT_INDEX_PATH" "$models_dest_dir"
+  aws s3 cp "$S3_SENT_INDEX_PATH" "$models_dest_dir" --no-progress
 
   echo "Downloading QE Model"
   echo "S3 QE MODEL: $S3_QEXP_PATH"
-  aws s3 cp "$S3_QEXP_PATH" "$models_dest_dir"
+  aws s3 cp "$S3_QEXP_PATH" "$models_dest_dir" --no-progress
 
   echo "Downloading JBOOK QE Model"
   echo "S3 JBOOK QE MODEL: $S3_QEXP_JBOOK_PATH"
-  aws s3 cp "$S3_QEXP_JBOOK_PATH" "$models_dest_dir"
+  aws s3 cp "$S3_QEXP_JBOOK_PATH" "$models_dest_dir" --no-progress
 
   echo "Downloading Topic Model"
   echo "S3 TOPIC MODEL: $S3_TOPICS_PATH"
-  aws s3 cp "$S3_TOPICS_PATH" "$models_dest_dir"
+  aws s3 cp "$S3_TOPICS_PATH" "$models_dest_dir" --no-progress
 
   echo "Downloading Data Folder"
   echo "DATA DIRECTORY: $S3_ML_DATA_PATH"
-  aws s3 cp "$S3_ML_DATA_PATH" "$data_dest_dir"
+  aws s3 cp "$S3_ML_DATA_PATH" "$data_dest_dir" --no-progress
 
   echo "Uncompressing all tar files in models"
   find "$models_dest_dir" -maxdepth 1 -type f -name "*.tar.gz" | while IFS=$'\n' read -r f; do
-    tar kxzvf "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C "$models_dest_dir"
+    tar kxzf "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C "$models_dest_dir"
   done
   # no longer pulling data files right now
   #echo "Uncompressing all tar files in data"
