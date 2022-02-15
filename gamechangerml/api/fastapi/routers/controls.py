@@ -743,6 +743,7 @@ async def train_model(model_dict: dict, response: Response):
             "sent_finetune": finetune_sentence,
             "eval": run_evals,
             "meta": update_metadata,
+            "topics": train_topics,
         }
         # Set the training method to be loaded onto the thread
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
