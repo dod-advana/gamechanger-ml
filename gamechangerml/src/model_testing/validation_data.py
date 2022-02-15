@@ -1,17 +1,13 @@
 import pandas as pd
 import numpy as np
-from gamechangerml.src.utilities.text_utils import (
-    normalize_answer,
-    normalize_query,
-    get_tokens,
-)
+from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, filter_title_queries
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.configs.config import ValidationConfig, TrainingConfig
+from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.api.utils.logger import logger
-from gamechangerml.src.utilities.es_utils import get_paragraph_results, connect_es
-from gamechangerml.src.utilities.test_utils import filter_date_range
+from gamechangerml.src.utilities.test_utils import filter_date_range, open_txt
+from gamechangerml import REPO_PATH
 
-ES_URL = "https://vpc-gamechanger-iquxkyq2dobz4antllp35g2vby.us-east-1.es.amazonaws.com"
+CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 
 
 class ValidationData:
@@ -419,18 +415,10 @@ class SearchHistory:
         df = self.history
         if self.start_date or self.end_date:
             df = filter_date_range(df, self.start_date, self.end_date)
-        # drop all rows where is no search
-        df.dropna(subset=["search"], inplace=True)
-        if self.exclude_searches:
-            logger.info(f"Excluding searches: {str(self.exclude_searches)}")
-            df = df[
-                ~df["search"].isin(self.exclude_searches)
-            ]  # remove searches we don't want to use
-        df.drop_duplicates(
-            subset=["idvisit", "document", "search"], inplace=True
-        )  # drop duplicates
-        df["source"] = "user_history"
-
+        df.dropna(subset = ['search'], inplace = True) # drop all rows where is no search
+        df.drop_duplicates(subset = ['idvisit', 'document', 'search'], inplace = True) # drop duplicates
+        df['source'] = 'user_history'
+        
         def clean_quot(string):
             return string.replace("&quot;", "'").replace("&#039;", "'").lower()
 
@@ -446,33 +434,20 @@ class SearchHistory:
             else:
                 return bool(set(string.lower().split()).intersection(question_words))
 
-        df.rename(
-            columns={
-                "documenttime": "date",
-                "search": "search_text",
-                "document": "title_returned",
-            },
-            inplace=True,
-        )
-        df["search_text"] = df["search_text"].apply(lambda x: clean_quot(x))
-        df["search_text_clean"] = df["search_text"].apply(
-            lambda x: normalize_query(x))
-        df = df[df["search_text_clean"] != ""].copy()
-        df.drop(
-            columns=["idvisit", "idaction_name", "search_cat", "searchtime"],
-            inplace=True,
-        )
-
-        matched = df[~df["title_returned"].isnull()].copy()
-        matched["correct_match"] = True
-        matched["title_returned"] = matched["title_returned"].apply(
-            lambda x: clean_doc(x)
-        )
-        # matched['is_question'] = matched['search'].apply(lambda x: is_question(x))
-
-        unmatched = df[df["title_returned"].isnull()].copy()
-        unmatched["correct_match"] = False
-
+        df.rename(columns = {'documenttime': 'date', 'search': 'search_text', 'document': 'title_returned'}, inplace = True)
+        df['search_text'] = df['search_text'].apply(lambda x: clean_quot(x))
+        df['search_text_clean'] = df['search_text'].apply(lambda x: normalize_query(x))
+        df['search_text_clean'].fillna('', inplace = True)
+        df = df[df['search_text_clean']!='']
+        df.drop(columns = ['idvisit', 'idaction_name', 'search_cat', 'searchtime'], inplace = True)
+        
+        matched = df[~df['title_returned'].isnull()].copy()
+        matched['correct_match'] = True
+        matched['title_returned'] = matched['title_returned'].apply(lambda x: clean_doc(x))
+        
+        unmatched = df[df['title_returned'].isnull()].copy()
+        unmatched['correct_match'] = False
+        
         return matched, unmatched
 
 
@@ -547,9 +522,16 @@ class QASearchData(SearchValidationData):
 
 class IntelSearchData(SearchValidationData):
     def __init__(
-        self, start_date, end_date, exclude_searches, min_correct_matches, max_results
-    ):
-
+        self, 
+        start_date, 
+        end_date,
+        exclude_searches,
+        min_correct_matches,
+        max_results,
+        filter_queries,
+        index_path
+        ):
+        
         super().__init__(start_date, end_date, exclude_searches)
         self.exclude_searches = exclude_searches
         self.data = pd.concat(
@@ -557,29 +539,30 @@ class IntelSearchData(SearchValidationData):
         ).reset_index()
         self.min_correct_matches = min_correct_matches
         self.max_results = max_results
-        (
-            self.queries,
-            self.collection,
-            self.all_relations,
-            self.correct,
-            self.incorrect,
-        ) = self.make_intel()
-
+        self.filter_queries = filter_queries
+        self.index_path = index_path
+        self.queries, self.collection, self.all_relations, self.correct, self.incorrect = self.make_intel()
+        
     def make_intel(self):
 
         intel = self.data
-        intel = intel[~intel["search_text"].isin(self.exclude_searches)]
+        
+        int_queries = set(intel['search_text_clean'])
 
-        int_queries = set(intel["search_text_clean"])
-        intel_search_queries = update_dictionary(
-            old_dict={}, new_additions=int_queries, prefix="S"
-        )
+        # if filter queries == True, remove queries that are titles/fuzzy match titles
+        if self.filter_queries:
+            docs = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
+            docs= [x.split('.pdf')[0] for x in docs]
+            remove = filter_title_queries(int_queries, docs)
+            self.exclude_searches.extend(remove)
+            logger.info(f"**** Removing {str(len(self.exclude_searches))} queries.")
+        int_queries = [i for i in int_queries if i not in self.exclude_searches]
 
-        int_docs = set(intel["title_returned"])
-        intel_search_results = update_dictionary(
-            old_dict={}, new_additions=int_docs, prefix="R"
-        )
-
+        intel_search_queries = update_dictionary(old_dict = {}, new_additions = int_queries, prefix ='S')
+        
+        int_docs = set(intel['title_returned'])
+        intel_search_results = update_dictionary(old_dict = {}, new_additions = int_docs, prefix ='R')
+        
         # map IDS back to dfs
         intel = map_ids(intel_search_queries, intel,
                         "search_text_clean", "key")

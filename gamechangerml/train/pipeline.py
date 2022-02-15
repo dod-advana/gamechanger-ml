@@ -156,13 +156,13 @@ class Pipeline:
         ),
         days: int = 80,
         prod_data_file=PROD_DATA_FILE,
-        n_returns: int = 15,
-        n_matching: int = 3,
-        level: str = "silver",
-        update_eval_data: bool = False,
+        n_returns: int=50,
+        n_matching: int=3,
+        level: str='silver',
+        update_eval_data: bool=False,
         retriever=None,
-        upload: bool = True,
-        version: str = "v1",
+        upload:bool=True,
+        version:str="v1"
     ) -> None:
         """
         create_metadata: combines datasets to create readable sets for ingest
@@ -189,27 +189,31 @@ class Pipeline:
         if "rank_features" in meta_steps:
             make_corpus_meta(corpus_dir, days, prod_data_file, upload)
         if "update_sent_data" in meta_steps:
-            make_training_data(
-                index_path, n_returns, n_matching, level, update_eval_data, retriever
-            )
+            try:
+                make_training_data(index_path, n_returns, n_matching, level, update_eval_data, retriever)
+            except Exception as e:
+                logger.warning(e, exc_info=True) 
         if upload:
-            s3_path = os.path.join(S3_DATA_PATH, f"{version}")
-            logger.info(f"****    Saving new data files to S3: {s3_path}")
-            model_name = datetime.now().strftime("%Y%m%d")
-            model_prefix = "data"
-            dst_path = DATA_PATH + model_name + ".tar.gz"
-            utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
-            utils.upload(s3_path, dst_path, model_prefix, model_name)
+            try:
+                s3_path = os.path.join(S3_DATA_PATH, f"{version}")
+                logger.info(f"****    Saving new data files to S3: {s3_path}")
+                model_name = datetime.now().strftime("%Y%m%d")
+                model_prefix = "data"
+                dst_path = DATA_PATH + model_name + ".tar.gz"
+                utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
+                utils.upload(s3_path, dst_path, model_prefix, model_name)
+            except Exception as e:
+                logger.warning(e, exc_info=True)
 
     def finetune_sent(
         self,
-        batch_size: int = 32,
-        epochs: int = 3,
-        warmup_steps: int = 100,
-        testing_only: bool = False,
-        version: str = "v5",
-    ) -> t.Dict[str, str]:
-        """finetune_sent: finetunes the sentence transformer - saves new model,
+        batch_size: int=32,
+        epochs: int=3,
+        warmup_steps: int=100,
+        testing_only: bool=False,
+        version: str="v100"
+    ) -> t.Dict[str,str]:
+        """finetune_sent: finetunes the sentence transformer - saves new model, 
            a csv file of old/new cos sim scores, and a metadata file.
         Args:
             batch_size [int]: batch_size
@@ -219,29 +223,33 @@ class Pipeline:
         Returns:
             metadata: meta information on finetuning
         """
-        model_load_path = os.path.join(
-            LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
-        )
-        model_id = datetime.now().strftime("%Y%m%d")
-        model_save_path = model_load_path + "_" + model_id
-        logger.info(
-            f"Setting {str(model_save_path)} as save path for new model")
-        data_path = get_most_recent_dir(
-            os.path.join(DATA_PATH, "training", "sent_transformer")
-        )
-        logger.info(f"Loading in domain data to finetune from {data_path}")
-        finetuner = STFinetuner(
-            model_load_path=model_load_path,
-            model_save_path=model_save_path,
-            shuffle=True,
-            batch_size=batch_size,
-            epochs=epochs,
-            warmup_steps=warmup_steps,
-        )
-        logger.info("Loaded finetuner class...")
-        logger.info(f"Testing only is set to: {testing_only}")
-
-        return finetuner.retrain(data_path, testing_only, version)
+        try:
+            model_load_path = os.path.join(
+                LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
+            )
+            model_id = datetime.now().strftime("%Y%m%d")
+            model_save_path = model_load_path + "_" + model_id
+            logger.info(
+                f"Setting {str(model_save_path)} as save path for new model")
+            data_path = get_most_recent_dir(os.path.join(DATA_PATH, "training", "sent_transformer"))
+            if not data_path:
+                quit()
+            logger.info(f"Loading in domain data to finetune from {data_path}")
+            finetuner = STFinetuner(
+                model_load_path=model_load_path,
+                model_save_path=model_save_path,
+                shuffle=True,
+                batch_size=batch_size,
+                epochs=epochs,
+                warmup_steps=warmup_steps,
+            )
+            logger.info("Loaded finetuner class...")
+            logger.info(f"Testing only is set to: {testing_only}")
+        
+            return finetuner.retrain(data_path, testing_only, version)
+        except Exception as e:
+            logger.warning("Could not finetune sentence model - pipeline")
+            logger.error(e, exc_info=True)
 
     def evaluate(
         self,

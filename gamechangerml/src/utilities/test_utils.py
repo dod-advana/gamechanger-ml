@@ -320,14 +320,18 @@ def filter_date_range(df, start_date, end_date):
     return subset
 
 def concat_csvs(directory):
-    '''Combines csvs in directory into one df; drops entirly null columns'''
+    '''Combines csvs in directory into one df; drops entirely null columns'''
     df = pd.DataFrame()
     logger.info(str(directory))
     csvs = [i for i in os.listdir(directory) if i.split('.')[-1]=='csv']
-    logger.info(f"CSVs: {str(csvs)}")
+    logger.info(f"Combining csvs: {str(csvs)}")
     for i in csvs:
-        f = pd.read_csv(os.path.join(directory, i))
-        df = pd.concat([df, f])
+        try:
+            f = pd.read_csv(os.path.join(directory, i))
+            df = pd.concat([df, f])
+        except Exception as e:
+            logger.warning(e)
+            pass
     return df
 
 def concat_matamo():
@@ -337,6 +341,9 @@ def concat_search_hist():
     return concat_csvs(SEARCH_HIST)
 
 def get_most_recent_dir(parent_dir):
-
+    
     subdirs = [os.path.join(parent_dir, d) for d in os.listdir(parent_dir) if os.path.isdir(os.path.join(parent_dir, d))]
-    return max(subdirs, key=os.path.getctime)
+    if len(subdirs) > 0:
+        return max(subdirs, key=os.path.getctime)
+    else:
+        logger.error("There are no subdirectories to retrieve most recent data from")
