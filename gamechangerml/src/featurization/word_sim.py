@@ -11,7 +11,7 @@ class WordSim:
         self.model_dir = model_dir
         try:
             self.model = gensim.models.KeyedVectors.load_word2vec_format(
-                self.model_dir, mmap='r')
+                self.model_dir, binary=True)
         except Exception as e:
             print(e)
             self.model = None
