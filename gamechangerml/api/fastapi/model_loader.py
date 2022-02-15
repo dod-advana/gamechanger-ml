@@ -193,7 +193,7 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(f"Loading Query Expansion Model from {model_path}")
+        logger.info(f"Loading Word Sim Model from {model_path}")
         try:
             if MODEL_LOAD_FLAG:
                 ModelLoader.__word_sim = WordSim(model_path)

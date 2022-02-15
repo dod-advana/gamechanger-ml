@@ -102,8 +102,9 @@ class QexpConfig:
         "bqe": {
             "num_trees": 125,
             "num_keywords": 2,
-            "ngram": (1, 2),
+            "ngram": (1, 3),
             "abbrv_file": None,
+            "merge_word_sim": True
         },
     }
 
