@@ -9,8 +9,7 @@ from gamechangerml.src.utilities.test_utils import (
     )
 from gamechangerml import DATA_PATH
 
-    
-def make_tiered_eval_data():
+def make_tiered_eval_data(index_path):
 
     if not os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")):
         os.mkdir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
@@ -26,6 +25,7 @@ def make_tiered_eval_data():
         start_date: str, 
         end_date: str, 
         exclude_searches: List[str], 
+        filter_queries: bool,
         save_dir: Union[str,os.PathLike]=save_dir) -> Tuple[Dict[str,str], Dict[str,str], Dict[str,str]]:
         """Makes eval data for each tier level using args from config.py and saves to save_dir
         Args:
@@ -39,7 +39,6 @@ def make_tiered_eval_data():
         Returns:
             [Tuple[Dict[str,str], Dict[str,str], Dict[str,str]]]: dictionaries of any, silver, and gold data
         """
-
         min_matches = min_correct_matches[level]
         max_res = max_results[level]
 
@@ -48,7 +47,9 @@ def make_tiered_eval_data():
                     end_date=end_date,
                     exclude_searches=exclude_searches,
                     min_correct_matches=min_matches,
-                    max_results=max_res
+                    max_results=max_res,
+                    filter_queries=filter_queries,
+                    index_path=index_path
                 )
 
         save_intel = {
@@ -69,7 +70,8 @@ def make_tiered_eval_data():
             "end_date": end_date,
             "exclude_searches": exclude_searches,
             "min_correct_matches": min_matches,
-            "max_results": max_res
+            "max_results": max_res,
+            "filter_queries": str(filter_queries)
         }
 
         save_intel = json.dumps(save_intel, cls=CustomJSONizer)
@@ -86,16 +88,19 @@ def make_tiered_eval_data():
 
     all_data = save_data(
         level='any',
+        filter_queries = False,
         **ValidationConfig.TRAINING_ARGS
         )
     
     silver_data = save_data(
         level='silver',
+        filter_queries = True,
         **ValidationConfig.TRAINING_ARGS
         )
     
     gold_data = save_data(
         level='gold',
+        filter_queries = False, # should use same (updated) exclude list of queries as silver_data
         **ValidationConfig.TRAINING_ARGS
         )
     

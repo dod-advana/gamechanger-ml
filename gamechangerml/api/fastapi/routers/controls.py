@@ -21,6 +21,7 @@ from gamechangerml.src.utilities.test_utils import (
     collect_evals,
     handle_sent_evals,
 )
+from gamechangerml import MODEL_PATH
 
 router = APIRouter()
 MODELS = ModelLoader()
@@ -736,6 +737,137 @@ async def train_model(model_dict: dict, response: Response):
     Returns:
     """
     try:
+        # Methods for all the different models we can train
+        def update_metadata(model_dict=model_dict):
+            logger.info("Attempting to update feature metadata")
+            pipeline = Pipeline()
+            model_dict["build_type"] = "meta"
+            try:
+                corpus_dir = model_dict["corpus_dir"]
+            except:
+                corpus_dir = CORPUS_DIR
+            try:
+                retriever = MODELS.sentence_searcher
+                logger.info("Using pre-loaded SentenceSearcher")
+            except:
+                retriever = None
+                logger.info("Setting SentenceSearcher to None")
+            try:
+                meta_steps = model_dict["meta_steps"]
+            except:
+                meta_steps = [
+                    "pop_docs",
+                    "combined_ents",
+                    "rank_features",
+                    "update_sent_data",
+                ]
+            try:
+                index_path = model_dict["index_path"]
+            except:
+                index_path = os.path.join(MODEL_PATH, "sent_index_20210715")
+            try:
+                update_eval_data = model_dict['update_eval_data']
+            except:
+                update_eval_data = False
+
+            args = {
+                "meta_steps": meta_steps,
+                "corpus_dir": corpus_dir,
+                "retriever": retriever,
+                "index_path": index_path ,
+                "update_eval_data": update_eval_data
+            }
+                
+            pipeline.run(
+                build_type=model_dict["build_type"],
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
+
+        def finetune_sentence(model_dict=model_dict):
+            logger.info("Attempting to finetune the sentence transformer")
+            try:
+                testing_only = model_dict["testing_only"]
+            except:
+                testing_only = False
+            args = {
+                "batch_size": 8,
+                "epochs": int(model_dict["epochs"]),
+                "warmup_steps": int(model_dict["warmup_steps"]),
+                "testing_only": bool(testing_only),
+            }
+            pipeline.run(
+                build_type="sent_finetune",
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
+
+        def train_sentence(model_dict=model_dict):
+            logger.info("Attempting to start sentence pipeline")
+            try:
+                corpus_dir = model_dict["corpus_dir"]
+            except:
+                corpus_dir = CORPUS_DIR
+            if not os.path.exists(corpus_dir):
+                logger.warning(
+                    f"Corpus is not in local directory {str(corpus_dir)}")
+                raise Exception("Corpus is not in local directory")
+            args = {
+                "corpus": corpus_dir,
+                "encoder_model": model_dict["encoder_model"],
+                "gpu": bool(model_dict["gpu"]),
+                "upload": bool(model_dict["upload"]),
+                "version": model_dict["version"],
+            }
+            logger.info(args)
+            pipeline.run(
+                build_type=model_dict["build_type"],
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
+
+        def train_qexp(model_dict=model_dict):
+            logger.info("Attempting to start qexp pipeline")
+            args = {
+                "model_id": model_dict["model_id"],
+                "validate": bool(model_dict["validate"]),
+                "upload": bool(model_dict["upload"]),
+                "version": model_dict["version"],
+            }
+            pipeline.run(
+                build_type=model_dict["build_type"],
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
+
+        def run_evals(model_dict=model_dict):
+            logger.info("Attempting to run evaluation")
+            args = {
+                "model_name": model_dict["model_name"],
+                "eval_type": model_dict["eval_type"],
+                "sample_limit": model_dict["sample_limit"],
+                "validation_data": model_dict["validation_data"],
+            }
+            pipeline.run(
+                build_type=model_dict["build_type"],
+                run_name=datetime.now().strftime("%Y%m%d"),
+                params=args,
+            )
+
+        # Create a mapping between the training methods and input from the api
+        training_switch = {
+            "sentence": train_sentence,
+            "qexp": train_qexp,
+            "sent_finetune": finetune_sentence,
+            "eval": run_evals,
+            "meta": update_metadata,
+        }
+        # Set the training method to be loaded onto the thread
+        if "build_type" in model_dict and model_dict["build_type"] in training_switch:
+            training_method = training_switch[model_dict["build_type"]]
+        else:  # PLACEHOLDER
+            model_dict["build_type"] = "sentence"
+            training_method = training_switch[model_dict["build_type"]]
 
         build_type = model_dict.get("build_type")
         training_method = training_switch.get(build_type)
