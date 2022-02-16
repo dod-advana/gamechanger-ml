@@ -6,7 +6,7 @@ from gamechangerml import REPO_PATH, DATA_PATH, MODEL_PATH
 
 class DefaultConfig:
 
-    DATA_DIR = os.path.join(REPO_PATH, "common/data/processed")
+    DATA_DIR = DATA_PATH
     LOCAL_MODEL_DIR = MODEL_PATH
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
 
@@ -78,7 +78,8 @@ class EmbedderConfig:
         "verbose": True,  # for creating LocalCorpus
         "return_id": True,  # for creating LocalCorpus
     }
-    FINETUNE = {"shuffle": True, "batch_size": 32, "epochs": 3, "warmup_steps": 100}
+    FINETUNE = {"shuffle": True, "batch_size": 32,
+                "epochs": 3, "warmup_steps": 100}
 
 
 class SimilarityConfig:

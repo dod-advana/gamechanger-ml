@@ -12,7 +12,7 @@ loading_corpus = "training: load_corpus"
 loading_data = "training: load_data"
 training = "training: train_model"
 reloading = "models: reloading_models"
-ltr_creation = "models: ltr_creation"
+ltr_creation = "training: ltr_creation"
 topics_creation = "models: topics_creation"
 
 running_threads = {}
@@ -45,7 +45,7 @@ if COMPLETED_PROCESS.value == None:
     COMPLETED_PROCESS.value = []
 
 
-def update_status(key, progress=0, total=100, message="", failed=False,thread_id="", completed_max = 20):
+def update_status(key, progress=0, total=100, message="", failed=False, thread_id="", completed_max=20):
 
     try:
         if progress == total or failed:
@@ -68,7 +68,7 @@ def update_status(key, progress=0, total=100, message="", failed=False,thread_id
                         del running_threads[tempProcess['thread_id']]
                 if not failed:
                     completed_list = COMPLETED_PROCESS.value
-                    if len(completed_list) == completed_max :
+                    if len(completed_list) == completed_max:
                         completed_list.pop(0)
                     completed_list.append(completed)
                     COMPLETED_PROCESS.value = completed_list
@@ -81,7 +81,7 @@ def update_status(key, progress=0, total=100, message="", failed=False,thread_id
             status = {"progress": progress, "total": total}
             with thread_lock:
                 status_dict = PROCESS_STATUS.value
-                
+
                 if key not in status_dict:
                     status['thread_id'] = thread_id
                     status_dict[key] = status
