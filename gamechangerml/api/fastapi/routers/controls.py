@@ -38,16 +38,19 @@ async def api_information():
         "API_Name": "GAMECHANGER ML API",
         "Version": __version__,
         "Elasticsearch host":  es.root_url,
-        "Elasticsearch status": get_es_status()
-    }
+        "Elasticsearch status": get_es_status()}
 
 
-async def get_es_status():
+def get_es_status():
+    status = "red"
     try:
-        status = es.get(es.root_url)
-        return status
+        res = es.get(es.root_url+"_cluster/health")
+        cont = json.loads(res.content)
+        status = cont['status']
     except ConnectionError as e:
         logger.warning(e)
+
+    return status
 
 
 @router.get("/getProcessStatus")
@@ -198,7 +201,8 @@ def get_downloaded_models_list():
                     )
                 ) as mf:
                     topic_models[topic_model_name] = json.load(mf)
-            except:
+            except Exception as e:
+                logger.error(e)
                 topic_models[topic_model_name] = {
                     "Error": "Failed to load metadata file for this model"
                 }
@@ -612,7 +616,7 @@ async def download_corpus(corpus_dict: dict, response: Response):
 
     # Methods for all the different models we can train
 
-def update_metadata(model_dict=model_dict):
+def update_metadata(model_dict):
     logger.info("Attempting to update feature metadata")
     pipeline = Pipeline()
     model_dict["build_type"] = "meta"
@@ -659,7 +663,7 @@ def update_metadata(model_dict=model_dict):
     )
 
 
-def finetune_sentence(model_dict=model_dict):
+def finetune_sentence(model_dict):
     logger.info("Attempting to finetune the sentence transformer")
     try:
         testing_only = model_dict["testing_only"]
