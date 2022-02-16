@@ -37,8 +37,8 @@ async def api_information():
     return {
         "API_Name": "GAMECHANGER ML API",
         "Version": __version__,
-        "Elasticsearch host":  es.root_url,
-        "Elasticsearch status": get_es_status()}
+        "Elasticsearch_Host":  es.root_url,
+        "Elasticsearch_Status": get_es_status()}
 
 
 def get_es_status():
