@@ -7,6 +7,7 @@ from gamechangerml import CORPUS_PATH
 
 # get environ vars
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
+ML_WEB_TOKEN = os.environ.get("ML_WEB_TOKEN", default="")
 
 MODEL_LOAD_FLAG = os.environ.get("MODEL_LOAD", default=True)
 if MODEL_LOAD_FLAG in ["False", "false", "0"]:
