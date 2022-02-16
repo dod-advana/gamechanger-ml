@@ -738,8 +738,7 @@ def train_topics(model_dict):
     logger.info("Attempting to train topic model")
     logger.info(model_dict)
     args = {"sample_rate": model_dict["sample_rate"],
-            "upload": model_dict["upload"],
-            "version": model_dict["version"]}
+            "upload": model_dict["upload"]}
     pipeline.run(
         build_type=model_dict["build_type"],
         run_name=datetime.now().strftime("%Y%m%d"),

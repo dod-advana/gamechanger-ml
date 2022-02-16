@@ -225,6 +225,7 @@ class Pipeline:
         Returns:
             metadata: meta information on finetuning
         """
+
         try:
             model_load_path = os.path.join(
                 LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
