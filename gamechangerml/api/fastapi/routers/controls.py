@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from gamechangerml import DATA_PATH
 from gamechangerml.src.utilities import utils
+from gamechangerml.src.utilities.es_utils import ESUtils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.api.fastapi.settings import *
@@ -28,15 +29,25 @@ MODELS = ModelLoader()
 ## Get Methods ##
 
 pipeline = Pipeline()
+es = ESUtils()
 
 
 @router.get("/")
 async def api_information():
     return {
-        "API": "FOR TRANSFORMERS",
         "API_Name": "GAMECHANGER ML API",
         "Version": __version__,
+        "Elasticsearch host":  es.root_url,
+        "Elasticsearch status": get_es_status()
     }
+
+
+async def get_es_status():
+    try:
+        status = es.get(es.root_url)
+        return status
+    except ConnectionError as e:
+        logger.warning(e)
 
 
 @router.get("/getProcessStatus")
@@ -51,7 +62,7 @@ async def get_process_status():
 def get_downloaded_data_list():
     """
     Gets a list of the data in the local data folder
-    Args: 
+    Args:
     Returns: dict {"dirs":[ array of dicts {"name":(name of file):"path":(base directory), "files":(arr of files in directory),"subdirectories":(arr of subdirectories)}]}
     """
     files = []
@@ -72,7 +83,7 @@ def get_downloaded_data_list():
 def get_downloaded_models_list():
     """
     Gets a list of the models in the local model folder
-    Args: 
+    Args:
     Returns:{
         "transformers": (list of transformers),
         "sentence": (list of sentence indexes),
@@ -483,7 +494,8 @@ async def s3_func(function, response: Response):
 async def reload_models(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
-        model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
+        model_dict: dict; {"sentence": "bert...",
+            "qexp": "bert...", "transformer": "bert..."}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -565,7 +577,8 @@ async def reload_models(model_dict: dict, response: Response):
 async def download_corpus(corpus_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
-        model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
+        model_dict: dict; {"sentence": "bert...",
+            "qexp": "bert...", "transformer": "bert..."}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -597,8 +610,9 @@ async def download_corpus(corpus_dict: dict, response: Response):
 # Methods for all the different models we can train
 # Defined outside the function so they arent recreated each time its called
 
+    # Methods for all the different models we can train
 
-def update_metadata(model_dict):
+def update_metadata(model_dict=model_dict):
     logger.info("Attempting to update feature metadata")
     pipeline = Pipeline()
     model_dict["build_type"] = "meta"
@@ -621,11 +635,23 @@ def update_metadata(model_dict):
             "rank_features",
             "update_sent_data",
         ]
+    try:
+        index_path = model_dict["index_path"]
+    except:
+        index_path = os.path.join(MODEL_PATH, "sent_index_20210715")
+    try:
+        update_eval_data = model_dict['update_eval_data']
+    except:
+        update_eval_data = False
+
     args = {
         "meta_steps": meta_steps,
         "corpus_dir": corpus_dir,
         "retriever": retriever,
+        "index_path": index_path,
+        "update_eval_data": update_eval_data
     }
+
     pipeline.run(
         build_type=model_dict["build_type"],
         run_name=datetime.now().strftime("%Y%m%d"),
@@ -633,16 +659,17 @@ def update_metadata(model_dict):
     )
 
 
-def finetune_sentence(model_dict):
+def finetune_sentence(model_dict=model_dict):
     logger.info("Attempting to finetune the sentence transformer")
     try:
         testing_only = model_dict["testing_only"]
     except:
         testing_only = False
     args = {
-        "epochs": model_dict["epochs"],
-        "warmup_steps": model_dict["warmup_steps"],
-        "testing_only": testing_only,
+        "batch_size": 8,
+        "epochs": int(model_dict["epochs"]),
+        "warmup_steps": int(model_dict["warmup_steps"]),
+        "testing_only": bool(testing_only),
     }
     pipeline.run(
         build_type="sent_finetune",
@@ -678,7 +705,6 @@ def train_sentence(model_dict):
 def train_qexp(model_dict):
     logger.info("Attempting to start qexp pipeline")
     args = {
-        "validate": bool(model_dict["validate"]),
         "upload": bool(model_dict["upload"]),
         "version": model_dict["version"],
     }
@@ -694,7 +720,7 @@ def run_evals(model_dict):
     args = {
         "model_name": model_dict["model_name"],
         "eval_type": model_dict["eval_type"],
-        "sample_limit": model_dict["sample_limit"],
+        "sample_limit": int(model_dict["sample_limit"]),
         "validation_data": model_dict["validation_data"],
     }
     pipeline.run(
