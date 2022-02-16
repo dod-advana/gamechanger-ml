@@ -212,6 +212,7 @@ class UpdatedGCRetrieverData(RetrieverGSData):
     ):
 
         super().__init__(validation_dir,  available_ids, gold_standard)
+        new_data = ""
         try:
             if data_path:  # if there is a path for data, use that
                 self.data_path = os.path.join(data_path, level)
@@ -228,7 +229,7 @@ class UpdatedGCRetrieverData(RetrieverGSData):
                 self.new_relations,
             ) = self.load_new_data()
             self.combine_in_domain()
-        except:
+        except Exception as e:
             logger.info(
                 f"Error getting data from {new_data}. Could not create UpdatedGCRetrieverData object."
             )
