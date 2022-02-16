@@ -44,10 +44,10 @@ async def api_information():
 def get_es_status():
     status = "red"
     try:
-        res = es.get(es.root_url+"_cluster/health")
+        res = es.get("http://localhost"+"_cluster/health", timeout=5)
         cont = json.loads(res.content)
         status = cont['status']
-    except ConnectionError as e:
+    except Exception as e:
         logger.warning(e)
 
     return status
