@@ -121,6 +121,7 @@ class MSMarcoData(ValidationData):
     def __init__(
         self,
         validation_dir=ValidationConfig.DATA_ARGS["validation_dir"],
+        user_dir=ValidationConfig.DATA_ARGS["user_dir"],
         queries=ValidationConfig.DATA_ARGS["msmarco"]["queries"],
         collection=ValidationConfig.DATA_ARGS["msmarco"]["collection"],
         relations=ValidationConfig.DATA_ARGS["msmarco"]["relations"],
@@ -145,7 +146,7 @@ class RetrieverGSData(ValidationData):
 
         super().__init__(validation_dir)
         self.samples = pd.read_csv(
-            os.path.join(self.validation_dir, gold_standard),
+            os.path.join(self.user_dir, gold_standard),
             names=["query", "document"],
         )
         self.queries, self.collection, self.relations = self.dictify_data(
