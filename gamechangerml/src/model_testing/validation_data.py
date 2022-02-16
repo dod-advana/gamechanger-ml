@@ -121,7 +121,6 @@ class MSMarcoData(ValidationData):
     def __init__(
         self,
         validation_dir=ValidationConfig.DATA_ARGS["validation_dir"],
-        user_dir=ValidationConfig.DATA_ARGS["user_dir"],
         queries=ValidationConfig.DATA_ARGS["msmarco"]["queries"],
         collection=ValidationConfig.DATA_ARGS["msmarco"]["collection"],
         relations=ValidationConfig.DATA_ARGS["msmarco"]["relations"],
@@ -142,11 +141,12 @@ class MSMarcoData(ValidationData):
 
 
 class RetrieverGSData(ValidationData):
-    def __init__(self, validation_dir, user_dir, available_ids, gold_standard):
+    def __init__(self, validation_dir,  available_ids, gold_standard):
 
-        super().__init__(validation_dir, user_dir)
+        super().__init__(validation_dir)
         self.samples = pd.read_csv(
-            os.path.join(self.user_dir, gold_standard),
+            os.path.join(
+                ValidationConfig.DATA_ARGS['user_dir'], gold_standard),
             names=["query", "document"],
         )
         self.queries, self.collection, self.relations = self.dictify_data(
@@ -208,11 +208,10 @@ class UpdatedGCRetrieverData(RetrieverGSData):
         level=["gold", "silver"],
         data_path=None,
         validation_dir=ValidationConfig.DATA_ARGS["validation_dir"],
-        user_dir=ValidationConfig.DATA_ARGS["user_dir"],
         gold_standard=ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"],
     ):
 
-        super().__init__(validation_dir, user_dir, available_ids, gold_standard)
+        super().__init__(validation_dir,  available_ids, gold_standard)
         try:
             if data_path:  # if there is a path for data, use that
                 self.data_path = os.path.join(data_path, level)
