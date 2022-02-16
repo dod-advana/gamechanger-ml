@@ -209,7 +209,7 @@ class Pipeline:
 
     def finetune_sent(
         self,
-        batch_size: int = 32,
+        batch_size: int = 8,
         epochs: int = 3,
         warmup_steps: int = 100,
         testing_only: bool = False,
