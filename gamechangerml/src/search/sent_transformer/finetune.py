@@ -20,20 +20,7 @@ from torch.optim import Adam
 import torch.nn.functional as F
 from torch import nn
 torch.cuda.empty_cache()
-<<<<<<< HEAD
-import gc
-import logging
-import tqdm
-from time import sleep
-from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename, cos_sim
-from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.model_testing.metrics import reciprocal_rank_score, get_MRR
-from gamechangerml.api.utils.logger import logger
-from datetime import datetime
-from gamechangerml.api.utils import processmanager
-from gamechangerml import DATA_PATH
-=======
->>>>>>> 1c22cbef3da8da8d37e161f644e1ec5a0c2d7bab
 
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
