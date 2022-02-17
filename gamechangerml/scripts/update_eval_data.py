@@ -105,7 +105,7 @@ def make_tiered_eval_data(index_path):
     
     silver_data = save_data(
         level='silver',
-        filter_queries = True,
+        filter_queries = False,
         **ValidationConfig.TRAINING_ARGS
         )
     
