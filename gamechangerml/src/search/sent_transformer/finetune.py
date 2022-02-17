@@ -1,3 +1,13 @@
+from gamechangerml import DATA_PATH
+from gamechangerml.api.utils import processmanager
+from datetime import datetime
+from gamechangerml.api.utils.logger import logger
+from gamechangerml.src.utilities import utils as utils
+from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename, cos_sim
+from time import sleep
+import tqdm
+import logging
+import gc
 from sentence_transformers import SentenceTransformer, InputExample, util, losses
 from torch.utils.data import DataLoader
 import pandas as pd
@@ -10,6 +20,7 @@ from torch.optim import Adam
 import torch.nn.functional as F
 from torch import nn
 torch.cuda.empty_cache()
+<<<<<<< HEAD
 import gc
 import logging
 import tqdm
@@ -21,12 +32,15 @@ from gamechangerml.api.utils.logger import logger
 from datetime import datetime
 from gamechangerml.api.utils import processmanager
 from gamechangerml import DATA_PATH
+=======
+>>>>>>> 1c22cbef3da8da8d37e161f644e1ec5a0c2d7bab
 
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
 logging.root.addHandler(logging.StreamHandler(sys.stdout))
 logging.basicConfig(force=True)
 logger.setLevel(logging.INFO)
+
 
 def fix_model_config(model_load_path):
     """Workaround for error with sentence_transformers==0.4.1 (vs. version 2.0.0 which our model was trained on)"""
@@ -35,7 +49,8 @@ def fix_model_config(model_load_path):
         config = open_json("config.json", model_load_path)
         if "__version__" not in config.keys():
             try:
-                st_config = open_json("config_sentence_transformers.json", model_load_path)
+                st_config = open_json(
+                    "config_sentence_transformers.json", model_load_path)
                 version = st_config["__version__"]["sentence_transformers"]
                 config["__version__"] = version
             except:
@@ -45,16 +60,18 @@ def fix_model_config(model_load_path):
     except:
         logger.info("Could not update model config file")
 
+
 def get_cos_sim(model, pair):
 
-    emb1 = model.encode(pair[0])
-    emb2 = model.encode(pair[1])
+    emb1 = model.encode(pair[0], show_progress_bar=False)
+    emb2 = model.encode(pair[1], show_progress_bar=False)
     try:
         sim = float(util.cos_sim(emb1, emb2))
     except:
         sim = float(cos_sim(emb1, emb2))
-    
+
     return sim
+
 
 def format_inputs(train, test):
     """Create input data for dataloader and df for tracking cosine sim"""
@@ -70,8 +87,8 @@ def format_inputs(train, test):
         train_samples.append(inputex)
         all_data.append([train[i]["query"], i, texts, score, "train"])
         count += 1
-        processmanager.update_status(processmanager.loading_data, count, total)
-    
+        #processmanager.update_status(processmanager.loading_data, count, total)
+
     for x in test.keys():
         texts = [test[x]["query"], test[x]["paragraph"]]
         score = float(test[x]["label"])
@@ -79,9 +96,10 @@ def format_inputs(train, test):
         count += 1
         processmanager.update_status(processmanager.loading_data, count, total)
 
-    df = pd.DataFrame(all_data, columns = ["query", "key", "pair", "score", "label"])
-    
+    df = pd.DataFrame(all_data, columns=["key", "pair", "score", "label"])
+
     return train_samples, df
+
 
 class STFinetuner():
 
@@ -181,41 +199,48 @@ class STFinetuner():
             gc.collect()
 
             if testing_only:
-                logger.info("Creating smaller dataset just for testing finetuning.")
+                logger.info(
+                    "Creating smaller dataset just for testing finetuning.")
                 train_keys = list(train.keys())[:10]
                 test_keys = list(test.keys())[:10]
-                train = {k:train[k] for k in train_keys}
-                test = {k:test[k] for k in test_keys}
+                train = {k: train[k] for k in train_keys}
+                test = {k: test[k] for k in test_keys}
 
-            ## make formatted training data
-            logger.info("Formatting the inputs...")
-            train_samples, df = format_inputs(train, test)
-            
-            ## get cosine sim before finetuning
-            df["original_cos_sim"] = df["pair"].apply(lambda x: get_cos_sim(self.model, x))
-            processmanager.update_status(processmanager.training, 0, 1) 
+            processmanager.update_status(processmanager.training, 0, 1)
             sleep(0.1)
+            # make formatted training data
+            train_samples, df = format_inputs(train, test)
 
-            ## finetune on samples
+            # get cosine sim before finetuning
+            # TODO: you should be able to encode this more efficiently
+            df["original_cos_sim"] = df["pair"].apply(
+                lambda x: get_cos_sim(self.model, x))
+
+            # finetune on samples
             logger.info("Starting dataloader...")
-            train_dataloader = DataLoader(train_samples, shuffle=self.shuffle, batch_size=self.batch_size) #pin_memory=self.pin_memory)
+            # pin_memory=self.pin_memory)
+            train_dataloader = DataLoader(
+                train_samples, shuffle=self.shuffle, batch_size=self.batch_size)
             train_loss = losses.CosineSimilarityLoss(model=self.model)
             del train_samples
             gc.collect()
             logger.info("Finetuning the encoder model...")
-            self.model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
+            self.model.fit(train_objectives=[
+                           (train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
             processmanager.update_status(processmanager.training, 1, 0)
-            logger.info("Finished finetuning the encoder model") 
-            ## save model
+            logger.info("Finished finetuning the encoder model")
+            # save model
             self.model.save(self.model_save_path)
-            logger.info("Finetuned model saved to {}".format(str(self.model_save_path)))
+            logger.info("Finetuned model saved to {}".format(
+                str(self.model_save_path)))
 
             logger.info("*** Summarizing finetuning results ")
             ## get new cosine sim
             ft_metadata = self.summarize_results(df, data_dir)
 
-            ## save metadata file
-            ft_metadata_path = os.path.join(data_dir, timestamp_filename("finetuning_metadata", ".json"))
+            # save metadata file
+            ft_metadata_path = os.path.join(
+                data_dir, timestamp_filename("finetuning_metadata", ".json"))
             with open(ft_metadata_path, "w") as outfile:
                 json.dump(ft_metadata, outfile)
 
@@ -254,7 +279,7 @@ class STFinetuner():
                 logger.info(f"*** Saved model to S3: {s3_path}")
 
             return ft_metadata
-        
+
         except Exception as e:
             logger.warning("Could not complete finetuning")
-            logger.error(e, exc_info=True)
+            logger.error(e)

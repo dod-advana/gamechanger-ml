@@ -35,13 +35,19 @@ def test_expandTerms():
     test_data = {"termsList": ["artificial intelligence"]}
     resp = http.post(API_URL + "/expandTerms", json=test_data)
     verified = {
-        'qexp': {
-            'artificial': ['"turf"', '"ground"'],
-            'intelligence': ['"questioning"', '"capabilities"']
+        "qexp": {
+            "artificial intelligence": [
+                "\"employ artificial intelligence\"",
+                "\"developing artificial intelligence\""
+            ]
         },
-        'wordsim': {
-            'artificial': ['artifical'],
-            'intelligence': ['intellegence']
+        "wordsim": {
+            "artificial": [
+                "artifical"
+            ],
+            "intelligence": [
+                "intellegence"
+            ]
         }
     }
     assert resp.json() == verified

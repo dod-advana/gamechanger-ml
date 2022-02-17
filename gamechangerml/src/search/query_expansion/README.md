@@ -78,8 +78,8 @@ A command line utility, `build_qe_models.py` is provided in the directory `/buil
 Usage is as follows
 ```
 usage: python build_qe_model.py [-h] -c CORPUS_DIR -i INDEX_DIR [-t NUM_TREES]
-                                [-k NUM_KEYWORDS] -w WORD_WT_FILE -g NGRAM -a
-                                ABBRV_FILE
+                                [-k NUM_KEYWORDS] [-w WEIGHT_FILE] -g NGRAM
+                                [-a ABBRV_FILE] [-m]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -93,14 +93,15 @@ optional arguments:
   -k NUM_KEYWORDS, --num-keywords NUM_KEYWORDS
                         number of keywords per page to add to the index,
                         default=3
-  -w WORD_WT_FILE, --word-wt WORD_WT_FILE
+  -w WEIGHT_FILE, --word-wt WEIGHT_FILE
                         path + name of the word weight file in aux_data/
   -g NGRAM, --ngram NGRAM
                         tuple of (min, max) length of keywords to find
   -a ABBRV_FILE, --abbrv-file ABBRV_FILE
                         path and file for the short-form to long-form
                         abbreviation mapping
-
+  -m, --merge-word-sim  Whether or not the word sim (wiki-news-300d-1M.vec)
+                        results should be concatenated to the annoy index
 ```
 Documents are processed on a page-by-page basis using the raw text of the page. The only pre-processing that is
 performed is to replace newline characters with a single space and reduce inter-word spacing to

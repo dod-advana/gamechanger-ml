@@ -85,7 +85,7 @@ class LTR:
             self.data = xgb.DMatrix(fts, label)
             return self.data
         except Exception as e:
-            logger.error("Could not read in data for training")
+            logger.error("LTR - Could not read in data for training")
 
     def read_mappings(
         self, path=GC_USER_DATA, remote_mappings: bool = False, daysBack: int = 180
@@ -100,10 +100,10 @@ class LTR:
                 self.mappings = self.request_mappings(daysBack)
             else:
                 logger.info(
-                    "Not production environment, defaulting to local mappings")
+                    "LTR - Not production environment, defaulting to local mappings")
                 self.mappings = pd.read_csv(path)
         except Exception as e:
-            logger.warning("Could not request or read mappings")
+            logger.warning("LTR - Could not request or read mappings")
             logger.warning(e)
         return self.mappings
 
@@ -114,7 +114,7 @@ class LTR:
             mappings = json.loads(mappings)
             mappings = pd.DataFrame(mappings["data"])
         except Exception as e:
-            logger.warning("Could not request mappings from GC Web")
+            logger.warning("LTR - Could not request mappings from GC Web")
         return mappings
 
     def train(self, data=None, params=None, write=True):
@@ -292,7 +292,7 @@ class LTR:
             ltr_log: logs of from ES
         """
         ltr_log = []
-        logger.info("querying es ltr logs")
+        logger.info("LTR - Querying ES LTR logs")
         # loop through all unique keywords
         query_list = []
         for kw in tqdm(df.keyword.unique()):
@@ -319,7 +319,7 @@ class LTR:
             all_vals: all logged features in matrix
         """
         all_vals = []
-        logger.info("processing logs")
+        logger.info("LTR - processing logs")
         for entries in ltr_log:
             if len(entries) > 0:
                 # loop through entry logs (num of features)
@@ -343,27 +343,30 @@ class LTR:
         returns:
             outputs a file
         """
-        print(df)
-        ltr_log = self.query_es_fts(df)
-        vals = self.process_ltr_log(ltr_log)
-        ft_df = pd.DataFrame(
-            vals,
-            columns=[
-                "title",
-                "keyw_5",
-                "topics",
-                "entities",
-                "textlength",
-                "paragraph",
-                "popscore",
-                "paragraph-phrase",
-            ],
-        )
-        df.reset_index(inplace=True)
-        df = pd.concat([df, ft_df], axis=1)
+        try:
+            ltr_log = self.query_es_fts(df)
+            vals = self.process_ltr_log(ltr_log)
+            ft_df = pd.DataFrame(
+                vals,
+                columns=[
+                    "title",
+                    "keyw_5",
+                    "topics",
+                    "entities",
+                    "textlength",
+                    "paragraph",
+                    "popscore",
+                    "paragraph-phrase",
+                ],
+            )
+            df.reset_index(inplace=True)
+            df = pd.concat([df, ft_df], axis=1)
 
-        logger.info("generating csv file")
-        df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
+            logger.info("LTR - Generating csv file")
+            df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
+        except Exception as e:
+            logger.error(e)
+            logger.info("LTR - Failed in generating feature text file")
         return df
 
     def construct_query(self, doc, kw):

@@ -108,7 +108,7 @@ class ModelLoader:
             )
             ModelLoader.initTopics()
         return ModelLoader.__topic_model
-    
+
     def getRecommender(self):
         if ModelLoader.__recommender is None:
             logger.warning(
@@ -193,7 +193,7 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(f"Loading Query Expansion Model from {model_path}")
+        logger.info(f"Loading Word Sim Model from {model_path}")
         try:
             if MODEL_LOAD_FLAG:
                 ModelLoader.__word_sim = WordSim(model_path)
@@ -211,7 +211,8 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
+        logger.info(
+            f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
             if MODEL_LOAD_FLAG:
                 ModelLoader.__sentence_searcher = SentenceSearcher(
@@ -259,23 +260,24 @@ class ModelLoader:
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
             if MODEL_LOAD_FLAG:
-                ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
+                ModelLoader.__sparse_reader = sparse.SparseReader(
+                    model_name=model_name)
                 logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
             logger.warning(e)
 
     @staticmethod
-    def initTopics() -> None:
+    def initTopics(model_path=TOPICS_MODEL.value) -> None:
         """initTopics - load topics model on start
         Args:
         Returns:
         """
         try:
             if MODEL_LOAD_FLAG:
-                logger.info("Starting Topic pipeline")
+                logger.info(f"Loading topic model {model_path}")
                 logger.info(TopicsConfig.DATA_ARGS)
-                ModelLoader.__topic_model = Topics(directory=TOPICS_MODEL.value)
+                ModelLoader.__topic_model = Topics(directory=model_path)
                 logger.info("Finished loading Topic Model")
         except Exception as e:
             logger.warning("** Could not load Topic model")
@@ -293,4 +295,4 @@ class ModelLoader:
                 ModelLoader.__recommender = Recommender()
                 logger.info("Finished loading Recommender")
         except OSError:
-            logger.error(f"** Could not load Recommender") 
+            logger.error(f"** Could not load Recommender")

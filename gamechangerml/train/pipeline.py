@@ -69,7 +69,8 @@ os.environ["PYTHONWARNINGS"] = "ignore:Unverified HTTPS request"
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
-formatter = logging.Formatter("%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s")
+formatter = logging.Formatter(
+    "%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
@@ -104,12 +105,14 @@ class Pipeline:
         # read in input data files
         try:
             self.search_history = pd.read_csv(
-                os.path.join(USER_DATA_PATH, "search_history", "SearchPdfMapping.csv")
+                os.path.join(USER_DATA_PATH, "search_history",
+                             "SearchPdfMapping.csv")
             )
             self.topics = pd.read_csv(
                 os.path.join(FEATURES_DATA_PATH, "topics_wiki.csv")
             )
-            self.orgs = pd.read_csv(os.path.join(FEATURES_DATA_PATH, "agencies.csv"))
+            self.orgs = pd.read_csv(os.path.join(
+                FEATURES_DATA_PATH, "agencies.csv"))
         except Exception as e:
             logger.info(e)
 
@@ -157,8 +160,8 @@ class Pipeline:
         level: str='silver',
         update_eval_data: bool=False,
         retriever=None,
-        upload:bool=True,
-        version:str="v1"
+        upload: bool = True,
+        version: str = "v1"
     ) -> None:
         """
         create_metadata: combines datasets to create readable sets for ingest
@@ -180,14 +183,15 @@ class Pipeline:
         if "pop_docs" in meta_steps:
             make_pop_docs(self.search_history, self.pop_docs_path)
         if "combined_ents" in meta_steps:
-            make_combined_entities(self.topics, self.orgs, self.combined_ents_path)
+            make_combined_entities(
+                self.topics, self.orgs, self.combined_ents_path)
         if "rank_features" in meta_steps:
             make_corpus_meta(corpus_dir, days, prod_data_file, upload)
         if "update_sent_data" in meta_steps:
             try:
                 make_training_data(index_path, n_returns, level, update_eval_data, retriever)
             except Exception as e:
-                logger.warning(e, exc_info=True) 
+                logger.warning(e, exc_info=True)
         if upload:
             try:
                 s3_path = os.path.join(S3_DATA_PATH, f"{version}")
@@ -195,19 +199,20 @@ class Pipeline:
                 model_name = datetime.now().strftime("%Y%m%d")
                 model_prefix = "data"
                 dst_path = DATA_PATH + model_name + ".tar.gz"
-                utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
+                utils.create_tgz_from_dir(
+                    src_dir=DATA_PATH, dst_archive=dst_path)
                 utils.upload(s3_path, dst_path, model_prefix, model_name)
             except Exception as e:
                 logger.warning(e, exc_info=True)
 
     def finetune_sent(
         self,
-        batch_size: int=32,
-        epochs: int=3,
-        warmup_steps: int=100,
-        testing_only: bool=False,
-        version: str="v100"
-    ) -> t.Dict[str,str]:
+        batch_size: int = 8,
+        epochs: int = 3,
+        warmup_steps: int = 100,
+        testing_only: bool = False,
+        version: str = "v100"
+    ) -> t.Dict[str, str]:
         """finetune_sent: finetunes the sentence transformer - saves new model, 
            a csv file of old/new cos sim scores, and a metadata file.
         Args:
@@ -218,6 +223,7 @@ class Pipeline:
         Returns:
             metadata: meta information on finetuning
         """
+
         try:
             model_load_path = os.path.join(
                 LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
@@ -254,7 +260,7 @@ class Pipeline:
             )
             logger.info("Loaded finetuner class...")
             logger.info(f"Testing only is set to: {testing_only}")
-        
+
             return finetuner.retrain(data_path, testing_only, version)
         except Exception as e:
             logger.warning("Could not finetune sentence model - pipeline")
@@ -284,7 +290,8 @@ class Pipeline:
             logger.info(f"Attempting to evaluate model {model_name}")
 
             if "bert-base-cased-squad2" in model_name:
-                results[eval_type] = eval_qa(model_name, sample_limit, eval_type)
+                results[eval_type] = eval_qa(
+                    model_name, sample_limit, eval_type)
             elif "msmarco-distilbert-base-v2" in model_name:
                 results["original"] = eval_sent(
                     model_name, validation_data, eval_type="original"
@@ -294,7 +301,8 @@ class Pipeline:
                     model_name, validation_data, eval_type="domain"
                 )
             elif "distilbart-mnli-12-3" in model_name:
-                results[eval_type] = eval_sim(model_name, sample_limit, eval_type)
+                results[eval_type] = eval_sim(
+                    model_name, sample_limit, eval_type)
             elif "qexp" in model_name:
                 results["domain"] = eval_qe(model_name)
             else:
@@ -306,7 +314,7 @@ class Pipeline:
         except Exception as e:
             logger.warning(f"Could not evaluate {model_name}")
             logger.warning(e)
-
+        """
         if upload:
             s3_path = os.path.join(S3_DATA_PATH, f"{version}")
             logger.info(f"****    Saving new data files to S3: {s3_path}")
@@ -315,14 +323,14 @@ class Pipeline:
             dst_path = DATA_PATH + model_name + ".tar.gz"
             utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
             utils.upload(s3_path, dst_path, model_prefix, model_name)
-
+        """
         return results
 
     def create_qexp(
         self,
         model_id=None,
         upload=False,
-        corpus=DefaultConfig.DATA_DIR,
+        corpus=CORPUS_DIR,
         model_dest=DefaultConfig.LOCAL_MODEL_DIR,
         exp_name=modelname,
         validate=True,
@@ -351,7 +359,8 @@ class Pipeline:
             # build ANN indices
             index_dir = os.path.join(model_dest, model_path)
             bqe.main(corpus, index_dir, **QexpConfig.MODEL_ARGS["bqe"])
-            logger.info("-------------- Model Training Complete --------------")
+            logger.info(
+                "-------------- Model Training Complete --------------")
             # Create .tgz file
             dst_path = index_dir + ".tar.gz"
             utils.create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
@@ -370,7 +379,8 @@ class Pipeline:
                 # qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
                 # evals = qxpeval.results
 
-                logger.info("-------------- Assessment is not available--------------")
+                logger.info(
+                    "-------------- Assessment is not available--------------")
                 """
                 results = mau.assess_model(
                     model_name=model_id,
@@ -385,7 +395,8 @@ class Pipeline:
                             key=metric, value=results[metric])
                 """
 
-                logger.info("-------------- Finished Assessment --------------")
+                logger.info(
+                    "-------------- Finished Assessment --------------")
             else:
                 logger.info("-------------- No Assessment Ran --------------")
         except Exception as e:
@@ -422,7 +433,8 @@ class Pipeline:
         # GPU check
         use_gpu = gpu
         if use_gpu and not torch.cuda.is_available:
-            logger.info("GPU is not available. Setting `gpu` argument to False")
+            logger.info(
+                "GPU is not available. Setting `gpu` argument to False")
             use_gpu = False
 
         # Define model saving directories
@@ -434,7 +446,8 @@ class Pipeline:
         # Define new index directory
         if not os.path.isdir(local_sent_index_dir):
             os.mkdir(local_sent_index_dir)
-        logger.info("-------------- Building Sentence Embeddings --------------")
+        logger.info(
+            "-------------- Building Sentence Embeddings --------------")
         logger.info("Loading Encoder Model...")
 
         # If existing index exists, copy content from reference index
@@ -454,7 +467,8 @@ class Pipeline:
             )
             logger.info("-------------- Indexing Documents--------------")
             start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            encoder.index_documents(corpus_path=corpus, index_path=local_sent_index_dir)
+            encoder.index_documents(
+                corpus_path=corpus, index_path=local_sent_index_dir)
             end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             logger.info("-------------- Completed Indexing --------------")
             user = get_user(logger)
@@ -521,7 +535,8 @@ class Pipeline:
                 )
                 logger.error(e)
 
-            logger.info("-------------- Finished Sentence Embedding--------------")
+            logger.info(
+                "-------------- Finished Sentence Embedding--------------")
         except Exception as e:
             logger.warning("Error with creating embedding")
             logger.error(e)
@@ -578,9 +593,8 @@ class Pipeline:
         except Exception as e:
             logger.error("Could not create LTR")
 
-    def create_topics(self, sample_rate=None, upload=False, corpus_dir=CORPUS_DIR):
+    def create_topics(self, sample_rate=None, upload=False, corpus_dir=CORPUS_DIR, version="v2"):
         try:
-            version = "v2"
             model_id = datetime.now().strftime("%Y%m%d%H%M%S")
             model_dir = DefaultConfig.LOCAL_MODEL_DIR
 
@@ -611,9 +625,11 @@ class Pipeline:
             # Upload to S3
             if upload:
                 S3_MODELS_PATH = "bronze/gamechanger/models"
-                s3_path = os.path.join(S3_MODELS_PATH, f"topic_model/{version}")
+                s3_path = os.path.join(
+                    S3_MODELS_PATH, f"topic_model/{version}")
                 logger.info(f"Topics uploading to {s3_path}")
-                self.upload(s3_path, tar_path, "topic_model", model_id, version)
+                self.upload(s3_path, tar_path,
+                            "topic_model", model_id, version)
 
             evals = None  # TODO: figure out how to evaluate this
             return metadata, evals
@@ -626,7 +642,8 @@ class Pipeline:
         logger.info(f"Uploading files to {s3_path}")
         logger.info(f"\tUploading: {local_path}")
         # local_path = os.path.join(dst_path)
-        s3_path = os.path.join(s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
+        s3_path = os.path.join(
+            s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
         logger.info(f"s3_path {s3_path}")
         utils.upload_file(local_path, s3_path)
         logger.info(f"Successfully uploaded files to {s3_path}")

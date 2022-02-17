@@ -6,7 +6,7 @@ from gamechangerml import REPO_PATH, DATA_PATH, MODEL_PATH
 
 class DefaultConfig:
 
-    DATA_DIR = os.path.join(REPO_PATH, "common/data/processed")
+    DATA_DIR = DATA_PATH
     LOCAL_MODEL_DIR = MODEL_PATH
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
 
@@ -78,7 +78,8 @@ class EmbedderConfig:
         "verbose": True,  # for creating LocalCorpus
         "return_id": True,  # for creating LocalCorpus
     }
-    FINETUNE = {"shuffle": True, "batch_size": 32, "epochs": 3, "warmup_steps": 100}
+    FINETUNE = {"shuffle": True, "batch_size": 32,
+                "epochs": 3, "warmup_steps": 100}
 
 
 class SimilarityConfig:
@@ -101,8 +102,9 @@ class QexpConfig:
         "bqe": {
             "num_trees": 125,
             "num_keywords": 2,
-            "ngram": (1, 2),
+            "ngram": (1, 3),
             "abbrv_file": None,
+            "merge_word_sim": True
         },
     }
 
@@ -112,6 +114,7 @@ class ValidationConfig:
         # need to have validation data in here
         "validation_dir": os.path.join(DATA_PATH, "validation"),
         "evaluation_dir": os.path.join(DATA_PATH, "evaluation"),
+        "user_dir": os.path.join(DATA_PATH, "user_data"),
         # location with smaller set of corpus JSONs
         "test_corpus_dir": "gamechangerml/test_corpus",
         "squad": {

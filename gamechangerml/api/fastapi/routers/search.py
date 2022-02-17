@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Response, status
 import time
+import requests
+import base64
+import hashlib
 
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.src.featurization.keywords.extract_keywords import get_keywords
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.fastapi.version import __version__
+from gamechangerml.src.utilities import gc_web_api
 
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
 # from gamechangerml.src.featurization.summary import GensimSumm
@@ -160,21 +164,21 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
         else MODELS.query_expander_jbook
     )
     try:
-        for term in terms:
-            term = unquoted(term)
-            expansion_list = query_expander.expand(
-                term, **QexpConfig.MODEL_ARGS["expansion"]
-            )
-            # turn word pairs into search phrases since otherwise it will just search for pages with both words on them
-            # removing original word from the return terms unless it is combined with another word
-            logger.info(f"original expanded terms: {expansion_list}")
-            finalTerms = remove_original_kw(expansion_list, term)
-            expansion_dict[term] = ['"{}"'.format(exp) for exp in finalTerms]
-            logger.info(f"-- Expanded {term} to \n {finalTerms}")
-        terms = " ".join(terms)
-        logger.info(f"Finding similiar words for: {terms}")
-        sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms)
-        logger.info(f"-- Expanded {terms} to \n {sim_words_dict}")
+        terms_string = unquoted(terms_string)
+        expansion_list = query_expander.expand(
+            terms_string, **QexpConfig.MODEL_ARGS["expansion"]
+        )
+        # Pass entire query from frontend to query expansion model and return topn.
+        # Removes original word from the return terms unless it is combined with another word
+        logger.info(f"original expanded terms: {expansion_list}")
+        finalTerms = remove_original_kw(expansion_list, terms_string)
+        expansion_dict[terms_string] = ['"{}"'.format(exp) for exp in finalTerms]
+        logger.info(f"-- Expanded {terms_string} to \n {finalTerms}")
+        # Perform word similarity
+        logger.info(f"Finding similiar words for: {terms_string}")
+        sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms_string)
+        logger.info(f"-- Expanded {terms_string} to \n {sim_words_dict}")
+        ## Construct return payload
         expanded_words = {}
         expanded_words["qexp"] = expansion_dict
         expanded_words["wordsim"] = sim_words_dict

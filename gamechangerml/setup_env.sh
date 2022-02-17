@@ -17,7 +17,7 @@ function setup_prod() {
     export REDIS_HOST="${REDIS_HOST:-localhost}"
     export REDIS_PORT="${REDIS_PORT:-6379}"
     export GC_ML_HOST="${GC_ML_HOST:-http://localhost}"
-    export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v5/transformers.tar.gz}"
+    export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v7/transformers.tar.gz}"
     export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v7/sent_index_20210715.tar.gz}"
     export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-data-zone/bronze/gamechanger/models/qexp_model/v3/qexp_20201217.tar.gz}"
     export S3_QEXP_JBOOK_PATH="${S3_QEXP_JBOOK_PATH:-s3://advana-data-zone/bronze/gamechanger/models/jbook_qexp_model/v2/jbook_qexp_20220131.tar.gz}"
@@ -47,9 +47,9 @@ function setup_dev() {
     export REDIS_HOST="${REDIS_HOST:-gc-redis}"
     export REDIS_PORT="${REDIS_PORT:-6380}"
     export GC_ML_HOST="${GC_ML_HOST:-http://host.docker.internal}"
-    export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v5/transformers.tar.gz}"
+    export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v7/transformers.tar.gz}"
     export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v7/sent_index_20210716.tar.gz}"
-    export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-data-zone/bronze/gamechanger/models/qexp_model/v4/qexp_20211001.tar.gz}"
+    export S3_QEXP_PATH="${S3_QEXP_PATH:-s3://advana-data-zone/bronze/gamechanger/models/qexp_model/v5/qexp_20220202.tar.gz}"
     export S3_QEXP_JBOOK_PATH="${S3_QEXP_JBOOK_PATH:-s3://advana-data-zone/bronze/gamechanger/models/jbook_qexp_model/v2/jbook_qexp_20220131.tar.gz}"
     export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-data-zone/bronze/gamechanger/models/topic_model/v1/20210208.tar.gz}"
     export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20220127.tar.gz}"
@@ -73,7 +73,9 @@ function setup_dev() {
     export GC_WEB_PORT="${GC_WEB_PORT:-8990}"
     export GC_WEB_USER="${GC_WEB_USER:-steve}"
     export GC_ENABLE_SSL="${GC_ENABLE_SSL:-false}"
-    
+
+    export ML_WEB_TOKEN="${ML_WEB_TOKEN:-eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJtcyI6WyJHYW1lY2hhbmdlciBBZG1pbiJdLCJjbiI6IjAwNyIsImNzcmYtdG9rZW4iOiI0ZWE1YzUwOGE2NTY2ZTc2MjQwNTQzZjhmZWIwNmZkNDU3Nzc3YmUzOTU0OWM0MDE2NDM2YWZkYTY1ZDIzMzBlIiwiaWF0IjoxNjQ0MzQyMjI0fQ.ezxT-36a25IMFJPea3re7sUwYZfm8ivZvDVAv_zti1W6DRkM2Hs7WwFuy-gR092m-p7Z7ohb7yM2AKVbJAn4CMtI3_1j0_VzzYb6yhQj7YIPg-Cax5Em9JCrIlCEx7r26o-zV1me0mIYMATJTMInKikeBvg2RJErvLwkgZNQVT8gQyR-JxM4mhjmylcel9-kt5FpJJuUKnzPI8BqVeG_eL6ktevA9odJRx56w9n2LivUaoQUCiXreLOLmSEwkkhIFnsyMcCCwkPpx4lMrkzjIr3B08_gRk5wIv4pV01OcSYR4QkXM7ZsNZZzRf-JtPHYn9SlT9DvwRVbYniYUCA7IM0OegFKSTt_-i7qvuKuYFHGDStfkijX2T6g_49oY1qfLsKldisccoOLfsaROpB1NiE9DBeM5OzAo-R98H_UiUFjsFVNvlunETbhuqX2yZFUjKxxerS_-1_DW8BmoD25Ofl188KM8gqUXo5lJs4bPTf41_N_V-57muZxdAq8kBazDKhaudAzskFNFF1B9dxwgxeE8wd5Gh_beCuCoP3K-9GwRVFfrdOCO19FDjqpLr0k94UfZzuflP5SDGXth2-AzZIslurPDL_1F4iadxq06GJggwryMxC7_Uc4_FQST53-gl9SXEFVSNdr6gsw318JNiyz8bxbBpIj7posqQeEaDg}"
+
 }
 
 
@@ -154,4 +156,5 @@ cat <<EOF
   * ES_HOST: ${ES_HOST:-<unset>}"
   * GC_WEB_HOST: ${GC_WEB_HOST:-<unset>}"
   * GC_WEB_USER: ${GC_WEB_USER:-<unset>}"
+  * ML_WEB_TOKEN: ${ML_WEB_TOKEN:-<unset>}"
 EOF

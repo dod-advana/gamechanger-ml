@@ -1,7 +1,7 @@
 """
 usage: python build_qe_model.py [-h] -c CORPUS_DIR -i INDEX_DIR [-t NUM_TREES]
-                                [-k NUM_KEYWORDS] -w WORD_WT_FILE -g NGRAM -a
-                                ABBRV_FILE
+                                [-k NUM_KEYWORDS] [-w WEIGHT_FILE] -g NGRAM
+                                [-a ABBRV_FILE] [-m]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -15,14 +15,15 @@ optional arguments:
   -k NUM_KEYWORDS, --num-keywords NUM_KEYWORDS
                         number of keywords per page to add to the index,
                         default=3
-  -w WORD_WT_FILE, --word-wt WORD_WT_FILE
+  -w WEIGHT_FILE, --word-wt WEIGHT_FILE
                         path + name of the word weight file in aux_data/
   -g NGRAM, --ngram NGRAM
                         tuple of (min, max) length of keywords to find
   -a ABBRV_FILE, --abbrv-file ABBRV_FILE
                         path and file for the short-form to long-form
                         abbreviation mapping
-
+  -m, --merge-word-sim  Whether or not the word sim (wiki-news-300d-1M.vec)
+                        results should be concatenated to the annoy index
 """
 import logging
 import os
@@ -46,6 +47,8 @@ from gamechangerml.src.utilities.text_generators import gen_json, child_doc_gen
 from gamechangerml.src.utilities.text_utils import simple_clean
 from gamechangerml.src.utilities.timer import Timer
 
+from gamechangerml import DATA_PATH, MODEL_PATH
+FEATURES_DATA_PATH = os.path.join(DATA_PATH, "features")
 logger = logging.getLogger(__name__)
 
 empty_dict = dict()
@@ -101,9 +104,10 @@ def main(
     index_dir,
     num_trees=125,
     num_keywords=2,
-    ngram=(1, 2),
+    ngram=(1, 3),
     weight_file=None,
     abbrv_file=None,
+    merge_word_sim=False
 ):
     """
     `main` corresponding to the command line to build the approximate
@@ -141,7 +145,9 @@ def main(
             "directory not found; got {}".format(str(corpus_dir))
         )
 
-    word_wt = get_word_weight(weight_file="enwiki_vocab_min200.txt", a=1e-03)
+    if weight_file is None:
+        weight_file = os.path.join(FEATURES_DATA_PATH, "enwiki_vocab_min200.txt")
+    word_wt = get_word_weight(weight_file=weight_file, a=1e-03)
 
     if ngram[0] < 1:
         raise ValueError("minimum ngram must be > 0; got {}".format(ngram))
@@ -187,6 +193,24 @@ def main(
         logger.info("       items to index : {:9,d}".format(len(vec_dict)))
         vocab_map, ann_index = build_ann_index(nlp, vec_dict)
         vocab_map = list(vocab_map)
+        ## Merge in word similarity vocab/vectors to ann index
+        if merge_word_sim:
+            try:
+                from gamechangerml.src.featurization.word_sim import WordSim
+                word_sim = WordSim(os.path.join(MODEL_PATH,"transformers","wiki-news-300d-1M.bin"))
+                word_sim_text_vec_dict = dict(zip(word_sim.model.index_to_key,
+                                                word_sim.model.vectors))
+                logger.info(f"Attempting to add in {len(word_sim.model.index_to_key)} total vocab/vectors from the "
+                            f"word similarity model")
+                current_idx = len(vocab_map)
+                for text, vec in word_sim_text_vec_dict.items():
+                    ann_index.add_item(current_idx, vec)
+                    vocab_map.append(text)
+                    current_idx+=1
+                logger.info("Successfully added in word similarity results to ann index")
+            except Exception as e:
+                logger.error(f"Exception thrown when attempting to merge in word similarity results: {e}, saving ANNOY "
+                             f"index without word similarity included")
 
         with Timer():
             logger.info("building index...")
@@ -247,7 +271,7 @@ if __name__ == "__main__":
         "-w",
         "--word-wt",
         dest="weight_file",
-        required=True,
+        required=False,
         help="path + name of the word weight file in aux_data/",
     )
     parser.add_argument(
@@ -263,6 +287,13 @@ if __name__ == "__main__":
         dest="abbrv_file",
         required=False,  # TODO change to True once this is integrated
         help="path and file for the short-form to long-form abbreviation mapping",  # noqa
+    )
+    parser.add_argument(
+        "-m",
+        "--merge-word-sim",
+        dest="merge_word_sim",
+        action = 'store_true',
+        help="Whether or not the word sim (wiki-news-300d-1M.vec) results should be concatenated to the annoy index"
     )
     args = parser.parse_args()
     if isinstance(args.ngram[0], str):
@@ -281,7 +312,8 @@ if __name__ == "__main__":
             int(args.num_trees),
             int(args.num_keywords),
             ngram,
-            args.word_wt_file,
+            args.weight_file,
             args.abbrv_file,
+            args.merge_word_sim
         )
     logger.info("complete")
