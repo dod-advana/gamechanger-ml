@@ -11,6 +11,8 @@ import en_core_web_md
 from gamechangerml.src.utilities.borg import Borg
 
 logger = logging.getLogger(__name__)
+sp_logger = logging.getLogger("spacy")
+sp_logger.setLevel(logging.ERROR)
 
 
 class SpacyConfig(Borg):
@@ -72,7 +74,8 @@ def get_lg_nlp():
 
     """
     try:
-        c = _set_nlp("spacy-large", disable=None)
+        c = _set_nlp(
+            "spacy-large", disable=["ner", "parser", "tagger", "lemmatizer"])
         return c.config["nlp"]
     except ValueError as e:
         logger.exception("{}: {}".format(type(e), str(e)), exc_info=True)
@@ -90,7 +93,8 @@ def get_lg_vectors():
 
     """
     try:
-        c = _set_nlp("spacy-large", disable=["ner", "parser", "tagger"])
+        c = _set_nlp(
+            "spacy-large", disable=["ner", "parser", "tagger", "lemmatizer"])
         return c.config["nlp"]
     except ValueError as e:
         logger.exception("{}: {}".format(type(e), str(e)), exc_info=True)

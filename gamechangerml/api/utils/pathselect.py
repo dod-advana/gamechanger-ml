@@ -63,9 +63,8 @@ def get_model_paths():
     # WORK SIM MODEL PATH
     try:
         WORD_SIM_MODEL_PATH = os.path.join(
-            QEXP_MODEL_PATH,
-            "wiki-news-300d-1M.vec"
-            # Config.LOCAL_PACKAGED_MODELS_DIR, "crawl-300d-2M.vec",
+            LOCAL_TRANSFORMERS_DIR,
+            "wiki-news-300d-1M.bin"
         )
     except Exception as e:
         logger.error(e)
@@ -94,7 +93,8 @@ def get_model_paths():
             )
         else:
             print("defaulting INDEX_PATH to sent_index")
-            INDEX_PATH = os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
+            INDEX_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
     except Exception as e:
         logger.error(e)
         INDEX_PATH = "gamechangerml/models/"

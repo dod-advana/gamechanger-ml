@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from gamechangerml import DATA_PATH
 from gamechangerml.src.utilities import utils
+from gamechangerml.src.utilities.es_utils import ESUtils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.api.fastapi.settings import *
@@ -28,15 +29,28 @@ MODELS = ModelLoader()
 ## Get Methods ##
 
 pipeline = Pipeline()
+es = ESUtils()
 
 
 @router.get("/")
 async def api_information():
     return {
-        "API": "FOR TRANSFORMERS",
         "API_Name": "GAMECHANGER ML API",
         "Version": __version__,
-    }
+        "Elasticsearch_Host":  es.root_url,
+        "Elasticsearch_Status": get_es_status()}
+
+
+def get_es_status():
+    status = "red"
+    try:
+        res = es.get(es.root_url+"_cluster/health", timeout=5)
+        cont = json.loads(res.content)
+        status = cont['status']
+    except Exception as e:
+        logger.warning(e)
+
+    return status
 
 
 @router.get("/getProcessStatus")
@@ -51,7 +65,7 @@ async def get_process_status():
 def get_downloaded_data_list():
     """
     Gets a list of the data in the local data folder
-    Args: 
+    Args:
     Returns: dict {"dirs":[ array of dicts {"name":(name of file):"path":(base directory), "files":(arr of files in directory),"subdirectories":(arr of subdirectories)}]}
     """
     files = []
@@ -72,7 +86,7 @@ def get_downloaded_data_list():
 def get_downloaded_models_list():
     """
     Gets a list of the models in the local model folder
-    Args: 
+    Args:
     Returns:{
         "transformers": (list of transformers),
         "sentence": (list of sentence indexes),
@@ -81,10 +95,12 @@ def get_downloaded_models_list():
     }
     """
     qexp_list = {}
+    jbook_qexp_list = {}
     sent_index_list = {}
     transformer_list = {}
     topic_models = {}
     ltr_list = {}
+    # QEXP MODEL PATH
     try:
         for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
             if ("qexp_" in f) and ("tar" not in f):
@@ -97,6 +113,25 @@ def get_downloaded_models_list():
                     qexp_list[f] = json.load(meta_file)
                     qexp_list[f]["evaluation"] = {}
                     qexp_list[f]["evaluation"] = collect_evals(
+                        os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
+                    )
+                    meta_file.close()
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get QEXP model path")
+    # JBOOK QEXP
+    try:
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("jbook_qexp_" in f) and ("tar" not in f):
+                jbook_qexp_list[f] = {}
+                meta_path = os.path.join(
+                    Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json"
+                )
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    jbook_qexp_list[f] = json.load(meta_file)
+                    jbook_qexp_list[f]["evaluation"] = {}
+                    jbook_qexp_list[f]["evaluation"] = collect_evals(
                         os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
                     )
                     meta_file.close()
@@ -122,7 +157,7 @@ def get_downloaded_models_list():
                     config_file.close()
     except Exception as e:
         logger.error(e)
-        logger.info("Cannot get TRANSFORMER model path")
+        logger.info("Cannot get JBook model path")
     # SENTENCE INDEX
     # get largest file name with sent_index prefix (by date)
     try:
@@ -166,7 +201,8 @@ def get_downloaded_models_list():
                     )
                 ) as mf:
                     topic_models[topic_model_name] = json.load(mf)
-            except:
+            except Exception as e:
+                logger.error(e)
                 topic_models[topic_model_name] = {
                     "Error": "Failed to load metadata file for this model"
                 }
@@ -196,6 +232,7 @@ def get_downloaded_models_list():
         "transformers": transformer_list,
         "sentence": sent_index_list,
         "qexp": qexp_list,
+        "jbook_qexp": jbook_qexp_list,
         "topic_models": topic_models,
         "ltr": ltr_list,
     }
@@ -304,9 +341,9 @@ async def files_in_corpus(response: Response):
     return json.dumps(number_files)
 
 
-@router.get("/getCurrentTransformer")
-async def get_trans_model():
-    """get_trans_model - endpoint for current transformer
+@router.get("/getLoadedModels")
+async def get_current_models():
+    """get_current_models - endpoint for current models
     Args:
     Returns:
         dict of model name
@@ -318,6 +355,9 @@ async def get_trans_model():
         "sentence_index": SENT_INDEX_PATH.value,
         "qexp_model": QEXP_MODEL_NAME.value,
         "qa_model": latest_qa_model.value,
+        "jbook_model": QEXP_JBOOK_MODEL_NAME.value,
+        "topic_model": TOPICS_MODEL.value,
+        "wordsim_model": WORD_SIM_MODEL.value
     }
 
 
@@ -458,7 +498,8 @@ async def s3_func(function, response: Response):
 async def reload_models(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
-        model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
+        model_dict: dict; {"sentence": "bert...",
+            "qexp": "bert...", "transformer": "bert..."}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -493,10 +534,22 @@ async def reload_models(model_dict: dict, response: Response):
                     processmanager.update_status(
                         processmanager.reloading, progress, total
                     )
+                if "jbook_qexp" in model_dict:
+                    jbook_qexp_name = os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["jbook_qexp"]
+                    )
+                    # uses QEXP_MODEL_NAME by default
+                    logger.info("Attempting to load Jbook QE")
+                    MODELS.initQEJBook(jbook_qexp_name)
+                    QEXP_JBOOK_MODEL.value = jbook_qexp_name
+                    progress += 1
+                    processmanager.update_status(
+                        processmanager.reloading, progress, total
+                    )
 
-                if "topics" in model_dict:
+                if "topic_models" in model_dict:
                     topics_name = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["topics"]
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["topic_models"]
                     )
 
                     logger.info("Attempting to load Topics")
@@ -528,7 +581,8 @@ async def reload_models(model_dict: dict, response: Response):
 async def download_corpus(corpus_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
     Args:
-        model_dict: dict; {"sentence": "bert...", "qexp": "bert...", "transformer": "bert..."}
+        model_dict: dict; {"sentence": "bert...",
+            "qexp": "bert...", "transformer": "bert..."}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
@@ -560,6 +614,7 @@ async def download_corpus(corpus_dict: dict, response: Response):
 # Methods for all the different models we can train
 # Defined outside the function so they arent recreated each time its called
 
+    # Methods for all the different models we can train
 
 def update_metadata(model_dict):
     logger.info("Attempting to update feature metadata")
@@ -584,11 +639,23 @@ def update_metadata(model_dict):
             "rank_features",
             "update_sent_data",
         ]
+    try:
+        index_path = model_dict["index_path"]
+    except:
+        index_path = os.path.join(MODEL_PATH, "sent_index_20210715")
+    try:
+        update_eval_data = model_dict['update_eval_data']
+    except:
+        update_eval_data = False
+
     args = {
         "meta_steps": meta_steps,
         "corpus_dir": corpus_dir,
         "retriever": retriever,
+        "index_path": index_path,
+        "update_eval_data": update_eval_data
     }
+
     pipeline.run(
         build_type=model_dict["build_type"],
         run_name=datetime.now().strftime("%Y%m%d"),
@@ -603,10 +670,10 @@ def finetune_sentence(model_dict):
     except:
         testing_only = False
     args = {
-        "batch_size": model_dict["batch_size"],
-        "epochs": model_dict["epochs"],
-        "warmup_steps": model_dict["warmup_steps"],
-        "testing_only": testing_only,
+        "batch_size": 8,
+        "epochs": int(model_dict["epochs"]),
+        "warmup_steps": int(model_dict["warmup_steps"]),
+        "testing_only": bool(testing_only),
     }
     pipeline.run(
         build_type="sent_finetune",
@@ -642,7 +709,6 @@ def train_sentence(model_dict):
 def train_qexp(model_dict):
     logger.info("Attempting to start qexp pipeline")
     args = {
-        "validate": bool(model_dict["validate"]),
         "upload": bool(model_dict["upload"]),
         "version": model_dict["version"],
     }
@@ -658,7 +724,7 @@ def run_evals(model_dict):
     args = {
         "model_name": model_dict["model_name"],
         "eval_type": model_dict["eval_type"],
-        "sample_limit": model_dict["sample_limit"],
+        "sample_limit": int(model_dict["sample_limit"]),
         "validation_data": model_dict["validation_data"],
     }
     pipeline.run(
@@ -699,123 +765,6 @@ async def train_model(model_dict: dict, response: Response):
     Returns:
     """
     try:
-        # Methods for all the different models we can train
-        def update_metadata(model_dict=model_dict):
-            logger.info("Attempting to update feature metadata")
-            pipeline = Pipeline()
-            model_dict["build_type"] = "meta"
-            try:
-                corpus_dir = model_dict["corpus_dir"]
-            except:
-                corpus_dir = CORPUS_DIR
-            try:
-                retriever = MODELS.sentence_searcher
-                logger.info("Using pre-loaded SentenceSearcher")
-            except:
-                retriever = None
-                logger.info("Setting SentenceSearcher to None")
-            try:
-                meta_steps = model_dict["meta_steps"]
-            except:
-                meta_steps = [
-                    "pop_docs",
-                    "combined_ents",
-                    "rank_features",
-                    "update_sent_data",
-                ]
-            try:
-                index_path = model_dict["index_path"]
-            except:
-                index_path = os.path.join(MODEL_PATH, "sent_index_20210715")
-            try:
-                update_eval_data = model_dict['update_eval_data']
-            except:
-                update_eval_data = False
-
-            args = {
-                "meta_steps": meta_steps,
-                "corpus_dir": corpus_dir,
-                "retriever": retriever,
-                "index_path": index_path ,
-                "update_eval_data": update_eval_data
-            }
-                
-            pipeline.run(
-                build_type=model_dict["build_type"],
-                run_name=datetime.now().strftime("%Y%m%d"),
-                params=args,
-            )
-
-        def finetune_sentence(model_dict=model_dict):
-            logger.info("Attempting to finetune the sentence transformer")
-            try:
-                testing_only = model_dict["testing_only"]
-            except:
-                testing_only = False
-            args = {
-                "batch_size": 8,
-                "epochs": int(model_dict["epochs"]),
-                "warmup_steps": int(model_dict["warmup_steps"]),
-                "testing_only": bool(testing_only),
-            }
-            pipeline.run(
-                build_type="sent_finetune",
-                run_name=datetime.now().strftime("%Y%m%d"),
-                params=args,
-            )
-
-        def train_sentence(model_dict=model_dict):
-            logger.info("Attempting to start sentence pipeline")
-            try:
-                corpus_dir = model_dict["corpus_dir"]
-            except:
-                corpus_dir = CORPUS_DIR
-            if not os.path.exists(corpus_dir):
-                logger.warning(
-                    f"Corpus is not in local directory {str(corpus_dir)}")
-                raise Exception("Corpus is not in local directory")
-            args = {
-                "corpus": corpus_dir,
-                "encoder_model": model_dict["encoder_model"],
-                "gpu": bool(model_dict["gpu"]),
-                "upload": bool(model_dict["upload"]),
-                "version": model_dict["version"],
-            }
-            logger.info(args)
-            pipeline.run(
-                build_type=model_dict["build_type"],
-                run_name=datetime.now().strftime("%Y%m%d"),
-                params=args,
-            )
-
-        def train_qexp(model_dict=model_dict):
-            logger.info("Attempting to start qexp pipeline")
-            args = {
-                "model_id": model_dict["model_id"],
-                "validate": bool(model_dict["validate"]),
-                "upload": bool(model_dict["upload"]),
-                "version": model_dict["version"],
-            }
-            pipeline.run(
-                build_type=model_dict["build_type"],
-                run_name=datetime.now().strftime("%Y%m%d"),
-                params=args,
-            )
-
-        def run_evals(model_dict=model_dict):
-            logger.info("Attempting to run evaluation")
-            args = {
-                "model_name": model_dict["model_name"],
-                "eval_type": model_dict["eval_type"],
-                "sample_limit": model_dict["sample_limit"],
-                "validation_data": model_dict["validation_data"],
-            }
-            pipeline.run(
-                build_type=model_dict["build_type"],
-                run_name=datetime.now().strftime("%Y%m%d"),
-                params=args,
-            )
-
         # Create a mapping between the training methods and input from the api
         training_switch = {
             "sentence": train_sentence,
@@ -823,6 +772,7 @@ async def train_model(model_dict: dict, response: Response):
             "sent_finetune": finetune_sentence,
             "eval": run_evals,
             "meta": update_metadata,
+            "topics": train_topics,
         }
         # Set the training method to be loaded onto the thread
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:

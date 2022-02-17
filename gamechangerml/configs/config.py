@@ -102,8 +102,9 @@ class QexpConfig:
         "bqe": {
             "num_trees": 125,
             "num_keywords": 2,
-            "ngram": (1, 2),
+            "ngram": (1, 3),
             "abbrv_file": None,
+            "merge_word_sim": True
         },
     }
 
@@ -113,6 +114,7 @@ class ValidationConfig:
         # need to have validation data in here
         "validation_dir": os.path.join(DATA_PATH, "validation"),
         "evaluation_dir": os.path.join(DATA_PATH, "evaluation"),
+        "user_dir": os.path.join(DATA_PATH, "user_data"),
         # location with smaller set of corpus JSONs
         "test_corpus_dir": "gamechangerml/test_corpus",
         "squad": {
