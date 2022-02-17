@@ -303,7 +303,7 @@ class Pipeline:
         except Exception as e:
             logger.warning(f"Could not evaluate {model_name}")
             logger.warning(e)
-
+        """
         if upload:
             s3_path = os.path.join(S3_DATA_PATH, f"{version}")
             logger.info(f"****    Saving new data files to S3: {s3_path}")
@@ -312,7 +312,7 @@ class Pipeline:
             dst_path = DATA_PATH + model_name + ".tar.gz"
             utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
             utils.upload(s3_path, dst_path, model_prefix, model_name)
-
+        """
         return results
 
     def create_qexp(
