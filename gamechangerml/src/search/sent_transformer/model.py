@@ -159,6 +159,7 @@ class SentenceEncoder(object):
                 return_id=self.return_id,
                 min_token_len=self.min_token_len,
                 verbose=self.verbose,
+                bert_based_tokenizer=self.encoder_model,
             )
             corpus = [(para_id, " ".join(tokens), None)
                       for tokens, para_id in corp]
