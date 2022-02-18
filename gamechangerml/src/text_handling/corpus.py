@@ -47,7 +47,7 @@ class LocalCorpus(object):
                 paragraphs = [p["par_raw_text_t"] for p in doc["paragraphs"]]
                 paragraph_ids = [p["id"] for p in doc["paragraphs"]]
                 for para_text, para_id in zip(paragraphs, paragraph_ids):
-                    if self.bert_based_tokens:
+                    if self.bert_based_tokenizer:
                         tokens = self.auto_token.tokenize(para_text)
                     else:
                         tokens = preprocess(para_text, min_len=1)
