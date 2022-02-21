@@ -628,8 +628,8 @@ def update_metadata(model_dict):
         retriever = MODELS.sentence_searcher
         logger.info("Using pre-loaded SentenceSearcher")
     except:
-        retriever = None
         logger.info("Setting SentenceSearcher to None")
+        retriever = None
     try:
         meta_steps = model_dict["meta_steps"]
     except:
@@ -678,6 +678,7 @@ def finetune_sentence(model_dict):
         "epochs": int(model_dict["epochs"]),
         "warmup_steps": int(model_dict["warmup_steps"]),
         "testing_only": bool(testing_only),
+        "retriever": MODELS.sentence_searcher,
         "remake_train_data": bool(remake_train_data)
     }
     pipeline.run(
