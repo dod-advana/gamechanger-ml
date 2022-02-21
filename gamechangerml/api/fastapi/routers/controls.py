@@ -669,11 +669,16 @@ def finetune_sentence(model_dict):
         testing_only = model_dict["testing_only"]
     except:
         testing_only = False
+    try:
+        remake_train_data = model_dict["remake_train_data"]
+    except:
+        remake_train_data = False
     args = {
         "batch_size": 8,
         "epochs": int(model_dict["epochs"]),
         "warmup_steps": int(model_dict["warmup_steps"]),
         "testing_only": bool(testing_only),
+        "remake_train_data": bool(remake_train_data)
     }
     pipeline.run(
         build_type="sent_finetune",
