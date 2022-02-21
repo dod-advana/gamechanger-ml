@@ -72,14 +72,14 @@ def format_inputs(train, test):
         score = float(train[i]["label"])
         inputex = InputExample(str(count), texts, score)
         train_samples.append(inputex)
-        all_data.append([train[i]["query"], i, texts, score, "train"])
+        all_data.append([train[i]["query"], texts, score, "train"])
         count += 1
         #processmanager.update_status(processmanager.loading_data, count, total)
 
     for x in test.keys():
         texts = [test[x]["query"], test[x]["paragraph"]]
         score = float(test[x]["label"])
-        all_data.append([test[x]["query"], x, texts, score, "test"])
+        all_data.append([test[x]["query"], texts, score, "test"])
         count += 1
         processmanager.update_status(processmanager.loading_data, count, total)
 
