@@ -289,7 +289,7 @@ def collect_matches(
             doc = collection[k]
             uid = str(i) + '_' + str(k) # backup UID, overwritten if there are results
             try:
-                matching = get_best_paragraphs(data, query, doc, nlp, n_returns)
+                matching = get_best_paragraphs(query, doc, nlp, n_returns)
                 for match in matching:
                     uid =  str(i) + '_' + str(match['id'])
                     text = ' '.join(match['text'].split(' ')[:400]) # truncate to 400 tokens

@@ -324,6 +324,7 @@ def concat_csvs(directory):
     df = pd.DataFrame()
     logger.info(str(directory))
     csvs = [i for i in os.listdir(directory) if i.split('.')[-1]=='csv']
+    csvs = [i for i in csvs if i[:2] != '._']
     logger.info(f"Combining csvs: {str(csvs)}")
     for i in csvs:
         try:
