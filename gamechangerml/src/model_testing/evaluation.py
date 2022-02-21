@@ -4,6 +4,7 @@ import pandas as pd
 import csv
 import math
 from datetime import datetime
+from sentence_transformers import util
 from gamechangerml.src.search.sent_transformer.model import (
     SentenceEncoder,
     SentenceSearcher,
@@ -594,6 +595,103 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                 model_name=encoder_model_name,
             )
 
+class EncoderEvaluator(TransformerEvaluator):
+    def __init__(
+        self,
+        model_name,
+        transformer_path=LOCAL_TRANSFORMERS_DIR,
+        use_gpu=False
+        ):
+
+        super().__init__(transformer_path, use_gpu)
+        self.model = model_name
+        self.df = pd.read_csv(data_path)
+        # get data dir
+        #base_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
+
+            logger.info("*** Summarizing finetuning results ")
+            ## get new cosine sim
+            ft_metadata = self.summarize_results(df, data_dir)
+
+            # save metadata file
+            ft_metadata_path = os.path.join(
+                data_dir, timestamp_filename("finetuning_metadata", ".json"))
+            with open(ft_metadata_path, "w") as outfile:
+                json.dump(ft_metadata, outfile)
+
+            logger.info("Metadata saved to {}".format(ft_metadata_path))
+
+            evals_dir = os.path.join(self.model_save_path, "evals_gc")
+            if not os.path.isdir(evals_dir):
+                os.mkdir(os.path.join(evals_dir))
+            ft_evals_path = os.path.join(evals_dir, timestamp_filename("finetuning_evals", ".json"))
+            with open(ft_evals_path, "w") as outfile:
+                json.dump(ft_metadata, outfile)
+            
+            logger.info("Metadata saved to {}".format(ft_evals_path))
+
+    def summarize_results(self, df, data_dir):
+
+        queries = list(set(df['query']))
+        train_queries = list(set(df[df['label']=='train']['query'].tolist()))
+        test_queries = [i for i in queries if i not in train_queries]
+        
+        def get_stats(df, query):
+        
+            mydict = {}
+            sub = df[df['query']==query].copy()
+            balance = sub['score'].value_counts().to_dict()
+
+            ## calculate new scores
+            sub = sub.sort_values(by = 'new_cos_sim', ascending = False)
+
+            mydict["query"] = query
+            mydict["balance"] = balance
+            mydict["original_RR"] = original_RR
+            mydict["new_RR"] = new_RR
+
+            return mydict
+        
+        results_dict = {}
+        for q in queries:
+            results = get_stats(df, q)
+            results_dict[q] = results 
+        
+        summary = pd.DataFrame(results_dict)
+        
+        summary = summary.T.reset_index()
+        summary.drop(columns = 'index', inplace = True)
+        dev_only = summary[summary['balance']!={0:50}]
+        num_queries = dev_only.shape[0]
+
+        # getting old MRR
+        original_MRR = get_MRR(dev_only['original_RR'])
+        new_MRR = get_MRR(dev_only['new_RR'])
+
+        train_only = dev_only[dev_only['query'].isin(train_queries)]
+        test_only = dev_only[dev_only['query'].isin(test_queries)]
+
+        train_original_MRR = get_MRR(train_only['original_RR'])
+        test_original_MRR = get_MRR(test_only['original_RR'])
+        test_new_MRR = get_MRR(test_only['new_RR'])
+        train_new_MRR = get_MRR(train_only['new_RR'])
+        
+        logger.info(f"Number of unique queries tested: {str(num_queries)}")
+        logger.info(f"Old MRR: {str(original_MRR)}")
+        logger.info(f"New MRR: {str(new_MRR)}")
+        if new_MRR < original_MRR:
+            logger.warning("WARNING! Model did not improve MRR")
+            
+        summary.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
+        
+        ft_metadata = {
+            "date_finetuned": str(date.today()),
+            "data_dir": str(data_dir),
+            "old_MRR": f"{str(original_MRR)} ({str(train_original_MRR)} train / {str(test_original_MRR)} test)",
+            "new_MRR": f"{str(new_MRR)} ({str(train_new_MRR)} train / {str(test_new_MRR)} test)"
+        }
+
+        return ft_metadata
 
 class SimilarityEvaluator(TransformerEvaluator):
     def __init__(
