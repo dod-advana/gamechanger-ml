@@ -239,6 +239,8 @@ class Pipeline:
                 os.makedirs(base_dir)
             elif len(os.listdir(base_dir))==0: # if base dir exists but there are no files
                 no_data=True
+            elif len(os.listdir(get_most_recent_dir(base_dir)))==0:
+                no_data=True
             if no_data: #if we don't have data, make training data
                 logger.info("No training data found - creating training data")
                 make_training_data(
