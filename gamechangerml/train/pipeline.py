@@ -211,7 +211,8 @@ class Pipeline:
         epochs: int = 3,
         warmup_steps: int = 100,
         testing_only: bool = False,
-        version: str = "v100"
+        remake_train_data: bool = False,
+        version: str = "v1"
     ) -> t.Dict[str, str]:
         """finetune_sent: finetunes the sentence transformer - saves new model, 
            a csv file of old/new cos sim scores, and a metadata file.
@@ -234,7 +235,9 @@ class Pipeline:
                 f"Setting {str(model_save_path)} as save path for new model")
             no_data=False
             base_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
-            if not os.path.isdir(base_dir): # if no training data directory exists
+            if remake_train_data:
+                no_data = True
+            elif not os.path.isdir(base_dir): # if no training data directory exists
                 no_data=True
                 os.makedirs(base_dir)
             elif len(os.listdir(base_dir))==0: # if base dir exists but there are no files
