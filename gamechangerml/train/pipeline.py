@@ -212,6 +212,7 @@ class Pipeline:
         warmup_steps: int = 100,
         testing_only: bool = False,
         remake_train_data: bool = False,
+        retriever = None,
         version: str = "v1"
     ) -> t.Dict[str, str]:
         """finetune_sent: finetunes the sentence transformer - saves new model, 
@@ -251,7 +252,7 @@ class Pipeline:
                     n_returns=50, 
                     level='silver', 
                     update_eval_data=True, 
-                    retriever=None
+                    retriever=retriever
                 )
             data_path = get_most_recent_dir(base_dir)
             logger.info(f"Loading in domain data to finetune from {data_path}")

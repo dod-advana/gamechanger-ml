@@ -678,7 +678,8 @@ def finetune_sentence(model_dict):
         "epochs": int(model_dict["epochs"]),
         "warmup_steps": int(model_dict["warmup_steps"]),
         "testing_only": bool(testing_only),
-        "remake_train_data": bool(remake_train_data)
+        "remake_train_data": bool(remake_train_data),
+        "retriever": MODELS.sentence_searcher,
     }
     pipeline.run(
         build_type="sent_finetune",
