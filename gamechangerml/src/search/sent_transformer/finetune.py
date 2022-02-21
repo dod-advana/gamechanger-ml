@@ -48,19 +48,7 @@ def fix_model_config(model_load_path):
         logger.info("Could not update model config file")
 
 
-def get_cos_sim(model, pair):
-
-    emb1 = model.encode(pair[0], show_progress_bar=False)
-    emb2 = model.encode(pair[1], show_progress_bar=False)
-    try:
-        sim = float(util.cos_sim(emb1, emb2))
-    except:
-        sim = float(cos_sim(emb1, emb2))
-
-    return sim
-
-
-def format_inputs(train, test):
+def format_inputs(train, test, data_dir):
     """Create input data for dataloader and df for tracking cosine sim"""
 
     train_samples = []
@@ -84,8 +72,9 @@ def format_inputs(train, test):
         processmanager.update_status(processmanager.loading_data, count, total)
 
     df = pd.DataFrame(all_data, columns=["key", "pair", "score", "label"])
+    df.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_data", ".csv")))
 
-    return train_samples, df
+    return train_samples
 
 
 class STFinetuner():
@@ -100,80 +89,6 @@ class STFinetuner():
         self.epochs = epochs
         self.warmup_steps = warmup_steps
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    def summarize_results(self, df, data_dir):
-
-        df["new_cos_sim"] = df["pair"].apply(lambda x: get_cos_sim(self.model, x))
-        df["change_cos_sim"] = df["new_cos_sim"] - df["original_cos_sim"]
-        df['score'] = df['score'].apply(lambda x: int(x))
-
-        ## save all results to CSV
-        df.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
-
-        queries = list(set(df['query']))
-        train_queries = list(set(df[df['label']=='train']['query'].tolist()))
-        test_queries = [i for i in queries if i not in train_queries]
-        
-        def get_stats(df, query):
-        
-            mydict = {}
-            sub = df[df['query']==query].copy()
-            balance = sub['score'].value_counts().to_dict()
-            ## calculate original scores
-            sub = sub.sort_values(by = 'original_cos_sim', ascending = False)
-            original_RR = reciprocal_rank_score(list(sub['score']))
-
-            ## calculate new scores
-            sub = sub.sort_values(by = 'new_cos_sim', ascending = False)
-            new_RR = reciprocal_rank_score(list(sub['score']))
-
-            mydict["query"] = query
-            mydict["balance"] = balance
-            mydict["original_RR"] = original_RR
-            mydict["new_RR"] = new_RR
-
-            return mydict
-        
-        results_dict = {}
-        for q in queries:
-            results = get_stats(df, q)
-            results_dict[q] = results 
-        
-        summary = pd.DataFrame(results_dict)
-        
-        summary = summary.T.reset_index()
-        summary.drop(columns = 'index', inplace = True)
-        dev_only = summary[summary['balance']!={0:50}]
-        num_queries = dev_only.shape[0]
-
-        # getting old MRR
-        original_MRR = get_MRR(dev_only['original_RR'])
-        new_MRR = get_MRR(dev_only['new_RR'])
-
-        train_only = dev_only[dev_only['query'].isin(train_queries)]
-        test_only = dev_only[dev_only['query'].isin(test_queries)]
-
-        train_original_MRR = get_MRR(train_only['original_RR'])
-        test_original_MRR = get_MRR(test_only['original_RR'])
-        test_new_MRR = get_MRR(test_only['new_RR'])
-        train_new_MRR = get_MRR(train_only['new_RR'])
-        
-        logger.info(f"Number of unique queries tested: {str(num_queries)}")
-        logger.info(f"Old MRR: {str(original_MRR)}")
-        logger.info(f"New MRR: {str(new_MRR)}")
-        if new_MRR < original_MRR:
-            logger.warning("WARNING! Model did not improve MRR")
-            
-        summary.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
-        
-        ft_metadata = {
-            "date_finetuned": str(date.today()),
-            "data_dir": str(data_dir),
-            "old_MRR": f"{str(original_MRR)} ({str(train_original_MRR)} train / {str(test_original_MRR)} test)",
-            "new_MRR": f"{str(new_MRR)} ({str(train_new_MRR)} train / {str(test_new_MRR)} test)"
-        }
-
-        return ft_metadata
     
     def retrain(self, data_dir, testing_only, version):
 
@@ -196,12 +111,7 @@ class STFinetuner():
             processmanager.update_status(processmanager.training, 0, 1)
             sleep(0.1)
             # make formatted training data
-            train_samples, df = format_inputs(train, test)
-
-            # get cosine sim before finetuning
-            # TODO: you should be able to encode this more efficiently
-            df["original_cos_sim"] = df["pair"].apply(
-                lambda x: get_cos_sim(self.model, x))
+            train_samples = format_inputs(train, test, data_dir)
 
             # finetune on samples
             logger.info("Starting dataloader...")
@@ -221,27 +131,6 @@ class STFinetuner():
             logger.info("Finetuned model saved to {}".format(
                 str(self.model_save_path)))
 
-            logger.info("*** Summarizing finetuning results ")
-            ## get new cosine sim
-            ft_metadata = self.summarize_results(df, data_dir)
-
-            # save metadata file
-            ft_metadata_path = os.path.join(
-                data_dir, timestamp_filename("finetuning_metadata", ".json"))
-            with open(ft_metadata_path, "w") as outfile:
-                json.dump(ft_metadata, outfile)
-
-            logger.info("Metadata saved to {}".format(ft_metadata_path))
-
-            evals_dir = os.path.join(self.model_save_path, "evals_gc")
-            if not os.path.isdir(evals_dir):
-                os.mkdir(os.path.join(evals_dir))
-            ft_evals_path = os.path.join(evals_dir, timestamp_filename("finetuning_evals", ".json"))
-            with open(ft_evals_path, "w") as outfile:
-                json.dump(ft_metadata, outfile)
-            
-            logger.info("Metadata saved to {}".format(ft_evals_path))
-            
             # when not testing only, save to S3
             if not testing_only:
                 logger.info("Saving data to S3...")
@@ -265,7 +154,7 @@ class STFinetuner():
                 utils.upload(s3_path, dst_path, "transformers", model_id)
                 logger.info(f"*** Saved model to S3: {s3_path}")
 
-            return ft_metadata
+            return {}
 
         except Exception as e:
             logger.warning("Could not complete finetuning")
