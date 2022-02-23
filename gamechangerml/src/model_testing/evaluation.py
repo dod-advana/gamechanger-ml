@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import csv
 import math
+import shutil
 from datetime import datetime
 from sentence_transformers import util
 from gamechangerml.src.search.sent_transformer.model import (
@@ -43,6 +44,11 @@ init_timer()
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SENT_INDEX_PATH = model_path_dict["sentence"]
+try:
+    from gamechangerml import CORPUS_PATH
+except Exception as e:
+    logger.info("could not import CORPUS_PATH")
+    CORPUS_PATH = "gamechangerml/corpus"
 
 
 class TransformerEvaluator:
@@ -526,6 +532,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         return_id,
         verbose,
         data_level,
+        finetune_data_path=None,
         create_index=True,
         data_path=None,
         encoder=None,
@@ -538,12 +545,13 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         super().__init__(transformer_path, encoder_model_name, use_gpu)
 
         self.model_path = os.path.join(transformer_path, encoder_model_name)
-        if not index:
+        if not index: # if there is no index to evaluate
             logger.info("No index provided for evaluating.")
-            if create_index:
+            if create_index: # make test index in the encoder model directory
                 self.index_path = os.path.join(
-                    os.path.dirname(transformer_path), "sent_index_TEST"
+                    transformer_path, encoder_model_name, "sent_index_TEST"
                 )
+                corpus_subset_path=ValidationConfig.DATA_ARGS["test_corpus_dir"]
                 logger.info(
                     "Making new embeddings index at {}".format(
                         str(self.index_path))
@@ -560,9 +568,21 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                         verbose=verbose,
                         use_gpu=use_gpu,
                     )
+                if finetune_data_path: # use data to make corpus subset
+                    df = pd.read_csv(finetune_data_path)
+                    docs = list(set(df['doc']))
+                    docs = [i + '.json' for i in docs]
+                    docs = [os.path.join(CORPUS_PATH, i) for i in docs]
+                    for doc in docs:
+                        try:
+                            shutil.copy(doc, corpus_subset_path)
+                        except Exception as e:
+                            logger.warning(f"Could not copy {doc} to the corpus")
+                            logger.warning(e)
+
                 self.make_index(
                     encoder=self.encoder,
-                    corpus_path=ValidationConfig.DATA_ARGS["test_corpus_dir"],
+                    corpus_path=corpus_subset_path,
                     index_path=self.index_path,
                 )
         else:
@@ -594,105 +614,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                 eval_path=self.eval_path,
                 model_name=encoder_model_name,
             )
-
-class EncoderEvaluator(TransformerEvaluator):
-    def __init__(
-        self,
-        model_name,
-        transformer_path=LOCAL_TRANSFORMERS_DIR,
-        use_gpu=False
-        ):
-
-        super().__init__(transformer_path, use_gpu)
-        self.model = model_name
-        self.df = pd.read_csv(data_path)
-        # get data dir
-        #base_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
-
-            logger.info("*** Summarizing finetuning results ")
-            ## get new cosine sim
-            ft_metadata = self.summarize_results(df, data_dir)
-
-            # save metadata file
-            ft_metadata_path = os.path.join(
-                data_dir, timestamp_filename("finetuning_metadata", ".json"))
-            with open(ft_metadata_path, "w") as outfile:
-                json.dump(ft_metadata, outfile)
-
-            logger.info("Metadata saved to {}".format(ft_metadata_path))
-
-            evals_dir = os.path.join(self.model_save_path, "evals_gc")
-            if not os.path.isdir(evals_dir):
-                os.mkdir(os.path.join(evals_dir))
-            ft_evals_path = os.path.join(evals_dir, timestamp_filename("finetuning_evals", ".json"))
-            with open(ft_evals_path, "w") as outfile:
-                json.dump(ft_metadata, outfile)
-            
-            logger.info("Metadata saved to {}".format(ft_evals_path))
-
-    def summarize_results(self, df, data_dir):
-
-        queries = list(set(df['query']))
-        train_queries = list(set(df[df['label']=='train']['query'].tolist()))
-        test_queries = [i for i in queries if i not in train_queries]
         
-        def get_stats(df, query):
-        
-            mydict = {}
-            sub = df[df['query']==query].copy()
-            balance = sub['score'].value_counts().to_dict()
-
-            ## calculate new scores
-            sub = sub.sort_values(by = 'new_cos_sim', ascending = False)
-
-            mydict["query"] = query
-            mydict["balance"] = balance
-            mydict["original_RR"] = original_RR
-            mydict["new_RR"] = new_RR
-
-            return mydict
-        
-        results_dict = {}
-        for q in queries:
-            results = get_stats(df, q)
-            results_dict[q] = results 
-        
-        summary = pd.DataFrame(results_dict)
-        
-        summary = summary.T.reset_index()
-        summary.drop(columns = 'index', inplace = True)
-        dev_only = summary[summary['balance']!={0:50}]
-        num_queries = dev_only.shape[0]
-
-        # getting old MRR
-        original_MRR = get_MRR(dev_only['original_RR'])
-        new_MRR = get_MRR(dev_only['new_RR'])
-
-        train_only = dev_only[dev_only['query'].isin(train_queries)]
-        test_only = dev_only[dev_only['query'].isin(test_queries)]
-
-        train_original_MRR = get_MRR(train_only['original_RR'])
-        test_original_MRR = get_MRR(test_only['original_RR'])
-        test_new_MRR = get_MRR(test_only['new_RR'])
-        train_new_MRR = get_MRR(train_only['new_RR'])
-        
-        logger.info(f"Number of unique queries tested: {str(num_queries)}")
-        logger.info(f"Old MRR: {str(original_MRR)}")
-        logger.info(f"New MRR: {str(new_MRR)}")
-        if new_MRR < original_MRR:
-            logger.warning("WARNING! Model did not improve MRR")
-            
-        summary.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
-        
-        ft_metadata = {
-            "date_finetuned": str(date.today()),
-            "data_dir": str(data_dir),
-            "old_MRR": f"{str(original_MRR)} ({str(train_original_MRR)} train / {str(test_original_MRR)} test)",
-            "new_MRR": f"{str(new_MRR)} ({str(train_new_MRR)} train / {str(test_new_MRR)} test)"
-        }
-
-        return ft_metadata
-
 class SimilarityEvaluator(TransformerEvaluator):
     def __init__(
         self,

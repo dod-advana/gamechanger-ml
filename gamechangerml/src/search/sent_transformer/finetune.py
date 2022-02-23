@@ -59,24 +59,23 @@ def format_inputs(train, test, data_dir):
         score = float(train[i]["label"])
         inputex = InputExample(str(count), texts, score)
         train_samples.append(inputex)
-        all_data.append([train[i]["query"], texts, score, "train"])
+        all_data.append([train[i]["query"], train[i]["doc"], score, "train"])
         count += 1
         #processmanager.update_status(processmanager.loading_data, count, total)
 
     for x in test.keys():
         texts = [test[x]["query"], test[x]["paragraph"]]
         score = float(test[x]["label"])
-        all_data.append([test[x]["query"], texts, score, "test"])
+        all_data.append([test[x]["query"], train[i]["doc"], score, "test"])
         count += 1
         processmanager.update_status(processmanager.loading_data, count, total)
 
-    df = pd.DataFrame(all_data, columns=["key", "pair", "score", "label"])
-    df['score'] = df['score'].apply(lambda x: int(x))
+    df = pd.DataFrame(all_data, columns=["query", "result", "score", "label"])
 
     ## save all results to CSV
     df.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_results", ".csv")))
 
-    return train_samples, df
+    return train_samples
 
 
 class STFinetuner():
@@ -113,7 +112,7 @@ class STFinetuner():
             processmanager.update_status(processmanager.training, 0, 1)
             sleep(0.1)
             # make formatted training data
-            train_samples, df = format_inputs(train, test, data_dir)
+            train_samples = format_inputs(train, test, data_dir)
     
             # finetune on samples
             logger.info("Starting dataloader...")
