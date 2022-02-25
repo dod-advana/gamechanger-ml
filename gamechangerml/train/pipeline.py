@@ -236,6 +236,8 @@ class Pipeline:
                 f"Setting {str(model_save_path)} as save path for new model")
             no_data=False
             base_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
+
+            ## check if training data exists
             if remake_train_data:
                 no_data = True
             elif not os.path.isdir(base_dir): # if no training data directory exists
@@ -243,10 +245,14 @@ class Pipeline:
                 os.makedirs(base_dir)
             elif len(os.listdir(base_dir))==0: # if base dir exists but there are no files
                 no_data=True
+            elif get_most_recent_dir(base_dir)==None:
+                no_data = True
             elif len(os.listdir(get_most_recent_dir(base_dir)))==0:
                 no_data=True
-            if no_data: #if we don't have data, make training data
-                logger.info("No training data found - creating training data")
+            logger.info(f"No data flag is set to: {str(no_data)}")
+
+            #if we don't have data, make training data
+            if no_data: 
                 make_training_data(
                     index_path=SENT_INDEX,
                     n_returns=50, 
@@ -254,6 +260,7 @@ class Pipeline:
                     update_eval_data=True, 
                     retriever=retriever
                 )
+            
             data_path = get_most_recent_dir(base_dir)
             logger.info(f"Loading in domain data to finetune from {data_path}")
             finetuner = STFinetuner(
@@ -299,9 +306,10 @@ class Pipeline:
                 results[eval_type] = eval_qa(
                     model_name, sample_limit, eval_type)
             elif "msmarco-distilbert-base-v2" in model_name:
-                results["original"] = eval_sent(
-                    model_name, validation_data, eval_type="original"
-                )
+                for e_type in ["domain", "original"]:
+                    results[eval_type] = eval_sent(
+                        model_name, validation_data, e_type
+                    )
             elif "sent_index" in model_name:
                 results["domain"] = eval_sent(
                     model_name, validation_data, eval_type="domain"

@@ -17,9 +17,13 @@ def eval_qa(model_name, sample_limit, eval_type="original"):
         logger.info("No eval_type selected. Options: ['original', 'gamechanger'].")
 
 def eval_sent(model_name, validation_data, eval_type="domain"):
-    metadata = open_json('metadata.json', os.path.join(MODEL_PATH, model_name))
-    encoder = metadata['encoder_model']
-    logger.info(f"Evaluating {model_name} created with {encoder}")
+    if "sent_index" in model_name:
+        metadata = open_json('metadata.json', os.path.join(MODEL_PATH, model_name))
+        encoder = metadata['encoder_model']
+        logger.info(f"Evaluating {model_name} created with {encoder}")
+    else:
+        encoder = model_name
+        logger.info(f"Evaluating encoder: {encoder}")
     if eval_type == "domain":
         if validation_data != "latest":
             if os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer", validation_data)):

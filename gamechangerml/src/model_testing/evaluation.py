@@ -6,6 +6,7 @@ import math
 import shutil
 from datetime import datetime
 from sentence_transformers import util
+from gamechangerml import REPO_PATH
 from gamechangerml.src.search.sent_transformer.model import (
     SentenceEncoder,
     SentenceSearcher,
@@ -15,10 +16,6 @@ from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.configs.config import (
-    QAConfig,
-    EmbedderConfig,
-    SimilarityConfig,
-    QexpConfig,
     ValidationConfig,
 )
 from gamechangerml.src.utilities.text_utils import normalize_answer
@@ -28,7 +25,6 @@ from gamechangerml.src.model_testing.validation_data import (
     NLIData,
     MSMarcoData,
     QADomainData,
-    RetrieverGSData,
     UpdatedGCRetrieverData,
     QEXPDomainData,
 )
@@ -44,12 +40,7 @@ init_timer()
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SENT_INDEX_PATH = model_path_dict["sentence"]
-try:
-    from gamechangerml import CORPUS_PATH
-except Exception as e:
-    logger.info("could not import CORPUS_PATH")
-    CORPUS_PATH = "gamechangerml/corpus"
-
+CORPUS_PATH = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 
 class TransformerEvaluator:
     def __init__(self, transformer_path=LOCAL_TRANSFORMERS_DIR, use_gpu=False):
@@ -522,7 +513,6 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
             model_name=encoder_model_name,
         )
 
-
 class IndomainRetrieverEvaluator(RetrieverEvaluator):
     def __init__(
         self,
@@ -532,35 +522,56 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         return_id,
         verbose,
         data_level,
-        finetune_data_path=None,
         create_index=True,
         data_path=None,
         encoder=None,
         retriever=None,
         transformer_path=LOCAL_TRANSFORMERS_DIR,
         index=SENT_INDEX_PATH,
+        overwrite_test_corpus=True,
         use_gpu=False,
     ):
 
         super().__init__(transformer_path, encoder_model_name, use_gpu)
 
         self.model_path = os.path.join(transformer_path, encoder_model_name)
-        if not index: # if there is no index to evaluate
-            logger.info("No index provided for evaluating.")
+        self.data_path = data_path
+        self.data_level = data_level
+        if not index: # if there is no index to evaluate, we need to make one
+            logger.info("No index provided for evaluating. Creating one.")
             if create_index: # make test index in the encoder model directory
                 self.index_path = os.path.join(
                     transformer_path, encoder_model_name, "sent_index_TEST"
                 )
-                corpus_subset_path=ValidationConfig.DATA_ARGS["test_corpus_dir"]
+                
+                # use test corpus directory to make test corpus
+                corpus_test_dir=ValidationConfig.DATA_ARGS["test_corpus_dir"]
+                if corpus_test_dir != CORPUS_PATH: # make sure this is a new dir
+                    if len(os.listdir(corpus_test_dir)) > 0: # check if files in test corpus dir
+                        if overwrite_test_corpus:
+                            logger.info("Removing files already in the test corpus dir")
+                            for f in os.listdir(corpus_test_dir):
+                                os.remove(os.path.join(corpus_test_dir, f))
+                        else: # otherwise, make a new timestamped subdir
+                            corpus_subset_path = make_timestamp_directory(corpus_test_dir)
+                else:
+                    logger.warning("Corpus sub dir cannot be the same as the corpus dir")
+                    quit
+                
+                # create directory for the test index
+                if not os.path.exists(self.index_path):
+                    os.makedirs(self.index_path)
                 logger.info(
                     "Making new embeddings index at {}".format(
                         str(self.index_path))
                 )
-                if not os.path.exists(self.index_path):
-                    os.makedirs(self.index_path)
-                if encoder:
+
+                # set up the encoder to make the index
+                if encoder: # if encoder model is passed, use that
+                    logger.info(f"Using pre-init encoder to make the index")
                     self.encoder = encoder
-                else:
+                else: # otherwise init an encoder to make the index
+                    logger.info(f"Loading {encoder_model_name} to make the index")
                     self.encoder = SentenceEncoder(
                         encoder_model_name=encoder_model_name,
                         min_token_len=min_token_len,
@@ -568,30 +579,33 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                         verbose=verbose,
                         use_gpu=use_gpu,
                     )
-                if finetune_data_path: # use data to make corpus subset
-                    df = pd.read_csv(finetune_data_path)
-                    docs = list(set(df['doc']))
-                    docs = [i + '.json' for i in docs]
-                    docs = [os.path.join(CORPUS_PATH, i) for i in docs]
-                    for doc in docs:
-                        try:
-                            shutil.copy(doc, corpus_subset_path)
-                        except Exception as e:
-                            logger.warning(f"Could not copy {doc} to the corpus")
-                            logger.warning(e)
 
+                # create the test corpus
+                include_ids = self.collect_docs_for_index()
+                make_test_corpus(
+                    test_size=1000, 
+                    corpus_dir=CORPUS_PATH, 
+                    save_dir=corpus_subset_path, 
+                    include_ids=include_ids
+                )
+
+                # make a (test) index for evaluating the model
+                logger.info("Making the test index")
                 self.make_index(
                     encoder=self.encoder,
                     corpus_path=corpus_subset_path,
                     index_path=self.index_path,
                 )
-        else:
+        else: # if a full index is passed, use that for evaluating
             self.index_path = os.path.join(
                 os.path.dirname(transformer_path), index)
 
-        if self.index_path:
+        if self.index_path: # at this point, there should be an index path
+            # collect all the doc ids in the index
             self.doc_ids = open_txt(os.path.join(
                 self.index_path, "doc_ids.txt"))
+            
+            # if retriever exists, use that, otherwise make one
             if retriever:
                 self.retriever = retriever
             else:
@@ -600,12 +614,18 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     index_path=self.index_path,
                     transformer_path=transformer_path,
                 )
+            
+            # make evaluations path
             self.eval_path = check_directory(
                 os.path.join(self.index_path, "evals_gc", data_level)
             )
+
+            # make the validation data
             self.data = UpdatedGCRetrieverData(
-                available_ids=self.doc_ids, level=data_level, data_path=data_path
+                available_ids=self.doc_ids, level=self.data_level, data_path=self.data_path
             )
+
+            # generate the evaluation results
             self.results = self.eval(
                 data=self.data,
                 index=index,
@@ -614,7 +634,24 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                 eval_path=self.eval_path,
                 model_name=encoder_model_name,
             )
+
+    def collect_docs_for_index(self):
+        '''Check if the model has an associated training data file with IDs to include in test index.'''
+
+        if os.path.isfile(os.path.join(self.model_path, "metadata.json")):
+            logger.info("This is a finetuned model: collecting training data IDs for index")
+            metadata = open_json("metadata.json", self.model_path)
+            train_data_path = metadata['data_dir']
+            training_data = pd.read_csv(train_data_path)
+            include_ids = list(set(training_data['doc']))
+        else:
+            logger.info("This is a base model: collecting validation data IDs for index")
+            validation_data = open_json(os.path.join(self.data_path, self.data_level, "intelligent_search_data.json"))
+            validation_data = json.loads(validation_data)
+            include_ids = [i.strip().lstrip() for i in validation_data['collection'].values()]
         
+        return include_ids
+
 class SimilarityEvaluator(TransformerEvaluator):
     def __init__(
         self,
