@@ -38,7 +38,10 @@ retriever_k = 5
 
 init_timer()
 model_path_dict = get_model_paths()
-LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
+try:
+    LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
+except:
+    LOCAL_TRANSFORMERS_DIR = 'gamechangerml/models/transformers'
 SENT_INDEX_PATH = model_path_dict["sentence"]
 CORPUS_PATH = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 
@@ -305,9 +308,9 @@ class RetrieverEvaluator(TransformerEvaluator):
         self.encoder_model_name = encoder_model_name
         self.model_path = os.path.join(encoder_model_name, transformer_path)
 
-    def make_index(self, encoder, corpus_path):
+    def make_index(self, encoder, corpus_path, index_path):
 
-        return encoder.index_documents(corpus_path)
+        return encoder.index_documents(corpus_path, index_path)
 
     def predict(self, data, index, retriever, eval_path, k):
 
@@ -325,9 +328,13 @@ class RetrieverEvaluator(TransformerEvaluator):
             "precision@{}".format(k),
             "recall@{}".format(k),
         ]
-        fname = index.split("/")[-1]
+        if "/" in index:
+            fname = index.split("/")[-1]
+        else:
+            fname = index
         csv_filename = os.path.join(
             eval_path, timestamp_filename(fname, ".csv"))
+        logger.info(f"Making a csv of test results, saved at: {csv_filename}")
         with open(csv_filename, "w") as csvfile:
             csvwriter = csv.writer(csvfile)
             csvwriter.writerow(columns)
@@ -342,7 +349,7 @@ class RetrieverEvaluator(TransformerEvaluator):
                 doc_texts = [x["text"] for x in doc_results]
                 doc_ids = [x["id"] for x in doc_results]
                 doc_scores = [x["score"] for x in doc_results]
-                if index != "msmarco_index":
+                if fname != "msmarco_index":
                     doc_ids = [".".join(i.split(".")[:-1]) for i in doc_ids]
                 logger.info(
                     f"retrieved: {str(doc_texts)}, {str(doc_ids)}, {str(doc_scores)}"
@@ -413,7 +420,15 @@ class RetrieverEvaluator(TransformerEvaluator):
 
     def eval(
         self, data, index, retriever, data_name, eval_path, model_name, k=retriever_k
-    ):
+        ):
+
+        logger.info(f"Data: {data}")
+        logger.info(f"index: {index}")
+        logger.info(f"retriever: {retriever}")
+        logger.info(f"data_name: {data_name}")
+        logger.info(f"eval_path: {eval_path}")
+        logger.info(f"model name: {model_name}")
+        logger.info(f"k: {k}")
 
         df, tp, tn, fp, fn, total_expected = self.predict(
             data, index, retriever, eval_path, k
@@ -522,15 +537,15 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         return_id,
         verbose,
         data_level,
+        index,
         create_index=True,
         data_path=None,
         encoder=None,
         retriever=None,
         transformer_path=LOCAL_TRANSFORMERS_DIR,
-        index=SENT_INDEX_PATH,
         overwrite_test_corpus=True,
-        use_gpu=False,
-    ):
+        use_gpu=False
+        ):
 
         super().__init__(transformer_path, encoder_model_name, use_gpu)
 
@@ -538,67 +553,83 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         self.data_path = data_path
         self.data_level = data_level
         if not index: # if there is no index to evaluate, we need to make one
-            logger.info("No index provided for evaluating. Creating one.")
-            if create_index: # make test index in the encoder model directory
-                self.index_path = os.path.join(
+            logger.info("No index provided for evaluating. Checking if test index exists.")
+            self.index_path = os.path.join(
                     transformer_path, encoder_model_name, "sent_index_TEST"
                 )
-                
-                # use test corpus directory to make test corpus
-                corpus_test_dir=ValidationConfig.DATA_ARGS["test_corpus_dir"]
-                if corpus_test_dir != CORPUS_PATH: # make sure this is a new dir
-                    if len(os.listdir(corpus_test_dir)) > 0: # check if files in test corpus dir
-                        if overwrite_test_corpus:
-                            logger.info("Removing files already in the test corpus dir")
-                            for f in os.listdir(corpus_test_dir):
-                                os.remove(os.path.join(corpus_test_dir, f))
-                        else: # otherwise, make a new timestamped subdir
-                            corpus_subset_path = make_timestamp_directory(corpus_test_dir)
-                else:
-                    logger.warning("Corpus sub dir cannot be the same as the corpus dir")
-                    quit
-                
-                # create directory for the test index
-                if not os.path.exists(self.index_path):
-                    os.makedirs(self.index_path)
-                logger.info(
-                    "Making new embeddings index at {}".format(
-                        str(self.index_path))
-                )
-
-                # set up the encoder to make the index
-                if encoder: # if encoder model is passed, use that
-                    logger.info(f"Using pre-init encoder to make the index")
-                    self.encoder = encoder
-                else: # otherwise init an encoder to make the index
-                    logger.info(f"Loading {encoder_model_name} to make the index")
-                    self.encoder = SentenceEncoder(
-                        encoder_model_name=encoder_model_name,
-                        min_token_len=min_token_len,
-                        return_id=return_id,
-                        verbose=verbose,
-                        use_gpu=use_gpu,
+            # make evaluations path
+            self.eval_path = check_directory(
+                os.path.join(self.model_path, "evals_gc", data_level)
+            )
+            if os.path.isdir(self.index_path) and len(os.listdir(self.index_path)) > 0:
+                logger.info("Found a test index for this model, using that.")
+            else:
+                logger.info("Did not find a test index - creating one.")
+                if create_index: # make test index in the encoder model directory
+                    # use test corpus directory to make test corpus
+                    corpus_test_dir=ValidationConfig.DATA_ARGS["test_corpus_dir"]
+                    if corpus_test_dir != CORPUS_PATH: # make sure this is a new dir
+                        if len(os.listdir(corpus_test_dir)) > 0: # check if files in test corpus dir
+                            if overwrite_test_corpus:
+                                logger.info("Removing files already in the test corpus dir")
+                                for f in os.listdir(corpus_test_dir):
+                                    os.remove(os.path.join(corpus_test_dir, f))
+                            else: # otherwise, make a new timestamped subdir
+                                corpus_test_dir = make_timestamp_directory(corpus_test_dir)
+                    else:
+                        logger.warning("Corpus sub dir cannot be the same as the corpus dir")
+                        quit
+                    
+                    # create directory for the test index
+                    if not os.path.exists(self.index_path):
+                        os.makedirs(self.index_path)
+                    logger.info(
+                        "Making new embeddings index at {}".format(
+                            str(self.index_path))
                     )
 
-                # create the test corpus
-                include_ids = self.collect_docs_for_index()
-                make_test_corpus(
-                    test_size=1000, 
-                    corpus_dir=CORPUS_PATH, 
-                    save_dir=corpus_subset_path, 
-                    include_ids=include_ids
-                )
+                    # set up the encoder to make the index
+                    if encoder: # if encoder model is passed, use that
+                        logger.info(f"Using pre-init encoder to make the index")
+                        self.encoder = encoder
+                    else: # otherwise init an encoder to make the index
+                        logger.info(f"Loading {encoder_model_name} to make the index")
+                        self.encoder = SentenceEncoder(
+                            encoder_model_name=encoder_model_name,
+                            min_token_len=min_token_len,
+                            return_id=return_id,
+                            verbose=verbose,
+                            use_gpu=use_gpu,
+                            transformer_path=LOCAL_TRANSFORMERS_DIR
+                        )
 
-                # make a (test) index for evaluating the model
-                logger.info("Making the test index")
-                self.make_index(
-                    encoder=self.encoder,
-                    corpus_path=corpus_subset_path,
-                    index_path=self.index_path,
-                )
+                    # create the test corpus
+                    logger.info("Making a corpus test directory")
+                    include_ids = self.collect_docs_for_index()
+                    make_test_corpus(
+                        test_size=1000, 
+                        corpus_dir=CORPUS_PATH, 
+                        save_dir=corpus_test_dir, 
+                        include_ids=include_ids
+                    )
+
+                    # make a (test) index for evaluating the model
+                    logger.info("Making the test index")
+                    self.make_index(
+                        encoder=self.encoder,
+                        corpus_path=corpus_test_dir,
+                        index_path=self.index_path,
+                    )
+
+            index = self.index_path
         else: # if a full index is passed, use that for evaluating
             self.index_path = os.path.join(
                 os.path.dirname(transformer_path), index)
+
+            # make evaluations path
+            self.eval_path = check_directory(
+                os.path.join(self.index_path, "evals_gc", data_level)
+            )
 
         if self.index_path: # at this point, there should be an index path
             # collect all the doc ids in the index
@@ -614,17 +645,14 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     index_path=self.index_path,
                     transformer_path=transformer_path,
                 )
-            
-            # make evaluations path
-            self.eval_path = check_directory(
-                os.path.join(self.index_path, "evals_gc", data_level)
-            )
 
             # make the validation data
+            logger.info("Collecting query/result pairs for testing")
             self.data = UpdatedGCRetrieverData(
                 available_ids=self.doc_ids, level=self.data_level, data_path=self.data_path
             )
 
+            logger.info("Generating results")
             # generate the evaluation results
             self.results = self.eval(
                 data=self.data,
@@ -641,7 +669,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         if os.path.isfile(os.path.join(self.model_path, "metadata.json")):
             logger.info("This is a finetuned model: collecting training data IDs for index")
             metadata = open_json("metadata.json", self.model_path)
-            train_data_path = metadata['data_dir']
+            train_data_path = metadata['training_data_dir']
             training_data = pd.read_csv(train_data_path)
             include_ids = list(set(training_data['doc']))
         else:

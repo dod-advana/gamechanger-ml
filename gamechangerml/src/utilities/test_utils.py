@@ -360,7 +360,7 @@ def make_test_corpus(
     max_file_size=100000 # max size of random files to add to the test corpus
     ):
     '''Makes a small test corpus for checking validation'''
-    all_files = [f.split('.json')[0] + '.json' for f in os.path.listdir(corpus_dir) if os.path.isfile(os.path.join(corpus_dir, f))]
+    all_files = [f.split('.json')[0] + '.json' for f in os.listdir(corpus_dir) if os.path.isfile(os.path.join(corpus_dir, f))]
     if include_ids:
         logger.info(f"{str(len(include_ids))} ids required in test corpus")
         include_ids = [f.split('.json')[0] + '.json' for f in include_ids] # make sure json at end of filenames
@@ -389,6 +389,6 @@ def make_test_corpus(
     
     # verify the test corpus dir now contains files
     size_test_corpus = len(os.listdir(save_dir))
-    logger.info(f"Saved {str(size_test_corpus)} to {save_dir}")
+    logger.info(f"Saved {str(size_test_corpus)} jsons to {save_dir}")
 
     return

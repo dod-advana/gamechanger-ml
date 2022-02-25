@@ -219,7 +219,7 @@ class UpdatedGCRetrieverData(RetrieverGSData):
             else:
                 new_data = get_most_recent_dir(
                     os.path.join(
-                        ValidationConfig.DATA_ARGS["validation_dir"], "sent_transformer"
+                        ValidationConfig.DATA_ARGS["validation_dir"], "domain", "sent_transformer"
                     )
                 )
                 self.data_path = os.path.join(new_data, level)

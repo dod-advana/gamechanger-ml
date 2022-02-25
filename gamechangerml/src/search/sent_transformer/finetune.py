@@ -59,17 +59,17 @@ def format_inputs(train, test, data_dir):
         score = float(train[i]["label"])
         inputex = InputExample(str(count), texts, score)
         train_samples.append(inputex)
-        all_data.append([train[i]["query"], texts, score, "train"])
+        all_data.append([train[i]["query"], train[i]["doc"], score, "train"])
         count += 1
 
     for x in test.keys():
         texts = [test[x]["query"], test[x]["paragraph"]]
         score = float(test[x]["label"])
-        all_data.append([test[x]["query"], texts, score, "test"])
+        all_data.append([test[x]["query"], test[x]["doc"], score, "test"])
         count += 1
         processmanager.update_status(processmanager.loading_data, count, total)
 
-    df = pd.DataFrame(all_data, columns=["key", "pair", "score", "label"])
+    df = pd.DataFrame(all_data, columns=["key", "doc", "score", "label"])
     df_path = os.path.join(data_dir, timestamp_filename("finetuning_data", ".csv"))
     df.to_csv(df_path)
 
@@ -81,6 +81,7 @@ class STFinetuner():
     def __init__(self, model_load_path, model_save_path, shuffle, batch_size, epochs, warmup_steps):
 
         fix_model_config(model_load_path)
+        self.model_load_path = model_load_path
         self.model = SentenceTransformer(model_load_path)
         self.model_save_path = model_save_path
         self.shuffle = shuffle
@@ -102,8 +103,8 @@ class STFinetuner():
             if testing_only:
                 logger.info(
                     "Creating smaller dataset just for testing finetuning.")
-                train_keys = list(train.keys())[:10]
-                test_keys = list(test.keys())[:10]
+                train_keys = list(train.keys())[:160]
+                test_keys = list(test.keys())[:40]
                 train = {k: train[k] for k in train_keys}
                 test = {k: test[k] for k in test_keys}
 
@@ -118,8 +119,8 @@ class STFinetuner():
             train_dataloader = DataLoader(
                 train_samples, shuffle=self.shuffle, batch_size=self.batch_size)
             train_loss = losses.CosineSimilarityLoss(model=self.model)
-            del train_samples
-            gc.collect()
+            #del train_samples
+            #gc.collect()
             logger.info("Finetuning the encoder model...")
             self.model.fit(train_objectives=[
                            (train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
@@ -132,18 +133,18 @@ class STFinetuner():
 
             # save metadata with the finetuned model
             metadata = {
-                "date": datetime.now().strftime("%Y%m%d"),
+                "date": datetime.now().strftime("%Y-%m-%d"),
                 "model_type": "finetuned encoder",
-                "base_model": self.model_load_path,
-                "data_dir": df_path,
+                "base_model_path": self.model_load_path,
+                "current_model_path": self.model_save_path,
+                "training_data_dir": df_path,
                 "n_training_samples": len_samples,
                 "version": version,
                 "testing_only": testing_only,
                 "shuffle": self.shuffle,
                 "batch_size": self.batch_size,
                 "epochs": self.epochs,
-                "warmup_steps": self.warmup_steps,
-                "device": self.device
+                "warmup_steps": self.warmup_steps
             }
 
             save_json("metadata.json", self.model_save_path, metadata)
@@ -176,4 +177,4 @@ class STFinetuner():
 
         except Exception as e:
             logger.warning("Could not complete finetuning")
-            logger.error(e)
+            logger.error(e, exc_info=True)

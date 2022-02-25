@@ -306,10 +306,13 @@ class Pipeline:
                 results[eval_type] = eval_qa(
                     model_name, sample_limit, eval_type)
             elif "msmarco-distilbert-base-v2" in model_name:
-                for e_type in ["domain", "original"]:
-                    results[eval_type] = eval_sent(
-                        model_name, validation_data, e_type
-                    )
+                #for e_type in ["domain", "original"]:
+                #    results[e_type] = eval_sent(
+                #        model_name, validation_data, e_type
+                #    )
+                results["domain"] = eval_sent(
+                    model_name, validation_data, eval_type="domain"
+                )
             elif "sent_index" in model_name:
                 results["domain"] = eval_sent(
                     model_name, validation_data, eval_type="domain"
