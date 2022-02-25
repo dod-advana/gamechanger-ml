@@ -3,7 +3,7 @@ from gamechangerml.api.utils import processmanager
 from datetime import datetime
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities import utils as utils
-from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename
+from gamechangerml.src.utilities.test_utils import open_json, save_json, timestamp_filename
 from time import sleep
 import tqdm
 import logging
@@ -48,7 +48,7 @@ def fix_model_config(model_load_path):
         logger.info("Could not update model config file")
 
 def format_inputs(train, test, data_dir):
-    """Create input data for dataloader and df for tracking cosine sim"""
+    """Create input data for dataloader and df with train/test split data"""
 
     train_samples = []
     all_data = []
@@ -61,7 +61,6 @@ def format_inputs(train, test, data_dir):
         train_samples.append(inputex)
         all_data.append([train[i]["query"], train[i]["doc"], score, "train"])
         count += 1
-        #processmanager.update_status(processmanager.loading_data, count, total)
 
     for x in test.keys():
         texts = [test[x]["query"], test[x]["paragraph"]]
@@ -113,7 +112,7 @@ class STFinetuner():
             sleep(0.1)
             # make formatted training data
             train_samples = format_inputs(train, test, data_dir)
-    
+            len_samples = len(train_samples)
             # finetune on samples
             logger.info("Starting dataloader...")
             # pin_memory=self.pin_memory)
@@ -131,6 +130,25 @@ class STFinetuner():
             self.model.save(self.model_save_path)
             logger.info("Finetuned model saved to {}".format(
                 str(self.model_save_path)))
+
+            # save metadata with the finetuned model
+            metadata = {
+                "date": datetime.now().strftime("%Y%m%d"),
+                "model_type": "finetuned encoder",
+                "base_model": self.model_load_path,
+                "data_dir": data_dir,
+                "n_training_samples": len_samples,
+                "version": version,
+                "testing_only": testing_only,
+                "shuffle": self.shuffle,
+                "batch_size": self.batch_size,
+                "epochs": self.epochs,
+                "warmup_steps": self.warmup_steps,
+                "device": self.device
+            }
+
+            save_json("metadata.json", self.model_save_path, metadata)
+            logger.info(f"Finetuned model metadata saved to {self.model_save_path}/metadata.json")
             
             # when not testing only, save to S3
             if not testing_only:
