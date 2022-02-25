@@ -25,6 +25,7 @@ RUN dnf install -y \
         libomp-devel \
         openblas \
         cryptsetup-libs \
+        cyrus-sasl-lib \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
