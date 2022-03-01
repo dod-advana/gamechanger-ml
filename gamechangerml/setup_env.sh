@@ -37,7 +37,7 @@ function setup_prod() {
     export GC_WEB_PORT="${GC_WEB_PORT:-8990}"
     export GC_WEB_USER="${GC_WEB_USER:-steve}"
     export GC_ENABLE_SSL="${GC_ENABLE_SSL:-true}"
-    
+    export ML_WEB_TOKEN="${ML_WEB_TOKEN:-}"
 
     export DEV_ENV="PROD"
 }
