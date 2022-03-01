@@ -194,7 +194,7 @@ class RetrieverGSData(ValidationData):
         relations = dict(zip(q_idx, doc_list))
 
         logger.info(
-            "Generated {} test queries of gold standard data".format(
+            "Generated {} test queries of gold standard data from search history".format(
                 len(query_list))
         )
 

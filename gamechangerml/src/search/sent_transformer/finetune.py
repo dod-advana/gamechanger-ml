@@ -70,11 +70,12 @@ def format_inputs(train, test, data_dir):
         processmanager.update_status(processmanager.loading_data, count, total)
 
     df = pd.DataFrame(all_data, columns=["key", "doc", "score", "label"])
+    df.drop_duplicates(subset = ['doc', 'score', 'label'], inplace = True)
+    logger.info(f"Generated training data CSV of {str(df.shape[0])} rows")
     df_path = os.path.join(data_dir, timestamp_filename("finetuning_data", ".csv"))
     df.to_csv(df_path)
 
     return train_samples, df_path
-
 
 class STFinetuner():
 
@@ -94,8 +95,11 @@ class STFinetuner():
 
         try:
             data = open_json("training_data.json", data_dir)
+            meta = open_json("training_metadata.json", data_dir)
             train = data["train"]
             test = data["test"]
+            train_queries = meta['train_queries'][:30]
+            test_queries = meta['test_queries'][:10]
 
             del data
             gc.collect()
@@ -103,10 +107,8 @@ class STFinetuner():
             if testing_only:
                 logger.info(
                     "Creating smaller dataset just for testing finetuning.")
-                train_keys = list(train.keys())[:160]
-                test_keys = list(test.keys())[:40]
-                train = {k: train[k] for k in train_keys}
-                test = {k: test[k] for k in test_keys}
+                train = {k: train[k] for k in train.keys() if train[k]['query'] in train_queries}
+                test = {k: test[k] for k in test.keys() if test[k]['query'] in test_queries}
 
             processmanager.update_status(processmanager.training, 0, 1)
             sleep(0.1)

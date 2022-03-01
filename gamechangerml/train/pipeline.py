@@ -255,7 +255,7 @@ class Pipeline:
             if no_data: 
                 make_training_data(
                     index_path=SENT_INDEX,
-                    n_returns=50, 
+                    n_returns=150, 
                     level='silver', 
                     update_eval_data=True, 
                     retriever=retriever

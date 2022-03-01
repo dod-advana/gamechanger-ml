@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import csv
 import math
-import shutil
 from datetime import datetime
 from sentence_transformers import util
 from gamechangerml import REPO_PATH
@@ -318,6 +317,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             "index",
             "queries",
             "top_expected_ids",
+            f"results@{k}",
             "hits",
             "true_positives",
             "false_positives",
@@ -325,9 +325,10 @@ class RetrieverEvaluator(TransformerEvaluator):
             "true_negatives",
             "reciprocal_rank",
             "average_precision",
-            "precision@{}".format(k),
-            "recall@{}".format(k),
+            f"precision@{k}",
+            f"recall@{k}"
         ]
+        ## make name for the csv of results
         if "/" in index:
             fname = index.split("/")[-1]
         else:
@@ -335,6 +336,8 @@ class RetrieverEvaluator(TransformerEvaluator):
         csv_filename = os.path.join(
             eval_path, timestamp_filename(fname, ".csv"))
         logger.info(f"Making a csv of test results, saved at: {csv_filename}")
+
+        # make the csv
         with open(csv_filename, "w") as csvfile:
             csvwriter = csv.writer(csvfile)
             csvwriter.writerow(columns)
@@ -382,6 +385,8 @@ class RetrieverEvaluator(TransformerEvaluator):
                         hit["score"] = doc_scores[rank]
                         hits.append(hit)
                         true_pos += 1
+                    else:
+                        false_pos += 1
                 if (
                     len(doc_ids) < k
                 ):  # if there are not k predictions, there are pred negatives
@@ -396,14 +401,16 @@ class RetrieverEvaluator(TransformerEvaluator):
                 fn += false_neg
                 tn += true_neg
                 tp += true_pos
+                fp += false_pos
                 logger.info(
-                    f"Metrics: fn: {str(fn)}, tn: {str(tn)}, tp: {str(tp)}")
+                    f"Metrics: fn: {str(fn)}, fp: {str(fp)}, tn: {str(tn)}, tp: {str(tp)}")
                 # save metrics to csv
                 row = [
                     [
                         str(query_count),
                         str(query),
                         str(expected_docs),
+                        str(doc_results),
                         str(hits),
                         str(true_pos),
                         str(false_pos),
@@ -607,7 +614,8 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     logger.info("Making a corpus test directory")
                     include_ids = self.collect_docs_for_index()
                     make_test_corpus(
-                        test_size=1000, 
+                        percent_random=0,
+                        max_size=1000, 
                         corpus_dir=CORPUS_PATH, 
                         save_dir=corpus_test_dir, 
                         include_ids=include_ids
@@ -620,6 +628,18 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                         corpus_path=corpus_test_dir,
                         index_path=self.index_path,
                     )
+
+                    ## save index metadata
+                    metadata = {
+                        "date": datetime.now().strftime("%Y-%m-%d"),
+                        "model_type": "sentence index",
+                        "base_model_path": self.model_load_path,
+                        "current_model_path": self.index_path,
+                        "validation_data_dir": self.data_path,
+                        "include_ids": include_ids,
+                    }
+                    save_json("metadata.json", self.index_path, metadata)
+                    logger.info("Saved metadata to the index dir")
 
             index = self.index_path
         else: # if a full index is passed, use that for evaluating

@@ -283,7 +283,7 @@ def collect_matches(
     count = 0
     for i in relations.keys():
         count += 1
-        logger.info(count)
+        logger.info(f"{str(count)} / {str(len(relations.keys()))}")
         query = queries[i]
         for k in relations[i]:
             doc = collection[k]
@@ -323,7 +323,10 @@ def collect_negative_samples(
     """
     found = {}
     not_found = {}
+    count = 0
     for i in relations.keys():
+        count += 1
+        logger.info(f"{str(count)} / {str(len(relations.keys()))}")
         query = queries[i]
         for k in relations[i]:
             doc = collection[k]
@@ -469,6 +472,8 @@ def make_training_data(
 
     ## train/test split  
     train, test, metadata = train_test_split(all_examples, tts_ratio)
+    metadata["sent_index_used"] = index_path
+    metadata["validation_data_used"] = validation_dir
 
     data = {"train": train, "test": test}
 
@@ -487,5 +492,5 @@ def make_training_data(
 if __name__ == '__main__':
 
     make_training_data(
-        index_path="gamechangerml/models/sent_index_20220103", n_returns=50, level="silver", 
+        index_path="gamechangerml/models/sent_index_20220103", n_returns=150, level="silver", 
         update_eval_data=True)
