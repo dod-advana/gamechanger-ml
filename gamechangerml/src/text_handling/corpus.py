@@ -49,13 +49,23 @@ class LocalCorpus(object):
                 for para_text, para_id in zip(paragraphs, paragraph_ids):
                     if self.bert_based_tokenizer:
                         tokens = self.auto_token.tokenize(para_text)
+                        print(tokens)
+                        process_tokens = preprocess(para_text, min_len=1)
+                        # half of the tokens are actual words
+                        if tokens:
+                            if (len(process_tokens) / len(tokens)) > 0.5:
+                                if len(tokens) > self.min_token_len:
+                                    if self.return_id:
+                                        yield tokens, para_id
+                                    else:
+                                        yield tokens
                     else:
                         tokens = preprocess(para_text, min_len=1)
-                    if len(tokens) > self.min_token_len:
-                        if self.return_id:
-                            yield tokens, para_id
-                        else:
-                            yield tokens
+                        if len(tokens) > self.min_token_len:
+                            if self.return_id:
+                                yield tokens, para_id
+                            else:
+                                yield tokens
                 progress += 1
                 processmanager.update_status(
                     processmanager.loading_corpus, progress, total
