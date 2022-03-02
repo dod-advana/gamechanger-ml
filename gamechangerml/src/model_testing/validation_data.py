@@ -428,7 +428,7 @@ class SearchHistory:
             return string.replace("&quot;", "'").replace("&#039;", "'").lower()
 
         def clean_doc(string):
-            return string.split(".pdf")[0]
+            return string.split(".pdf")[0].strip().lstrip()
 
         def is_question(string):
             """If we find a good way to use search history for QA validation (not used currently)"""

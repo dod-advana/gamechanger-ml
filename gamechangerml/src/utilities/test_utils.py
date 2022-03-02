@@ -96,7 +96,7 @@ def check_directory(directory):
 def make_timestamp_directory(base_dir):
 
     now = datetime.now()
-    new_dir = os.path.join(base_dir, now.strftime("%Y-%m-%d:%H-%M-%S"))
+    new_dir = os.path.join(base_dir, now.strftime("%Y-%m-%d_%H-%M-%S"))
     if not os.path.exists(new_dir):
         logger.info("Creating new directory {}".format(new_dir))
         os.makedirs(new_dir)

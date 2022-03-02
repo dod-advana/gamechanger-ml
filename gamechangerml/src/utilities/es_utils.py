@@ -128,13 +128,13 @@ def connect_es(es_url):
     return es
 
 
-def get_es_responses_doc(es, query, docid):
+def get_es_query(query, docid):
     """Query ES for a search string and a docid (from search results)"""
 
     true = True
     false = False
 
-    search = {
+    search_query = {
         "_source": {
             "includes": ["pagerank_r", "kw_doc_score_r", "orgs_rs", "topics_rs"]
         },
@@ -237,7 +237,13 @@ def get_es_responses_doc(es, query, docid):
         },
     }
 
-    return es.search(index="gamechanger", body=search)
+    return search_query
+
+
+def get_es_responses_doc(es, query):
+    """Query ES for a search string and a docid (from search results)"""
+
+    return es.search(index="gamechanger", body=query)
 
 
 def get_paragraph_results(es, query, doc):
@@ -266,9 +272,11 @@ def collect_results(relations, queries, collection, es, label):
             doc = collection[k]
             uid = str(i) + "_" + str(k)
             try:
-                para = get_paragraph_results(es, query, doc)[0][0]
+                results = get_paragraph_results(es, query, doc)
+                logger.info(f"**RESULTS: {results}")
+                para = results[0][0]
                 # truncate to 400 tokens
-                para = " ".join(para.split(" ")[:400])
+                para = " ".join(para.split(" "))
                 found[uid] = {
                     "query": query,
                     "doc": doc,

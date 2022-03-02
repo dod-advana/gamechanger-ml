@@ -5,6 +5,7 @@ import json
 from datetime import date
 from typing import List, Union, Dict, Tuple
 import spacy
+from torch import NoneType
 
 
 from gamechangerml.configs.config import TrainingConfig, ValidationConfig, SimilarityConfig
@@ -17,6 +18,7 @@ from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 from gamechangerml.src.text_handling.corpus import LocalCorpus
 from gensim.utils import simple_preprocess
 from gamechangerml import DATA_PATH
+from gamechangerml.src.utilities import gc_web_api, es_utils
 
 model_path_dict = get_model_paths()
 random.seed(42)
@@ -31,6 +33,177 @@ gold_standard_path = os.path.join(
 
 CORPUS_DIR = "gamechangerml/corpus"
 corpus_docs = [i.split('.json')[0] for i in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, i))]
+
+gcClient = gc_web_api.GCWebClient()
+
+esu = es_utils.ESUtils()
+
+def get_es_query(query, docid):
+    """Query ES for a search string and a docid (from search results)"""
+
+    true = True
+    false = False
+
+    search_query = {
+        "_source": {
+            "includes": ["pagerank_r", "kw_doc_score_r", "orgs_rs", "topics_rs"]
+        },
+        "stored_fields": [
+            "filename",
+            "title",
+            "page_count",
+            "doc_type",
+            "doc_num",
+            "ref_list",
+            "id",
+            "summary_30",
+            "keyw_5",
+            "p_text",
+            "type",
+            "p_page",
+            "display_title_s",
+            "display_org_s",
+            "display_doc_type_s",
+            "is_revoked_b",
+            "access_timestamp_dt",
+            "publication_date_dt",
+            "crawler_used_s",
+        ],
+        "from": 0,
+        "size": 20,
+        "track_total_hits": true,
+        "query": {
+            "bool": {
+                "must": [
+                    {"match": {"id": docid}},
+                    {
+                        "nested": {
+                            "path": "paragraphs",
+                            "inner_hits": {
+                                "_source": false,
+                                "stored_fields": [
+                                    "paragraphs.page_num_i",
+                                    "paragraphs.filename",
+                                    "paragraphs.par_raw_text_t",
+                                ],
+                                "from": 0,
+                                "size": 5,
+                                "highlight": {
+                                    "fields": {
+                                        "paragraphs.filename.search": {
+                                            "number_of_fragments": 0
+                                        },
+                                        "paragraphs.par_raw_text_t": {
+                                            "fragment_size": 200,
+                                            "number_of_fragments": 1,
+                                        },
+                                    },
+                                    "fragmenter": "span",
+                                },
+                            },
+                            "query": {
+                                "bool": {
+                                    "should": [
+                                        {
+                                            "wildcard": {
+                                                "paragraphs.filename.search": {
+                                                    "value": query,
+                                                    "boost": 15,
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "query_string": {
+                                                "query": query,
+                                                "default_field": "paragraphs.par_raw_text_t",
+                                                "default_operator": "AND",
+                                                "fuzzy_max_expansions": 100,
+                                                "fuzziness": "AUTO",
+                                            }
+                                        },
+                                    ]
+                                }
+                            },
+                        }
+                    },
+                ],
+                "should": [
+                    {
+                        "multi_match": {
+                            "query": query,
+                            "fields": [
+                                "keyw_5^2",
+                                "id^2",
+                                "summary_30",
+                                "paragraphs.par_raw_text_t",
+                            ],
+                            "operator": "or",
+                        }
+                    },
+                    {"rank_feature": {"field": "pagerank_r", "boost": 0.5}},
+                    {"rank_feature": {"field": "kw_doc_score_r", "boost": 0.1}},
+                ],
+            }
+        },
+    }
+
+    return search_query
+
+def get_es_result(query, doc):
+
+    try:
+        search_query = get_es_query(query, doc)
+        r = esu.client.search(index=esu.es_index, body=dict(search_query))
+        return r
+    except Exception as e:
+        logger.warning("Failed to get ES results")
+        logger.warning(e)
+
+def get_paragraph_results(query, doc):
+    """Get list of paragraph texts for each search result"""
+
+    docid = doc + ".pdf_0"
+    resp = get_es_result(query, docid)
+    texts = []
+    if resp["hits"]["total"]["value"] > 0:
+        hits = resp["hits"]["hits"][0]["inner_hits"]["paragraphs"]["hits"]["hits"]
+        for par in hits:
+            par_id = doc + '_' + str(par["_nested"]["offset"])
+            par_text = par["fields"]["paragraphs.par_raw_text_t"][0]
+            processed = ' '.join(simple_preprocess(par_text, min_len=2, max_len=100))
+            texts.append({"par_id": par_id, "par_text": processed})
+
+    return texts
+
+def collect_paragraphs_es(relations, queries, collection, label):
+    """Query ES for search/doc matches and add them to query results with a label"""
+
+    found = {}
+    not_found = {}
+    for i in relations.keys():
+        query = queries[i]
+        for k in relations[i]:
+            doc = collection[k]
+            try:
+                #results = get_paragraph_results(query, doc)
+                results = get_paragraph_results(query, doc)
+                logger.info(results)
+                for r in results:
+                    offset = r['par_id'].split('_')[-1]
+                    uid = str(i) + "_" + str(k) + "_" + offset
+                    found[uid] = {
+                        "query": query,
+                        "doc": r['par_id'],
+                        "paragraph": r['par_text'],
+                        "label": label,
+                    }
+            except Exception as e:
+                logger.info(f"Could not get results for {query} / {doc}")
+                logger.error(e, exc_info=True)
+                not_found[uid] = {"query": query, "doc": doc, "label": label}
+
+    return found, not_found
+
 
 def get_sample_paragraphs(pars, par_limit=100, min_length=150):
     '''Collect sample paragraphs longer than min_length (char), up to par_limit paragraphs'''
@@ -99,12 +272,9 @@ def get_best_paragraphs(query: str, doc_id: str, nlp, n_returns, min_score: floa
     
     return ranked
 
-def check_no_match(id_1: str, id_2: str) -> bool:
-    """Checks if paragraph ID matches the expected doc ID"""
-    if id_1.split('.pdf')[0].upper().strip().lstrip() == id_2.split('.pdf')[0].upper().strip().lstrip():
-        return False
-    else:
-        return True
+def clean_id(id_1: str) -> str:
+    """Normalizes doc ids to compare"""
+    return id_1.split('.pdf')[0].upper().strip().lstrip()
 
 def get_negative_paragraphs(
     data: pd.DataFrame, query: str, doc_id: str, retriever, n_returns: int, any_matches: Dict[str,str]) -> List[Dict[str,str]]:
@@ -122,7 +292,7 @@ def get_negative_paragraphs(
 
     checked_results = []
     try:
-        single_matching_docs = [i for i in any_matches[query] if check_no_match(i, doc_id)]
+        single_matching_docs = [clean_id(i) for i in any_matches[query] if clean_id(i) != clean_id(doc_id)]
     except:
         single_matching_docs = []
     try:
@@ -130,13 +300,12 @@ def get_negative_paragraphs(
         logger.info(f"Retrieved {str(len(results))} negative samples for query: {query} / doc: {doc_id}")
         for result in results:
             par = data[data["paragraph_id"]==result['id']].iloc[0]["text"]
-            par = ' '.join(par.split(' ')[:400])
-            if check_no_match(doc_id, result['id']):            
-                for s in single_matching_docs:
-                    if s and check_no_match(s, result['id']):
-                        checked_results.append({"query": query, "doc": result['id'], "paragraph": par, "label": 0})
-                    else:
-                        checked_results.append({"query": query, "doc": result['id'], "paragraph": par, "label": 0.5}) 
+            par = ' '.join(simple_preprocess(par, min_len=2, max_len=100))
+            if clean_id(doc_id) != clean_id(result['id']):            
+                if clean_id(result['id']) not in single_matching_docs:
+                    checked_results.append({"query": query, "doc": result['id'], "paragraph": par, "label": 0.3})
+                else:
+                    checked_results.append({"query": query, "doc": result['id'], "paragraph": par, "label": 0.75}) 
     except Exception as e:
         logger.warning("Could not get negative paragraphs")
         logger.warning(e, exc_info=True)
@@ -151,7 +320,34 @@ def add_gold_standard(intel: Dict[str,str], gold_standard_path: Union[str, os.Pa
     Returns:
         intel [Dict[str,str]: intelligent search evaluation data with manual entries added
     """
-    gold = pd.read_csv(gold_standard_path, names=['query', 'document'])
+    gold_original = pd.read_csv(gold_standard_path, names=['query', 'document'])
+    logger.info(f"Reading in {gold_original.shape[0]} queries from the Gold Standard data")
+
+    def add_extra_queries(intel: Dict[str,str]) -> Dict[str,str]:
+        '''Multiply query/doc pairs to add by using title/filename/id as queries'''
+        extra_queries = []
+        docs = []
+        for doc_id in intel['collection'].values():
+            try:
+                json = open_json(doc_id + '.json', CORPUS_DIR)
+                extra_queries.append(json['display_title_s'])
+                extra_queries.append(json['title'])
+                extra_queries.append(json['filename'])
+                extra_queries.append(doc_id)
+                docs.extend([doc_id for i in range(4)])
+                logger.info(f"Added extra queries for {doc_id}")
+            except:
+                logger.warning(f"Could not add extra queries for {doc_id}")
+        
+        df = pd.DataFrame()
+        df['query'] = extra_queries
+        df['document'] = docs
+        return df
+    
+    extra_queries_df = add_extra_queries(intel)
+    gold = pd.concat([gold_original, extra_queries_df], reset_index=True)
+    logger.info(f"Added {extra_queries_df.shape[0]} extra queries to the Gold Standard")
+    
     gold['query_clean'] = gold['query'].apply(lambda x: normalize_query(x))
     gold['docs_split'] = gold['document'].apply(lambda x: x.split(';'))
     all_docs = list(set([a for b in gold['docs_split'].tolist() for a in b]))
@@ -215,8 +411,8 @@ def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, s
     pos_passing = {}
     for q in queries:
         subset = {i:data[i] for i in data.keys() if data[i]['query']==q}
-        pos_sample = [i for i in subset.keys() if subset[i]['label']==1]
-        neg_sample = [i for i in subset.keys() if subset[i]['label']==-1]
+        pos_sample = [i for i in subset.keys() if subset[i]['label']==0.95]
+        neg_sample = [i for i in subset.keys() if subset[i]['label']==-0.5]
         if len(neg_sample)>0: #since we have so few negative samples, add to neg list if it has a negative ex
             neg_passing[q] = subset
         elif len(pos_sample)>0: # only add the other samples if they have a positive matching sample
@@ -431,11 +627,19 @@ def make_training_data(
         logger.warning(e)
 
     any_matches = get_all_single_matches()
+
     ## get matching paragraphs
+    try:
+        correct_es_found, correct_es_notfound = collect_paragraphs_es(
+            relations=intel['correct'], queries=intel['queries'], collection=intel['collection'], label=0.95)
+        logger.info(f"---Number of correct query/result pairs that were not found: {str(len(correct_es_notfound))}")
+    except Exception as e:
+        logger.warning(e)
+        logger.warning("\nCould not retrieve positive matches from ES\n")
     try:
         correct_found, correct_notfound = collect_matches(
         data=data, queries=intel['queries'], collection=intel['collection'],
-        relations=intel['correct'], label=1, nlp = nlp, n_returns=n_returns)
+        relations=intel['correct'], label=0.95, nlp = nlp, n_returns=n_returns)
         logger.info(f"---Number of correct query/result pairs that were not found: {str(len(correct_notfound))}")
     except Exception as e:
         logger.warning(e)
@@ -443,7 +647,7 @@ def make_training_data(
     try:
         incorrect_found, incorrect_notfound = collect_matches(
         data=data, queries=intel['queries'], collection=intel['collection'],
-        relations=intel['incorrect'], label=-1, nlp = nlp, n_returns=n_returns)
+        relations=intel['incorrect'], label=-0.5, nlp = nlp, n_returns=n_returns)
         logger.info(f"---Number of incorrect query/result pairs that were not found: {str(len(incorrect_notfound))}")
     except Exception as e:
         logger.warning(e)
@@ -458,16 +662,16 @@ def make_training_data(
         logger.info(f"---Number of negative sample pairs that were not found: {str(len(neutral_notfound))}")
     except Exception as e:
         logger.warning(e)
-        logger.warning("\nCould not retrieve negative samples\n")
+        logger.warning("\nCould not retrieve neutral matches\n")
 
     ## save a json of the query-doc pairs that did not retrieve an ES paragraph for training data
-    notfound = {**correct_notfound, **incorrect_notfound, **neutral_notfound}
+    notfound = {**correct_es_notfound, **correct_notfound, **incorrect_notfound, **neutral_notfound}
     logger.info(f"---Number of total query/result pairs that were not found: {str(len(notfound))}")
     notfound_path = os.path.join(save_dir, 'not_found_search_pairs.json')
     with open(notfound_path, "w") as outfile:
         json.dump(notfound, outfile)
 
-    all_examples = {**neutral_found, **incorrect_found, **correct_found}
+    all_examples = {**neutral_found, **incorrect_found, **correct_found, **correct_es_found}
     logger.info(f"Total size of query-doc pairs: {str(len(all_examples))}")
 
     ## train/test split  
