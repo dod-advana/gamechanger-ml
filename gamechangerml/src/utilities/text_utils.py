@@ -188,10 +188,10 @@ def normalize_query(s: str) -> str:
         return ' '.join(text.strip().lstrip().split())
     def lower(text):
         return text.lower()
-    def remove_punc(text):
-        exclude = set(punctuation)
+    def remove_quotes(text):
+        exclude = ["'", '"']
         return ''.join(ch for ch in text if ch not in exclude)
-    return white_space_fix(remove_punc(lower(s)))
+    return white_space_fix(remove_quotes(lower(s)))
 
 def clean_query(query: str) -> str:
     '''Removes all non alphanumeric characters and 'and' / 'or' from query string'''

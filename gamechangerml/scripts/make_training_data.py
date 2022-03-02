@@ -331,10 +331,11 @@ def add_gold_standard(intel: Dict[str,str], gold_standard_path: Union[str, os.Pa
             try:
                 json = open_json(doc_id + '.json', CORPUS_DIR)
                 extra_queries.append(json['display_title_s'])
-                extra_queries.append(json['title'])
-                extra_queries.append(json['filename'])
-                extra_queries.append(doc_id)
-                docs.extend([doc_id for i in range(4)])
+                #extra_queries.append(json['title'])
+                #extra_queries.append(json['filename'])
+                #extra_queries.append(doc_id)
+                #docs.extend([doc_id for i in range(4)])
+                docs.append(doc_id)
                 logger.info(f"Added extra queries for {doc_id}")
             except:
                 logger.warning(f"Could not add extra queries for {doc_id}")
@@ -345,7 +346,8 @@ def add_gold_standard(intel: Dict[str,str], gold_standard_path: Union[str, os.Pa
         return df
     
     extra_queries_df = add_extra_queries(intel)
-    gold = pd.concat([gold_original, extra_queries_df], reset_index=True)
+    gold = pd.concat([gold_original, extra_queries_df])
+    gold.reset_index(inplace = True)
     logger.info(f"Added {extra_queries_df.shape[0]} extra queries to the Gold Standard")
     
     gold['query_clean'] = gold['query'].apply(lambda x: normalize_query(x))
@@ -396,8 +398,10 @@ def add_gold_standard(intel: Dict[str,str], gold_standard_path: Union[str, os.Pa
                     continue
                 else:
                     intel['correct'][q_id] += [d_id]
+                    logger.info(f"Added {j} to correct matches for {q}")
             else:
                 intel['correct'][q_id] = [d_id]
+                logger.info(f"New query/doc relationship added to correct matches: {q} / {j}")
     
     return intel
 
