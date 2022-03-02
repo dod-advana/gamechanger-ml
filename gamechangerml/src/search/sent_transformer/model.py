@@ -37,6 +37,7 @@ class SentenceEncoder(object):
         transformer_path,
         model=None,
         use_gpu=False,
+        bert_tokenize=False,
     ):
 
         if model:
@@ -44,6 +45,9 @@ class SentenceEncoder(object):
         else:
             self.encoder_model = os.path.join(
                 transformer_path, encoder_model_name)
+        self.bert_tokenizer = None
+        if bert_tokenize:
+            self.bert_tokenizer = self.encoder_model
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
@@ -159,7 +163,7 @@ class SentenceEncoder(object):
                 return_id=self.return_id,
                 min_token_len=self.min_token_len,
                 verbose=self.verbose,
-                bert_based_tokenizer=self.encoder_model,
+                bert_based_tokenizer=self.bert_tokenizer,
             )
             corpus = [(para_id, " ".join(tokens), None)
                       for tokens, para_id in corp]
