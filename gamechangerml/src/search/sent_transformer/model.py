@@ -276,7 +276,7 @@ class SentenceSearcher(object):
             )
             for idx, doc in enumerate(top_results):
                 doc["text_length"] = length_scores[idx]
-                doc["score"] = doc["score"] + length_scores[idx]
+                doc["score"] = doc["score"]
                 finalResults.append(doc)
             finalResults = sorted(
                 finalResults, key=lambda i: i["score"], reverse=True)
