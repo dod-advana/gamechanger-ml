@@ -254,7 +254,7 @@ class SentenceSearcher(object):
             results.append(doc)
         return results
 
-    def search(self, query, num_results=10, externalSim=True):
+    def search(self, query, num_results=10, process=False, externalSim=True):
         """
         Search the index and perform a similarity scoring reranker at
         the topn returned documents
@@ -264,8 +264,9 @@ class SentenceSearcher(object):
             rerank (list): List of tuples following a (score, paragraph_id,
                 paragraph_text) format ranked based on similarity with query
         """
-        processed_q = " ".join(preprocess(query))
-        top_results = self.retrieve_topn(processed_q, num_results)
+        if process:
+            query = " ".join(preprocess(query))
+        top_results = self.retrieve_topn(query, num_results)
         # choose to use an external similarity transformer
         if externalSim:
             return self.similarity.re_rank(query, top_results)
