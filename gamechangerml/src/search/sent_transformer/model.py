@@ -13,6 +13,7 @@ from gamechangerml.src.text_handling.corpus import LocalCorpus
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.test_utils import *
+from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
@@ -263,7 +264,8 @@ class SentenceSearcher(object):
             rerank (list): List of tuples following a (score, paragraph_id,
                 paragraph_text) format ranked based on similarity with query
         """
-        top_results = self.retrieve_topn(query, num_results)
+        processed_q = " ".join(preprocess(query))
+        top_results = self.retrieve_topn(processed_q, num_results)
         # choose to use an external similarity transformer
         if externalSim:
             return self.similarity.re_rank(query, top_results)

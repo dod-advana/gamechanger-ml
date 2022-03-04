@@ -49,7 +49,6 @@ class LocalCorpus(object):
                 for para_text, para_id in zip(paragraphs, paragraph_ids):
                     if self.bert_based_tokenizer:
                         tokens = self.auto_token.tokenize(para_text)
-                        print(tokens)
                         process_tokens = preprocess(para_text, min_len=1)
                         # half of the tokens are actual words
                         if tokens:
