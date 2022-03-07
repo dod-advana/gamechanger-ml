@@ -116,7 +116,7 @@ def get_model_paths():
                 Config.LOCAL_PACKAGED_MODELS_DIR, topic_model_dirs[0]
             )
         else:
-            raise f"No topic_model_<date> folders in {Config.LOCAL_PACKAGED_MODELS_DIR}"
+            raise ValueError(f"No topic_model_<date> folders in {Config.LOCAL_PACKAGED_MODELS_DIR}")
 
     except Exception as e:
         logger.error(e)

@@ -20,6 +20,7 @@ from torch.optim import Adam
 import torch.nn.functional as F
 from torch import nn
 torch.cuda.empty_cache()
+from gamechangerml.src.model_testing.metrics import reciprocal_rank_score, get_MRR
 
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
@@ -47,19 +48,7 @@ def fix_model_config(model_load_path):
         logger.info("Could not update model config file")
 
 
-def get_cos_sim(model, pair):
-
-    emb1 = model.encode(pair[0], show_progress_bar=False)
-    emb2 = model.encode(pair[1], show_progress_bar=False)
-    try:
-        sim = float(util.cos_sim(emb1, emb2))
-    except:
-        sim = float(cos_sim(emb1, emb2))
-
-    return sim
-
-
-def format_inputs(train, test):
+def format_inputs(train, test, data_dir):
     """Create input data for dataloader and df for tracking cosine sim"""
 
     train_samples = []
@@ -71,20 +60,21 @@ def format_inputs(train, test):
         score = float(train[i]["label"])
         inputex = InputExample(str(count), texts, score)
         train_samples.append(inputex)
-        all_data.append([i, texts, score, "train"])
+        all_data.append([train[i]["query"], texts, score, "train"])
         count += 1
         #processmanager.update_status(processmanager.loading_data, count, total)
 
     for x in test.keys():
         texts = [test[x]["query"], test[x]["paragraph"]]
         score = float(test[x]["label"])
-        all_data.append([x, texts, score, "test"])
+        all_data.append([test[x]["query"], texts, score, "test"])
         count += 1
-        #processmanager.update_status(processmanager.loading_data, count, total)
+        processmanager.update_status(processmanager.loading_data, count, total)
 
     df = pd.DataFrame(all_data, columns=["key", "pair", "score", "label"])
+    df.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_data", ".csv")))
 
-    return train_samples, df
+    return train_samples
 
 
 class STFinetuner():
@@ -98,10 +88,8 @@ class STFinetuner():
         self.batch_size = batch_size
         self.epochs = epochs
         self.warmup_steps = warmup_steps
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
-        #self.pin_memory = True if torch.cuda.is_available() else False
-
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
     def retrain(self, data_dir, testing_only, version):
 
         try:
@@ -123,12 +111,7 @@ class STFinetuner():
             processmanager.update_status(processmanager.training, 0, 1)
             sleep(0.1)
             # make formatted training data
-            train_samples, df = format_inputs(train, test)
-
-            # get cosine sim before finetuning
-            # TODO: you should be able to encode this more efficiently
-            df["original_cos_sim"] = df["pair"].apply(
-                lambda x: get_cos_sim(self.model, x))
+            train_samples = format_inputs(train, test, data_dir)
 
             # finetune on samples
             logger.info("Starting dataloader...")
@@ -150,63 +133,7 @@ class STFinetuner():
 
             # when not testing only, save to S3
             if not testing_only:
-                dst_path = self.model_save_path + ".tar.gz"
-                utils.create_tgz_from_dir(
-                    src_dir=self.model_save_path, dst_archive=dst_path)
-                model_id = self.model_save_path.split('_')[1]
-                logger.info(f"*** Created tgz file and saved to {dst_path}")
-
-                S3_MODELS_PATH = "bronze/gamechanger/models"
-                s3_path = os.path.join(S3_MODELS_PATH, str(version))
-                utils.upload(s3_path, dst_path, "transformers", model_id)
-                logger.info(f"*** Saved model to S3: {s3_path}")
-
-            logger.info("*** Making finetuning results csv")
-            # get new cosine sim
-            df["new_cos_sim"] = df["pair"].apply(
-                lambda x: get_cos_sim(self.model, x))
-            df["change_cos_sim"] = df["new_cos_sim"] - df["original_cos_sim"]
-
-            # save all results to CSV
-            df.to_csv(os.path.join(data_dir, timestamp_filename(
-                "finetuning_results", ".csv")))
-
-            # create training metadata
-            positive_change_train = df[(df["score"] == 1.0) & (
-                df["label"] == "train")]["change_cos_sim"].median()
-            negative_change_train = df[(
-                df["score"] == -1.0) & (df["label"] == "train")]["change_cos_sim"].median()
-            neutral_change_train = df[(df["score"] == 0.0) & (
-                df["label"] == "train")]["change_cos_sim"].median()
-            positive_change_test = df[(df["score"] == 1.0) & (
-                df["label"] == "test")]["change_cos_sim"].median()
-            negative_change_test = df[(
-                df["score"] == -1.0) & (df["label"] == "test")]["change_cos_sim"].median()
-            neutral_change_test = df[(df["score"] == 0.0) & (
-                df["label"] == "test")]["change_cos_sim"].median()
-
-            ft_metadata = {
-                "date_finetuned": str(date.today()),
-                "data_dir": str(data_dir),
-                "positive_change_train": positive_change_train,
-                "negative_change_train": negative_change_train,
-                "neutral_change_train": neutral_change_train,
-                "positive_change_test": positive_change_test,
-                "negative_change_test": negative_change_test,
-                "neutral_change_test": neutral_change_test
-            }
-
-            # save metadata file
-            ft_metadata_path = os.path.join(
-                data_dir, timestamp_filename("finetuning_metadata", ".json"))
-            with open(ft_metadata_path, "w") as outfile:
-                json.dump(ft_metadata, outfile)
-
-            logger.info("Metadata saved to {}".format(ft_metadata_path))
-            logger.info(str(ft_metadata))
-
-            # when not testing only, save to S3
-            if not testing_only:
+                logger.info("Saving data to S3...")
                 s3_path = os.path.join(S3_DATA_PATH, f"{version}")
                 logger.info(f"****    Saving new data files to S3: {s3_path}")
                 dst_path = data_dir + ".tar.gz"
@@ -216,7 +143,18 @@ class STFinetuner():
                 logger.info("*** Attempting to upload data to s3")
                 utils.upload(s3_path, dst_path, "data", model_name)
 
-            return ft_metadata
+                logger.info("Saving model to S3...")
+                dst_path = self.model_save_path + ".tar.gz"
+                utils.create_tgz_from_dir(src_dir=self.model_save_path, dst_archive=dst_path)
+                model_id = self.model_save_path.split('_')[1]
+                logger.info(f"*** Created tgz file and saved to {dst_path}")
+
+                S3_MODELS_PATH = "bronze/gamechanger/models"
+                s3_path = os.path.join(S3_MODELS_PATH, str(version))
+                utils.upload(s3_path, dst_path, "transformers", model_id)
+                logger.info(f"*** Saved model to S3: {s3_path}")
+
+            return {}
 
         except Exception as e:
             logger.warning("Could not complete finetuning")
