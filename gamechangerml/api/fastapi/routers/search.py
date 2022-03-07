@@ -84,7 +84,11 @@ async def textExtract_infer(body: dict, extractType: str, response: Response) ->
 
 @router.post("/transSentenceSearch", status_code=200)
 async def trans_sentence_infer(
-    body: dict, response: Response, num_results: int = 10, externalSim: bool = False
+    body: dict,
+    response: Response,
+    num_results: int = 10,
+    process: bool = True,
+    externalSim: bool = False,
 ) -> dict:
     """trans_sentence_infer - endpoint for sentence transformer inference
     Args:
@@ -99,7 +103,7 @@ async def trans_sentence_infer(
     try:
         query_text = body["text"]
         results = MODELS.sentence_searcher.search(
-            query_text, num_results, externalSim=False
+            query_text, num_results, process=process, externalSim=False
         )
         logger.info(results)
     except Exception:
@@ -160,7 +164,8 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
     logger.info(f"Expanding: {body}")
     query_expander = (
         MODELS.query_expander
-        if body.get("qe_model", "gc_core") != "jbook" or MODELS.query_expander_jbook==None
+        if body.get("qe_model", "gc_core") != "jbook"
+        or MODELS.query_expander_jbook == None
         else MODELS.query_expander_jbook
     )
     try:
@@ -172,13 +177,14 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
         # Removes original word from the return terms unless it is combined with another word
         logger.info(f"original expanded terms: {expansion_list}")
         finalTerms = remove_original_kw(expansion_list, terms_string)
-        expansion_dict[terms_string] = ['"{}"'.format(exp) for exp in finalTerms]
+        expansion_dict[terms_string] = [
+            '"{}"'.format(exp) for exp in finalTerms]
         logger.info(f"-- Expanded {terms_string} to \n {finalTerms}")
         # Perform word similarity
         logger.info(f"Finding similiar words for: {terms_string}")
         sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms_string)
         logger.info(f"-- Expanded {terms_string} to \n {sim_words_dict}")
-        ## Construct return payload
+        # Construct return payload
         expanded_words = {}
         expanded_words["qexp"] = expansion_dict
         expanded_words["wordsim"] = sim_words_dict
@@ -222,7 +228,7 @@ async def post_recommender(body: dict, response: Response) -> dict:
         logger.info(f"Recommending similar documents to {filenames}")
         results = MODELS.recommender.get_recs(
             filenames=filenames, sample=sample)
-        if results['results'] != []:
+        if results["results"] != []:
             logger.info(f"Found similar docs: \n {str(results)}")
         else:
             logger.info("Did not find any similar docs")

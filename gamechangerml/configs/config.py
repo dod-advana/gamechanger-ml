@@ -74,7 +74,7 @@ class QAConfig:
 class EmbedderConfig:
     BASE_MODEL = "msmarco-distilbert-base-v2"
     MODEL_ARGS = {
-        "min_token_len": 10,
+        "min_token_len": 25,
         "verbose": True,  # for creating LocalCorpus
         "return_id": True,  # for creating LocalCorpus
     }
@@ -104,7 +104,7 @@ class QexpConfig:
             "num_keywords": 2,
             "ngram": (1, 3),
             "abbrv_file": None,
-            "merge_word_sim": True
+            "merge_word_sim": True,
         },
     }
 

@@ -6,6 +6,7 @@
 ../models
 ../transformer_cache.zip
 ../src/DrQA/data/
+../corpus
 dataPipelines
 out
 common

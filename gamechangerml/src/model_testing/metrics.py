@@ -72,6 +72,24 @@ def reciprocal_rank(ranked_results: List[str], expected: List[str]) -> float:
     else:
         return 0
 
+def reciprocal_rank_score(ranked_scores: List[str]) -> float:
+    '''
+    Calculates the reciprocal of the rank of the first correct score (returns single value from 0 to 1).
+    '''
+    first_relevant_rank = 0 # if no relevant results show up, the RR will be 0
+    count = 1
+    for i in ranked_scores: # list in order of rank
+        if i == 1:
+            first_relevant_rank = count
+            break
+        else:
+            count += 1
+    
+    if first_relevant_rank > 0:
+        return np.round((1 / first_relevant_rank), 3)
+    else:
+        return 0
+
 def get_MRR(reciprocal_ranks: List[float]) -> float:
     '''Takes list of reciprocal rank scores for each search and averages them.'''
     return np.round(np.mean(reciprocal_ranks), 3)
