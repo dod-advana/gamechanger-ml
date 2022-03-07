@@ -156,6 +156,7 @@ def collect_paragraphs_es(correct, incorrect, queries, collection, any_matches):
         except:
             single_matching_docs = []
         
+        len_matches = par_count
         if par_count == 0:
             logger.info(f"No matching paragraphs found for {query}. Skipping negative samples.")
         else:
@@ -164,22 +165,28 @@ def collect_paragraphs_es(correct, incorrect, queries, collection, any_matches):
             try:
                 non_matches = get_any_es_result(query)
                 results = get_paragraph_results(non_matches)
+                negative_count = 0
+                previous_text = ''
                 for r in results:
-                    doc_id = r['par_id'].split('.pdf_')[0]
-                    if doc_id in matching_docs:
-                        logger.info("Paragraph comes from a matching doc, skipping")
-                    else:
-                        if doc_id in single_matching_docs:
-                            label = scores["weak_match"]
+                    if negative_count <= (len_matches * 4): # stop getting negatives after 1:4 ratio
+                        doc_id = r['par_id'].split('.pdf_')[0]
+                        if doc_id in matching_docs:
+                            logger.info("Paragraph comes from a matching doc, skipping")
                         else:
-                            label = scores["neutral"]
-                        uid = query + "_|_" + r['par_id']
-                        found[uid] = {
-                            "query": query,
-                            "doc": r['par_id'],
-                            "paragraph": r['par_text'],
-                            "label": label,
-                        }
+                            if doc_id in single_matching_docs:
+                                label = scores["weak_match"]
+                            else:
+                                label = scores["neutral"]
+                            if r['par_text'] != previous_text:
+                                uid = query + "_|_" + r['par_id']
+                                found[uid] = {
+                                    "query": query,
+                                    "doc": r['par_id'],
+                                    "paragraph": r['par_text'],
+                                    "label": label,
+                                }
+                                negative_count += 1
+                                previous_text = r['par_text']
             except Exception as e:
                 logger.warning(f"Could not get negative results from ES for {query}")
 
