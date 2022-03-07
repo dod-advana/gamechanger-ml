@@ -13,6 +13,7 @@ from gamechangerml.src.text_handling.corpus import LocalCorpus
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.test_utils import *
+from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
@@ -38,6 +39,7 @@ class SentenceEncoder(object):
         transformer_path,
         model=None,
         use_gpu=False,
+        bert_tokenize=False,
     ):
 
         if model:
@@ -45,6 +47,9 @@ class SentenceEncoder(object):
         else:
             self.encoder_model = os.path.join(
                 transformer_path, encoder_model_name)
+        self.bert_tokenizer = None
+        if bert_tokenize:
+            self.bert_tokenizer = self.encoder_model
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
@@ -162,6 +167,7 @@ class SentenceEncoder(object):
                 return_id=self.return_id,
                 min_token_len=self.min_token_len,
                 verbose=self.verbose,
+                bert_based_tokenizer=self.bert_tokenizer,
             )
             corpus = [(para_id, " ".join(tokens), None)
                     for tokens, para_id in corp]
@@ -252,7 +258,7 @@ class SentenceSearcher(object):
             results.append(doc)
         return results
 
-    def search(self, query, num_results=10, externalSim=True):
+    def search(self, query, num_results=10, process=False, externalSim=True):
         """
         Search the index and perform a similarity scoring reranker at
         the topn returned documents
@@ -262,6 +268,8 @@ class SentenceSearcher(object):
             rerank (list): List of tuples following a (score, paragraph_id,
                 paragraph_text) format ranked based on similarity with query
         """
+        if process:
+            query = " ".join(preprocess(query))
         top_results = self.retrieve_topn(query, num_results)
         # choose to use an external similarity transformer
         if externalSim:
@@ -275,7 +283,7 @@ class SentenceSearcher(object):
             )
             for idx, doc in enumerate(top_results):
                 doc["text_length"] = length_scores[idx]
-                doc["score"] = doc["score"] + length_scores[idx]
+                doc["score"] = doc["score"]
                 finalResults.append(doc)
             finalResults = sorted(
                 finalResults, key=lambda i: i["score"], reverse=True)
