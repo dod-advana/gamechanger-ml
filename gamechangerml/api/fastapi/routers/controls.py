@@ -673,6 +673,10 @@ def finetune_sentence(model_dict):
         remake_train_data = model_dict["remake_train_data"]
     except:
         remake_train_data = False
+    try:
+        model = model_dict["model"]
+    except:
+        model = None
     args = {
         "batch_size": 8,
         "epochs": int(model_dict["epochs"]),
@@ -680,6 +684,7 @@ def finetune_sentence(model_dict):
         "testing_only": bool(testing_only),
         "remake_train_data": bool(remake_train_data),
         "retriever": MODELS.sentence_searcher,
+        "model": model
     }
     pipeline.run(
         build_type="sent_finetune",

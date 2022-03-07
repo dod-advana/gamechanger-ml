@@ -633,7 +633,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     metadata = {
                         "date": datetime.now().strftime("%Y-%m-%d"),
                         "model_type": "sentence index",
-                        "base_model_path": self.model_load_path,
+                        "base_model_path": self.model_path,
                         "current_model_path": self.index_path,
                         "validation_data_dir": self.data_path,
                         "include_ids": include_ids,
@@ -691,7 +691,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             metadata = open_json("metadata.json", self.model_path)
             train_data_path = metadata['training_data_dir']
             training_data = pd.read_csv(train_data_path)
-            include_ids = list(set(training_data['doc']))
+            include_ids = [i.split('.pdf_')[0] for i in list(set(training_data['doc']))]
         else:
             logger.info("This is a base model: collecting validation data IDs for index")
             validation_data = open_json(os.path.join(self.data_path, self.data_level, "intelligent_search_data.json"))

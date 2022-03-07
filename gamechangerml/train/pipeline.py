@@ -189,7 +189,7 @@ class Pipeline:
             make_corpus_meta(corpus_dir, days, prod_data_file, upload)
         if "update_sent_data" in meta_steps:
             try:
-                make_training_data(index_path, n_returns, level, update_eval_data, retriever)
+                make_training_data(index_path, level, update_eval_data)
             except Exception as e:
                 logger.warning(e, exc_info=True)
         if upload:
@@ -213,6 +213,7 @@ class Pipeline:
         testing_only: bool = False,
         remake_train_data: bool = False,
         retriever = None,
+        model = None,
         version: str = "v1"
     ) -> t.Dict[str, str]:
         """finetune_sent: finetunes the sentence transformer - saves new model, 
@@ -227,9 +228,14 @@ class Pipeline:
         """
 
         try:
-            model_load_path = os.path.join(
-                LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
-            )
+            if not model:
+                model_load_path = os.path.join(
+                    LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
+                )
+            else:
+                model_load_path = os.path.join(
+                    LOCAL_TRANSFORMERS_DIR, model
+                )
             model_id = datetime.now().strftime("%Y%m%d")
             model_save_path = model_load_path + "_" + model_id
             logger.info(
@@ -305,11 +311,12 @@ class Pipeline:
             if "bert-base-cased-squad2" in model_name:
                 results[eval_type] = eval_qa(
                     model_name, sample_limit, eval_type)
-            elif "msmarco-distilbert-base-v2" in model_name:
-                #for e_type in ["domain", "original"]:
-                #    results[e_type] = eval_sent(
-                #        model_name, validation_data, e_type
-                #    )
+            elif "msmarco-distilbert" in model_name:
+                for e_type in ["domain", "original"]:
+                    results[e_type] = eval_sent(
+                        model_name, validation_data, e_type
+                    )
+            elif "multi-qa-MiniLM" in model_name:
                 results["domain"] = eval_sent(
                     model_name, validation_data, eval_type="domain"
                 )

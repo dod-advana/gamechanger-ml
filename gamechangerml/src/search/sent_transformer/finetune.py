@@ -20,7 +20,6 @@ from torch.optim import Adam
 import torch.nn.functional as F
 from torch import nn
 torch.cuda.empty_cache()
-from gamechangerml.src.model_testing.metrics import reciprocal_rank_score, get_MRR
 
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
@@ -95,20 +94,19 @@ class STFinetuner():
 
         try:
             data = open_json("training_data.json", data_dir)
-            meta = open_json("training_metadata.json", data_dir)
             train = data["train"]
             test = data["test"]
-            train_queries = meta['train_queries'][:30]
-            test_queries = meta['test_queries'][:10]
-
-            del data
-            gc.collect()
 
             if testing_only:
                 logger.info(
                     "Creating smaller dataset just for testing finetuning.")
+                train_queries = list(set([train[i]['query'] for i in train.keys()]))[:30]
+                test_queries = list(set([test[i]['query'] for i in test.keys()]))[:10]
                 train = {k: train[k] for k in train.keys() if train[k]['query'] in train_queries}
                 test = {k: test[k] for k in test.keys() if test[k]['query'] in test_queries}
+            
+            del data
+            gc.collect()
 
             processmanager.update_status(processmanager.training, 0, 1)
             sleep(0.1)
