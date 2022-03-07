@@ -156,10 +156,9 @@ class Pipeline:
         ),
         days: int = 80,
         prod_data_file=PROD_DATA_FILE,
-        n_returns: int = 50,
-        n_matching: int = 3,
-        level: str = 'silver',
-        update_eval_data: bool = False,
+        n_returns: int=50,
+        level: str='silver',
+        update_eval_data: bool=False,
         retriever=None,
         upload: bool = True,
         version: str = "v1"
@@ -190,8 +189,7 @@ class Pipeline:
             make_corpus_meta(corpus_dir, days, prod_data_file, upload)
         if "update_sent_data" in meta_steps:
             try:
-                make_training_data(
-                    index_path, n_returns, n_matching, level, update_eval_data, retriever)
+                make_training_data(index_path, n_returns, level, update_eval_data, retriever)
             except Exception as e:
                 logger.warning(e, exc_info=True)
         if upload:
@@ -213,7 +211,9 @@ class Pipeline:
         epochs: int = 3,
         warmup_steps: int = 100,
         testing_only: bool = False,
-        version: str = "v100"
+        remake_train_data: bool = False,
+        retriever = None,
+        version: str = "v1"
     ) -> t.Dict[str, str]:
         """finetune_sent: finetunes the sentence transformer - saves new model, 
            a csv file of old/new cos sim scores, and a metadata file.
@@ -234,10 +234,34 @@ class Pipeline:
             model_save_path = model_load_path + "_" + model_id
             logger.info(
                 f"Setting {str(model_save_path)} as save path for new model")
-            data_path = get_most_recent_dir(os.path.join(
-                DATA_PATH, "training", "sent_transformer"))
-            if not data_path:
-                quit()
+            no_data=False
+            base_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
+
+            ## check if training data exists
+            if remake_train_data:
+                no_data = True
+            elif not os.path.isdir(base_dir): # if no training data directory exists
+                no_data=True
+                os.makedirs(base_dir)
+            elif len(os.listdir(base_dir))==0: # if base dir exists but there are no files
+                no_data=True
+            elif get_most_recent_dir(base_dir)==None:
+                no_data = True
+            elif len(os.listdir(get_most_recent_dir(base_dir)))==0:
+                no_data=True
+            logger.info(f"No data flag is set to: {str(no_data)}")
+
+            #if we don't have data, make training data
+            if no_data: 
+                make_training_data(
+                    index_path=SENT_INDEX,
+                    n_returns=50, 
+                    level='silver', 
+                    update_eval_data=True, 
+                    retriever=retriever
+                )
+
+            data_path = get_most_recent_dir(base_dir)
             logger.info(f"Loading in domain data to finetune from {data_path}")
             finetuner = STFinetuner(
                 model_load_path=model_load_path,
