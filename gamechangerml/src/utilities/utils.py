@@ -5,6 +5,7 @@ import os
 import shutil
 import glob
 import tarfile
+import threading
 import typing as t
 from pathlib import Path
 from gamechangerml.src.utilities.aws_helper import *
@@ -141,14 +142,14 @@ def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
             progress = 0
             if total > 0:
                 processmanager.update_status(
-                    processmanager.delete_corpus, progress, total
+                    processmanager.delete_corpus, progress, total,thread_id=threading.current_thread().ident
                 )
                 logger.info("Removing existing corpus files.")
                 for f in files:
                     os.remove(os.path.join(output_dir, f))
                     progress += 1
                     processmanager.update_status(
-                        processmanager.delete_corpus, progress, total
+                        processmanager.delete_corpus, progress, total,thread_id=threading.current_thread().ident
                     )
         # get the s3.Bucket.objectsCollection of objects that meet the prefix
         filter = bucket.objects.filter(Prefix=f"{s3_corpus_dir}/")
@@ -156,7 +157,8 @@ def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
         completed = 0
         # Initialize Progress
         processmanager.update_status(
-            processmanager.corpus_download, completed, total)
+            processmanager.corpus_download, completed, total,thread_id=threading.current_thread().ident
+        )
         logger.info("Downloading corpus from " + s3_corpus_dir)
         for obj in filter:
             corp.append(obj.key)
@@ -169,15 +171,16 @@ def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
                     completed += 1
                 # Update Progress
                 processmanager.update_status(
-                    processmanager.corpus_download, completed, total
+                    processmanager.corpus_download, completed, total,thread_id=threading.current_thread().ident
                 )
             except RuntimeError:
                 logger.debug(f"Could not retrieve {filename}")
     except Exception as error:
         logger.warning(error)
-        processmanager.update_status(processmanager.delete_corpus, failed=True)
+        processmanager.update_status(processmanager.delete_corpus, failed=True,thread_id=threading.current_thread().ident)
         processmanager.update_status(
-            processmanager.corpus_download, failed=True)
+            processmanager.corpus_download, failed=True,thread_id=threading.current_thread().ident
+        )
     return corp
 
 

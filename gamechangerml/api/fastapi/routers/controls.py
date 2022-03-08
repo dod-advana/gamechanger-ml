@@ -1,10 +1,11 @@
+from concurrent.futures import thread
 from fastapi import APIRouter, Response, status
 import subprocess
 import os
 import json
 import tarfile
 import shutil
-import time
+import threading
 
 from datetime import datetime
 from gamechangerml import DATA_PATH
@@ -302,13 +303,13 @@ async def create_LTR_model(response: Response):
         try:
 
             pipeline.create_ltr()
-            processmanager.update_status(processmanager.ltr_creation, 1, 1)
+            processmanager.update_status(processmanager.ltr_creation, 1, 1, thread_id=threading.current_thread().ident)
         except Exception as e:
             logger.warning(e)
             logger.warning(f"There is an issue with LTR creation")
             response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             processmanager.update_status(
-                processmanager.ltr_creation, failed=True)
+                processmanager.ltr_creation, failed=True, thread_id=threading.current_thread().ident)
 
     ltr_thread = MlThread(ltr_process)
     ltr_thread.start()
@@ -374,13 +375,13 @@ async def download(response: Response):
                 ["gamechangerml/scripts/download_dependencies.sh"])
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)
-            processmanager.update_status(processmanager.s3_dependency, 1, 1)
+            processmanager.update_status(processmanager.s3_dependency, 1, 1, thread_id=threading.current_thread().ident)
         except:
 
             logger.warning(f"Could not get dependencies from S3")
             response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             processmanager.update_status(
-                processmanager.s3_dependency, failed=True)
+                processmanager.s3_dependency, failed=True, thread_id=threading.current_thread().ident)
 
     thread = MlThread(download_s3_thread)
     thread.start()
@@ -408,15 +409,15 @@ async def download_s3_file(file_dict: dict, response: Response):
 
             if len(downloaded_files) == 0:
                 processmanager.update_status(
-                    f's3: {file_dict["file"]}', failed=True, message="No files found")
+                    f's3: {file_dict["file"]}', failed=True, message="No files found", thread_id=threading.current_thread().ident)
                 return
 
             processmanager.update_status(
-                f's3: {file_dict["file"]}', 0, len(downloaded_files))
+                f's3: {file_dict["file"]}', 0, len(downloaded_files), thread_id=threading.current_thread().ident)
             i = 0
             for f in downloaded_files:
                 i += 1
-                processmanager.update_status(f's3: {file_dict["file"]}', 0, i)
+                processmanager.update_status(f's3: {file_dict["file"]}', 0, i, thread_id=threading.current_thread().ident)
                 logger.info(f)
                 if '.tar' in f:
                     tar = tarfile.open(f)
@@ -437,8 +438,12 @@ async def download_s3_file(file_dict: dict, response: Response):
                         '.git' not in member.name and '.DS_Store' not in member.name)])
                     tar.close()
 
-            processmanager.update_status(f's3: {file_dict["file"]}', len(
-                downloaded_files), len(downloaded_files))
+            processmanager.update_status(
+                f's3: {file_dict["file"]}', 
+                len(downloaded_files), 
+                len(downloaded_files), 
+                thread_id=threading.current_thread().ident
+            )
 
         except PermissionError:
             failedExtracts = []
@@ -451,20 +456,28 @@ async def download_s3_file(file_dict: dict, response: Response):
             logger.warning(
                 f'Could not extract {failedExtracts} with permission errors')
             processmanager.update_status(
-                f's3: {file_dict["file"]}', failed=True, message="Permission error not all files extracted")
+                f's3: {file_dict["file"]}',
+                failed=True, message="Permission error not all files extracted", 
+                thread_id=threading.current_thread().ident
+            )
 
         except Exception as e:
             logger.warning(e)
             logger.warning(f"Could download {file_dict['file']} from S3")
             response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             processmanager.update_status(
-                f's3: {file_dict["file"]}', failed=True, message=e)
+                f's3: {file_dict["file"]}', 
+                failed=True, 
+                message=e, 
+                thread_id=threading.current_thread().ident
+            )
 
     thread = MlThread(download_s3_thread)
     thread.start()
     processmanager.running_threads[thread.ident] = thread
     processmanager.update_status(
-        f's3: {file_dict["file"]}', 0, 1, thread_id=thread.ident)
+        f's3: {file_dict["file"]}', 0, 1, thread_id=thread.ident
+    )
 
     return await get_process_status()
 
@@ -510,6 +523,8 @@ async def reload_models(model_dict: dict, response: Response):
         def reload_thread(model_dict):
             try:
                 progress = 0
+                thread_name = processmanager.reloading + ' '.join([key for key in model_dict])
+                logger.info(thread_name)
                 if "sentence" in model_dict:
                     sentence_path = os.path.join(
                         Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
@@ -520,7 +535,7 @@ async def reload_models(model_dict: dict, response: Response):
                     SENT_INDEX_PATH.value = sentence_path
                     progress += 1
                     processmanager.update_status(
-                        processmanager.reloading, progress, total
+                       thread_name, progress, total, thread_id=threading.current_thread().ident
                     )
                 if "qexp" in model_dict:
                     qexp_name = os.path.join(
@@ -532,7 +547,7 @@ async def reload_models(model_dict: dict, response: Response):
                     QEXP_MODEL_NAME.value = qexp_name
                     progress += 1
                     processmanager.update_status(
-                        processmanager.reloading, progress, total
+                        thread_name, progress, total, thread_id=threading.current_thread().ident
                     )
                 if "jbook_qexp" in model_dict:
                     jbook_qexp_name = os.path.join(
@@ -541,10 +556,10 @@ async def reload_models(model_dict: dict, response: Response):
                     # uses QEXP_MODEL_NAME by default
                     logger.info("Attempting to load Jbook QE")
                     MODELS.initQEJBook(jbook_qexp_name)
-                    QEXP_JBOOK_MODEL.value = jbook_qexp_name
+                    QEXP_JBOOK_MODEL_NAME.value = jbook_qexp_name
                     progress += 1
                     processmanager.update_status(
-                        processmanager.reloading, progress, total
+                        thread_name, progress, total, thread_id=threading.current_thread().ident
                     )
 
                 if "topic_models" in model_dict:
@@ -557,20 +572,25 @@ async def reload_models(model_dict: dict, response: Response):
                     TOPICS_MODEL.value = topics_name
                     progress += 1
                     processmanager.update_status(
-                        processmanager.reloading, progress, total
+                        thread_name, progress, total, thread_id=threading.current_thread().ident
                     )
-
+                
             except Exception as e:
                 logger.warning(e)
                 processmanager.update_status(
-                    processmanager.reloading, failed=True)
+                    f'{processmanager.reloading}', 
+                    failed=True, 
+                    thread_id=threading.current_thread().ident
+                )
 
         args = {"model_dict": model_dict}
         thread = MlThread(reload_thread, args)
         thread.start()
         processmanager.running_threads[thread.ident] = thread
+        thread_name = processmanager.reloading + ' '.join([key for key in model_dict])
         processmanager.update_status(
-            processmanager.reloading, 0, total, thread_id=thread.ident)
+            thread_name, 0, total, thread_id=thread.ident
+        )
     except Exception as e:
         logger.warning(e)
 
@@ -593,7 +613,8 @@ async def download_corpus(corpus_dict: dict, response: Response):
         if not corpus_dict["corpus"]:
             corpus_dict = S3_CORPUS_PATH
         args = {
-            "s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+            "s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR
+        }
         logger.info(args)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()
@@ -605,7 +626,8 @@ async def download_corpus(corpus_dict: dict, response: Response):
         logger.warning(e)
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         processmanager.update_status(
-            processmanager.corpus_download, failed=True, message=e)
+            processmanager.corpus_download, failed=True, message=e, thread_id=corpus_thread.ident
+        )
 
     return await get_process_status()
 
@@ -795,8 +817,12 @@ async def train_model(model_dict: dict, response: Response):
                 f"No training method mapped for build type {build_type}")
 
         # Set the training method to be loaded onto the thread
-        training_thread = MlThread(training_method, args={
-                                   "model_dict": model_dict})
+        training_thread = MlThread(
+            training_method, 
+            args={
+                "model_dict": model_dict
+            }
+        )
         training_thread.start()
         processmanager.running_threads[training_thread.ident] = training_thread
         processmanager.update_status(
@@ -804,7 +830,7 @@ async def train_model(model_dict: dict, response: Response):
     except:
         logger.warning(f"Could not train/evaluate the model")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        processmanager.update_status(processmanager.training, failed=True)
+        processmanager.update_status(processmanager.training, failed=True, thread_id=training_thread.ident)
 
     return await get_process_status()
 
@@ -819,11 +845,13 @@ async def stop_process(thread_dict: dict, response: Response):
         Stopped thread id
     """
     logger.info(processmanager.running_threads)
+    thread_id = int(thread_dict['thread_id'])
     with processmanager.thread_lock:
-        if thread_dict['thread_id'] in processmanager.running_threads:
-            processmanager.running_threads[thread_dict['thread_id']].kill()
-            del processmanager.running_threads[thread_dict['thread_id']]
+        if thread_id in processmanager.running_threads:
+            processmanager.running_threads[thread_id].kill()
+            del processmanager.running_threads[thread_id]
     processmanager.update_status(
-        thread_dict['process'], failed=True, message='Killed by user')
+        thread_dict['process'], failed=True, message='Killed by user', thread_id=thread_id
+    )
 
-    return {'stopped': thread_dict['thread_id']}
+    return {'stopped':thread_id}

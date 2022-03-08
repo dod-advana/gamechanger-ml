@@ -8,6 +8,7 @@ import pandas as pd
 import pickle
 import torch
 import time
+import threading
 
 from gamechangerml.src.text_handling.corpus import LocalCorpus
 from gamechangerml.api.utils import processmanager
@@ -183,12 +184,12 @@ class SentenceEncoder(object):
             corpus = data.corpus
 
         processmanager.update_status(
-            processmanager.training, 0, 1, "building sent index"
+            processmanager.training, 0, 1, "building sent index",thread_id=threading.current_thread().ident
         )
 
         self._index(corpus, index_path)
         processmanager.update_status(
-            processmanager.training, 1, 0, "finished building sent index"
+            processmanager.training, 1, 1, "finished building sent index",thread_id=threading.current_thread().ident
         )
 
         self.embedder.save(index_path)
