@@ -35,7 +35,6 @@ gold_standard_path = os.path.join(
 )
 
 CORPUS_DIR = CORPUS_PATH
-print(CORPUS_DIR)
 corpus_docs = []
 try:
     corpus_docs = [
