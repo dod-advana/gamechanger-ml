@@ -33,6 +33,7 @@ RUN dnf install -y \
         openblas \
         cairo \
         cryptsetup-libs \
+        cyrus-sasl-lib \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
