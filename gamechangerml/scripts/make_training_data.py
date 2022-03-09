@@ -35,10 +35,9 @@ gold_standard_path = os.path.join(
 )
 
 CORPUS_DIR = CORPUS_PATH
+print(CORPUS_DIR)
 corpus_docs = []
 try:
-    if not os.path.exists(CORPUS_DIR):
-        os.makedirs(CORPUS_DIR)
     corpus_docs = [
         i.split(".json")[0]
         for i in os.listdir(CORPUS_DIR)
