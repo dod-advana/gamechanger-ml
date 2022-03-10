@@ -7,6 +7,7 @@ import os
 import torch
 import json
 import urllib3
+import threading
 import pandas as pd
 from distutils.dir_util import copy_tree
 from datetime import datetime, date
@@ -576,7 +577,7 @@ class Pipeline:
     def create_ltr(self, daysBack: int = 180):
         try:
             ltr = self.ltr
-            processmanager.update_status(processmanager.ltr_creation, 0, 4)
+            processmanager.update_status(processmanager.ltr_creation, 0, 4,thread_id=threading.current_thread().ident)
             logger.info("Attempting to create judgement list")
             # NOTE: always set it false right now since there needs to be API changes in the WEB
             remote_mappings = False
@@ -585,15 +586,15 @@ class Pipeline:
             judgements = ltr.generate_judgement(
                 remote_mappings=remote_mappings, daysBack=daysBack
             )
-            processmanager.update_status(processmanager.ltr_creation, 1, 4)
+            processmanager.update_status(processmanager.ltr_creation, 1, 4,thread_id=threading.current_thread().ident)
             logger.info("Attempting to get features")
             fts = ltr.generate_ft_txt_file(judgements)
-            processmanager.update_status(processmanager.ltr_creation, 2, 4)
+            processmanager.update_status(processmanager.ltr_creation, 2, 4,thread_id=threading.current_thread().ident)
             logger.info("Attempting to read in data")
             ltr.data = ltr.read_xg_data()
             logger.info("Attempting to train LTR model")
             bst, model = ltr.train()
-            processmanager.update_status(processmanager.ltr_creation, 3, 4)
+            processmanager.update_status(processmanager.ltr_creation, 3, 4,thread_id=threading.current_thread().ident)
             logger.info("Created LTR model")
             with open(os.path.join(MODEL_PATH, "ltr/xgb-model.json")) as f:
                 model = json.load(f)
@@ -602,7 +603,7 @@ class Pipeline:
             logger.info(resp)
             resp = ltr.post_model(model, model_name="ltr_model")
             logger.info("Posted LTR model")
-            processmanager.update_status(processmanager.ltr_creation, 4, 4)
+            processmanager.update_status(processmanager.ltr_creation, 4, 4,thread_id=threading.current_thread().ident)
         except Exception as e:
             logger.error("Could not create LTR")
 
@@ -692,12 +693,12 @@ class Pipeline:
 
                 self.mlflow_record(metadata, evals)
                 processmanager.update_status(
-                    processmanager.training, 0, 1, f"training {build_type} model"
+                    processmanager.training, 0, 1, f"training {build_type} model",thread_id=threading.current_thread().ident
                 )
 
             mlflow.end_run()
             processmanager.update_status(
-                processmanager.training, 1, 1, f"trained {build_type} model"
+                processmanager.training, 1, 1, f"trained {build_type} model",thread_id=threading.current_thread().ident
             )
         except Exception as e:
             logger.warning(f"Error building {build_type} with MLFlow")
@@ -721,10 +722,10 @@ class Pipeline:
                         f"Started pipeline with unknown build_type: {build_type}"
                     )
                 processmanager.update_status(
-                    processmanager.training, 0, 1, f"training {build_type} model"
+                    processmanager.training, 0, 1, f"training {build_type} model",thread_id=threading.current_thread().ident
                 )
                 processmanager.update_status(
-                    processmanager.training, 1, 1, f"trained {build_type} model"
+                    processmanager.training, 1, 1, f"trained {build_type} model",thread_id=threading.current_thread().ident
                 )
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
@@ -733,11 +734,13 @@ class Pipeline:
                     processmanager.loading_corpus,
                     message="failed to load corpus",
                     failed=True,
+                    thread_id=threading.current_thread().ident
                 )
                 processmanager.update_status(
                     processmanager.training,
                     message="failed to train " + build_type + " model",
                     failed=True,
+                    thread_id=threading.current_thread().ident
                 )
 
     def mlflow_record(self, metadata, evals):
