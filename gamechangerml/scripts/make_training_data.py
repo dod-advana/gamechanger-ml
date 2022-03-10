@@ -35,11 +35,15 @@ gold_standard_path = os.path.join(
 )
 
 CORPUS_DIR = CORPUS_PATH
-corpus_docs = [
-    i.split(".json")[0]
-    for i in os.listdir(CORPUS_DIR)
-    if os.path.isfile(os.path.join(CORPUS_DIR, i))
-]
+corpus_docs = []
+try:
+    corpus_docs = [
+        i.split(".json")[0]
+        for i in os.listdir(CORPUS_DIR)
+        if os.path.isfile(os.path.join(CORPUS_DIR, i))
+    ]
+except Exception as e:
+    logger.error(e)
 
 
 def get_sample_paragraphs(pars, par_limit=100, min_length=150):

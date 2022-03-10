@@ -50,7 +50,8 @@ RUN ( (getent group $APP_GID &> /dev/null) \
 ENV APP_ROOT="${APP_ROOT:-/opt/app-root}"
 ENV APP_VENV="${APP_VENV:-/opt/app-root/venv}"
 ENV APP_DIR="${APP_ROOT}/src"
-RUN mkdir -p "${APP_DIR}" "${APP_VENV}"
+ENV LOCAL_CORPUS_PATH="${APP_DIR}/gamechangerml/corpus"
+RUN mkdir -p "${APP_DIR}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
 
 # install python venv w all the packages
 ARG APP_REQUIREMENTS_FILE="./requirements.txt"

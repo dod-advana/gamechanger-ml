@@ -24,6 +24,7 @@ function setup_prod() {
     export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-data-zone/bronze/gamechanger/models/topic_model/v1/20210208.tar.gz}"
     export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20220127.tar.gz}"
     export S3_CORPUS_PATH="${S3_CORPUS_PATH:-s3://advana-data-zone/bronze/gamechanger/json}"
+    export LOCAL_CORPUS_PATH="${LOCAL_CORPUS_PATH:-$PWD/gamechangerml/corpus}"
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-true}"
 
     export ES_HOST="${ES_HOST:-}"
@@ -54,7 +55,7 @@ function setup_dev() {
     export S3_TOPICS_PATH="${S3_TOPICS_PATH:-s3://advana-data-zone/bronze/gamechanger/models/topic_model/v1/20210208.tar.gz}"
     export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20220127.tar.gz}"
     export S3_CORPUS_PATH="${S3_CORPUS_PATH:-s3://advana-data-zone/bronze/gamechanger/json}"
-
+    export LOCAL_CORPUS_PATH="${LOCAL_CORPUS_PATH:-$PWD/gamechangerml/corpus}"
     export DEV_ENV="DEV"
     export PULL_MODELS="${PULL_MODELS:-latest}"
     export MLFLOW_HOST="${MLFLOW_HOST:-localhost}"
@@ -157,4 +158,5 @@ cat <<EOF
   * GC_WEB_HOST: ${GC_WEB_HOST:-<unset>}"
   * GC_WEB_USER: ${GC_WEB_USER:-<unset>}"
   * ML_WEB_TOKEN: ${ML_WEB_TOKEN:-<unset>}"
+  * LOCAL_CORPUS_PATH: ${LOCAL_CORPUS_PATH:-<unset>}"
 EOF
