@@ -1,6 +1,7 @@
 import os
 import json
 import threading
+
 # import pandas as pd
 from gensim.models.doc2vec import TaggedDocument
 from gamechangerml.src.text_handling.process import preprocess, get_tokenizer
@@ -40,7 +41,10 @@ class LocalCorpus(object):
         total = len(self.file_list)
         progress = 0
         processmanager.update_status(
-            processmanager.loading_corpus, progress, total,thread_id=threading.current_thread().ident
+            processmanager.loading_corpus,
+            progress,
+            total,
+            thread_id=threading.current_thread().ident,
         )
         for file_name in iterator:
             try:
@@ -68,11 +72,10 @@ class LocalCorpus(object):
                                 yield tokens
                 progress += 1
                 processmanager.update_status(
-<<<<<<< HEAD
-                    processmanager.loading_corpus, progress, total
-=======
-                    processmanager.loading_corpus, progress, total,thread_id=threading.current_thread().ident
->>>>>>> bae99ae... updated how processes are stored to have multiple of the same type
+                    processmanager.loading_corpus,
+                    progress,
+                    total,
+                    thread_id=threading.current_thread().ident,
                 )
             except Exception as e:
                 print(e)
