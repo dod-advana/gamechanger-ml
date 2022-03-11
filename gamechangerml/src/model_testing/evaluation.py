@@ -567,6 +567,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                 if create_index: # make test index in the encoder model directory
                     # use test corpus directory to make test corpus
                     corpus_test_dir=ValidationConfig.DATA_ARGS["test_corpus_dir"]
+                    corpus_test_dir = check_directory(corpus_test_dir)
                     if corpus_test_dir != CORPUS_PATH: # make sure this is a new dir
                         if len(os.listdir(corpus_test_dir)) > 0: # check if files in test corpus dir
                             if overwrite_test_corpus:
