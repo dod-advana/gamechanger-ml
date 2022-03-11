@@ -650,8 +650,8 @@ def update_metadata(model_dict):
         retriever = MODELS.sentence_searcher
         logger.info("Using pre-loaded SentenceSearcher")
     except:
-        logger.info("Setting SentenceSearcher to None")
         retriever = None
+        logger.info("Setting SentenceSearcher to None")
     try:
         meta_steps = model_dict["meta_steps"]
     except:

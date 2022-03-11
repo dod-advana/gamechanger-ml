@@ -429,14 +429,6 @@ class RetrieverEvaluator(TransformerEvaluator):
         self, data, index, retriever, data_name, eval_path, model_name, k=retriever_k
         ):
 
-        logger.info(f"Data: {data}")
-        logger.info(f"index: {index}")
-        logger.info(f"retriever: {retriever}")
-        logger.info(f"data_name: {data_name}")
-        logger.info(f"eval_path: {eval_path}")
-        logger.info(f"model name: {model_name}")
-        logger.info(f"k: {k}")
-
         df, tp, tn, fp, fn, total_expected = self.predict(
             data, index, retriever, eval_path, k
         )
