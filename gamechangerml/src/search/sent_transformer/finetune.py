@@ -7,6 +7,7 @@ from gamechangerml.src.utilities.test_utils import open_json, save_json, timesta
 from gamechangerml.scripts.run_evaluation import eval_sent
 from time import sleep
 import tqdm
+import threading
 import logging
 import gc
 from sentence_transformers import SentenceTransformer, InputExample, losses
@@ -109,7 +110,7 @@ class STFinetuner():
             del data
             gc.collect()
 
-            processmanager.update_status(processmanager.training, 0, 1)
+            processmanager.update_status(processmanager.training, 0, 1,thread_id=threading.current_thread().ident)
             sleep(0.1)
             # make formatted training data
             train_samples, df_path = format_inputs(train, test, data_dir)
@@ -125,7 +126,7 @@ class STFinetuner():
             logger.info("Finetuning the encoder model...")
             self.model.fit(train_objectives=[
                            (train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
-            processmanager.update_status(processmanager.training, 1, 0)
+            processmanager.update_status(processmanager.training, 1, 0,thread_id=threading.current_thread().ident)
             logger.info("Finished finetuning the encoder model")
             # save model
             self.model.save(self.model_save_path)

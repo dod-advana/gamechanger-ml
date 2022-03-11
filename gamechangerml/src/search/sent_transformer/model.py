@@ -8,14 +8,15 @@ import pandas as pd
 import pickle
 import torch
 import time
+import threading
 
 from gamechangerml.src.text_handling.corpus import LocalCorpus
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.test_utils import *
+from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
-
 
 
 class SentenceEncoder(object):
@@ -38,6 +39,7 @@ class SentenceEncoder(object):
         transformer_path,
         model=None,
         use_gpu=False,
+        bert_tokenize=False,
     ):
 
         if model:
@@ -45,6 +47,9 @@ class SentenceEncoder(object):
         else:
             self.encoder_model = os.path.join(
                 transformer_path, encoder_model_name)
+        self.bert_tokenizer = None
+        if bert_tokenize:
+            self.bert_tokenizer = self.encoder_model
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
@@ -93,7 +98,7 @@ class SentenceEncoder(object):
         dataframe_path = os.path.join(index_path, "data.csv")
         ids_path = os.path.join(index_path, "doc_ids.txt")
 
-        '''
+        """
         # Load new data
         if os.path.isfile(embedding_path) and (overwrite is False):
             logger.info(f"Loading new data from {embedding_path}")
@@ -115,7 +120,7 @@ class SentenceEncoder(object):
             # Append new dataframe
             old_df = pd.read_csv(dataframe_path)
             df = pd.concat([old_df, df])
-        '''
+        """
 
         # Store embeddings and document index
         # for future reference
@@ -162,9 +167,10 @@ class SentenceEncoder(object):
                 return_id=self.return_id,
                 min_token_len=self.min_token_len,
                 verbose=self.verbose,
+                bert_based_tokenizer=self.bert_tokenizer,
             )
             corpus = [(para_id, " ".join(tokens), None)
-                    for tokens, para_id in corp]
+                      for tokens, para_id in corp]
             logger.info(
                 f"\nLength of batch (in par ids) for indexing : {str(len(corpus))}"
             )
@@ -177,12 +183,12 @@ class SentenceEncoder(object):
             corpus = data.corpus
 
         processmanager.update_status(
-            processmanager.training, 0, 1, "building sent index"
+            processmanager.training, 0, 1, "building sent index",thread_id=threading.current_thread().ident
         )
 
         self._index(corpus, index_path)
         processmanager.update_status(
-            processmanager.training, 1, 0, "finished building sent index"
+            processmanager.training, 1, 1, "finished building sent index",thread_id=threading.current_thread().ident
         )
 
         self.embedder.save(index_path)
@@ -252,7 +258,7 @@ class SentenceSearcher(object):
             results.append(doc)
         return results
 
-    def search(self, query, num_results=10, externalSim=True):
+    def search(self, query, num_results=10, process=False, externalSim=True):
         """
         Search the index and perform a similarity scoring reranker at
         the topn returned documents
@@ -262,22 +268,30 @@ class SentenceSearcher(object):
             rerank (list): List of tuples following a (score, paragraph_id,
                 paragraph_text) format ranked based on similarity with query
         """
-        top_results = self.retrieve_topn(query, num_results)
-        # choose to use an external similarity transformer
-        if externalSim:
-            return self.similarity.re_rank(query, top_results)
-        else:
-            # adding normalize text length to score and sorting
-            finalResults = []
-            result_text = [len(x["text"]) for x in top_results]
-            length_scores = np.interp(
-                result_text, (min(result_text), max(result_text)), (0, 0.2)
-            )
-            for idx, doc in enumerate(top_results):
-                doc["text_length"] = length_scores[idx]
-                doc["score"] = doc["score"] + length_scores[idx]
-                finalResults.append(doc)
-            finalResults = sorted(
-                finalResults, key=lambda i: i["score"], reverse=True)
+        if process:
+            query = " ".join(preprocess(query))
 
-            return finalResults
+        logger.info(f"Sentence searching for: {query}")
+        if len(query) > 2:
+            top_results = self.retrieve_topn(query, num_results)
+            # choose to use an external similarity transformer
+            if externalSim:
+                return self.similarity.re_rank(query, top_results)
+            else:
+                # adding normalize text length to score and sorting
+                finalResults = []
+                result_text = [len(x["text"]) for x in top_results]
+                length_scores = np.interp(
+                    result_text, (min(result_text), max(result_text)), (0, 0.2)
+                )
+                for idx, doc in enumerate(top_results):
+                    doc["text_length"] = length_scores[idx]
+                    doc["score"] = doc["score"]
+                    finalResults.append(doc)
+                finalResults = sorted(
+                    finalResults, key=lambda i: i["score"], reverse=True
+                )
+
+                return finalResults
+        else:
+            return []

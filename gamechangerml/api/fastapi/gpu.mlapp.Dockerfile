@@ -33,6 +33,7 @@ RUN dnf install -y \
         openblas \
         cairo \
         cryptsetup-libs \
+        cyrus-sasl-lib \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
@@ -57,7 +58,9 @@ RUN ( (getent group $APP_GID &> /dev/null) \
 ENV APP_ROOT="${APP_ROOT:-/opt/app-root}"
 ENV APP_VENV="${APP_VENV:-/opt/app-root/venv}"
 ENV APP_DIR="${APP_ROOT}/src"
-RUN mkdir -p "${APP_DIR}" "${APP_VENV}"
+ENV LOCAL_CORPUS_PATH="${APP_DIR}/gamechangerml/corpus"
+RUN mkdir -p "${APP_DIR}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
+
 
 # install python venv w all the packages
 ARG APP_REQUIREMENTS_FILE="./requirements.txt"
@@ -66,7 +69,7 @@ COPY "${APP_REQUIREMENTS_FILE}" "/tmp/requirements.txt"
 RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
     && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" \
-    && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}"
+    && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
 
 # thou shall not root
 USER $APP_UID:$APP_GID

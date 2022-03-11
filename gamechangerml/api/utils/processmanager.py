@@ -7,11 +7,11 @@ clear_corpus = "corpus: corpus_download"
 corpus_download = "corpus: corpus_download"
 delete_corpus = "corpus: delete_corpus"
 s3_file_download = "s3: file_download"
-s3_dependency = "s3: dependency_download"
+s3_dependency = "s3: all_dependency_download"
 loading_corpus = "training: load_corpus"
 loading_data = "training: load_data"
 training = "training: train_model"
-reloading = "models: reloading_models"
+reloading = "models: reloading_models "
 ltr_creation = "training: ltr_creation"
 topics_creation = "models: topics_creation"
 
@@ -45,51 +45,52 @@ if COMPLETED_PROCESS.value == None:
     COMPLETED_PROCESS.value = []
 
 
-def update_status(key, progress=0, total=100, message="", failed=False, thread_id="", completed_max=20):
+def update_status(name, progress=0, total=100, message="", failed=False, thread_id="", completed_max=20):
 
+    thread_id = str(thread_id)
     try:
         if progress == total or failed:
             date = datetime.now()
             date_string = date.strftime("%Y-%m-%d %H:%M:%S")
             completed = {
-                "process": key,
+                "process": name,
                 "total": total,
                 "message": message,
                 "date": date_string,
             }
             with thread_lock:
-                if key in PROCESS_STATUS.value:
+                if thread_id in PROCESS_STATUS.value:
                     temp = PROCESS_STATUS.value
-                    tempProcess = temp.pop(key, None)
-                    if key in temp["flags"]:
-                        temp["flags"][key] = False
+                    temp.pop(thread_id, None)
+                    if name in temp["flags"]:
+                        temp["flags"][name] = True
                     PROCESS_STATUS.value = temp
-                    if tempProcess['thread_id'] in running_threads:
-                        del running_threads[tempProcess['thread_id']]
-                if not failed:
-                    completed_list = COMPLETED_PROCESS.value
-                    if len(completed_list) == completed_max:
-                        completed_list.pop(0)
-                    completed_list.append(completed)
-                    COMPLETED_PROCESS.value = completed_list
-                else:
-                    completed['date'] = 'Failed'
-                    completed_list = COMPLETED_PROCESS.value
-                    completed_list.append(completed)
-                    COMPLETED_PROCESS.value = completed_list
+                    if thread_id in running_threads:
+                        del running_threads[thread_id]
+                    if failed:
+                        completed['date'] = 'Failed'
+
+                completed_list = COMPLETED_PROCESS.value
+                completed_list.append(completed)
+
+                if len(completed_list) >= completed_max:
+                    completed_list = completed_list[-completed_max:]
+
+                COMPLETED_PROCESS.value = completed_list
         else:
             status = {"progress": progress, "total": total}
             with thread_lock:
                 status_dict = PROCESS_STATUS.value
 
-                if key not in status_dict:
-                    status['thread_id'] = thread_id
-                    status_dict[key] = status
+                if thread_id not in status_dict:
+                    status['process'] = name
+                    status['category'] = name.split(':')[0]
+                    status_dict[thread_id] = status
                 else:
-                    status_dict[key].update(status)
+                    status_dict[thread_id].update(status)
 
-                if key in status_dict["flags"]:
-                    status_dict["flags"][key] = True
+                if name in status_dict["flags"]:
+                    status_dict["flags"][name] = False
                 PROCESS_STATUS.value = status_dict
     except Exception as e:
         print(e)

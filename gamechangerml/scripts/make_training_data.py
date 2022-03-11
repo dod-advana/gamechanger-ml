@@ -5,7 +5,11 @@ import json
 from datetime import date
 from typing import List, Union, Dict, Tuple
 
-from gamechangerml.configs.config import TrainingConfig, ValidationConfig, SimilarityConfig
+from gamechangerml.configs.config import (
+    TrainingConfig,
+    ValidationConfig,
+    SimilarityConfig,
+)
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.model_testing.query_es import *
 from gamechangerml.src.utilities.text_utils import normalize_query
@@ -14,7 +18,7 @@ from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 from gensim.utils import simple_preprocess
-from gamechangerml import DATA_PATH
+from gamechangerml import DATA_PATH, CORPUS_PATH
 from gamechangerml.src.utilities import gc_web_api, es_utils
 
 model_path_dict = get_model_paths()
@@ -22,14 +26,23 @@ random.seed(42)
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SIM_MODEL = SimilarityConfig.BASE_MODEL
-training_dir= os.path.join(DATA_PATH, "training", "sent_transformer")
-tts_ratio=TrainingConfig.DATA_ARGS["train_test_split_ratio"]
+training_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
+tts_ratio = TrainingConfig.DATA_ARGS["train_test_split_ratio"]
 gold_standard_path = os.path.join(
-    "gamechangerml/data/user_data", ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"]
-    )
+    "gamechangerml/data/user_data",
+    ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"],
+)
 
-CORPUS_DIR = "gamechangerml/corpus"
-corpus_docs = [i.split('.json')[0] for i in os.listdir(CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, i))]
+corpus_docs = []
+try:
+    corpus_docs = [
+        i.split(".json")[0]
+        for i in os.listdir(CORPUS_PATH)
+        if os.path.isfile(os.path.join(CORPUS_PATH, i))
+    ]
+except Exception as e:
+    logger.error(e)
+
 
 scores = {
     "strong_match": 0.95,
@@ -201,7 +214,10 @@ def collect_paragraphs_es(correct, incorrect, queries, collection, any_matches):
     
     return all_found, all_not_found
 
-def add_gold_standard(intel: Dict[str,str], gold_standard_path: Union[str, os.PathLike]) -> Dict[str,str]:
+
+def add_gold_standard(
+    intel: Dict[str, str], gold_standard_path: Union[str, os.PathLike]
+) -> Dict[str, str]:
     """Adds original gold standard data to the intel training data.
     Args:
         intel [Dict[str,str]: intelligent search evaluation data
@@ -218,7 +234,7 @@ def add_gold_standard(intel: Dict[str,str], gold_standard_path: Union[str, os.Pa
         docs = []
         for doc_id in intel['collection'].values():
             try:
-                json = open_json(doc_id + '.json', CORPUS_DIR)
+                json = open_json(doc_id + '.json', CORPUS_PATH)
                 extra_queries.append(json['display_title_s'])
                 docs.append(doc_id)
                 logger.info(f"Added extra queries for {doc_id}")
@@ -239,61 +255,60 @@ def add_gold_standard(intel: Dict[str,str], gold_standard_path: Union[str, os.Pa
     gold['docs_split'] = gold['document'].apply(lambda x: x.split(';'))
     all_docs = list(set([a for b in gold['docs_split'].tolist() for a in b]))
 
-    def add_key(mydict: Dict[str,str]) -> str:
+    def add_key(mydict: Dict[str, str]) -> str:
         """Adds new key to queries/collections dictionaries"""
         last_key = sorted([*mydict.keys()])[-1]
         key_len = len(last_key) - 1
         last_prefix = last_key[0]
         last_num = int(last_key[1:])
         new_num = str(last_num + 1)
-        
-        return last_prefix + str(str(0)*(key_len - len(new_num)) + new_num)
+
+        return last_prefix + str(str(0) * (key_len - len(new_num)) + new_num)
 
     # check if queries already in dict, if not add
-    for i in gold['query_clean']:
-        if i in intel['queries'].values():
+    for i in gold["query_clean"]:
+        if i in intel["queries"].values():
             logger.info(f"'{i}' already in intel queries")
             continue
         else:
             logger.info(f"adding '{i}' to intel queries")
-            new_key = add_key(intel['queries'])
-            intel['queries'][new_key] = i
-    
+            new_key = add_key(intel["queries"])
+            intel["queries"][new_key] = i
+
     # check if docs already in dict, if not add
     for i in all_docs:
-        if i in intel['collection'].values():
+        if i in intel["collection"].values():
             logger.info(f"'{i}' already in intel collection")
             continue
         else:
             logger.info(f"adding '{i}' to intel collection")
-            new_key = add_key(intel['collection'])
-            intel['collection'][new_key] = i
+            new_key = add_key(intel["collection"])
+            intel["collection"][new_key] = i
 
     # check if rels already in intel, if not add
-    reverse_q = {v:k for k,v in intel['queries'].items()}
-    reverse_d = {v:k for k,v in intel['collection'].items()}
+    reverse_q = {v: k for k, v in intel["queries"].items()}
+    reverse_d = {v: k for k, v in intel["collection"].items()}
     for i in gold.index:
-        q = gold.loc[i, 'query_clean']
-        docs = gold.loc[i, 'docs_split']
+        q = gold.loc[i, "query_clean"]
+        docs = gold.loc[i, "docs_split"]
         for j in docs:
             q_id = reverse_q[q]
             d_id = reverse_d[j]
-            if q_id in intel['correct']: # if query in rels, add new docs
-                if d_id in intel['correct'][q_id]:
+            if q_id in intel["correct"]:  # if query in rels, add new docs
+                if d_id in intel["correct"][q_id]:
                     continue
                 else:
-                    intel['correct'][q_id] += [d_id]
-                    logger.info(f"Added {j} to correct matches for {q}")
+                    intel["correct"][q_id] += [d_id]
             else:
-                intel['correct'][q_id] = [d_id]
-                logger.info(f"New query/doc relationship added to correct matches: {q} / {j}")
-    
+                intel["correct"][q_id] = [d_id]
+
     return intel
 
-def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, str]]:
+
+def train_test_split(data: Dict[str, str], tts_ratio: float) -> Tuple[Dict[str, str]]:
     """Splits a dictionary into train/test set based on split ratio"""
 
-    queries = list(set([data[i]['query'] for i in data]))
+    queries = list(set([data[i]["query"] for i in data]))
 
     # split the data into positive and negative examples grouped by query
     neg_passing = {}
@@ -304,15 +319,17 @@ def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, s
         neg_sample = [i for i in subset.keys() if subset[i]['label']==-0.5]
         if len(neg_sample)>0: #since we have so few negative samples, add to neg list if it has a negative ex
             neg_passing[q] = subset
-        elif len(pos_sample)>0: # only add the other samples if they have a positive matching sample
+        elif (
+            len(pos_sample) > 0
+        ):  # only add the other samples if they have a positive matching sample
             pos_passing[q] = subset
 
     pos_train_size = round(len(pos_passing.keys()) * tts_ratio)
     neg_train_size = round(len(neg_passing.keys()) * tts_ratio)
 
     pos_train_keys = random.sample(pos_passing.keys(), pos_train_size)
-    neg_train_keys = random.sample(neg_passing.keys(), neg_train_size) 
-    
+    neg_train_keys = random.sample(neg_passing.keys(), neg_train_size)
+
     pos_test_keys = [i for i in pos_passing.keys() if i not in pos_train_keys]
     neg_test_keys = [i for i in neg_passing.keys() if i not in neg_train_keys]
 
@@ -326,9 +343,9 @@ def train_test_split(data: Dict[str,str], tts_ratio: float) -> Tuple[Dict[str, s
         train_keys.extend(neg_passing[x])
     for x in neg_test_keys:
         test_keys.extend(neg_passing[x])
-    
-    train = {i:data[i] for i in train_keys}
-    test = {i:data[i] for i in test_keys}
+
+    train = {i: data[i] for i in train_keys}
+    test = {i: data[i] for i in test_keys}
 
     metadata = {
         "date_created": str(date.today()),
@@ -344,12 +361,12 @@ def get_all_single_matches(validation_dir):
     directory = os.path.join(validation_dir, "any")
     any_matches = {}
     try:
-        f = open_json('intelligent_search_data.json', directory)
+        f = open_json("intelligent_search_data.json", directory)
         intel = json.loads(f)
-        for x in intel['correct'].keys():
-            query = intel['queries'][x]
-            doc_keys = intel['correct'][x]
-            docs = [intel['collection'][k] for k in doc_keys]
+        for x in intel["correct"].keys():
+            query = intel["queries"][x]
+            doc_keys = intel["correct"][x]
+            docs = [intel["collection"][k] for k in doc_keys]
             any_matches[query] = docs
     except Exception as e:
         logger.warning("Could not load all validation data")
@@ -418,17 +435,25 @@ def make_training_data(
         training_dir [Union[str,os.PathLike]]: directory for saving training data
     Returns:
         [Tuple[Dict[str,str]]]: training data and training metadata dictionaries
-    """    
-    ## open json files
-    if not os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")) or update_eval_data:
+    """
+    # open json files
+    if (
+        not os.path.exists(
+            os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
+        )
+        or update_eval_data
+    ):
         logger.info("****    Updating the evaluation data")
         make_tiered_eval_data(index_path, testing_only)
 
-    validation_dir = get_most_recent_dir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
+    validation_dir = get_most_recent_dir(
+        os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
+    )
     directory = os.path.join(validation_dir, level)
-    logger.info(f"****    Loading in intelligent search data from {str(directory)}")
+    logger.info(
+        f"****    Loading in intelligent search data from {str(directory)}")
     try:
-        f = open_json('intelligent_search_data.json', directory)
+        f = open_json("intelligent_search_data.json", directory)
         intel = json.loads(f)
     except Exception as e:
         logger.warning("Could not load intelligent search data")
@@ -438,11 +463,11 @@ def make_training_data(
     ## gather all possible matches
     any_matches = get_all_single_matches(validation_dir)
 
-    ## add gold standard samples
+    # add gold standard samples
     logger.info("****   Adding gold standard examples")
     intel = add_gold_standard(intel, gold_standard_path)
 
-    ## set up save dir
+    # set up save dir
     save_dir = make_timestamp_directory(training_dir)
 
     try:

@@ -1,4 +1,5 @@
 import logging
+import threading
 import typing as t
 from gamechangerml.api.utils import processmanager
 
@@ -30,6 +31,7 @@ class StatusUpdater:
                 progress=self.current_step,
                 total=self.nsteps,
                 message=message,
+                thread_id=threading.current_thread().ident
             )
             if self.current_step > self.nsteps:
                 logger.warn(f"StatusUpdater current step larger than nsteps")
