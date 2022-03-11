@@ -401,27 +401,5 @@ def make_test_corpus(
         subset.append(file)
         subset = list(set(subset)) # remove duplicates
 
-    save_dir = check_directory(save_dir) # if this directory doesn't exist, make one
-    ## if there are files in the test dir, need to make a new one
-    for x in subset:
-        shutil.copy(os.path.join(corpus_dir, x), os.path.join(save_dir, x))
-    
-    # verify the test corpus dir now contains files
-    size_test_corpus = len(os.listdir(save_dir))
-    logger.info(f"Saved {str(size_test_corpus)} jsons to {save_dir}")
-
-    return
-
-def delete_files(path):
-    '''Deletes all files in a directory'''
-    logger.info(f"Cleaning up: removing test files from {str(path)}")
-    for file in os.listdir(path):
-        path = os.path.join(path, file)
-        try:
-            shutil.rmtree(path)
-        except OSError:
-            os.remove(path)
-    try:
-        os.rmdir(path)
-    except OSError as e:
-        logger.error("Error: %s : %s" % (path, e.strerror))
+    logger.info(f"Collected {str(len(subset))} jsons")
+    return subset

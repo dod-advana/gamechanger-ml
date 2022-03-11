@@ -307,9 +307,9 @@ class RetrieverEvaluator(TransformerEvaluator):
         self.encoder_model_name = encoder_model_name
         self.model_path = os.path.join(encoder_model_name, transformer_path)
 
-    def make_index(self, encoder, corpus_path, index_path):
+    def make_index(self, encoder, corpus_path, index_path, files_to_use=None):
 
-        return encoder.index_documents(corpus_path, index_path)
+        return encoder.index_documents(corpus_path, index_path, files_to_use)
 
     def predict(self, data, index, retriever, eval_path, k):
 
@@ -606,13 +606,13 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     # create the test corpus
                     logger.info("Making a corpus test directory")
                     include_ids = self.collect_docs_for_index()
-                    make_test_corpus(
-                        percent_random=0,
-                        max_size=1000, 
-                        corpus_dir=CORPUS_PATH, 
-                        save_dir=corpus_test_dir, 
-                        include_ids=include_ids
-                    )
+                    #files_to_use = make_test_corpus(
+                    #    percent_random=0,
+                    #    max_size=1000, 
+                    #    corpus_dir=CORPUS_PATH, 
+                    #    save_dir=corpus_test_dir, 
+                    #    include_ids=include_ids
+                    #)
 
                     # make a (test) index for evaluating the model
                     logger.info("Making the test index")
@@ -620,6 +620,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                         encoder=self.encoder,
                         corpus_path=corpus_test_dir,
                         index_path=self.index_path,
+                        files_to_use=include_ids
                     )
 
                     ## save index metadata
