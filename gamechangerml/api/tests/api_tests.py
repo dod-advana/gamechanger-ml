@@ -11,6 +11,7 @@ from requests.adapters import HTTPAdapter
 from http.client import HTTPConnection  # py3
 
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
+from gamechangerml import DATA_PATH
 
 from .test_examples import TestSet
 
@@ -18,6 +19,7 @@ logger = logging.getLogger()
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
 API_URL = f"{GC_ML_HOST}:5000" if "http" in GC_ML_HOST else f"http://{GC_ML_HOST}:5000"
 QA_TIMEOUT = 30
+
 
 retries = Retry(total=10, backoff_factor=1)
 adapter = HTTPAdapter(max_retries=retries)
