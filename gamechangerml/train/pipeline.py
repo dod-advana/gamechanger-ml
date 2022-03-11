@@ -150,6 +150,7 @@ class Pipeline:
     def create_metadata(
         self,
         meta_steps,
+        testing_only:bool,
         corpus_dir: t.Union[str, os.PathLike] = CORPUS_DIR,
         index_path: t.Union[str, os.PathLike] = os.path.join(
             MODEL_PATH, "sent_index_20210715"
@@ -158,7 +159,7 @@ class Pipeline:
         prod_data_file=PROD_DATA_FILE,
         n_returns: int=50,
         level: str='silver',
-        update_eval_data: bool=False,
+        update_eval_data: bool=True,
         retriever=None,
         upload: bool = True,
         version: str = "v1"
@@ -189,7 +190,9 @@ class Pipeline:
             make_corpus_meta(corpus_dir, days, prod_data_file, upload)
         if "update_sent_data" in meta_steps:
             try:
-                make_training_data(index_path, level, update_eval_data)
+                make_training_data(
+                    index_path=index_path, level=level, update_eval_data=update_eval_data, testing_only=testing_only
+                )
             except Exception as e:
                 logger.warning(e, exc_info=True)
         if upload:
@@ -211,7 +214,7 @@ class Pipeline:
         epochs: int = 3,
         warmup_steps: int = 100,
         testing_only: bool = False,
-        remake_train_data: bool = False,
+        remake_train_data: bool = True,
         retriever = None,
         model = None,
         version: str = "v1"
@@ -236,8 +239,11 @@ class Pipeline:
                 model_load_path = os.path.join(
                     LOCAL_TRANSFORMERS_DIR, model
                 )
-            model_id = datetime.now().strftime("%Y%m%d")
-            model_save_path = model_load_path + "_" + model_id
+            if testing_only:
+                model_save_path = model_load_path + '_TEST'
+            else:
+                model_id = datetime.now().strftime("%Y%m%d")
+                model_save_path = model_load_path + "_" + model_id
             logger.info(
                 f"Setting {str(model_save_path)} as save path for new model")
             no_data=False
@@ -261,10 +267,9 @@ class Pipeline:
             if no_data: 
                 make_training_data(
                     index_path=SENT_INDEX,
-                    n_returns=150, 
                     level='silver', 
-                    update_eval_data=True, 
-                    retriever=retriever
+                    update_eval_data=True,
+                    testing_only=testing_only
                 )
             
             data_path = get_most_recent_dir(base_dir)
@@ -280,10 +285,31 @@ class Pipeline:
             logger.info("Loaded finetuner class...")
             logger.info(f"Testing only is set to: {testing_only}")
 
-            return finetuner.retrain(data_path, testing_only, version)
+            # finetune
+            finetuner.retrain(data_path, testing_only, version)
+
+            # eval finetuned model
+            logger.info("Done making finetuned model, runnin evals")
+            model_name = model_save_path.split('/')[-1]
+            train_meta = open_json("training_metadata.json", data_path)
+            validation_data = train_meta['validation_data_used'].split('/')[-1]
+            evals = eval_sent(model_name, validation_data, eval_type="domain")
+
+            try:
+                for metric in evals:
+                    if metric != "model_name":
+                        mlflow.log_metric(
+                            key=metric, value=evals[metric])
+            except Exception as e:
+                logger.warning(e)
+
+            return evals
+
         except Exception as e:
             logger.warning("Could not finetune sentence model - pipeline")
-            logger.error(e, exc_info=True)
+            logger.error(e)
+
+            return {}
 
     def evaluate(
         self,

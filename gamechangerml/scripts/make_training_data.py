@@ -4,8 +4,6 @@ import os
 import json
 from datetime import date
 from typing import List, Union, Dict, Tuple
-import spacy
-
 
 from gamechangerml.configs.config import TrainingConfig, ValidationConfig, SimilarityConfig
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
@@ -85,14 +83,84 @@ def get_paragraph_results(resp):
 
     return texts
 
+def format_matching_paragraphs(query, doc, uid, score):
+    """Retrieve & format matching positive/negative paragraphs from ES"""
+    found = {}
+    not_found = {}
+    try:
+        matches = get_matching_es_result(query, doc)
+        results = get_paragraph_results(matches)
+        for r in results:
+            offset = r['par_id'].split('_')[-1]
+            uid = uid + "_" + offset
+            found[uid] = {
+                "query": query,
+                "doc": r['par_id'],
+                "paragraph": r['par_text'],
+                "label": score
+            }
+
+    except Exception as e:
+        logger.error(f"Could not get results for {query} / {doc}")
+        logger.error(e)
+        not_found[uid] = {"query": query, "doc": doc, "label": score}
+    
+    return found, not_found
+
+def format_nonmatching_paragraphs(query, matching_docs, single_matching_docs, par_count):
+    found = {}
+    try:
+        non_matches = get_any_es_result(query)
+        results = get_paragraph_results(non_matches)
+        previous_text = ''
+        logger.info(f"Positive num: {par_count}")
+        for r in results:
+            if len(found) >= (par_count * 4): # stop getting negatives after 1:4 ratio
+                logger.info("Exceeded balance, stop retrieving paragraphs")
+                break
+            else:
+                doc_id = r['par_id'].split('.pdf_')[0]
+                if doc_id in matching_docs:
+                    logger.info("Paragraph comes from a matching doc, skipping")
+                else:
+                    if doc_id in single_matching_docs:
+                        label = scores["weak_match"]
+                    else:
+                        label = scores["neutral"]
+                    if r['par_text'] != previous_text: # skip duplicate paragraphs
+                        uid = query + "_|_" + r['par_id']
+                        resultdict = {
+                            "query": query,
+                            "doc": r['par_id'],
+                            "paragraph": r['par_text'],
+                            "label": label,
+                        }
+                        found[uid] = resultdict
+                        previous_text = r['par_text']
+    except Exception as e:
+        logger.warning(f"Could not get non-matching results from ES for {query}")
+    
+    return found
+
+def get_any_matches(any_matches, matching_docs, query):
+    """Collect docs that were clicked on at all for this query (so we can adjust their score)"""
+    try:
+        single_matching_docs = [clean_id(i) for i in any_matches[query] if clean_id(i) not in matching_docs]
+        logger.info(f"Found {str(len(single_matching_docs))} other docs opened for this query.")
+        return single_matching_docs
+    except:
+        return []
+
 def collect_paragraphs_es(correct, incorrect, queries, collection, any_matches):
     """Query ES for search/doc matches and negative samples and add them to query results with a label"""
 
-    found = {}
-    not_found = {}
+    all_found = {}
+    all_not_found = {}
     fullcount = 0
     total = len(correct.keys())
     for i in correct.keys():
+        found = {}
+        notfound = {}
         logger.info(f"{str(fullcount)} / {str(total)}")
         fullcount += 1
         query = queries[i]
@@ -102,26 +170,11 @@ def collect_paragraphs_es(correct, incorrect, queries, collection, any_matches):
             doc = collection[k] # get the docid
             uid = query + "_|_" + doc
             matching_docs.append(doc)
-            logger.info(f" *** Querying ES for positive matching paragraphs for: {query} / {doc} ***")
-            try:
-                matches = get_matching_es_result(query, doc)
-                results = get_paragraph_results(matches)
-                logger.info(results)
-                for r in results:
-                    offset = r['par_id'].split('_')[-1]
-                    uid = uid + "_" + offset
-                    logger.info(uid)
-                    found[uid] = {
-                        "query": query,
-                        "doc": r['par_id'],
-                        "paragraph": r['par_text'],
-                        "label": scores["strong_match"]
-                    }
-                    par_count += 1
-            except Exception as e:
-                logger.warning(f"Could not get results for {query} / {doc}")
-                logger.error(e, exc_info=True)
-                not_found[uid] = {"query": query, "doc": doc, "label": scores["strong_match"]}
+            logger.info(f" *** Querying ES: {query} / {doc} (POS)***")
+            p_found, p_not_found = format_matching_paragraphs(query, doc, uid, score=scores['strong_match'])
+            found.update(p_found)
+            notfound.update(p_not_found)
+            par_count += len(p_found)
 
         # check for negative samples
         if i in list(incorrect.keys()):
@@ -129,68 +182,24 @@ def collect_paragraphs_es(correct, incorrect, queries, collection, any_matches):
                 doc = collection[n] # get the docid
                 uid = query + "_|_" + doc
                 matching_docs.append(doc)
-                logger.info(f" *** Querying ES for negative matching paragraphs for: {query} / {doc} ***")
-                try:
-                    matches = get_matching_es_result(query, doc)
-                    results = get_paragraph_results(matches)
-                    logger.info(results)
-                    for r in results:
-                        offset = r['par_id'].split('_')[-1]
-                        uid = uid + "_" + offset
-                        found[uid] = {
-                            "query": query,
-                            "doc": r['par_id'],
-                            "paragraph": r['par_text'],
-                            "label": scores["negative"]
-                        }
-                        par_count += 1
-                except Exception as e:
-                    logger.warning(f"Could not get results for {query} / {doc}")
-                    logger.error(e, exc_info=True)
-                    not_found[uid] = {"query": query, "doc": doc, "label": scores["negative"]}
+                logger.info(f" *** Querying ES: {query} / {doc} (NEG)***")
+                n_found, n_not_found = format_matching_paragraphs(query, doc, uid, score=scores['negative'])
+                found.update(n_found)
+                notfound.update(n_not_found)
 
-        # collect any matching docs found for the query
-        try:
-            single_matching_docs = [clean_id(i) for i in any_matches[query] if clean_id(i) not in matching_docs]
-            logger.info(f"Found {str(len(single_matching_docs))} other docs opened for this query.")
-        except:
-            single_matching_docs = []
-        
-        len_matches = par_count
-        if par_count == 0:
-            logger.info(f"No matching paragraphs found for {query}. Skipping negative samples.")
+        if par_count > 0:
+            single_matching_docs = get_any_matches(any_matches, matching_docs, query)
+            neutral_found = format_nonmatching_paragraphs(query, matching_docs, single_matching_docs, par_count)
+            if len(neutral_found) > 0:
+                found.update(neutral_found)
+                all_found.update(found)
+                all_not_found.update(notfound)
+            else:
+                logger.info(f"\n**** No non-matching results retrieved for {query}")
         else:
-            # for each query, gather non-matches
-            logger.info(f" *** Querying ES for non-matching paragraphs for: {query} ***")
-            try:
-                non_matches = get_any_es_result(query)
-                results = get_paragraph_results(non_matches)
-                negative_count = 0
-                previous_text = ''
-                for r in results:
-                    if negative_count <= (len_matches * 4): # stop getting negatives after 1:4 ratio
-                        doc_id = r['par_id'].split('.pdf_')[0]
-                        if doc_id in matching_docs:
-                            logger.info("Paragraph comes from a matching doc, skipping")
-                        else:
-                            if doc_id in single_matching_docs:
-                                label = scores["weak_match"]
-                            else:
-                                label = scores["neutral"]
-                            if r['par_text'] != previous_text:
-                                uid = query + "_|_" + r['par_id']
-                                found[uid] = {
-                                    "query": query,
-                                    "doc": r['par_id'],
-                                    "paragraph": r['par_text'],
-                                    "label": label,
-                                }
-                                negative_count += 1
-                                previous_text = r['par_text']
-            except Exception as e:
-                logger.warning(f"Could not get negative results from ES for {query}")
-
-    return found, not_found
+            logger.info(f"\n**** No matching results retrieved for {query}")
+    
+    return all_found, all_not_found
 
 def add_gold_standard(intel: Dict[str,str], gold_standard_path: Union[str, os.PathLike]) -> Dict[str,str]:
     """Adds original gold standard data to the intel training data.
@@ -348,10 +357,54 @@ def get_all_single_matches(validation_dir):
 
     return any_matches
 
+def make_training_data_csv(data, label):
+    
+    df = pd.DataFrame(data).T
+    df['match'] = df['label'].apply(lambda x: 1 if x >= 0.95 else 0)
+    matches = df[df['match']==1]
+    non_matches = df[df['match']==0]
+    
+    
+    def get_docs(mylist):
+        try:
+            return [i.split('.pdf')[0] for i in mylist]
+        except:
+            return []
+
+    def count_unique(mylist):
+    
+        return len(set(get_docs(mylist)))
+    
+    agg_match = pd.DataFrame(matches.groupby('query')['doc'].apply(list))
+    agg_match.rename(columns = {'doc': 'matching_paragraphs'}, inplace = True)
+    agg_match['num_matching_paragraphs'] = agg_match['matching_paragraphs'].apply(lambda x: len(x))
+    agg_match['num_matching_docs'] = agg_match['matching_paragraphs'].apply(lambda x: count_unique(x))
+
+    agg_nonmatch = pd.DataFrame(non_matches.groupby('query')['doc'].apply(list))
+    agg_nonmatch.rename(columns = {'doc': 'nonmatching_paragraphs'}, inplace = True)
+    agg_nonmatch['num_nonmatching_paragraphs'] = agg_nonmatch['nonmatching_paragraphs'].apply(lambda x: len(x))
+    agg_nonmatch['num_nonmatching_docs'] = agg_nonmatch['nonmatching_paragraphs'].apply(lambda x: count_unique(x))
+
+    combined = agg_match.merge(agg_nonmatch, on='query', how = 'outer')
+    combined['label'] = label
+        
+    def check_overlap(list1, list2):
+        return len(set(get_docs(list1)).intersection(get_docs(list2)))
+        
+    combined['overlap'] = [check_overlap(x, y) for x, y in zip(combined['matching_paragraphs'], combined['nonmatching_paragraphs'])]
+    combined['par_balance'] = combined['num_matching_paragraphs'] / combined['num_nonmatching_paragraphs']
+    combined['doc_balance'] = combined['num_matching_docs'] / combined['num_nonmatching_docs']
+
+    combined.fillna(0, inplace = True)
+    
+    return combined
+    
+
 def make_training_data(
     index_path: Union[str, os.PathLike],
     level: str, 
     update_eval_data: bool, 
+    testing_only: bool=False,
     gold_standard_path: Union[str,os.PathLike]=gold_standard_path,
     tts_ratio: float=tts_ratio,
     training_dir: Union[str,os.PathLike]=training_dir) -> Tuple[Dict[str,str]]:
@@ -369,7 +422,7 @@ def make_training_data(
     ## open json files
     if not os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")) or update_eval_data:
         logger.info("****    Updating the evaluation data")
-        make_tiered_eval_data(index_path)
+        make_tiered_eval_data(index_path, testing_only)
 
     validation_dir = get_most_recent_dir(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer"))
     directory = os.path.join(validation_dir, level)
@@ -413,6 +466,13 @@ def make_training_data(
     data = {"train": train, "test": test}
 
     logger.info(f"**** Generated training data: \n {metadata}")
+
+    ## Make summary csv of training data
+    train_df = make_training_data_csv(train, "train")
+    test_df = make_training_data_csv(test, "test")
+    fulldf = pd.concat([train_df, test_df])
+    csv_path = os.path.join(save_dir, "retrieved_paragraphs.csv")
+    fulldf.to_csv(csv_path)
 
     ## save data and metadata files
     save_json("training_data.json", save_dir, data)

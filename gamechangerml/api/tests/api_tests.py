@@ -1,17 +1,25 @@
 import requests
 import logging
 import pytest
-import os
+import os, shutil
 import json
 import sys
 import time
+import pandas as pd
+from datetime import datetime
+
+training_dir= "gamechangerml/data/test"
 
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from http.client import HTTPConnection  # py3
 
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
-# from gamechangerml import DATA_PATH
+from gamechangerml.api.utils.pathselect import get_model_paths
+from gamechangerml.src.utilities.test_utils import open_json, get_most_recent_dir, delete_files
+
+model_path_dict = get_model_paths()
+SENT_INDEX = model_path_dict['sentence']
 
 from .test_examples import TestSet
 
@@ -19,17 +27,15 @@ logger = logging.getLogger()
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
 API_URL = f"{GC_ML_HOST}:5000" if "http" in GC_ML_HOST else f"http://{GC_ML_HOST}:5000"
 QA_TIMEOUT = 30
-
+ENCODER = "multi-qa-MiniLM-L6-cos-v1"
 
 retries = Retry(total=10, backoff_factor=1)
 adapter = HTTPAdapter(max_retries=retries)
 http = requests.Session()
 
-
 def test_conn():
     resp = http.get(API_URL)
     assert resp.ok == True
-
 
 def test_expandTerms():
     test_data = {"termsList": ["artificial intelligence"]}
@@ -297,17 +303,6 @@ def test_qa_outside_scope():
 #         "gpu": False,
 #         "upload": False,
 #         "version": "TEST"
-#     }
-#     resp = http.post(API_URL + "/trainModel", json=model_dict)
-#     assert resp.ok == True
-
-# def test_trainModel_sent_finetune():
-#     model_dict = {
-#         "build_type": "sent_finetune",
-#         "batch_size": 32,
-#         "epochs": 1,
-#         "warmup_steps": 100,
-#         "testing_only": True
 #     }
 #     resp = http.post(API_URL + "/trainModel", json=model_dict)
 #     assert resp.ok == True

@@ -642,18 +642,32 @@ def update_metadata(model_dict):
     try:
         index_path = model_dict["index_path"]
     except:
-        index_path = os.path.join(MODEL_PATH, "sent_index_20210715")
+        index_path = os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
+                    )
     try:
         update_eval_data = model_dict['update_eval_data']
     except:
         update_eval_data = False
+    try:
+        testing_only = model_dict["testing_only"]
+    except:
+        testing_only = False
+    try:
+        upload = model_dict["upload"]
+    except:
+        upload = True
+    
+    logger.info(f"Testing only is set to: {testing_only}")
 
     args = {
         "meta_steps": meta_steps,
         "corpus_dir": corpus_dir,
         "retriever": retriever,
         "index_path": index_path,
-        "update_eval_data": update_eval_data
+        "update_eval_data": update_eval_data,
+        "testing_only": testing_only,
+        "upload": upload
     }
 
     pipeline.run(

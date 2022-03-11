@@ -16,6 +16,10 @@ from gamechangerml.configs.config import ValidationConfig
 MATAMO_DIR = ValidationConfig.DATA_ARGS['matamo_dir']
 SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']
 
+MATAMO_TEST_FILE = "gamechangerml/data/test_data/MatamoFeedback_TEST.csv"
+SEARCH_TEST_FILE = "gamechangerml/data/test_data/SearchPDFMapping_TEST.csv"
+
+
 # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
 class TimeoutException(Exception):   # Custom exception class
     pass
@@ -337,11 +341,17 @@ def concat_csvs(directory):
             pass
     return df
 
-def concat_matamo():
-    return concat_csvs(MATAMO_DIR)
+def concat_matamo(testing_only=False):
+    if testing_only:
+        return pd.read_csv(MATAMO_TEST_FILE)
+    else:
+        return concat_csvs(MATAMO_DIR)
 
-def concat_search_hist():
-    return concat_csvs(SEARCH_HIST)
+def concat_search_hist(testing_only=False):
+    if testing_only:
+        return pd.read_csv(SEARCH_TEST_FILE)
+    else:
+        return concat_csvs(SEARCH_HIST)
 
 def get_most_recent_dir(parent_dir):
     
@@ -401,3 +411,17 @@ def make_test_corpus(
     logger.info(f"Saved {str(size_test_corpus)} jsons to {save_dir}")
 
     return
+
+def delete_files(path):
+    '''Deletes all files in a directory'''
+    logger.info(f"Cleaning up: removing test files from {str(path)}")
+    for file in os.listdir(path):
+        path = os.path.join(path, file)
+        try:
+            shutil.rmtree(path)
+        except OSError:
+            os.remove(path)
+    try:
+        os.rmdir(path)
+    except OSError as e:
+        logger.error("Error: %s : %s" % (path, e.strerror))

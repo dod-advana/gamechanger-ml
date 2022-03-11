@@ -4,6 +4,7 @@ from datetime import datetime
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities.test_utils import open_json, save_json, timestamp_filename
+from gamechangerml.scripts.run_evaluation import eval_sent
 from time import sleep
 import tqdm
 import logging
@@ -173,8 +174,8 @@ class STFinetuner():
                 utils.upload(s3_path, dst_path, "transformers", model_id)
                 logger.info(f"*** Saved model to S3: {s3_path}")
 
-            return {}
-
         except Exception as e:
             logger.warning("Could not complete finetuning")
-            logger.error(e, exc_info=True)
+            logger.error(e)
+        
+        return
