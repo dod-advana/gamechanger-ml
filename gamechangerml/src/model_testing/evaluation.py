@@ -604,8 +604,8 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                         )
 
                     # create the test corpus
-                    logger.info("Making a corpus test directory")
                     include_ids = self.collect_docs_for_index()
+                    logger.info("Collected doc IDs to include in test index")
                     #files_to_use = make_test_corpus(
                     #    percent_random=0,
                     #    max_size=1000, 

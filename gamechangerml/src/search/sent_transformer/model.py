@@ -53,7 +53,6 @@ class SentenceEncoder(object):
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
-        self.files_to_use = files_to_use
 
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = use_gpu
