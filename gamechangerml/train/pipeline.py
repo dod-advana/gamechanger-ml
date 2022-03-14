@@ -240,13 +240,7 @@ class Pipeline:
                 model_load_path = os.path.join(
                     LOCAL_TRANSFORMERS_DIR, model
                 )
-            if testing_only:
-                model_save_path = model_load_path + '_TEST'
-            else:
-                model_id = datetime.now().strftime("%Y%m%d")
-                model_save_path = model_load_path + "_" + model_id
-            logger.info(
-                f"Setting {str(model_save_path)} as save path for new model")
+
             no_data=False
             base_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
 
@@ -274,6 +268,17 @@ class Pipeline:
                 )
 
             data_path = get_most_recent_dir(base_dir)
+            timestamp = str(data_path).split('/')[-1]
+
+            ## set model save path
+            if testing_only:
+                model_save_path = model_load_path + '_TEST_' + timestamp
+            else:
+                model_id = datetime.now().strftime("%Y%m%d")
+                model_save_path = model_load_path + "_" + model_id
+            logger.info(
+                f"Setting {str(model_save_path)} as save path for new model")
+            
             logger.info(f"Loading in domain data to finetune from {data_path}")
             finetuner = STFinetuner(
                 model_load_path=model_load_path,

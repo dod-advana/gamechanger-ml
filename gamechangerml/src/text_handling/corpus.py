@@ -21,7 +21,7 @@ class LocalCorpus(object):
     ):
         self.directory = directory
         if files_to_use: ## if we only want to do this on a subset
-            self.file_list = list(set(files_to_use).intersection([
+            self.file_list = list(set([os.path.join(directory, i) for i in files_to_use]).intersection([
                 os.path.join(directory, file)
                 for file in os.listdir(directory)
                 if file[-5:] == ".json"

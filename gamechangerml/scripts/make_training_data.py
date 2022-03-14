@@ -459,6 +459,12 @@ def make_training_data(
         logger.warning("Could not load intelligent search data")
         logger.warning(e)
         intel = {}
+
+    # make save_dir
+    timestamp = str(validation_dir).split('/')[-1]
+    save_dir = os.path.join(training_dir, timestamp)
+    os.makedirs(save_dir)
+    logger.info(f"Created training data save directory {str(save_dir)}")
     
     ## gather all possible matches
     any_matches = get_all_single_matches(validation_dir)
@@ -466,9 +472,6 @@ def make_training_data(
     # add gold standard samples
     logger.info("****   Adding gold standard examples")
     intel = add_gold_standard(intel, gold_standard_path)
-
-    # set up save dir
-    save_dir = make_timestamp_directory(training_dir)
 
     try:
         found, notfound = collect_paragraphs_es(

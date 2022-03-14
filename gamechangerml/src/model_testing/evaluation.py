@@ -5,7 +5,7 @@ import csv
 import math
 from datetime import datetime
 from sentence_transformers import util
-from gamechangerml import REPO_PATH
+from gamechangerml import REPO_PATH, CORPUS_PATH
 from gamechangerml.src.search.sent_transformer.model import (
     SentenceEncoder,
     SentenceSearcher,
@@ -42,7 +42,6 @@ try:
 except:
     LOCAL_TRANSFORMERS_DIR = 'gamechangerml/models/transformers'
 SENT_INDEX_PATH = model_path_dict["sentence"]
-CORPUS_PATH = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 
 class TransformerEvaluator:
     def __init__(self, transformer_path=LOCAL_TRANSFORMERS_DIR, use_gpu=False):
@@ -564,22 +563,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                 logger.info("Found a test index for this model, using that.")
             else:
                 logger.info("Did not find a test index - creating one.")
-                if create_index: # make test index in the encoder model directory
-                    # use test corpus directory to make test corpus
-                    corpus_test_dir=ValidationConfig.DATA_ARGS["test_corpus_dir"]
-                    corpus_test_dir = check_directory(corpus_test_dir)
-                    if corpus_test_dir != CORPUS_PATH: # make sure this is a new dir
-                        if len(os.listdir(corpus_test_dir)) > 0: # check if files in test corpus dir
-                            if overwrite_test_corpus:
-                                logger.info("Removing files already in the test corpus dir")
-                                for f in os.listdir(corpus_test_dir):
-                                    os.remove(os.path.join(corpus_test_dir, f))
-                            else: # otherwise, make a new timestamped subdir
-                                corpus_test_dir = make_timestamp_directory(corpus_test_dir)
-                    else:
-                        logger.warning("Corpus sub dir cannot be the same as the corpus dir")
-                        quit
-                    
+                if create_index: # make test index in the encoder model directory               
                     # create directory for the test index
                     if not os.path.exists(self.index_path):
                         os.makedirs(self.index_path)
@@ -605,7 +589,12 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
 
                     # create the test corpus
                     include_ids = self.collect_docs_for_index()
-                    logger.info("Collected doc IDs to include in test index")
+                    if len(include_ids) > 0:
+                        logger.info(f"Collected {str(len(include_ids))} doc IDs to include in test index")
+                        logger.info(f"{str(include_ids[:5])}")
+                    else:
+                        logger.warning("Function to retrieve doc IDs didn't work")
+                        quit
                     #files_to_use = make_test_corpus(
                     #    percent_random=0,
                     #    max_size=1000, 
@@ -618,7 +607,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     logger.info("Making the test index")
                     self.make_index(
                         encoder=self.encoder,
-                        corpus_path=corpus_test_dir,
+                        corpus_path=CORPUS_PATH,
                         index_path=self.index_path,
                         files_to_use=include_ids
                     )
@@ -692,6 +681,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             validation_data = json.loads(validation_data)
             include_ids = [i.strip().lstrip() for i in validation_data['collection'].values()]
         
+        include_ids = [i + '.json' if i[-5:] != 'json' else i for i in include_ids]
         return include_ids
 
 class SimilarityEvaluator(TransformerEvaluator):
