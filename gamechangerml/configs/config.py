@@ -115,8 +115,7 @@ class ValidationConfig:
         "validation_dir": os.path.join(DATA_PATH, "validation"),
         "evaluation_dir": os.path.join(DATA_PATH, "evaluation"),
         "user_dir": os.path.join(DATA_PATH, "user_data"),
-        # location with smaller set of corpus JSONs
-        "test_corpus_dir": "gamechangerml/data/test_data/test_corpus",
+        "test_corpus_dir": "gamechangerml/test_corpus",
         "squad": {
             "dev": "original/squad2.0/dev-v2.0.json",
             "train": "original/squad2.0/train-v2.0.json",

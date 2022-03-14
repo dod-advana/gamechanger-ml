@@ -550,6 +550,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         self.model_path = os.path.join(transformer_path, encoder_model_name)
         self.data_path = data_path
         self.data_level = data_level
+        logger.info(f"Using {str(self.data_path)} for validation data")
         if not index: # if there is no index to evaluate, we need to make one
             logger.info("No index provided for evaluating. Checking if test index exists.")
             self.index_path = os.path.join(
@@ -595,13 +596,6 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     else:
                         logger.warning("Function to retrieve doc IDs didn't work")
                         quit
-                    #files_to_use = make_test_corpus(
-                    #    percent_random=0,
-                    #    max_size=1000, 
-                    #    corpus_dir=CORPUS_PATH, 
-                    #    save_dir=corpus_test_dir, 
-                    #    include_ids=include_ids
-                    #)
 
                     # make a (test) index for evaluating the model
                     logger.info("Making the test index")
@@ -677,7 +671,8 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             include_ids = [i.split('.pdf_')[0] for i in list(set(training_data['doc']))]
         else:
             logger.info("This is a base model: collecting validation data IDs for index")
-            validation_data = open_json(os.path.join(self.data_path, self.data_level, "intelligent_search_data.json"))
+            base_val_path = os.path.join(self.data_path, self.data_level)
+            validation_data = open_json("intelligent_search_data.json", base_val_path)
             validation_data = json.loads(validation_data)
             include_ids = [i.strip().lstrip() for i in validation_data['collection'].values()]
         

@@ -11,7 +11,7 @@ from requests.adapters import HTTPAdapter
 from http.client import HTTPConnection  # py3
 
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
-from gamechangerml import DATA_PATH
+#from gamechangerml import DATA_PATH
 
 from .test_examples import TestSet
 
