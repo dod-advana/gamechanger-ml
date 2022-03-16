@@ -768,10 +768,14 @@ def train_qexp(model_dict):
 
 def run_evals(model_dict):
     logger.info("Attempting to run evaluation")
+    try:
+        sample_limit = int(model_dict["sample_limit"])
+    except:
+        sample_limit = 15000
     args = {
         "model_name": model_dict["model_name"],
         "eval_type": model_dict["eval_type"],
-        "sample_limit": int(model_dict["sample_limit"]),
+        "sample_limit": sample_limit,
         "validation_data": model_dict["validation_data"],
     }
     pipeline.run(
