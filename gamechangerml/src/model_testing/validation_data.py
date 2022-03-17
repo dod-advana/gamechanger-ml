@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from collections import OrderedDict
 from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, filter_title_queries
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.configs.config import ValidationConfig
@@ -194,7 +195,7 @@ class RetrieverGSData(ValidationData):
         relations = dict(zip(q_idx, doc_list))
 
         logger.info(
-            "Generated {} test queries of gold standard data".format(
+            "Generated {} test queries of gold standard data from search history".format(
                 len(query_list))
         )
 
@@ -219,7 +220,7 @@ class UpdatedGCRetrieverData(RetrieverGSData):
             else:
                 new_data = get_most_recent_dir(
                     os.path.join(
-                        ValidationConfig.DATA_ARGS["validation_dir"], "sent_transformer"
+                        ValidationConfig.DATA_ARGS["validation_dir"], "domain", "sent_transformer"
                     )
                 )
                 self.data_path = os.path.join(new_data, level)
@@ -329,9 +330,9 @@ class NLIData(ValidationData):
 
 
 class MatamoFeedback:
-    def __init__(self, start_date, end_date, exclude_searches):
+    def __init__(self, start_date, end_date, exclude_searches, testing_only=False):
 
-        self.matamo = concat_matamo()
+        self.matamo = concat_matamo(testing_only)
         self.start_date = start_date
         self.end_date = end_date
         self.exclude_searches = exclude_searches
@@ -404,9 +405,9 @@ class MatamoFeedback:
 
 
 class SearchHistory:
-    def __init__(self, start_date, end_date, exclude_searches):
+    def __init__(self, start_date, end_date, exclude_searches, testing_only=False):
 
-        self.history = concat_search_hist()
+        self.history = concat_search_hist(testing_only)
         self.start_date = start_date
         self.end_date = end_date
         self.exclude_searches = exclude_searches
@@ -428,7 +429,9 @@ class SearchHistory:
             return string.replace("&quot;", "'").replace("&#039;", "'").lower()
 
         def clean_doc(string):
-            return string.split(".pdf")[0]
+            doc = string.split(".pdf")[0]
+            doc = ' '.join([i for i in doc.split(' ') if i != ''])
+            return doc
 
         def is_question(string):
             """If we find a good way to use search history for QA validation (not used currently)"""
@@ -461,16 +464,17 @@ class SearchHistory:
 
 
 class SearchValidationData:
-    def __init__(self, start_date, end_date, exclude_searches):
+    def __init__(self, start_date, end_date, exclude_searches, testing_only):
 
         self.start_date = start_date
         self.end_date = end_date
         self.exclude_searches = exclude_searches
+        self.testing_only = testing_only
         self.matamo_data = MatamoFeedback(
-            self.start_date, self.end_date, self.exclude_searches
+            self.start_date, self.end_date, self.exclude_searches, self.testing_only
         )
         self.history_data = SearchHistory(
-            self.start_date, self.end_date, self.exclude_searches
+            self.start_date, self.end_date, self.exclude_searches, self.testing_only
         )
 
 
@@ -538,10 +542,11 @@ class IntelSearchData(SearchValidationData):
         min_correct_matches,
         max_results,
         filter_queries,
-        index_path
+        index_path,
+        testing_only
     ):
 
-        super().__init__(start_date, end_date, exclude_searches)
+        super().__init__(start_date, end_date, exclude_searches, testing_only)
         self.exclude_searches = exclude_searches
         self.data = pd.concat(
             [self.matamo_data.intel, self.history_data.intel_matched]
@@ -550,7 +555,7 @@ class IntelSearchData(SearchValidationData):
         self.max_results = max_results
         self.filter_queries = filter_queries
         self.index_path = index_path
-        self.queries, self.collection, self.all_relations, self.correct, self.incorrect = self.make_intel()
+        self.queries, self.collection, self.all_relations, self.correct, self.incorrect, self.correct_vals, self.incorrect_vals = self.make_intel()
 
     def make_intel(self):
 
@@ -596,12 +601,40 @@ class IntelSearchData(SearchValidationData):
             max_results=self.max_results,
         )
 
+        def map_values(queries, collection, relations):
+            vals_dict = {}
+            for key in relations.keys():
+                query = queries[key]
+                doc_keys = relations[key]
+                docs = [collection[i] for i in doc_keys]
+                vals_dict[query] = docs
+            
+            return vals_dict
+
+        correct_vals = map_values(intel_search_queries, intel_search_results, correct)
+        incorrect_vals = map_values(intel_search_queries, intel_search_results, incorrect)
+
+        def sort_dictionary(dictionary):
+
+            mydict = OrderedDict(dictionary.items())
+            mydict_new = {}
+            for key in mydict.keys():
+                vals = mydict[key]
+                vals.sort()
+                mydict_new[key] = vals
+            return mydict_new
+        
+        correct_vals = sort_dictionary(correct_vals)
+        incorrect_vals = sort_dictionary(incorrect_vals)
+
         return (
             intel_search_queries,
             intel_search_results,
             new_intel_metadata,
             correct,
             incorrect,
+            correct_vals,
+            incorrect_vals
         )
 
 

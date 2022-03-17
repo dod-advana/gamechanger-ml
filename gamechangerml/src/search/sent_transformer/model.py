@@ -39,7 +39,7 @@ class SentenceEncoder(object):
         transformer_path,
         model=None,
         use_gpu=False,
-        bert_tokenize=False,
+        bert_tokenize=False
     ):
 
         if model:
@@ -149,7 +149,7 @@ class SentenceEncoder(object):
         self.embedder.embeddings.index(embeddings)
         logger.info(f"Built the embeddings index")
 
-    def index_documents(self, corpus_path, index_path):
+    def index_documents(self, corpus_path, index_path, files_to_use=None):
         """
         Create the index and accompanying dataframe to perform text
         and paragraph id search
@@ -168,6 +168,7 @@ class SentenceEncoder(object):
                 min_token_len=self.min_token_len,
                 verbose=self.verbose,
                 bert_based_tokenizer=self.bert_tokenizer,
+                files_to_use=files_to_use
             )
             corpus = [(para_id, " ".join(tokens), None)
                       for tokens, para_id in corp]

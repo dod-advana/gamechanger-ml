@@ -16,7 +16,7 @@ model_path_dict = get_model_paths()
 SENT_INDEX = model_path_dict['sentence']
 
 
-def make_tiered_eval_data(index_path):
+def make_tiered_eval_data(index_path, testing_only):
  
     if not index_path:
         index_path = SENT_INDEX
@@ -36,6 +36,7 @@ def make_tiered_eval_data(index_path):
         end_date: str, 
         exclude_searches: List[str], 
         filter_queries: bool,
+        testing_only: bool,
         save_dir: Union[str,os.PathLike]=save_dir) -> Tuple[Dict[str,str], Dict[str,str], Dict[str,str]]:
         """Makes eval data for each tier level using args from config.py and saves to save_dir
         Args:
@@ -59,7 +60,8 @@ def make_tiered_eval_data(index_path):
                     min_correct_matches=min_matches,
                     max_results=max_res,
                     filter_queries=filter_queries,
-                    index_path=index_path
+                    index_path=index_path,
+                    testing_only=testing_only
                 )
 
         save_intel = {
@@ -67,7 +69,10 @@ def make_tiered_eval_data(index_path):
             "collection": intel.collection, 
             "meta_relations": intel.all_relations,
             "correct": intel.correct,
-            "incorrect": intel.incorrect}
+            "incorrect": intel.incorrect,
+            "correct_vals": intel.correct_vals,
+            "incorrect_vals": intel.incorrect_vals
+        }
 
         metadata = {
             "date_created": str(date.today()),
@@ -100,18 +105,21 @@ def make_tiered_eval_data(index_path):
     all_data = save_data(
         level='any',
         filter_queries = False,
+        testing_only = testing_only,
         **ValidationConfig.TRAINING_ARGS
         )
     
     silver_data = save_data(
         level='silver',
         filter_queries = False,
+        testing_only=testing_only,
         **ValidationConfig.TRAINING_ARGS
         )
     
     gold_data = save_data(
         level='gold',
         filter_queries = False, # should use same (updated) exclude list of queries as silver_data
+        testing_only=testing_only,
         **ValidationConfig.TRAINING_ARGS
         )
     
@@ -120,6 +128,6 @@ def make_tiered_eval_data(index_path):
 if __name__ == '__main__':
     
     try:
-        make_tiered_eval_data(index_path=None)
+        make_tiered_eval_data(index_path=None, testing_only=False)
     except Exception as e:
         logger.warning(e, exc_info=True)

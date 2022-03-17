@@ -8,11 +8,17 @@ from dateutil import parser
 from datetime import date, datetime
 import signal
 import torch
+import random
+import shutil
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.configs.config import ValidationConfig
 
 MATAMO_DIR = ValidationConfig.DATA_ARGS['matamo_dir']
 SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']
+
+MATAMO_TEST_FILE = "gamechangerml/data/test_data/MatamoFeedback_TEST.csv"
+SEARCH_TEST_FILE = "gamechangerml/data/test_data/SearchPDFMapping_TEST.csv"
+
 
 # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
 class TimeoutException(Exception):   # Custom exception class
@@ -335,11 +341,17 @@ def concat_csvs(directory):
             pass
     return df
 
-def concat_matamo():
-    return concat_csvs(MATAMO_DIR)
+def concat_matamo(testing_only=False):
+    if testing_only:
+        return pd.read_csv(MATAMO_TEST_FILE)
+    else:
+        return concat_csvs(MATAMO_DIR)
 
-def concat_search_hist():
-    return concat_csvs(SEARCH_HIST)
+def concat_search_hist(testing_only=False):
+    if testing_only:
+        return pd.read_csv(SEARCH_TEST_FILE)
+    else:
+        return concat_csvs(SEARCH_HIST)
 
 def get_most_recent_dir(parent_dir):
     
@@ -349,3 +361,45 @@ def get_most_recent_dir(parent_dir):
     else:
         logger.error("There are no subdirectories to retrieve most recent data from")
         return None
+
+def make_test_corpus(
+    corpus_dir, # main corpus dir
+    save_dir, # where to save the test corpus
+    percent_random, # float from 0-1 percentage of index to make from random docs
+    max_size=1000, # max size of the index (to save on time building)
+    include_ids=None, # if any IDs need to be in the test, pass as list
+    max_file_size=100000 # max size of random files to add to the test corpus
+    ):
+    '''Makes a small test corpus for checking validation'''
+    all_files = [f.split('.json')[0] + '.json' for f in os.listdir(corpus_dir) if os.path.isfile(os.path.join(corpus_dir, f))]
+    if percent_random > 1:
+        percent_random = percent_random / 100
+    if include_ids:
+        logger.info(f"{str(len(include_ids))} ids required in test corpus")
+        include_ids = [f.split('.json')[0] + '.json' for f in include_ids] # make sure json at end of filenames
+        subset = list(set(all_files).intersection(include_ids)) # only get ids in the main corpus
+        if len(subset) < len(include_ids):
+            logger.info(f"Did not find all required ids in the main corpus dir.")
+            logger.info(f"Found {str(len(subset))} / {str(len(include_ids))} ids")
+        other = [i for i in all_files if i not in include_ids]
+        if percent_random > 0:
+            num_add = round(len(subset)/percent_random - len(subset))
+        else:
+            num_add = 0
+    else:
+        subset = []
+        other = all_files
+        num_add = max_size
+    
+    ## add random docs
+    for i in range(num_add):
+        filesize = 1000000
+        while filesize > max_file_size: # as we iterate, skip large files
+            random_index = random.randint(0,len(other)-1)
+            file = other[random_index] # pick a random file
+            filesize = check_file_size(file, corpus_dir) # if filesize is smaller than max, break loop
+        subset.append(file)
+        subset = list(set(subset)) # remove duplicates
+
+    logger.info(f"Collected {str(len(subset))} jsons")
+    return subset

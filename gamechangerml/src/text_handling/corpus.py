@@ -17,13 +17,21 @@ class LocalCorpus(object):
         min_token_len=3,
         verbose=False,
         bert_based_tokenizer=None,
+        files_to_use=None
     ):
         self.directory = directory
-        self.file_list = [
-            os.path.join(directory, file)
-            for file in os.listdir(directory)
-            if file[-5:] == ".json"
-        ]
+        if files_to_use: ## if we only want to do this on a subset
+            self.file_list = list(set([os.path.join(directory, i) for i in files_to_use]).intersection([
+                os.path.join(directory, file)
+                for file in os.listdir(directory)
+                if file[-5:] == ".json"
+            ]))
+        else:
+            self.file_list = [
+                os.path.join(directory, file)
+                for file in os.listdir(directory)
+                if file[-5:] == ".json"
+            ]
         self.file_list
         self.return_id = return_id
         self.min_token_len = min_token_len

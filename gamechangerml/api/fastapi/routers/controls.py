@@ -664,18 +664,32 @@ def update_metadata(model_dict):
     try:
         index_path = model_dict["index_path"]
     except:
-        index_path = os.path.join(MODEL_PATH, "sent_index_20210715")
+        index_path = os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
+                    )
     try:
         update_eval_data = model_dict['update_eval_data']
     except:
         update_eval_data = False
+    try:
+        testing_only = model_dict["testing_only"]
+    except:
+        testing_only = False
+    try:
+        upload = model_dict["upload"]
+    except:
+        upload = True
+    
+    logger.info(f"Testing only is set to: {testing_only}")
 
     args = {
         "meta_steps": meta_steps,
         "corpus_dir": corpus_dir,
         "retriever": retriever,
         "index_path": index_path,
-        "update_eval_data": update_eval_data
+        "update_eval_data": update_eval_data,
+        "testing_only": testing_only,
+        "upload": upload
     }
 
     pipeline.run(
@@ -695,6 +709,10 @@ def finetune_sentence(model_dict):
         remake_train_data = model_dict["remake_train_data"]
     except:
         remake_train_data = False
+    try:
+        model = model_dict["model"]
+    except:
+        model = None
     args = {
         "batch_size": 8,
         "epochs": int(model_dict["epochs"]),
@@ -702,6 +720,7 @@ def finetune_sentence(model_dict):
         "testing_only": bool(testing_only),
         "remake_train_data": bool(remake_train_data),
         "retriever": MODELS.sentence_searcher,
+        "model": model
     }
     pipeline.run(
         build_type="sent_finetune",
@@ -749,10 +768,14 @@ def train_qexp(model_dict):
 
 def run_evals(model_dict):
     logger.info("Attempting to run evaluation")
+    try:
+        sample_limit = int(model_dict["sample_limit"])
+    except:
+        sample_limit = 15000
     args = {
         "model_name": model_dict["model_name"],
         "eval_type": model_dict["eval_type"],
-        "sample_limit": int(model_dict["sample_limit"]),
+        "sample_limit": sample_limit,
         "validation_data": model_dict["validation_data"],
     }
     pipeline.run(

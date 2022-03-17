@@ -3,13 +3,14 @@ from gamechangerml.api.utils import processmanager
 from datetime import datetime
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities import utils as utils
-from gamechangerml.src.utilities.test_utils import open_json, timestamp_filename, cos_sim
+from gamechangerml.src.utilities.test_utils import open_json, save_json, timestamp_filename
+from gamechangerml.scripts.run_evaluation import eval_sent
 from time import sleep
 import tqdm
 import threading
 import logging
 import gc
-from sentence_transformers import SentenceTransformer, InputExample, util, losses
+from sentence_transformers import SentenceTransformer, InputExample, losses
 from torch.utils.data import DataLoader
 import pandas as pd
 from datetime import date
@@ -21,7 +22,6 @@ from torch.optim import Adam
 import torch.nn.functional as F
 from torch import nn
 torch.cuda.empty_cache()
-from gamechangerml.src.model_testing.metrics import reciprocal_rank_score, get_MRR
 
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
@@ -48,9 +48,8 @@ def fix_model_config(model_load_path):
     except:
         logger.info("Could not update model config file")
 
-
 def format_inputs(train, test, data_dir):
-    """Create input data for dataloader and df for tracking cosine sim"""
+    """Create input data for dataloader and df with train/test split data"""
 
     train_samples = []
     all_data = []
@@ -61,28 +60,30 @@ def format_inputs(train, test, data_dir):
         score = float(train[i]["label"])
         inputex = InputExample(str(count), texts, score)
         train_samples.append(inputex)
-        all_data.append([train[i]["query"], texts, score, "train"])
+        all_data.append([train[i]["query"], train[i]["doc"], score, "train"])
         count += 1
-        #processmanager.update_status(processmanager.loading_data, count, total)
 
     for x in test.keys():
         texts = [test[x]["query"], test[x]["paragraph"]]
         score = float(test[x]["label"])
-        all_data.append([test[x]["query"], texts, score, "test"])
+        all_data.append([test[x]["query"], test[x]["doc"], score, "test"])
         count += 1
         processmanager.update_status(processmanager.loading_data, count, total)
 
-    df = pd.DataFrame(all_data, columns=["key", "pair", "score", "label"])
-    df.to_csv(os.path.join(data_dir, timestamp_filename("finetuning_data", ".csv")))
+    df = pd.DataFrame(all_data, columns=["key", "doc", "score", "label"])
+    df.drop_duplicates(subset = ['doc', 'score', 'label'], inplace = True)
+    logger.info(f"Generated training data CSV of {str(df.shape[0])} rows")
+    df_path = os.path.join(data_dir, timestamp_filename("finetuning_data", ".csv"))
+    df.to_csv(df_path)
 
-    return train_samples
-
+    return train_samples, df_path
 
 class STFinetuner():
 
     def __init__(self, model_load_path, model_save_path, shuffle, batch_size, epochs, warmup_steps):
 
         fix_model_config(model_load_path)
+        self.model_load_path = model_load_path
         self.model = SentenceTransformer(model_load_path)
         self.model_save_path = model_save_path
         self.shuffle = shuffle
@@ -98,30 +99,30 @@ class STFinetuner():
             train = data["train"]
             test = data["test"]
 
-            del data
-            gc.collect()
-
             if testing_only:
                 logger.info(
                     "Creating smaller dataset just for testing finetuning.")
-                train_keys = list(train.keys())[:10]
-                test_keys = list(test.keys())[:10]
-                train = {k: train[k] for k in train_keys}
-                test = {k: test[k] for k in test_keys}
+                train_queries = list(set([train[i]['query'] for i in train.keys()]))[:30]
+                test_queries = list(set([test[i]['query'] for i in test.keys()]))[:10]
+                train = {k: train[k] for k in train.keys() if train[k]['query'] in train_queries}
+                test = {k: test[k] for k in test.keys() if test[k]['query'] in test_queries}
+            
+            del data
+            gc.collect()
 
             processmanager.update_status(processmanager.training, 0, 1,thread_id=threading.current_thread().ident)
             sleep(0.1)
             # make formatted training data
-            train_samples = format_inputs(train, test, data_dir)
-
+            train_samples, df_path = format_inputs(train, test, data_dir)
+            len_samples = len(train_samples)
             # finetune on samples
             logger.info("Starting dataloader...")
             # pin_memory=self.pin_memory)
             train_dataloader = DataLoader(
                 train_samples, shuffle=self.shuffle, batch_size=self.batch_size)
             train_loss = losses.CosineSimilarityLoss(model=self.model)
-            del train_samples
-            gc.collect()
+            #del train_samples
+            #gc.collect()
             logger.info("Finetuning the encoder model...")
             self.model.fit(train_objectives=[
                            (train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
@@ -132,6 +133,25 @@ class STFinetuner():
             logger.info("Finetuned model saved to {}".format(
                 str(self.model_save_path)))
 
+            # save metadata with the finetuned model
+            metadata = {
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "model_type": "finetuned encoder",
+                "base_model_path": self.model_load_path,
+                "current_model_path": self.model_save_path,
+                "training_data_dir": df_path,
+                "n_training_samples": len_samples,
+                "version": version,
+                "testing_only": testing_only,
+                "shuffle": self.shuffle,
+                "batch_size": self.batch_size,
+                "epochs": self.epochs,
+                "warmup_steps": self.warmup_steps
+            }
+
+            save_json("metadata.json", self.model_save_path, metadata)
+            logger.info(f"Finetuned model metadata saved to {self.model_save_path}/metadata.json")
+            
             # when not testing only, save to S3
             if not testing_only:
                 logger.info("Saving data to S3...")
@@ -155,8 +175,8 @@ class STFinetuner():
                 utils.upload(s3_path, dst_path, "transformers", model_id)
                 logger.info(f"*** Saved model to S3: {s3_path}")
 
-            return {}
-
         except Exception as e:
             logger.warning("Could not complete finetuning")
             logger.error(e)
+        
+        return

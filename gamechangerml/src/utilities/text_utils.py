@@ -185,10 +185,13 @@ def normalize_query(s: str) -> str:
     Lower text and remove extra whitespace.
     """
     def white_space_fix(text):
-        return ' '.join(text.split())
+        return ' '.join(text.strip().lstrip().split())
     def lower(text):
         return text.lower()
-    return white_space_fix(lower(s))
+    def remove_quotes(text):
+        exclude = ["'", '"']
+        return ''.join(ch for ch in text if ch not in exclude)
+    return white_space_fix(remove_quotes(lower(s)))
 
 def clean_query(query: str) -> str:
     '''Removes all non alphanumeric characters and 'and' / 'or' from query string'''

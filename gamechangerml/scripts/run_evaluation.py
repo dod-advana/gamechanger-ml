@@ -17,21 +17,33 @@ def eval_qa(model_name, sample_limit, eval_type="original"):
         logger.info("No eval_type selected. Options: ['original', 'gamechanger'].")
 
 def eval_sent(model_name, validation_data, eval_type="domain"):
-    metadata = open_json('metadata.json', os.path.join(MODEL_PATH, model_name))
-    encoder = metadata['encoder_model']
-    logger.info(f"Evaluating {model_name} created with {encoder}")
+    if "sent_index" in model_name:
+        logger.info("Evaluating a sentence index")
+        metadata = open_json('metadata.json', os.path.join(MODEL_PATH, model_name))
+        encoder = metadata['encoder_model']
+        index = model_name
+        logger.info(f"Evaluating {model_name} created with {encoder}")
+    else:
+        logger.info("Evaluating an encoder model")
+        encoder = model_name
+        index = None
+        logger.info(f"Evaluating encoder: {encoder}")
     if eval_type == "domain":
+        base_data_dir = os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
         if validation_data != "latest":
-            if os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer", validation_data)):
-                data_path = os.path.join(DATA_PATH, "validation", "domain", "sent_transformer", validation_data)
+            if os.path.exists(os.path.join(base_data_dir, validation_data)):
+                data_path = os.path.join(base_data_dir, validation_data)
             else:
                 logger.warning("Could not load validation data, path doesn't exist")
                 data_path = None
         else:
-            data_path = None
+            try:
+                data_path = get_most_recent_dir(base_data_dir)
+            except:
+                data_path = None
         results = {}
         for level in ['gold', 'silver']:
-            domainEval = IndomainRetrieverEvaluator(index=model_name, data_path=data_path, data_level=level, encoder_model_name=encoder, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
+            domainEval = IndomainRetrieverEvaluator(index=index, data_path=data_path, data_level=level, encoder_model_name=encoder, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
             results[level] = domainEval.results
     elif eval_type == "original":
         originalEval = MSMarcoRetrieverEvaluator(**EmbedderConfig.MODEL_ARGS, encoder_model_name=EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL)

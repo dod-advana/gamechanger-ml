@@ -11,7 +11,7 @@ from requests.adapters import HTTPAdapter
 from http.client import HTTPConnection  # py3
 
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
-# from gamechangerml import DATA_PATH
+#from gamechangerml import DATA_PATH
 
 from .test_examples import TestSet
 
@@ -297,17 +297,6 @@ def test_qa_outside_scope():
 #         "gpu": False,
 #         "upload": False,
 #         "version": "TEST"
-#     }
-#     resp = http.post(API_URL + "/trainModel", json=model_dict)
-#     assert resp.ok == True
-
-# def test_trainModel_sent_finetune():
-#     model_dict = {
-#         "build_type": "sent_finetune",
-#         "batch_size": 32,
-#         "epochs": 1,
-#         "warmup_steps": 100,
-#         "testing_only": True
 #     }
 #     resp = http.post(API_URL + "/trainModel", json=model_dict)
 #     assert resp.ok == True
