@@ -372,11 +372,10 @@ async def get_current_models():
         "encoder_model": latest_intel_model_encoder.value,
         "sentence_index": SENT_INDEX_PATH.value,
         "qexp_model": QEXP_MODEL_NAME.value,
-        "qa_model": latest_qa_model.value,
         "jbook_model": QEXP_JBOOK_MODEL_NAME.value,
         "topic_model": TOPICS_MODEL.value,
         "wordsim_model": WORD_SIM_MODEL.value,
-        "qa model": QA_MODEL.value,
+        "qa_model": QA_MODEL.value,
     }
 
 
