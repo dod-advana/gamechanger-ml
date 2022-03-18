@@ -62,6 +62,7 @@ class BertSummConfig:
 
 class QAConfig:
     BASE_MODEL = "bert-base-cased-squad2"
+    #BASE_MODEL = "multi-qa-MiniLM-L6-cos-v1"
     MODEL_ARGS = {
         # options are: ["scored_answer", "simple_answer"]
         "qa_type": "scored_answer",

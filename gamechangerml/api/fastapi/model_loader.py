@@ -26,7 +26,7 @@ from gamechangerml.api.fastapi.settings import (
     latest_intel_model_encoder,
     latest_intel_model_sim,
     latest_intel_model_trans,
-    latest_qa_model,
+    QA_MODEL,
 )
 from gamechangerml.src.featurization.word_sim import WordSim
 from gamechangerml.src.featurization.topic_modeling import Topics
@@ -133,7 +133,7 @@ class ModelLoader:
     recommender = property(getRecommender, set_error)
 
     @staticmethod
-    def initQA():
+    def initQA(qa_model_name=QA_MODEL.value):
         """initQA - loads transformer model on start
         Args:
         Returns:
@@ -144,11 +144,11 @@ class ModelLoader:
                 ModelLoader.__qa_model = QAReader(
                     transformer_path=LOCAL_TRANSFORMERS_DIR.value,
                     use_gpu=True,
-                    model_name=QAConfig.BASE_MODEL,
+                    model_name=qa_model_name,
                     **QAConfig.MODEL_ARGS,
                 )
                 # set cache variable defined in settings.py
-                latest_qa_model.value = ModelLoader.__qa_model.READER_PATH
+                QA_MODEL.value = ModelLoader.__qa_model.READER_PATH
                 logger.info("Finished loading QA Reader")
         except OSError:
             logger.error(f"Could not load Question Answer Model")
