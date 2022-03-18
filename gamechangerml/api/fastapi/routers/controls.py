@@ -644,10 +644,10 @@ async def reload_models(model_dict: dict, response: Response):
                         total,
                         thread_id=threading.current_thread().ident,
                     )
-                if "question_answer" in model_dict:
+                if "qa" in model_dict:
                     qa_model_name = os.path.join(
                         Config.LOCAL_PACKAGED_MODELS_DIR,
-                        model_dict["question_answer_models"],
+                        model_dict["qa"],
                     )
 
                     logger.info("Attempting to load QA model")
