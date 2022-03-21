@@ -21,6 +21,7 @@ from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.src.utilities.test_utils import (
     collect_evals,
+    collect_sent_evals_gc,
     handle_sent_evals,
 )
 from gamechangerml import MODEL_PATH
@@ -152,7 +153,7 @@ def get_downloaded_models_list():
                     config_file = open(config_path)
                     transformer_list[trans] = json.load(config_file)
                     transformer_list[trans]["evaluation"] = {}
-                    transformer_list[trans]["evaluation"] = collect_evals(
+                    transformer_list[trans]["evaluation"] = handle_sent_evals(
                         os.path.join(LOCAL_TRANSFORMERS_DIR.value, trans)
                     )
                     config_file.close()
