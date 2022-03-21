@@ -21,7 +21,6 @@ from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.src.utilities.test_utils import (
     collect_evals,
-    collect_sent_evals_gc,
     handle_sent_evals,
 )
 from gamechangerml import MODEL_PATH
