@@ -7,6 +7,7 @@ from gamechangerml.api.fastapi.model_loader import ModelLoader
 router = APIRouter()
 MODELS = ModelLoader()
 
+
 @router.on_event("startup")
 async def load_models():
     MODELS.initQA()
@@ -17,6 +18,7 @@ async def load_models():
     MODELS.initWordSim()
     MODELS.initTopics()
     MODELS.initRecommender()
+
 
 @router.on_event("startup")
 @repeat_every(seconds=120, wait_first=True)
@@ -30,7 +32,6 @@ async def check_health():
         new_sim_model_name = str(latest_intel_model_sim.value)
         new_encoder_model_name = str(latest_intel_model_encoder.value)
         new_sent_model_name = str(latest_intel_model_sent.value)
-        new_qa_model_name = str(latest_qa_model.value)
     except Exception as e:
         logger.info("Could not get one of the model names from redis")
         logger.info(e)
