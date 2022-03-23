@@ -241,6 +241,7 @@ class Pipeline:
                     LOCAL_TRANSFORMERS_DIR, model
                 )
 
+            logger.info(f"Model load path set to: {str(model_load_path)}")
             no_data=False
             base_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
 
