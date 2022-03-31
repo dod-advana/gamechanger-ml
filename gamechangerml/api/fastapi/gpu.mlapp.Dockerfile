@@ -72,7 +72,7 @@ RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
 
 # thou shall not root
-# USER $APP_UID:$APP_GID
+USER $APP_UID:$APP_GID
 
 COPY --chown="${APP_UID}:${APP_GID}" ./ "${APP_DIR}"
 
