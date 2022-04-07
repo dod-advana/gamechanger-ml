@@ -26,6 +26,9 @@ RUN dnf install -y \
         openblas \
         cryptsetup-libs \
         cyrus-sasl-lib \
+        expat \
+        libarchive \
+        libxml2 \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
