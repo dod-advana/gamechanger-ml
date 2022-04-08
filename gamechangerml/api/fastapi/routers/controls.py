@@ -24,9 +24,11 @@ from gamechangerml.src.utilities.test_utils import (
     handle_sent_evals,
 )
 from gamechangerml import MODEL_PATH
+from gamechangerml.src.utilities import gc_web_api
 
 router = APIRouter()
 MODELS = ModelLoader()
+gcClient = gc_web_api.GCWebClient()
 ## Get Methods ##
 
 pipeline = Pipeline()
@@ -969,4 +971,23 @@ async def stop_process(thread_dict: dict, response: Response):
         thread_id=thread_id,
     )
 
-    return {"stopped": thread_id}
+    return {'stopped':thread_id}
+
+@router.post("/getUserData")
+async def stop_process(date_dict: dict, response: Response):
+    """Get user aggregation data for selected date and write to data folder
+    Args:
+        date_dict: dict; {startDate,endDate}
+        Response: Response class; for status codes(apart of fastapi do not need to pass param)
+    Returns:
+        Stopped thread id
+    """
+
+    data = json.loads(gcClient.getUserAggregations(start_date=date_dict['startDate'],end_date=date_dict['endDate']))
+    GC_USER_DATA = os.path.join(
+        DATA_PATH, "user_data", "UserAggregations.json"
+    )
+    with open(GC_USER_DATA,'w') as f:
+        json.dump(data,f)
+
+    return 'wrote user data to file'
