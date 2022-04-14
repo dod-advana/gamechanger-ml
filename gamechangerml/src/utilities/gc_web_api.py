@@ -1,9 +1,10 @@
 from attr import has
+from datetime import datetime, timedelta
+
 import requests
 import os
 import base64
 import hmac, hashlib
-
 
 class GCWebClient:
     def __init__(
@@ -39,10 +40,18 @@ class GCWebClient:
         hash = base64.b64encode(h.digest())
         return hash
 
-    def getSearchMappings(self, daysBack=3):
+    def getSearchMappings(self, start_date=(datetime.now()-timedelta(days=3)).replace(hour=0, minute=0), end_date=datetime.now()):
         #endpoint needs to be hashed before adding query params since thats how the web backend calculates the hash
         endpoint = f"/api/gameChanger/admin/getSearchPdfMapping"
         hash = self.getHash(endpoint)
-        endpoint += f'?daysBack={daysBack}'
+        endpoint += f'?startDate={start_date}&endDate={end_date}'
+        r = requests.get(self.getURL + endpoint, headers=self.getHeader(hash))
+        return r.content
+
+    def getUserAggregations(self, start_date=(datetime.now()-timedelta(days=3)).replace(hour=0, minute=0), end_date=datetime.now()):
+        #endpoint needs to be hashed before adding query params since thats how the web backend calculates the hash
+        endpoint = f"/api/gameChanger/admin/getUserAggregations"
+        hash = self.getHash(endpoint)
+        endpoint += f'?startDate={start_date}&endDate={end_date}'
         r = requests.get(self.getURL + endpoint, headers=self.getHeader(hash))
         return r.content

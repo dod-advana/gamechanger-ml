@@ -14,6 +14,7 @@ from gamechangerml import MODEL_PATH, DATA_PATH
 import typing as t
 import base64
 from urllib.parse import urljoin
+from datetime import datetime,timedelta
 from gamechangerml.src.utilities import gc_web_api, es_utils
 
 
@@ -110,7 +111,9 @@ class LTR:
     def request_mappings(self, daysBack: int = 180):
         mappings = None
         try:
-            mappings = gcClient.getSearchMappings(daysBack=daysBack)
+            start_date=(datetime.now()-timedelta(days=daysBack)).replace(hour=0, minute=0)
+            end_date=datetime.now()
+            mappings = gcClient.getSearchMappings(start_date=start_date,end_date=end_date)
             mappings = json.loads(mappings)
             mappings = pd.DataFrame(mappings["data"])
         except Exception as e:
