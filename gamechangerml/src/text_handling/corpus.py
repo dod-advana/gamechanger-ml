@@ -5,6 +5,7 @@ import threading
 # import pandas as pd
 from gensim.models.doc2vec import TaggedDocument
 from gamechangerml.src.text_handling.process import preprocess, get_tokenizer
+from gamechangerml.src.utilities.text_utils import check_quality_paragraph
 from gamechangerml.api.utils import processmanager
 from tqdm import tqdm
 
@@ -65,7 +66,8 @@ class LocalCorpus(object):
                         process_tokens = preprocess(para_text, min_len=1)
                         # half of the tokens are actual words
                         if tokens:
-                            if (len(process_tokens) / len(tokens)) > 0.5:
+                            if check_quality_paragraph(process_tokens, tokens, para_text):
+                            #if (len(process_tokens) / len(tokens)) > 0.5:
                                 if len(tokens) > self.min_token_len:
                                     if self.return_id:
                                         yield tokens, para_id
