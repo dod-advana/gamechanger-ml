@@ -63,23 +63,16 @@ class LocalCorpus(object):
                 for para_text, para_id in zip(paragraphs, paragraph_ids):
                     if self.bert_based_tokenizer:
                         tokens = self.auto_token.tokenize(para_text)
-                        process_tokens = preprocess(para_text, min_len=1)
-                        # half of the tokens are actual words
-                        if tokens:
-                            if check_quality_paragraph(process_tokens, tokens, para_text):
-                            #if (len(process_tokens) / len(tokens)) > 0.5:
-                                if len(tokens) > self.min_token_len:
-                                    if self.return_id:
-                                        yield tokens, para_id
-                                    else:
-                                        yield tokens
                     else:
                         tokens = preprocess(para_text, min_len=1)
-                        if len(tokens) > self.min_token_len:
-                            if self.return_id:
-                                yield tokens, para_id
-                            else:
-                                yield tokens
+                    if tokens:
+                        if check_quality_paragraph(tokens, para_text):
+                            if len(tokens) > self.min_token_len:
+                                if self.return_id:
+                                    yield tokens, para_id
+                                else:
+                                    yield tokens
+                    
                 progress += 1
                 processmanager.update_status(
                     processmanager.loading_corpus,
@@ -90,6 +83,7 @@ class LocalCorpus(object):
             except Exception as e:
                 print(e)
                 print(f"Error with {file_name} in creating local corpus")
+        print
 
     def _get_doc(self, file_name):
         with open(file_name, "r") as f:

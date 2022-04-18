@@ -11,6 +11,10 @@ from requests.adapters import HTTPAdapter
 from http.client import HTTPConnection  # py3
 
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
+from gamechangerml.src.text_handling.process import preprocess
+from gamechamgerml.src.utilities.text_utils import (
+    has_many_short_tokens, has_many_repeating, has_extralong_tokens, is_a_toc, majority_tokens_filtered, check_quality_paragraph
+)
 #from gamechangerml import DATA_PATH
 
 from .test_examples import TestSet
@@ -98,6 +102,56 @@ def test_getTransformerList():
 def getCurrentTrans():
     resp = http.get(API_URL + "/getCurrentTransformer")
     return resp.json()
+
+## Sent Index Processing Tests
+
+def test_has_many_short_tokens():
+    test_pars = TestSet.sent_index_processing_pars
+    results = []
+    for x in test_pars.keys():
+        text = test_pars[x]
+        tokens = preprocess(text)
+        check = has_many_short_tokens(tokens, threshold = 4.0)
+        results.append(check)
+    assert results == TestSet.sent_index_processing_results['has_many_short_tokens']
+ 
+def test_has_many_repeating():
+    test_pars = TestSet.sent_index_processing_pars
+    results = []
+    for x in test_pars.keys():
+        text = test_pars[x]
+        tokens = preprocess(text)
+        check = has_many_repeating(text, tokens, threshold = 0.6)
+        results.append(check)
+    assert results == TestSet.sent_index_processing_results['has_many_repeating']
+    
+def test_has_extralong_tokens():
+    test_pars = TestSet.sent_index_processing_pars
+    results = []
+    for x in test_pars.keys():
+        text = test_pars[x]
+        check = has_extralong_tokens(text, threshold = 25)
+        results.append(check)
+    assert results == TestSet.sent_index_processing_results['has_extralong_tokens']
+
+def test_is_a_toc():
+    test_pars = TestSet.sent_index_processing_pars
+    results = []
+    for x in test_pars.keys():
+        text = test_pars[x]
+        check = is_a_toc(text)
+        results.append(check)
+    assert results == TestSet.sent_index_processing_results['is_a_toc']
+
+def test_check_quality_paragraph():
+    test_pars = TestSet.sent_index_processing_pars
+    results = []
+    for x in test_pars.keys():
+        text = test_pars[x]
+        tokens = preprocess(text)
+        check = check_quality_paragraph(tokens, text)
+        results.append(check)
+    assert results == TestSet.sent_index_processing_results['check_quality']
 
 
 # def test_changeModels():

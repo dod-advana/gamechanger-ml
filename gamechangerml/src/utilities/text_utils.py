@@ -216,9 +216,9 @@ def has_many_short_tokens(processed_tokens, threshold = 4.0):
     else:
         return False
 
-def has_many_repeating(text, processed_tokens, threshold = 0.6):
+def has_many_repeating(text, tokens, threshold = 0.6):
     '''Checks if the ratio of unique tokens is less than an expected threshold'''
-    ratio_unique = len(set(processed_tokens)) / len(text.split(' '))
+    ratio_unique = len(set(tokens)) / len(text.split(' '))
     if ratio_unique < threshold:
         return True
     else:
@@ -234,27 +234,27 @@ def has_extralong_tokens(text, threshold = 25):
 
 def is_a_toc(text):
     '''Checks if a paragraph appears to be a table of contents'''
-    toc_separation = re.findall(r'(\.{2,})', text)
+    toc_separation = re.findall(r'(\.{3,})', text)
     if len(toc_separation) > 0:
         return True
     else:
         return False
 
-def majority_tokens_filtered(processed_tokens, tokens):
+def majority_tokens_filtered(tokens, text):
     '''Checks if most of the tokens were filtered out'''
-    if (len(processed_tokens) / len(tokens)) <= 0.5:
+    if (len(tokens) / len(text.split(' '))) <= 0.5:
         return True
     else:
         return False
 
-def check_quality_paragraph(processed_tokens, tokens, text):
+def check_quality_paragraph(tokens, text):
     '''Runs functions to check that a paragraph isn't a junk paragraph'''
 
-    if majority_tokens_filtered(processed_tokens, tokens):
+    if majority_tokens_filtered(tokens, text):
         return False
-    if has_many_short_tokens(processed_tokens, threshold = 4.0):
+    if has_many_short_tokens(tokens, threshold = 4.0):
         return False
-    elif has_many_repeating(text, processed_tokens, threshold = 0.6):
+    elif has_many_repeating(text, tokens, threshold = 0.6):
         return False
     elif has_extralong_tokens(text, threshold = 25):
         return False
