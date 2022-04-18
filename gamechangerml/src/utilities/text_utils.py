@@ -252,7 +252,7 @@ def has_extralong_tokens(text, threshold=25):
 
 def is_a_toc(text):
     """Checks if a paragraph appears to be a table of contents"""
-    toc_separation = re.findall(r"(\.{3,})", text)
+    toc_separation = re.findall(r"(\.{6,})", text)
     if len(toc_separation) > 0:
         return True
     else:

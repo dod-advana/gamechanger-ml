@@ -12,12 +12,11 @@ from http.client import HTTPConnection  # py3
 
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.src.text_handling.process import preprocess
-from gamechamgerml.src.utilities.text_utils import (
+from gamechangerml.src.utilities.text_utils import (
     has_many_short_tokens,
     has_many_repeating,
     has_extralong_tokens,
     is_a_toc,
-    majority_tokens_filtered,
     check_quality_paragraph,
 )
 

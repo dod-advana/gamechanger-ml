@@ -187,8 +187,8 @@ class TestSet:
     }
     sent_index_processing_results = {
         "has_many_short_tokens": [False, True, True, False, False],
-        "has_many_repeating": [False, True, True, False, False],
-        "has_extralong_tokens": [False, False, False, True, False],
-        "is_a_toc": [False, False, False, False, False],
+        "has_many_repeating": [False, True, True, False, True],
+        "has_extralong_tokens": [False, False, False, True, True],
+        "is_a_toc": [False, False, False, False, True],
         "check_quality": [True, False, False, False, False],
     }
