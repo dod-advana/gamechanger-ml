@@ -161,134 +161,157 @@ def clean_text(doc_text: str) -> str:
 
     return text
 
+
 # Source: https://rajpurkar.github.io/SQuAD-explorer/
 def normalize_answer(s: str) -> str:
     """
     Normalize answers for QA evaluation.
     Lower text and remove punctuation, articles and extra whitespace.
     """
+
     def remove_articles(text):
-        regex = re.compile(r'\b(a|an|the)\b', re.UNICODE)
-        return re.sub(regex, ' ', text)
+        regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
+        return re.sub(regex, " ", text)
+
     def white_space_fix(text):
-        return ' '.join(text.split())
+        return " ".join(text.split())
+
     def remove_punc(text):
         exclude = set(punctuation)
-        return ''.join(ch for ch in text if ch not in exclude)
+        return "".join(ch for ch in text if ch not in exclude)
+
     def lower(text):
         return text.lower()
+
     return white_space_fix(remove_articles(remove_punc(lower(s))))
+
 
 def normalize_query(s: str) -> str:
     """
     Normalize queries.
     Lower text and remove extra whitespace.
     """
+
     def white_space_fix(text):
-        return ' '.join(text.strip().lstrip().split())
+        return " ".join(text.strip().lstrip().split())
+
     def lower(text):
         return text.lower()
+
     def remove_quotes(text):
         exclude = ["'", '"']
-        return ''.join(ch for ch in text if ch not in exclude)
+        return "".join(ch for ch in text if ch not in exclude)
+
     return white_space_fix(remove_quotes(lower(s)))
 
-def clean_query(query: str) -> str:
-    '''Removes all non alphanumeric characters and 'and' / 'or' from query string'''
 
-    stop = ['and', 'or']
+def clean_query(query: str) -> str:
+    """Removes all non alphanumeric characters and 'and' / 'or' from query string"""
+
+    stop = ["and", "or"]
     query = [i for i in query.lower().split() if i not in stop]
-    query = re.sub(r'[^ a-zA-Z]', '', ' '.join(query))
-    query = ' '.join(query.strip().lstrip().split())
-    
-    return query 
+    query = re.sub(r"[^ a-zA-Z]", "", " ".join(query))
+    query = " ".join(query.strip().lstrip().split())
+
+    return query
+
 
 def get_tokens(s: str) -> List[str]:
-    '''Get tokens from normalized answer.'''
-    if not s: return []
+    """Get tokens from normalized answer."""
+    if not s:
+        return []
     return s.split()
 
-def has_many_short_tokens(processed_tokens, threshold = 4.0):
-    '''Checks if the median length of tokens is less than the expected threshold'''
+
+def has_many_short_tokens(processed_tokens, threshold=4.0):
+    """Checks if the median length of tokens is less than the expected threshold"""
     median_len = np.median([len(i) for i in processed_tokens])
     if median_len <= threshold:
         return True
     else:
         return False
 
-def has_many_repeating(text, tokens, threshold = 0.6):
-    '''Checks if the ratio of unique tokens is less than an expected threshold'''
-    ratio_unique = len(set(tokens)) / len(text.split(' '))
+
+def has_many_repeating(text, tokens, threshold=0.6):
+    """Checks if the ratio of unique tokens is less than an expected threshold"""
+    ratio_unique = len(set(tokens)) / len(text.split(" "))
     if ratio_unique < threshold:
         return True
     else:
         return False
 
-def has_extralong_tokens(text, threshold = 25):
-    '''Checks if the paragraph has a token that exceeds the threshold for normal token length'''
-    longest_token = np.max([len(i) for i in text.split(' ')])
+
+def has_extralong_tokens(text, threshold=25):
+    """Checks if the paragraph has a token that exceeds the threshold for normal token length"""
+    longest_token = np.max([len(i) for i in text.split(" ")])
     if longest_token > threshold:
         return True
     else:
         return False
 
+
 def is_a_toc(text):
-    '''Checks if a paragraph appears to be a table of contents'''
-    toc_separation = re.findall(r'(\.{3,})', text)
+    """Checks if a paragraph appears to be a table of contents"""
+    toc_separation = re.findall(r"(\.{3,})", text)
     if len(toc_separation) > 0:
         return True
     else:
         return False
 
+
 def majority_tokens_filtered(tokens, text):
-    '''Checks if most of the tokens were filtered out'''
-    if (len(tokens) / len(text.split(' '))) <= 0.5:
+    """Checks if most of the tokens were filtered out after processing"""
+    if (len(tokens) / len(text.split(" "))) <= 0.5:
         return True
     else:
         return False
 
+
 def check_quality_paragraph(tokens, text):
-    '''Runs functions to check that a paragraph isn't a junk paragraph'''
+    """Runs filter functions to check that a paragraph isn't a junk paragraph"""
 
     if majority_tokens_filtered(tokens, text):
         return False
-    if has_many_short_tokens(tokens, threshold = 4.0):
+    if has_many_short_tokens(tokens, threshold=4.0):
         return False
-    elif has_many_repeating(text, tokens, threshold = 0.6):
+    elif has_many_repeating(text, tokens, threshold=0.6):
         return False
-    elif has_extralong_tokens(text, threshold = 25):
+    elif has_extralong_tokens(text, threshold=25):
         return False
     elif is_a_toc(text):
         return False
     else:
         return True
 
+
 # Adapted from https://www.datacamp.com/community/tutorials/fuzzy-string-python
-def levenshtein_ratio_and_distance(s: str, t: str, ratio_calc: bool=False) -> Tuple[int,float]:
-    """ levenshtein_ratio_and_distance:
-        Calculates levenshtein distance between two strings.
-        If ratio_calc = True, the function computes the
-        levenshtein distance ratio of similarity between two strings
-        For all i and j, distance[i,j] will contain the Levenshtein
-        distance between the first i characters of s and the
-        first j characters of t
+def levenshtein_ratio_and_distance(
+    s: str, t: str, ratio_calc: bool = False
+) -> Tuple[int, float]:
+    """levenshtein_ratio_and_distance:
+    Calculates levenshtein distance between two strings.
+    If ratio_calc = True, the function computes the
+    levenshtein distance ratio of similarity between two strings
+    For all i and j, distance[i,j] will contain the Levenshtein
+    distance between the first i characters of s and the
+    first j characters of t
     """
     # Initialize matrix of zeros
-    rows = len(s)+1
-    cols = len(t)+1
-    distance = np.zeros((rows,cols),dtype = int)
+    rows = len(s) + 1
+    cols = len(t) + 1
+    distance = np.zeros((rows, cols), dtype=int)
 
     # Populate matrix of zeros with the indeces of each character of both strings
     for i in range(1, rows):
-        for k in range(1,cols):
+        for k in range(1, cols):
             distance[i][0] = i
             distance[0][k] = k
 
-    # Iterate over the matrix to compute the cost of deletions,insertions and/or substitutions    
+    # Iterate over the matrix to compute the cost of deletions,insertions and/or substitutions
     for col in range(1, cols):
         for row in range(1, rows):
-            if s[row-1] == t[col-1]:
-                cost = 0 # If the characters are the same in the two strings in a given position [i,j] then the cost is 0
+            if s[row - 1] == t[col - 1]:
+                cost = 0  # If the characters are the same in the two strings in a given position [i,j] then the cost is 0
             else:
                 # In order to align the results with those of the Python Levenshtein package, if we choose to calculate the ratio
                 # the cost of a substitution is 2. If we calculate just distance, then the cost of a substitution is 1.
@@ -296,15 +319,18 @@ def levenshtein_ratio_and_distance(s: str, t: str, ratio_calc: bool=False) -> Tu
                     cost = 2
                 else:
                     cost = 1
-            distance[row][col] = min(distance[row-1][col] + 1,      # Cost of deletions
-                                 distance[row][col-1] + 1,          # Cost of insertions
-                                 distance[row-1][col-1] + cost)     # Cost of substitutions
-    Ratio = ((len(s)+len(t)) - distance[row][col]) / (len(s)+len(t))
-    
+            distance[row][col] = min(
+                distance[row - 1][col] + 1,  # Cost of deletions
+                distance[row][col - 1] + 1,  # Cost of insertions
+                distance[row - 1][col - 1] + cost,
+            )  # Cost of substitutions
+    Ratio = ((len(s) + len(t)) - distance[row][col]) / (len(s) + len(t))
+
     return distance[row][col], Ratio
 
+
 def string_contains(str1: str, str2: str) -> bool:
-    '''Checks if a str2 contains str1'''
+    """Checks if a str2 contains str1"""
     set1 = str1.lower().split()
     set2 = str2.lower().split()
     if len(set(set1).intersection(set2)) == len(set1):
@@ -312,22 +338,24 @@ def string_contains(str1: str, str2: str) -> bool:
     else:
         return False
 
-def check_majority_numbers(query: str, ratio: float=0.6) -> bool:
-    '''Checks ratio of numerical characters in a string, True if ratio is less than ratio threshold'''
-    
-    if len(re.sub(r'[0-9]', '', query))/len(query) <= ratio:
+
+def check_majority_numbers(query: str, ratio: float = 0.6) -> bool:
+    """Checks ratio of numerical characters in a string, True if ratio is less than ratio threshold"""
+
+    if len(re.sub(r"[0-9]", "", query)) / len(query) <= ratio:
         return True
     else:
         return False
 
-def sort_first(samples: List[str]) -> Dict[str,List[str]]:
-    '''Makes a dictionary of first letter: string for faster lookup of strings'''
+
+def sort_first(samples: List[str]) -> Dict[str, List[str]]:
+    """Makes a dictionary of first letter: string for faster lookup of strings"""
 
     doc_dict = {}
     docs = []
     first_letters = []
     for i in list(set(samples)):
-        if type(i)==str:
+        if type(i) == str:
             first_letters.append(str(i)[0].lower())
             docs.append(i)
     zipped = dict(zip(docs, first_letters))
@@ -336,18 +364,21 @@ def sort_first(samples: List[str]) -> Dict[str,List[str]]:
 
     return doc_dict
 
+
 def filter_title_queries(queries: List[str], doc_ids: List[str]) -> List[str]:
-    '''Collects list of queries that appear in a list of doc_ids/appear to look like doc_ids'''
-    
+    """Collects list of queries that appear in a list of doc_ids/appear to look like doc_ids"""
+
     remove = []
     logger.info("Making dictionary for doc titles")
     doc_dict = sort_first(doc_ids)
     logger.info("*** Comparing queries to doc titles\n")
     for i in queries:
-        if not re.search('[a-zA-Z]', i):  ## if the query has no letters, remove
+        if not re.search("[a-zA-Z]", i):  ## if the query has no letters, remove
             logger.info(f"*** Removing query: {i} // (contains no characters)")
             remove.append(i)
-        elif re.search('[0-9]', i):       ## if there are numbers in the query, compare to titles
+        elif re.search(
+            "[0-9]", i
+        ):  ## if there are numbers in the query, compare to titles
             if i.lower() in list(set([q.lower() for q in doc_ids])):
                 logger.info(f"*** Removing query: {i} // (in doc ids)")
                 remove.append(i)
@@ -357,21 +388,29 @@ def filter_title_queries(queries: List[str], doc_ids: List[str]) -> List[str]:
             else:
                 try:
                     cleaned = i.upper().replace("'", "")
-                    start = cleaned[0].lower() # starting letter
+                    start = cleaned[0].lower()  # starting letter
                     sub = doc_dict[start]
                     for x in sub:
                         if string_contains(cleaned, x):
-                            logger.info(f"*** Removing query: {i} // (string inside string)")
+                            logger.info(
+                                f"*** Removing query: {i} // (string inside string)"
+                            )
                             remove.append(i)
                             break
                         else:
-                            dist, ratio = levenshtein_ratio_and_distance(cleaned.lower(),x.lower())
+                            dist, ratio = levenshtein_ratio_and_distance(
+                                cleaned.lower(), x.lower()
+                            )
                             if len(i) > 12 and ratio >= 0.75:
-                                logger.info(f"*** Removing query: {i} // ({dist} char, {ratio} ratio diff from doc title)")
+                                logger.info(
+                                    f"*** Removing query: {i} // ({dist} char, {ratio} ratio diff from doc title)"
+                                )
                                 remove.append(i)
                                 break
                             elif len(i) < 12 and dist <= 2:
-                                logger.info(f"*** Removing query: {i} // ({dist} char, {ratio} ratio diff from doc title)")
+                                logger.info(
+                                    f"*** Removing query: {i} // ({dist} char, {ratio} ratio diff from doc title)"
+                                )
                                 remove.append(i)
                                 break
                 except Exception as e:

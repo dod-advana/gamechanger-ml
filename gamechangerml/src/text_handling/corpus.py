@@ -18,15 +18,19 @@ class LocalCorpus(object):
         min_token_len=3,
         verbose=False,
         bert_based_tokenizer=None,
-        files_to_use=None
+        files_to_use=None,
     ):
         self.directory = directory
-        if files_to_use: ## if we only want to do this on a subset
-            self.file_list = list(set([os.path.join(directory, i) for i in files_to_use]).intersection([
-                os.path.join(directory, file)
-                for file in os.listdir(directory)
-                if file[-5:] == ".json"
-            ]))
+        if files_to_use:  ## if we only want to do this on a subset
+            self.file_list = list(
+                set([os.path.join(directory, i) for i in files_to_use]).intersection(
+                    [
+                        os.path.join(directory, file)
+                        for file in os.listdir(directory)
+                        if file[-5:] == ".json"
+                    ]
+                )
+            )
         else:
             self.file_list = [
                 os.path.join(directory, file)
@@ -72,7 +76,7 @@ class LocalCorpus(object):
                                     yield tokens, para_id
                                 else:
                                     yield tokens
-                    
+
                 progress += 1
                 processmanager.update_status(
                     processmanager.loading_corpus,
