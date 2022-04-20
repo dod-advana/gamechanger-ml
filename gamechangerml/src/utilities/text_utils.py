@@ -223,7 +223,7 @@ def get_tokens(s: str) -> List[str]:
     return s.split()
 
 
-def has_many_short_tokens(processed_tokens, threshold=4.0):
+def has_many_short_tokens(processed_tokens, threshold):
     """Checks if the median length of tokens is less than the expected threshold"""
     median_len = np.median([len(i) for i in processed_tokens])
     if median_len <= threshold:
@@ -232,7 +232,7 @@ def has_many_short_tokens(processed_tokens, threshold=4.0):
         return False
 
 
-def has_many_repeating(text, tokens, threshold=0.6):
+def has_many_repeating(text, tokens, threshold):
     """Checks if the ratio of unique tokens is less than an expected threshold"""
     ratio_unique = len(set(tokens)) / len(text.split(" "))
     if ratio_unique < threshold:
@@ -241,10 +241,12 @@ def has_many_repeating(text, tokens, threshold=0.6):
         return False
 
 
-def has_extralong_tokens(text, threshold=25):
-    """Checks if the paragraph has a token that exceeds the threshold for normal token length"""
-    longest_token = np.max([len(i) for i in text.split(" ")])
-    if longest_token > threshold:
+def has_extralong_tokens(text, threshold):
+    """Checks if the paragraph has a high percentage of (nonwebsite) tokens exceeding threshold for normal token length"""
+    websites = ['http', 'www.']
+    tokens = [i for i in text.split(" ") if i[:4] not in websites]
+    long_tokens = [i for i in tokens if len(i) > threshold]
+    if len(long_tokens) / len(tokens) > 0.05:
         return True
     else:
         return False
@@ -272,9 +274,9 @@ def check_quality_paragraph(tokens, text):
 
     if majority_tokens_filtered(tokens, text):
         return False
-    if has_many_short_tokens(tokens, threshold=4.0):
+    if has_many_short_tokens(tokens, threshold=2.5):
         return False
-    elif has_many_repeating(text, tokens, threshold=0.6):
+    elif has_many_repeating(text, tokens, threshold=0.2):
         return False
     elif has_extralong_tokens(text, threshold=25):
         return False
