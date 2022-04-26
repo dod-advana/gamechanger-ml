@@ -1,0 +1,66 @@
+[tool.poetry]
+name = "gamechangerml"
+version = "1.5.0"
+description = "Package for GAMECHANGER ML modules"
+authors = ["Booz Allen Hamilton <gamechanger@advana>"]
+
+[tool.poetry.dependencies]
+python = "3.10.3"
+annoy = "^1.17.0"
+bert-extractive-summarizer = "^0.10.1"
+boto3 = "^1.21.41"
+elasticsearch = "^8.1.2"
+faiss-cpu = "^1.7.2"
+fastapi-utils = "^0.2.1"
+fastapi = "^0.75.1"
+fuzzywuzzy = "^0.18.0"
+gensim = "^4.1.2"
+gunicorn = "^20.1.0"
+httptools = "^0.4.0"
+matplotlib = "^3.5.1"
+networkx = "^2.8"
+nltk = "^3.7"
+numpy = "^1.22.3"
+packaging = "^21.3"
+pandas = "^1.4.2"
+psycopg2-binary = "^2.9.3"
+pytest = "^7.1.1"
+PyYAML = "^6.0"
+redis = "^4.2.2"
+requests = "^2.27.1"
+scikit-learn = "^1.0.2"
+sentence-transformers = "^2.2.0"
+spacy = "^3.2.4"
+tensorflow = "^2.8.0"
+tokenizers = "^0.12.1"
+torch = "^1.11.0"
+tqdm = "^4.64.0"
+transformers = "^4.18.0"
+txtai = "^4.3.1"
+urllib3 = "^1.26.9"
+uvicorn = "^0.17.6"
+uvloop = "^0.16.0"
+wikipedia = "^1.4.0"
+xgboost = "^1.5.2"
+en-core-web-lg = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.2.0/en_core_web_lg-3.2.0.tar.gz"}
+en-core-web-md = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.2.0/en_core_web_md-3.2.0.tar.gz"}
+en-core-web-sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.2.0/en_core_web_sm-3.2.0.tar.gz"}
+
+
+[tool.poetry.dev-dependencies]
+hypothesis = "^6.43.1"
+ipython = "^8.2.0"
+mypy = "^0.942"
+pylint = "^2.13.5"
+pytest = "^7.1.1"
+flake8 = "^4.0.1"
+devtools = "^0.8.0"
+typing-extensions = "^4.1.1"
+matplotlib = "^3.5.1"
+seaborn = "^0.11.2"
+autopep8 = "^1.6.0"
+black = "^22.3.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
