@@ -15,7 +15,6 @@ from gamechangerml.src.search.sent_transformer.model import (
 from gamechangerml.src.recommender.recommend import Recommender
 from gamechangerml.src.featurization.ner.extract import NERExtractor
 from gamechangerml.src.search.embed_reader import sparse
-from gamechangerml import MODEL_PATH
 from gamechangerml.api.fastapi.settings import (
     logger,
     TOPICS_MODEL,
@@ -29,8 +28,8 @@ from gamechangerml.api.fastapi.settings import (
     latest_intel_model_sim,
     latest_intel_model_trans,
     QA_MODEL,
-    NER_MODEL
-
+    NER_MODEL,
+    NER_TOKENIZER,
 )
 from gamechangerml.src.featurization.word_sim import WordSim
 from gamechangerml.src.featurization.topic_modeling import Topics
@@ -121,12 +120,10 @@ class ModelLoader:
             )
             ModelLoader.initRecommender()
         return ModelLoader.__recommender
-    
+
     def getNER(self):
         if ModelLoader.__ner is None:
-            logger.warning(
-                "ner was not set and was attempted to be used. Running init"
-            )
+            logger.warning("ner was not set and was attempted to be used. Running init")
             ModelLoader.initNER()
         return ModelLoader.__ner
 
@@ -225,8 +222,7 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(
-            f"Loading Sentence Searcher with sent index path: {index_path}")
+        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
             if MODEL_LOAD_FLAG:
                 ModelLoader.__sentence_searcher = SentenceSearcher(
@@ -274,8 +270,7 @@ class ModelLoader:
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
             if MODEL_LOAD_FLAG:
-                ModelLoader.__sparse_reader = sparse.SparseReader(
-                    model_name=model_name)
+                ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
                 logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
@@ -310,20 +305,18 @@ class ModelLoader:
                 logger.info("Finished loading Recommender")
         except OSError:
             logger.error(f"** Could not load Recommender")
-    
+
     @staticmethod
-    def initNER(ner_model_name=NER_MODEL.value):
+    def initNER(model_name=NER_MODEL.value, tokenizer=NER_TOKENIZER.value):
         """initNER - loads the NER class on start
         Args:
         Returns:
         """
         try:
             if MODEL_LOAD_FLAG:
-                logger.info("Loading NER class")
-                #tuned_model_loc = os.path.join(MODEL_PATH, ner_model_name)
-                logger.info(NER_MODEL.value)
-                ModelLoader.__ner = NERExtractor(ner_model_name)
+                logger.info("Loading NER Extractor")
+                ModelLoader.__ner = NERExtractor(model_name, tokenizer)
                 logger.info("Finished loading NER model")
         except OSError as e:
             logger.error(f"** could not load NER model")
-            logger.error(e, exc_info=True)
+            logger.error(e)
