@@ -13,7 +13,9 @@ from gamechangerml.src.search.sent_transformer.model import (
     SentenceEncoder,
 )
 from gamechangerml.src.recommender.recommend import Recommender
+from gamechangerml.src.featurization.ner.extract import NERExtractor
 from gamechangerml.src.search.embed_reader import sparse
+from gamechangerml import MODEL_PATH
 from gamechangerml.api.fastapi.settings import (
     logger,
     TOPICS_MODEL,
@@ -27,6 +29,8 @@ from gamechangerml.api.fastapi.settings import (
     latest_intel_model_sim,
     latest_intel_model_trans,
     QA_MODEL,
+    NER_MODEL
+
 )
 from gamechangerml.src.featurization.word_sim import WordSim
 from gamechangerml.src.featurization.topic_modeling import Topics
@@ -48,6 +52,7 @@ class ModelLoader:
         __sparse_reader = None
         __topic_model = None
         __recommender = None
+        __ner = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -116,6 +121,14 @@ class ModelLoader:
             )
             ModelLoader.initRecommender()
         return ModelLoader.__recommender
+    
+    def getNER(self):
+        if ModelLoader.__ner is None:
+            logger.warning(
+                "ner was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initNER()
+        return ModelLoader.__ner
 
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
@@ -131,6 +144,7 @@ class ModelLoader:
     word_sim = property(getWordSim, set_error)
     topic_model = property(getTopicModel, set_error)
     recommender = property(getRecommender, set_error)
+    ner = property(getNER, set_error)
 
     @staticmethod
     def initQA(qa_model_name=QA_MODEL.value):
@@ -296,3 +310,20 @@ class ModelLoader:
                 logger.info("Finished loading Recommender")
         except OSError:
             logger.error(f"** Could not load Recommender")
+    
+    @staticmethod
+    def initNER(ner_model_name=NER_MODEL.value):
+        """initNER - loads the NER class on start
+        Args:
+        Returns:
+        """
+        try:
+            if MODEL_LOAD_FLAG:
+                logger.info("Loading NER class")
+                #tuned_model_loc = os.path.join(MODEL_PATH, ner_model_name)
+                logger.info(NER_MODEL.value)
+                ModelLoader.__ner = NERExtractor(ner_model_name)
+                logger.info("Finished loading NER model")
+        except OSError as e:
+            logger.error(f"** could not load NER model")
+            logger.error(e, exc_info=True)

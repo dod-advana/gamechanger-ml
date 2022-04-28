@@ -122,6 +122,31 @@ def get_model_paths():
         logger.error(e)
         logger.info("Cannot get Topics model path")
         TOPICS_PATH = "gamechangerml/models/"
+    
+    # NER
+    try:
+        ner_model_dirs = [
+            name
+            for name in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            if "ner_" in name
+            and os.path.isdir(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
+        ]
+        ner_model_dirs.sort(reverse=True)
+
+        if len(ner_model_dirs) > 0:
+            NER_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, ner_model_dirs[0]
+            )
+        else:
+            raise ValueError(f"No ner_<date> folders in {Config.LOCAL_PACKAGED_MODELS_DIR}")
+        
+        logger.info(f"NER PATH: {NER_PATH}")
+
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get NER model path")
+        NER_PATH = "gamechangerml/models/distilroBERTa_ner_20220414"
+
 
     model_dict = {
         "transformers": LOCAL_TRANSFORMERS_DIR,
@@ -130,5 +155,6 @@ def get_model_paths():
         "qexp_jbook": QEXP_JBOOK_MODEL_PATH,
         "word_sim": WORD_SIM_MODEL_PATH,
         "topics": TOPICS_PATH,
+        "ner": NER_PATH
     }
     return model_dict

@@ -251,3 +251,17 @@ def unquoted(term):
         return term[1:-1]
     else:
         return term
+
+@router.post("/extractEntities", status_code=200)
+async def post_ner(body: dict, response: Response) -> dict:
+    entities = {}
+    try:
+        logger.info(body)
+        entities['entities'] = MODELS.ner.predict(body['text'])
+        logger.info(entities)
+    except Exception as e:
+        logger.warning(f"Could not get entities")
+        logger.warning(e)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    return entities
