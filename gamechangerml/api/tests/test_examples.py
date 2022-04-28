@@ -160,3 +160,64 @@ class TestSet:
         # 'msmarco-distilbert-base-v2_2021-10-17',
         # 'msmarco-distilbert-base-v2_20211210',
     }
+    ner_paragraph = {"text":"(1)The Chairman of the Joint Chiefs of Staff is the principal military adviser to the President, the National Security Council, the Homeland Security Council, and the Secretary of Defense.(2)The other members of the Joint Chiefs of Staff are military advisers to the President, the National Security Council, the Homeland Security Council, and the Secretary of Defense as specified in subsection (d)."}
+    ner_results = {
+        "entities": [
+            {
+            "label": "ROLE",
+            "start": 6,
+            "end": 44,
+            "text": "Chairman of the Joint Chiefs of Staff",
+            "score": 0.9998289346694946
+            },
+            {
+            "label": "ROLE",
+            "start": 85,
+            "end": 95,
+            "text": "President",
+            "score": 0.9999238848686218
+            },
+            {
+            "label": "ORG",
+            "start": 100,
+            "end": 126,
+            "text": "National Security Council",
+            "score": 0.9895954132080078
+            },
+            {
+            "label": "ROLE",
+            "start": 166,
+            "end": 187,
+            "text": "Secretary of Defense",
+            "score": 0.9998887181282043
+            },
+            {
+            "label": "ORG",
+            "start": 215,
+            "end": 237,
+            "text": "Joint Chiefs of Staff",
+            "score": 0.9959278702735901
+            },
+            {
+            "label": "ROLE",
+            "start": 266,
+            "end": 276,
+            "text": "President",
+            "score": 0.9999580383300781
+            },
+            {
+            "label": "ORG",
+            "start": 281,
+            "end": 307,
+            "text": "National Security Council",
+            "score": 0.9938161969184875
+            },
+            {
+            "label": "ROLE",
+            "start": 347,
+            "end": 368,
+            "text": "Secretary of Defense",
+            "score": 0.9998066425323486
+            }
+        ]
+    }
