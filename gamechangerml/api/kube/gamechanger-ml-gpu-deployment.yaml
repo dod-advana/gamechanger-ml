@@ -49,6 +49,7 @@ spec:
             - name: REDIS_PORT
             - name: S3_QEXP_PATH
             - name: S3_SENT_INDEX_PATH
+            - name: S3_DOC_COMPARE_SENT_INDEX_PATH
             - name: S3_TRANS_MODEL_PATH
             - name: WEB_CONCURRENCY
               value: "1"

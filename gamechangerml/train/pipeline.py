@@ -53,6 +53,8 @@ from gamechangerml.src.utilities import utils
 from gamechangerml.configs.config import (
     DefaultConfig,
     D2VConfig,
+    DocCompareEmbedderConfig,
+    DocCompareSimilarityConfig,
     QexpConfig,
     QAConfig,
     EmbedderConfig,
@@ -70,8 +72,7 @@ os.environ["PYTHONWARNINGS"] = "ignore:Unverified HTTPS request"
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
-formatter = logging.Formatter(
-    "%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s")
+formatter = logging.Formatter("%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
@@ -106,14 +107,12 @@ class Pipeline:
         # read in input data files
         try:
             self.search_history = pd.read_csv(
-                os.path.join(USER_DATA_PATH, "search_history",
-                             "SearchPdfMapping.csv")
+                os.path.join(USER_DATA_PATH, "search_history", "SearchPdfMapping.csv")
             )
             self.topics = pd.read_csv(
                 os.path.join(FEATURES_DATA_PATH, "topics_wiki.csv")
             )
-            self.orgs = pd.read_csv(os.path.join(
-                FEATURES_DATA_PATH, "agencies.csv"))
+            self.orgs = pd.read_csv(os.path.join(FEATURES_DATA_PATH, "agencies.csv"))
         except Exception as e:
             logger.info(e)
 
@@ -151,19 +150,19 @@ class Pipeline:
     def create_metadata(
         self,
         meta_steps,
-        testing_only:bool,
+        testing_only: bool,
         corpus_dir: t.Union[str, os.PathLike] = CORPUS_DIR,
         index_path: t.Union[str, os.PathLike] = os.path.join(
             MODEL_PATH, "sent_index_20210715"
         ),
         days: int = 80,
         prod_data_file=PROD_DATA_FILE,
-        n_returns: int=50,
-        level: str='silver',
-        update_eval_data: bool=True,
+        n_returns: int = 50,
+        level: str = "silver",
+        update_eval_data: bool = True,
         retriever=None,
         upload: bool = True,
-        version: str = "v1"
+        version: str = "v1",
     ) -> None:
         """
         create_metadata: combines datasets to create readable sets for ingest
@@ -185,14 +184,16 @@ class Pipeline:
         if "pop_docs" in meta_steps:
             make_pop_docs(self.search_history, self.pop_docs_path)
         if "combined_ents" in meta_steps:
-            make_combined_entities(
-                self.topics, self.orgs, self.combined_ents_path)
+            make_combined_entities(self.topics, self.orgs, self.combined_ents_path)
         if "rank_features" in meta_steps:
             make_corpus_meta(corpus_dir, days, prod_data_file, upload)
         if "update_sent_data" in meta_steps:
             try:
                 make_training_data(
-                    index_path=index_path, level=level, update_eval_data=update_eval_data, testing_only=testing_only
+                    index_path=index_path,
+                    level=level,
+                    update_eval_data=update_eval_data,
+                    testing_only=testing_only,
                 )
             except Exception as e:
                 logger.warning(e, exc_info=True)
@@ -203,8 +204,7 @@ class Pipeline:
                 model_name = datetime.now().strftime("%Y%m%d")
                 model_prefix = "data"
                 dst_path = DATA_PATH + model_name + ".tar.gz"
-                utils.create_tgz_from_dir(
-                    src_dir=DATA_PATH, dst_archive=dst_path)
+                utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
                 utils.upload(s3_path, dst_path, model_prefix, model_name)
             except Exception as e:
                 logger.warning(e, exc_info=True)
@@ -216,9 +216,9 @@ class Pipeline:
         warmup_steps: int = 100,
         testing_only: bool = False,
         remake_train_data: bool = True,
-        retriever = None,
-        model = None,
-        version: str = "v1"
+        retriever=None,
+        model=None,
+        version: str = "v1",
     ) -> t.Dict[str, str]:
         """finetune_sent: finetunes the sentence transformer - saves new model, 
            a csv file of old/new cos sim scores, and a metadata file.
@@ -237,49 +237,48 @@ class Pipeline:
                     LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
                 )
             else:
-                model_load_path = os.path.join(
-                    LOCAL_TRANSFORMERS_DIR, model
-                )
+                model_load_path = os.path.join(LOCAL_TRANSFORMERS_DIR, model)
 
             logger.info(f"Model load path set to: {str(model_load_path)}")
-            no_data=False
+            no_data = False
             base_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
 
             ## check if training data exists
             if remake_train_data:
                 no_data = True
-            elif not os.path.isdir(base_dir): # if no training data directory exists
-                no_data=True
-                os.makedirs(base_dir)
-            elif len(os.listdir(base_dir))==0: # if base dir exists but there are no files
-                no_data=True
-            elif get_most_recent_dir(base_dir)==None:
+            elif not os.path.isdir(base_dir):  # if no training data directory exists
                 no_data = True
-            elif len(os.listdir(get_most_recent_dir(base_dir)))==0:
-                no_data=True
+                os.makedirs(base_dir)
+            elif (
+                len(os.listdir(base_dir)) == 0
+            ):  # if base dir exists but there are no files
+                no_data = True
+            elif get_most_recent_dir(base_dir) == None:
+                no_data = True
+            elif len(os.listdir(get_most_recent_dir(base_dir))) == 0:
+                no_data = True
             logger.info(f"No data flag is set to: {str(no_data)}")
 
-            #if we don't have data, make training data
-            if no_data: 
+            # if we don't have data, make training data
+            if no_data:
                 make_training_data(
                     index_path=SENT_INDEX,
-                    level='silver', 
+                    level="silver",
                     update_eval_data=True,
-                    testing_only=testing_only
+                    testing_only=testing_only,
                 )
 
             data_path = get_most_recent_dir(base_dir)
-            timestamp = str(data_path).split('/')[-1]
+            timestamp = str(data_path).split("/")[-1]
 
             ## set model save path
             if testing_only:
-                model_save_path = model_load_path + '_TEST_' + timestamp
+                model_save_path = model_load_path + "_TEST_" + timestamp
             else:
                 model_id = datetime.now().strftime("%Y%m%d")
                 model_save_path = model_load_path + "_" + model_id
-            logger.info(
-                f"Setting {str(model_save_path)} as save path for new model")
-            
+            logger.info(f"Setting {str(model_save_path)} as save path for new model")
+
             logger.info(f"Loading in domain data to finetune from {data_path}")
             finetuner = STFinetuner(
                 model_load_path=model_load_path,
@@ -297,16 +296,15 @@ class Pipeline:
 
             # eval finetuned model
             logger.info("Done making finetuned model, runnin evals")
-            model_name = model_save_path.split('/')[-1]
+            model_name = model_save_path.split("/")[-1]
             train_meta = open_json("training_metadata.json", data_path)
-            validation_data = train_meta['validation_data_used'].split('/')[-1]
+            validation_data = train_meta["validation_data_used"].split("/")[-1]
             evals = eval_sent(model_name, validation_data, eval_type="domain")
 
             try:
                 for metric in evals:
                     if metric != "model_name":
-                        mlflow.log_metric(
-                            key=metric, value=evals[metric])
+                        mlflow.log_metric(key=metric, value=evals[metric])
             except Exception as e:
                 logger.warning(e)
 
@@ -342,13 +340,10 @@ class Pipeline:
             logger.info(f"Attempting to evaluate model {model_name}")
 
             if "bert-base-cased-squad2" in model_name:
-                results[eval_type] = eval_qa(
-                    model_name, sample_limit, eval_type)
+                results[eval_type] = eval_qa(model_name, sample_limit, eval_type)
             elif "msmarco-distilbert" in model_name:
                 for e_type in ["domain", "original"]:
-                    results[e_type] = eval_sent(
-                        model_name, validation_data, e_type
-                    )
+                    results[e_type] = eval_sent(model_name, validation_data, e_type)
             elif "multi-qa-MiniLM" in model_name:
                 results["domain"] = eval_sent(
                     model_name, validation_data, eval_type="domain"
@@ -358,8 +353,7 @@ class Pipeline:
                     model_name, validation_data, eval_type="domain"
                 )
             elif "distilbart-mnli-12-3" in model_name:
-                results[eval_type] = eval_sim(
-                    model_name, sample_limit, eval_type)
+                results[eval_type] = eval_sim(model_name, sample_limit, eval_type)
             elif "qexp" in model_name:
                 results["domain"] = eval_qe(model_name)
             else:
@@ -416,8 +410,7 @@ class Pipeline:
             # build ANN indices
             index_dir = os.path.join(model_dest, model_path)
             bqe.main(corpus, index_dir, **QexpConfig.MODEL_ARGS["bqe"])
-            logger.info(
-                "-------------- Model Training Complete --------------")
+            logger.info("-------------- Model Training Complete --------------")
             # Create .tgz file
             dst_path = index_dir + ".tar.gz"
             utils.create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
@@ -436,8 +429,7 @@ class Pipeline:
                 # qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
                 # evals = qxpeval.results
 
-                logger.info(
-                    "-------------- Assessment is not available--------------")
+                logger.info("-------------- Assessment is not available--------------")
                 """
                 results = mau.assess_model(
                     model_name=model_id,
@@ -452,8 +444,7 @@ class Pipeline:
                             key=metric, value=results[metric])
                 """
 
-                logger.info(
-                    "-------------- Finished Assessment --------------")
+                logger.info("-------------- Finished Assessment --------------")
             else:
                 logger.info("-------------- No Assessment Ran --------------")
         except Exception as e:
@@ -490,8 +481,7 @@ class Pipeline:
         # GPU check
         use_gpu = gpu
         if use_gpu and not torch.cuda.is_available:
-            logger.info(
-                "GPU is not available. Setting `gpu` argument to False")
+            logger.info("GPU is not available. Setting `gpu` argument to False")
             use_gpu = False
 
         # Define model saving directories
@@ -503,8 +493,7 @@ class Pipeline:
         # Define new index directory
         if not os.path.isdir(local_sent_index_dir):
             os.mkdir(local_sent_index_dir)
-        logger.info(
-            "-------------- Building Sentence Embeddings --------------")
+        logger.info("-------------- Building Sentence Embeddings --------------")
         logger.info("Loading Encoder Model...")
 
         # If existing index exists, copy content from reference index
@@ -524,8 +513,7 @@ class Pipeline:
             )
             logger.info("-------------- Indexing Documents--------------")
             start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            encoder.index_documents(
-                corpus_path=corpus, index_path=local_sent_index_dir)
+            encoder.index_documents(corpus_path=corpus, index_path=local_sent_index_dir)
             end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             logger.info("-------------- Completed Indexing --------------")
             user = get_user(logger)
@@ -592,8 +580,7 @@ class Pipeline:
                 )
                 logger.error(e)
 
-            logger.info(
-                "-------------- Finished Sentence Embedding--------------")
+            logger.info("-------------- Finished Sentence Embedding--------------")
         except Exception as e:
             logger.warning("Error with creating embedding")
             logger.error(e)
@@ -602,6 +589,154 @@ class Pipeline:
             S3_MODELS_PATH = "bronze/gamechanger/models"
             s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
             utils.upload(s3_path, dst_path, "sentence_index", model_id)
+        return metadata, evals
+
+    def create_doc_compare_embedding(
+        self,
+        corpus,
+        existing_embeds=None,
+        encoder_model="msmarco-distilbert-base-v2_2021-10-17",
+        gpu=True,
+        upload=False,
+        version="v1",
+        validate=True,
+    ):
+        """
+        create_embedding: creates a sentence embedding for document compare
+        Args:
+            params for sentence configuration
+        Returns:
+            metadata: params or meta information for qexp
+            evals: evaluation results dict
+        """
+        # Error fix for saving index and model to tgz
+        # https://github.com/huggingface/transformers/issues/5486
+        try:
+            os.environ["TOKENIZERS_PARALLELISM"] = "false"
+        except Exception as e:
+            logger.warning(e)
+
+        # GPU check
+        use_gpu = gpu
+        if use_gpu and not torch.cuda.is_available:
+            logger.info("GPU is not available. Setting `gpu` argument to False")
+            use_gpu = False
+
+        # Define model saving directories
+        model_dir = MODEL_PATH
+        model_id = datetime.now().strftime("%Y%m%d")
+        model_name = "doc_compare_index_" + model_id
+        local_doc_compare_index_dir = os.path.join(model_dir, model_name)
+
+        # Define new index directory
+        if not os.path.isdir(local_doc_compare_index_dir):
+            os.mkdir(local_doc_compare_index_dir)
+        logger.info(
+            "-------------- Building Doc Compare Sentence Embeddings --------------"
+        )
+        logger.info("Loading Doc Compare Encoder Model...")
+        logger.info(f"existing_embeds  {existing_embeds}")
+
+        # If existing index exists, copy content from reference index
+        if existing_embeds is not None:
+            copy_tree(existing_embeds, local_doc_compare_index_dir)
+
+        # Building the Index
+        try:
+            logger.info(
+                f"Creating Document Compare SentenceEncoder with {encoder_model} on {corpus}"
+            )
+            encoder = SentenceEncoder(
+                encoder_model_name=encoder_model,
+                use_gpu=use_gpu,
+                transformer_path=LOCAL_TRANSFORMERS_DIR,
+                **EmbedderConfig.MODEL_ARGS,
+            )
+            logger.info(
+                f"Creating Document Compare Embeddings with {encoder_model} on {corpus}"
+            )
+            logger.info("-------------- Indexing Documents--------------")
+            start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            encoder.index_documents(
+                corpus_path=corpus, index_path=local_doc_compare_index_dir
+            )
+            end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            logger.info("-------------- Completed Indexing --------------")
+            user = get_user(logger)
+
+            # Checking length of IDs
+            try:
+                DOC_COMPARE_INDEX_PATH = model_path_dict["doc_compare"]
+                old_index_len = get_index_size(DOC_COMPARE_INDEX_PATH)
+                new_index_len = len(encoder.embedder.config["ids"])
+                if new_index_len < old_index_len:
+                    logger.warning(
+                        f"Length of index ({str(new_index_len)}) is shorter than previous index ({str(old_index_len)})"
+                    )
+                    logger.info(f"Old index location: {str(DOC_COMPARE_INDEX_PATH)}")
+            except Exception as e:
+                logger.warning(
+                    f"Could not compare length to old index: {str(DOC_COMPARE_INDEX_PATH)}"
+                )
+                logger.error(e)
+
+            # Generating process metadata
+            metadata = {
+                "user": user,
+                "date_started": start_time,
+                "date_finished": end_time,
+                "doc_id_count": len(encoder.embedder.config["ids"]),
+                "corpus_name": corpus,
+                "encoder_model": encoder_model,
+            }
+
+            # Create metadata file
+            metadata_path = os.path.join(local_doc_compare_index_dir, "metadata.json")
+            with open(metadata_path, "w") as fp:
+                json.dump(metadata, fp)
+
+            logger.info(f"Saved metadata.json to {metadata_path}")
+            # Create .tgz file
+            dst_path = local_doc_compare_index_dir + ".tar.gz"
+            utils.create_tgz_from_dir(
+                src_dir=local_doc_compare_index_dir, dst_archive=dst_path
+            )
+
+            logger.info(f"Created tgz file and saved to {dst_path}")
+            logger.info("-------------- Running Evaluation --------------")
+
+            try:
+                evals = {}
+                for level in ["gold", "silver"]:
+                    evaluation = IndomainRetrieverEvaluator(
+                        encoder=encoder,
+                        index=model_name,
+                        data_level=level,
+                        encoder_model_name=DocCompareEmbedderConfig.BASE_MODEL,
+                        sim_model_name=DocCompareSimilarityConfig.BASE_MODEL,
+                        **DocCompareEmbedderConfig.MODEL_ARGS,
+                    )
+                    evals[level] = evaluation.results
+                    logger.info(
+                        f"Evals for {level} standard validation: {(str(evaluation.results))}"
+                    )
+            except Exception as e:
+                logger.warning(
+                    "Could not create evaluations for the new doc compare sentence index"
+                )
+                logger.error(e)
+
+            logger.info(
+                "-------------- Finished Doc Compare Sentence Embedding--------------"
+            )
+        except Exception as e:
+            logger.warning("Error with creating doc compare embedding")
+            logger.error(e)
+        # Upload to S3
+        if upload:
+            S3_MODELS_PATH = "bronze/gamechanger/models"
+            s3_path = os.path.join(S3_MODELS_PATH, f"doc_compare_sent_index/{version}")
+            utils.upload(s3_path, dst_path, "doc_compare_sent_index", model_id)
         return metadata, evals
 
     def init_ltr(self):
@@ -620,7 +755,12 @@ class Pipeline:
     def create_ltr(self, daysBack: int = 180):
         try:
             ltr = self.ltr
-            processmanager.update_status(processmanager.ltr_creation, 0, 4,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.ltr_creation,
+                0,
+                4,
+                thread_id=threading.current_thread().ident,
+            )
             logger.info("Attempting to create judgement list")
             # NOTE: always set it false right now since there needs to be API changes in the WEB
             remote_mappings = False
@@ -629,15 +769,30 @@ class Pipeline:
             judgements = ltr.generate_judgement(
                 remote_mappings=remote_mappings, daysBack=daysBack
             )
-            processmanager.update_status(processmanager.ltr_creation, 1, 4,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.ltr_creation,
+                1,
+                4,
+                thread_id=threading.current_thread().ident,
+            )
             logger.info("Attempting to get features")
             fts = ltr.generate_ft_txt_file(judgements)
-            processmanager.update_status(processmanager.ltr_creation, 2, 4,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.ltr_creation,
+                2,
+                4,
+                thread_id=threading.current_thread().ident,
+            )
             logger.info("Attempting to read in data")
             ltr.data = ltr.read_xg_data()
             logger.info("Attempting to train LTR model")
             bst, model = ltr.train()
-            processmanager.update_status(processmanager.ltr_creation, 3, 4,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.ltr_creation,
+                3,
+                4,
+                thread_id=threading.current_thread().ident,
+            )
             logger.info("Created LTR model")
             with open(os.path.join(MODEL_PATH, "ltr/xgb-model.json")) as f:
                 model = json.load(f)
@@ -646,11 +801,18 @@ class Pipeline:
             logger.info(resp)
             resp = ltr.post_model(model, model_name="ltr_model")
             logger.info("Posted LTR model")
-            processmanager.update_status(processmanager.ltr_creation, 4, 4,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.ltr_creation,
+                4,
+                4,
+                thread_id=threading.current_thread().ident,
+            )
         except Exception as e:
             logger.error("Could not create LTR")
 
-    def create_topics(self, sample_rate=None, upload=False, corpus_dir=CORPUS_DIR, version="v2"):
+    def create_topics(
+        self, sample_rate=None, upload=False, corpus_dir=CORPUS_DIR, version="v2"
+    ):
         try:
             model_id = datetime.now().strftime("%Y%m%d%H%M%S")
             model_dir = DefaultConfig.LOCAL_MODEL_DIR
@@ -682,11 +844,9 @@ class Pipeline:
             # Upload to S3
             if upload:
                 S3_MODELS_PATH = "bronze/gamechanger/models"
-                s3_path = os.path.join(
-                    S3_MODELS_PATH, f"topic_model/{version}")
+                s3_path = os.path.join(S3_MODELS_PATH, f"topic_model/{version}")
                 logger.info(f"Topics uploading to {s3_path}")
-                self.upload(s3_path, tar_path,
-                            "topic_model", model_id, version)
+                self.upload(s3_path, tar_path, "topic_model", model_id, version)
 
             evals = None  # TODO: figure out how to evaluate this
             return metadata, evals
@@ -699,8 +859,7 @@ class Pipeline:
         logger.info(f"Uploading files to {s3_path}")
         logger.info(f"\tUploading: {local_path}")
         # local_path = os.path.join(dst_path)
-        s3_path = os.path.join(
-            s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
+        s3_path = os.path.join(s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
         logger.info(f"s3_path {s3_path}")
         utils.upload_file(local_path, s3_path)
         logger.info(f"Successfully uploaded files to {s3_path}")
@@ -733,15 +892,25 @@ class Pipeline:
                     metadata, evals = self.create_topics(**params)
                 elif build_type == "meta":
                     self.create_metadata(**params)
+                elif build_type == "doc_compare_sentence":
+                    metadata, evals = self.create_doc_compare_embedding(**params)
 
                 self.mlflow_record(metadata, evals)
                 processmanager.update_status(
-                    processmanager.training, 0, 1, f"training {build_type} model",thread_id=threading.current_thread().ident
+                    processmanager.training,
+                    0,
+                    1,
+                    f"training {build_type} model",
+                    thread_id=threading.current_thread().ident,
                 )
 
             mlflow.end_run()
             processmanager.update_status(
-                processmanager.training, 1, 1, f"trained {build_type} model",thread_id=threading.current_thread().ident
+                processmanager.training,
+                1,
+                1,
+                f"trained {build_type} model",
+                thread_id=threading.current_thread().ident,
             )
         except Exception as e:
             logger.warning(f"Error building {build_type} with MLFlow")
@@ -760,15 +929,25 @@ class Pipeline:
                     metadata, evals = self.create_topics(**params)
                 elif build_type == "meta":
                     self.create_metadata(**params)
+                elif build_type == "doc_compare_sentence":
+                    metadata, evals = self.create_doc_compare_embedding(**params)
                 else:
                     logger.info(
                         f"Started pipeline with unknown build_type: {build_type}"
                     )
                 processmanager.update_status(
-                    processmanager.training, 0, 1, f"training {build_type} model",thread_id=threading.current_thread().ident
+                    processmanager.training,
+                    0,
+                    1,
+                    f"training {build_type} model",
+                    thread_id=threading.current_thread().ident,
                 )
                 processmanager.update_status(
-                    processmanager.training, 1, 1, f"trained {build_type} model",thread_id=threading.current_thread().ident
+                    processmanager.training,
+                    1,
+                    1,
+                    f"trained {build_type} model",
+                    thread_id=threading.current_thread().ident,
                 )
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
@@ -777,13 +956,13 @@ class Pipeline:
                     processmanager.loading_corpus,
                     message="failed to load corpus",
                     failed=True,
-                    thread_id=threading.current_thread().ident
+                    thread_id=threading.current_thread().ident,
                 )
                 processmanager.update_status(
                     processmanager.training,
                     message="failed to train " + build_type + " model",
                     failed=True,
-                    thread_id=threading.current_thread().ident
+                    thread_id=threading.current_thread().ident,
                 )
 
     def mlflow_record(self, metadata, evals):

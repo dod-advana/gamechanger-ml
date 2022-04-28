@@ -6,6 +6,8 @@ from gamechangerml.configs.config import (
     SimilarityConfig,
     QexpConfig,
     TopicsConfig,
+    DocCompareEmbedderConfig,
+    DocCompareSimilarityConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import (
@@ -23,9 +25,12 @@ from gamechangerml.api.fastapi.settings import (
     WORD_SIM_MODEL,
     LOCAL_TRANSFORMERS_DIR,
     SENT_INDEX_PATH,
+    DOC_COMPARE_SENT_INDEX_PATH,
     latest_intel_model_encoder,
     latest_intel_model_sim,
     latest_intel_model_trans,
+    latest_doc_compare_sim,
+    latest_doc_compare_encoder,
     QA_MODEL,
 )
 from gamechangerml.src.featurization.word_sim import WordSim
@@ -48,6 +53,8 @@ class ModelLoader:
         __sparse_reader = None
         __topic_model = None
         __recommender = None
+        __document_compare_searcher = None
+        __document_compare_encoder = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -98,6 +105,22 @@ class ModelLoader:
             ModelLoader.initSentenceEncoder()
         return ModelLoader.__sentence_encoder
 
+    def getDocumentCompareSearcher(self):
+        if ModelLoader.__document_compare_searcher == None:
+            logger.warning(
+                "document_compare_searcher was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initDocumentCompareSearcher()
+        return ModelLoader.__document_compare_searcher
+
+    def getDocumentCompareEncoder(self):
+        if ModelLoader.__document_compare_encoder == None:
+            logger.warning(
+                "document_compare_encoder was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initDocumentCompareEncoder()
+        return ModelLoader.__document_compare_encoder
+
     def getSparse(self):
         return ModelLoader.__sparse_reader
 
@@ -131,6 +154,8 @@ class ModelLoader:
     word_sim = property(getWordSim, set_error)
     topic_model = property(getTopicModel, set_error)
     recommender = property(getRecommender, set_error)
+    document_compare_searcher = property(getDocumentCompareSearcher, set_error)
+    document_compare_encoder = property(getDocumentCompareEncoder, set_error)
 
     @staticmethod
     def initQA(qa_model_name=QA_MODEL.value):
@@ -211,8 +236,7 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(
-            f"Loading Sentence Searcher with sent index path: {index_path}")
+        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
             if MODEL_LOAD_FLAG:
                 ModelLoader.__sentence_searcher = SentenceSearcher(
@@ -257,11 +281,62 @@ class ModelLoader:
             logger.warning(e)
 
     @staticmethod
+    def initDocumentCompareSearcher(
+        index_path=DOC_COMPARE_SENT_INDEX_PATH.value,
+        transformer_path=LOCAL_TRANSFORMERS_DIR.value,
+    ):
+        """
+        initDocumentCompareSearcher - loads SentenceSearcher class on start
+        Args: 
+        Returns:
+        """
+        logger.info(f"Loading Document Compare Searcher with index path: {index_path}")
+        try:
+            ModelLoader.__document_compare_searcher = SentenceSearcher(
+                sim_model_name=DocCompareSimilarityConfig.BASE_MODEL,
+                index_path=index_path,
+                transformer_path=transformer_path,
+            )
+
+            sim_model = ModelLoader.__document_compare_searcher.similarity
+            # set cache variable defined in settings.py
+            latest_doc_compare_sim.value = sim_model.sim_model
+            logger.info(
+                f"** Loaded Doc Compare Similarity model from {sim_model.sim_model} and sent index from {index_path}"
+            )
+
+        except Exception as e:
+            logger.warning("** Could not load Doc Compare Similarity model")
+            logger.warning(e)
+
+    @staticmethod
+    def initDocumentCompareEncoder(transformer_path=LOCAL_TRANSFORMERS_DIR.value):
+        """
+        initDocumentCompareEncoder - loads Document Compare Encoder on start
+        Args:
+        Returns:
+        """
+        logger.info(f"Loading document compare encoder model")
+        try:
+            ModelLoader.__document_compare_encoder = SentenceEncoder(
+                encoder_model_name=DocCompareEmbedderConfig.BASE_MODEL,
+                transformer_path=transformer_path,
+                **DocCompareEmbedderConfig.MODEL_ARGS,
+            )
+            encoder_model = ModelLoader.__document_compare_encoder.encoder_model
+            # set cache variable defined in settings.py
+            latest_doc_compare_encoder.value = encoder_model
+            logger.info(f"** Loaded Doc Compare Encoder Model from {encoder_model}")
+
+        except Exception as e:
+            logger.warning("** Could not load Doc Compare Encoder model")
+            logger.warning(e)
+
+    @staticmethod
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
             if MODEL_LOAD_FLAG:
-                ModelLoader.__sparse_reader = sparse.SparseReader(
-                    model_name=model_name)
+                ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
                 logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")

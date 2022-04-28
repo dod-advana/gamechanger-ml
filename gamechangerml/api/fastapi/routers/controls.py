@@ -13,8 +13,26 @@ from gamechangerml.src.utilities import utils
 from gamechangerml.src.utilities.es_utils import ESUtils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
-from gamechangerml.api.fastapi.settings import *
-from gamechangerml.api.fastapi.routers.startup import *
+
+from gamechangerml.api.fastapi.settings import (
+    logger,
+    TOPICS_MODEL,
+    CORPUS_DIR,
+    QEXP_JBOOK_MODEL_NAME,
+    QEXP_MODEL_NAME,
+    WORD_SIM_MODEL,
+    LOCAL_TRANSFORMERS_DIR,
+    SENT_INDEX_PATH,
+    latest_intel_model_encoder,
+    latest_intel_model_sim,
+    latest_doc_compare_encoder,
+    latest_doc_compare_sim,
+    DOC_COMPARE_SENT_INDEX_PATH,
+    S3_CORPUS_PATH,
+    QA_MODEL,
+    ignore_files,
+)
+
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
@@ -107,6 +125,7 @@ def get_downloaded_models_list():
     qexp_list = {}
     jbook_qexp_list = {}
     sent_index_list = {}
+    doc_compare_index_list = {}
     transformer_list = {}
     topic_models = {}
     ltr_list = {}
@@ -191,6 +210,29 @@ def get_downloaded_models_list():
         logger.error(e)
         logger.info("Cannot get Sentence Index model path")
 
+    # DOC COMPARE SENTENCE INDEX
+    # get largest file name with doc_compare_index prefix (by date)
+    try:
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("doc_compare_index" in f) and ("tar" not in f):
+                logger.info(f"doc_compare_index sent indices: {str(f)}")
+                doc_compare_index_list[f] = {}
+                meta_path = os.path.join(
+                    Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json"
+                )
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    doc_compare_index_list[f] = json.load(meta_file)
+                    doc_compare_index_list[f]["evaluation"] = {}
+
+                    doc_compare_index_list[f]["evaluation"] = handle_sent_evals(
+                        os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
+                    )
+                    meta_file.close()
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get Doc Compare Index model path")
+
     # TOPICS MODELS
     try:
 
@@ -245,6 +287,7 @@ def get_downloaded_models_list():
         "jbook_qexp": jbook_qexp_list,
         "topic_models": topic_models,
         "ltr": ltr_list,
+        "doc_compare_sentence": doc_compare_index_list,
     }
     return model_list
 
@@ -259,8 +302,7 @@ async def delete_local_model(model: dict, response: Response):
 
     def removeDirectory(dir):
         try:
-            logger.info(
-                f'Removing directory {os.path.join(dir,model["model"])}')
+            logger.info(f'Removing directory {os.path.join(dir,model["model"])}')
             shutil.rmtree(os.path.join(dir, model["model"]))
         except OSError as e:
             logger.error(e)
@@ -277,7 +319,7 @@ async def delete_local_model(model: dict, response: Response):
     logger.info(model)
     if model["type"] == "transformers":
         removeDirectory(LOCAL_TRANSFORMERS_DIR.value)
-    elif model["type"] == "sentence" or model["type"] == "qexp":
+    elif model["type"] in ("sentence", "qexp", "doc_compare_sentence"):
         removeDirectory(Config.LOCAL_PACKAGED_MODELS_DIR)
         removeFiles(Config.LOCAL_PACKAGED_MODELS_DIR)
 
@@ -378,6 +420,9 @@ async def get_current_models():
         "topic_model": TOPICS_MODEL.value,
         "wordsim_model": WORD_SIM_MODEL.value,
         "qa_model": QA_MODEL.value,
+        "doc_compare_sim_model": latest_doc_compare_sim.value,
+        "doc_compare_encoder_model": latest_doc_compare_encoder.value,
+        "doc_compare_sentence_index": DOC_COMPARE_SENT_INDEX_PATH.value,
     }
 
 
@@ -391,8 +436,7 @@ async def download(response: Response):
     def download_s3_thread():
         try:
             logger.info("Attempting to download dependencies from S3")
-            output = subprocess.call(
-                ["gamechangerml/scripts/download_dependencies.sh"])
+            output = subprocess.call(["gamechangerml/scripts/download_dependencies.sh"])
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)
             processmanager.update_status(
@@ -510,8 +554,7 @@ async def download_s3_file(file_dict: dict, response: Response):
                 except Exception as e:
                     failedExtracts.append(member.name)
 
-            logger.warning(
-                f"Could not extract {failedExtracts} with permission errors")
+            logger.warning(f"Could not extract {failedExtracts} with permission errors")
             processmanager.update_status(
                 f's3: {file_dict["file"]}',
                 failed=True,
@@ -648,8 +691,7 @@ async def reload_models(model_dict: dict, response: Response):
                     )
                 if "qa_model" in model_dict:
                     qa_model_name = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR,
-                        model_dict["qa_model"],
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qa_model"],
                     )
 
                     logger.info("Attempting to load QA model")
@@ -675,10 +717,8 @@ async def reload_models(model_dict: dict, response: Response):
         thread = MlThread(reload_thread, args)
         thread.start()
         processmanager.running_threads[thread.ident] = thread
-        thread_name = processmanager.reloading + \
-            " ".join([key for key in model_dict])
-        processmanager.update_status(
-            thread_name, 0, total, thread_id=thread.ident)
+        thread_name = processmanager.reloading + " ".join([key for key in model_dict])
+        processmanager.update_status(thread_name, 0, total, thread_id=thread.ident)
     except Exception as e:
         logger.warning(e)
 
@@ -698,10 +738,12 @@ async def download_corpus(corpus_dict: dict, response: Response):
         logger.info("Attempting to download corpus from S3")
         # grabs the s3 path to the corpus from the post in "corpus"
         # then passes in where to dowload the corpus locally.
-        if not corpus_dict["corpus"]:
-            corpus_dict = S3_CORPUS_PATH
-        args = {
-            "s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+        if not corpus_dict.get("corpus", None):
+            s3_corpus_dir = S3_CORPUS_PATH
+        else:
+            s3_corpus_dir = corpus_dict.get("corpus")
+
+        args = {"s3_corpus_dir": s3_corpus_dir, "output_dir": CORPUS_DIR}
         logger.info(args)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()
@@ -845,6 +887,31 @@ def train_sentence(model_dict):
     )
 
 
+def train_doc_compare_sentence(model_dict):
+
+    logger.info("Attempting to start doc compare sentence pipeline")
+
+    corpus_dir = model_dict.get("corpus_dir", CORPUS_DIR)
+
+    if not os.path.exists(corpus_dir):
+        logger.warning(f"Corpus is not in local directory {str(corpus_dir)}")
+        raise Exception("Corpus is not in local directory")
+
+    args = {
+        "corpus": corpus_dir,
+        "encoder_model": model_dict["encoder_model"],
+        "gpu": bool(model_dict["gpu"]),
+        "upload": bool(model_dict["upload"]),
+        "version": model_dict["version"],
+    }
+    logger.info(f"starting pipeline run with args {args}")
+    pipeline.run(
+        build_type=model_dict["build_type"],
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
+
+
 def train_qexp(model_dict):
     logger.info("Attempting to start qexp pipeline")
     args = {
@@ -880,23 +947,12 @@ def run_evals(model_dict):
 def train_topics(model_dict):
     logger.info("Attempting to train topic model")
     logger.info(model_dict)
-    args = {"sample_rate": model_dict["sample_rate"],
-            "upload": model_dict["upload"]}
+    args = {"sample_rate": model_dict["sample_rate"], "upload": model_dict["upload"]}
     pipeline.run(
         build_type=model_dict["build_type"],
         run_name=datetime.now().strftime("%Y%m%d"),
         params=args,
     )
-
-
-training_switch = {
-    "sentence": train_sentence,
-    "qexp": train_qexp,
-    "sent_finetune": finetune_sentence,
-    "eval": run_evals,
-    "meta": update_metadata,
-    "topics": train_topics,
-}
 
 
 @router.post("/trainModel", status_code=200)
@@ -916,11 +972,14 @@ async def train_model(model_dict: dict, response: Response):
             "eval": run_evals,
             "meta": update_metadata,
             "topics": train_topics,
+            "doc_compare_sentence": train_doc_compare_sentence,
         }
+
         # Set the training method to be loaded onto the thread
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
         else:  # PLACEHOLDER
+            logger.warn("No build type specified in model_dict, defaulting to sentence")
             model_dict["build_type"] = "sentence"
             training_method = training_switch[model_dict["build_type"]]
 
@@ -928,12 +987,10 @@ async def train_model(model_dict: dict, response: Response):
         training_method = training_switch.get(build_type)
 
         if not training_method:
-            raise Exception(
-                f"No training method mapped for build type {build_type}")
+            raise Exception(f"No training method mapped for build type {build_type}")
 
         # Set the training method to be loaded onto the thread
-        training_thread = MlThread(training_method, args={
-                                   "model_dict": model_dict})
+        training_thread = MlThread(training_method, args={"model_dict": model_dict})
         training_thread.start()
         processmanager.running_threads[training_thread.ident] = training_thread
         processmanager.update_status(
@@ -971,7 +1028,8 @@ async def stop_process(thread_dict: dict, response: Response):
         thread_id=thread_id,
     )
 
-    return {'stopped':thread_id}
+    return {"stopped": thread_id}
+
 
 @router.post("/getUserData")
 async def stop_process(date_dict: dict, response: Response):
@@ -983,11 +1041,14 @@ async def stop_process(date_dict: dict, response: Response):
         Stopped thread id
     """
 
-    data = json.loads(gcClient.getUserAggregations(start_date=date_dict['startDate'],end_date=date_dict['endDate']))
-    GC_USER_DATA = os.path.join(
-        DATA_PATH, "user_data", "UserAggregations.json"
+    data = json.loads(
+        gcClient.getUserAggregations(
+            start_date=date_dict["startDate"], end_date=date_dict["endDate"]
+        )
     )
-    with open(GC_USER_DATA,'w') as f:
-        json.dump(data,f)
+    GC_USER_DATA = os.path.join(DATA_PATH, "user_data", "UserAggregations.json")
+    with open(GC_USER_DATA, "w") as f:
+        json.dump(data, f)
 
-    return 'wrote user data to file'
+    return "wrote user data to file"
+
