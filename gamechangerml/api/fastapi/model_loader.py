@@ -308,10 +308,7 @@ class ModelLoader:
 
     @staticmethod
     def initNER(model_name=NER_MODEL.value, tokenizer=NER_TOKENIZER.value):
-        """initNER - loads the NER class on start
-        Args:
-        Returns:
-        """
+        """initNER - loads the NER class on start"""
         try:
             if MODEL_LOAD_FLAG:
                 logger.info("Loading NER Extractor")
