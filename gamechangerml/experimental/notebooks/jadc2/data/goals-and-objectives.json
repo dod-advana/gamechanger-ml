@@ -1,8 +1,6 @@
 {
     "0": {
-        "name": [
-            "Innovate for Competitive Advantage"
-        ],
+        "name": "Innovate for Competitive Advantage",
         "description": "Innovation is a key element of future readiness It is essential to preserving and expanding US military competitive advantage in the face of nearpeer competition and asymmetric threats A theme running through the National Defense Strategyand subordinate strategies like the Artificial Intelligence Strategyis that preserving and expanding our military advantage depends on our ability to deliver technology faster than our adversaries and the agility of our enterprise to adapt our way of fighting to the potential advantages of innovative technology The Department will evaluate opportunities for innovation pursuing those deemed most suitable to address military problems and including those likely to deliver leapahead capabilities Cloud and cognitive computing will significantly alter warfighting and defense business operations Recognizing this the Department established the Joint Artificial Intelligence Center JAIC to accelerate delivery of AIenabled capabilities and is partnering with industry to securely deliver commercial cloud capabilities in alignment with mission requirements Modernization of warfighter support systems will enable improved command and control C2 information sharing and decision support through a rich and diverse set of analytic capabilities fueled by data from sensors across the DoD Information Network DODIN Modernization of the Defense Information Systems Network DISN a key component of the DODIN will provide critical enhancements necessary to fully realize the benefits from cloud computing big data analytics mobility Internet of Things IoT increased automation and cognitive computing Increased availability and use of secure mobile wireless platforms across the Department will increase Joint Force maneuver accuracy and information advantage Additionally DoD will improve the efficiency and effectiveness of healthcare logistics and other warfighting support functions Enhanced delivery and protection of Positioning Navigation and Timing PNT and development of a resilient secure and adaptive tactical IT infrastructure will improve the Joint Forces ability to operate in denied degraded contested congested and operationally limited environments Central to many of these areas for innovation is software which was highlighted in Sections 872875 of the National Defense Authorization Act NDAA for FY2018 and the DoD 2018 Digital Engineering Strategy Effectively managing the cost and speed of integration for software delivery across the DoD is critical Additionally continued innovation in automating the software lifecycle beyond the current state of the practice will be required",
         "objectives": {
             "0": {
@@ -60,9 +58,7 @@
         }
     },
     "1": {
-        "name": [
-            "Optimize for Efficiencies and Improved Capability"
-        ],
+        "name": "Optimize for Efficiencies and Improved Capability",
         "description": "Delivering IT capabilities with greater efficiency and performance requires the Department to reform the way it operates In particular the evaluation and implementation of suitable industry best current practices and proven technologies must be greatly accelerated and oversight of IT spending must be improved The objectives in this goal include shifting to an enterprisewide operations and defense model rightsizing DoD data centers optimizing office productivity and collaboration capabilities optimizing voice and video capabilities improving purchasing through enterprise agreements strengthening partnerships with industry and strengthening IT financial management and accountability",
         "objectives": {
             "0": {
@@ -96,9 +92,7 @@
         }
     },
     "2": {
-        "name": [
-            "Evolve Cybersecurity for an Agile and Resilient Defense Posture"
-        ],
+        "name": "Evolve Cybersecurity for an Agile and Resilient Defense Posture",
         "description": "The scope pace and sophistication of malicious cyberspace activity continues to rise globally Growing dependence on the cyberspace domain for nearly every essential civilian and military function makes this an urgent issue that must be addressed DoD overmatch in conventional and strategic weaponry may be overcome through sophisticated attacks within cyberspace supply chain exploitation across the acquisition and sustainment lifecycle and intelligence operations targeting insiders with access The Department must adopt a Cyber First Cyber Always7 mindset and be prepared to defend DoD systems in a contested cyberspace Every network system application and enterprise service must be secure by design with cybersecurity managed throughout the acquisition lifecycle The Department will maintain 7 This phrase was used by the DoD CIO in his speech at the Billington Cybersecurity Summit on 6 September 2018 system confidentiality integrity and availability by defending against avenues of attack used by sophisticated adversaries",
         "objectives": {
             "0": {
@@ -120,9 +114,7 @@
         }
     },
     "3": {
-        "name": [
-            "Cultivate Talent for a Ready Digital Workforce"
-        ],
+        "name": "Cultivate Talent for a Ready Digital Workforce",
         "description": "Competition for high quality experienced digital workforce personnel is constant and increasingly aggressive The Department of Defense is one of the three largest markets for this talent in the United States due to its size its continuous adoption and adaptation of technology and its extensive mission requirements Critical national infrastructure protection in particular is a global growth industry DoD is executing a new Functional Community Maturity Model for management of DoD civilians The DoD CIO will implement this model for elements of the Cyber Workforce and expand implementation of more agile recruiting training and retention capabilities through expansion of the Cyber Excepted Service personnel system incentives and local supplements Work continues on development of baseline qualification requirements for over 50 cyber work roles This will provide the workforce with a common understanding of the concepts principles and applications of cyberspace functions to enhance interoperability across organizational lines and mission sets",
         "objectives": {
             "0": {
