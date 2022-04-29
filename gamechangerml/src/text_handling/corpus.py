@@ -5,6 +5,7 @@ import threading
 # import pandas as pd
 from gensim.models.doc2vec import TaggedDocument
 from gamechangerml.src.text_handling.process import preprocess, get_tokenizer
+from gamechangerml.src.utilities.text_utils import check_quality_paragraph
 from gamechangerml.api.utils import processmanager
 from tqdm import tqdm
 
@@ -17,15 +18,19 @@ class LocalCorpus(object):
         min_token_len=3,
         verbose=False,
         bert_based_tokenizer=None,
-        files_to_use=None
+        files_to_use=None,
     ):
         self.directory = directory
-        if files_to_use: ## if we only want to do this on a subset
-            self.file_list = list(set([os.path.join(directory, i) for i in files_to_use]).intersection([
-                os.path.join(directory, file)
-                for file in os.listdir(directory)
-                if file[-5:] == ".json"
-            ]))
+        if files_to_use:  ## if we only want to do this on a subset
+            self.file_list = list(
+                set([os.path.join(directory, i) for i in files_to_use]).intersection(
+                    [
+                        os.path.join(directory, file)
+                        for file in os.listdir(directory)
+                        if file[-5:] == ".json"
+                    ]
+                )
+            )
         else:
             self.file_list = [
                 os.path.join(directory, file)
@@ -62,22 +67,16 @@ class LocalCorpus(object):
                 for para_text, para_id in zip(paragraphs, paragraph_ids):
                     if self.bert_based_tokenizer:
                         tokens = self.auto_token.tokenize(para_text)
-                        process_tokens = preprocess(para_text, min_len=1)
-                        # half of the tokens are actual words
-                        if tokens:
-                            if (len(process_tokens) / len(tokens)) > 0.5:
-                                if len(tokens) > self.min_token_len:
-                                    if self.return_id:
-                                        yield tokens, para_id
-                                    else:
-                                        yield tokens
                     else:
                         tokens = preprocess(para_text, min_len=1)
-                        if len(tokens) > self.min_token_len:
-                            if self.return_id:
-                                yield tokens, para_id
-                            else:
-                                yield tokens
+                    if tokens:
+                        if check_quality_paragraph(tokens, para_text):
+                            if len(tokens) > self.min_token_len:
+                                if self.return_id:
+                                    yield tokens, para_id
+                                else:
+                                    yield tokens
+
                 progress += 1
                 processmanager.update_status(
                     processmanager.loading_corpus,
@@ -88,6 +87,7 @@ class LocalCorpus(object):
             except Exception as e:
                 print(e)
                 print(f"Error with {file_name} in creating local corpus")
+        print
 
     def _get_doc(self, file_name):
         with open(file_name, "r") as f:

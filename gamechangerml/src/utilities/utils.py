@@ -133,7 +133,6 @@ def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
     corp = []
     try:
         bucket = s3_connect()
-
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         else:
