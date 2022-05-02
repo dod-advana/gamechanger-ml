@@ -243,7 +243,7 @@ class SentenceSearcher(object):
         try:
             silver_eval_file = get_most_recent_eval(os.path.join(index_path, "evals_gc", "silver"))
             silver_eval = open_json(silver_eval_file, os.path.join(index_path, "evals_gc", "silver"))
-            self.auto_threshold = float(silver_eval['best_threshold'])
+            self.auto_threshold = EmbedderConfig.THRESHOLD_MULTIPLIER * float(silver_eval['best_threshold'])
             logger.info(f"Setting automatic cutoff score to {self.auto_threshold}")
         except Exception as e:
             logger.error(F"Do not have best threshold available in eval data, defaulting to {EmbedderConfig.DEFAULT_THRESHOLD}")
