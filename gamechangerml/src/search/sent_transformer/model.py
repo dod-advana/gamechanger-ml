@@ -280,12 +280,17 @@ class SentenceSearcher(object):
         """
         if process:
             query = " ".join(preprocess(query))
+        logger.info(f"Input threshold: {threshold}")
         if threshold=='auto':
             cutoff_score = self.auto_threshold
-        elif type(threshold) == float and 0 < threshold < 1: # if a threshold is manually set betweeen 0-1, use that
-            cutoff_score = threshold
         else:
-            cutoff_score = self.auto_threshold
+            try:
+                threshold = float(threshold)
+                if threshold < 1 and threshold > 0: # if a threshold is manually set betweeen 0-1, use that
+                    cutoff_score = threshold
+                    logger.info(f"Setting threshold to {threshold}")
+            except:
+                cutoff_score = self.auto_threshold
 
         logger.info(f"Sentence searching for: {query}")
         if len(query) > 2:
