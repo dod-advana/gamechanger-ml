@@ -122,3 +122,33 @@ def average_precision(ranked_results: List[str], expected: List[str]) -> float:
 def get_MAP(average_precision_scores: List[float]) -> float:
     '''Takes list of average precision scores and averages them.'''
     return np.round(np.mean(average_precision_scores), 3)
+
+def get_threshold_f1(hit_scores, no_hit_scores, threshold):
+    '''Gets f1 score for sent index hit/no hit scores'''
+    true_pos = len([i for i in hit_scores if i >= threshold])
+    false_neg = len([i for i in hit_scores if i < threshold])
+    false_pos =  len([i for i in no_hit_scores if i >= threshold])
+    true_neg = len([i for i in no_hit_scores if i < threshold])
+    precision = get_precision(true_pos, false_pos)
+    recall = get_recall(true_pos, false_neg)
+    f1 = get_f1(precision, recall)
+    
+    return f1
+
+def get_optimum_threshold(hit_scores, no_hit_scores):
+    '''Get best threshold for cutting off sent index based on f1 scores'''
+    thresholds = []
+    f1_scores = []
+    for i in np.linspace(0,1,100):
+        thresholds.append(i)
+        f1 = get_threshold_f1(hit_scores, no_hit_scores, i)
+        f1_scores.append(f1)
+    
+    maximize = [0 if np.isnan(i) else i for i in f1_scores]
+    max_score = np.max(maximize)
+    max_index = maximize.index(max_score)
+    best_threshold = np.round(thresholds[max_index], 3)
+    print(f"Best threshold for f1: {best_threshold}")
+    print(f"Best f1 score: {max_score}")
+    
+    return best_threshold, max_score

@@ -89,6 +89,7 @@ async def trans_sentence_infer(
     num_results: int = 10,
     process: bool = True,
     externalSim: bool = False,
+    threshold='auto'
 ) -> dict:
     """trans_sentence_infer - endpoint for sentence transformer inference
     Args:
@@ -103,7 +104,7 @@ async def trans_sentence_infer(
     try:
         query_text = body["text"]
         results = MODELS.sentence_searcher.search(
-            query_text, num_results, process=process, externalSim=False
+            query_text, num_results, process=process, externalSim=False, threshold=threshold
         )
         logger.info(results)
     except Exception:

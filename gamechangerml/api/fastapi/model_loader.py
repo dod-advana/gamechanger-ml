@@ -218,7 +218,7 @@ class ModelLoader:
                 ModelLoader.__sentence_searcher = SentenceSearcher(
                     sim_model_name=SimilarityConfig.BASE_MODEL,
                     index_path=index_path,
-                    transformer_path=transformer_path,
+                    transformer_path=transformer_path
                 )
 
                 sim_model = ModelLoader.__sentence_searcher.similarity

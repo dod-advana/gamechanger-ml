@@ -17,6 +17,7 @@ from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
+from gamechangerml.configs.config import EmbedderConfig
 
 
 class SentenceEncoder(object):
@@ -239,6 +240,14 @@ class SentenceSearcher(object):
         self.data = pd.read_csv(
             os.path.join(index_path, "data.csv"), dtype={"paragraph_id": str}
         )
+        try:
+            silver_eval_file = get_most_recent_eval(os.path.join(index_path, "evals_gc", "silver"))
+            silver_eval = open_json(silver_eval_file, os.path.join(index_path, "evals_gc", "silver"))
+            self.auto_threshold = float(silver_eval['best_threshold'])
+            logger.info(f"Setting automatic cutoff score to {self.auto_threshold}")
+        except Exception as e:
+            logger.error(F"Do not have best threshold available in eval data, defaulting to {EmbedderConfig.DEFAULT_THRESHOLD}")
+            self.auto_threshold = EmbedderConfig.DEFAULT_THRESHOLD
         if sim_model:
             self.similarity = sim_model
         else:
@@ -259,7 +268,7 @@ class SentenceSearcher(object):
             results.append(doc)
         return results
 
-    def search(self, query, num_results=10, process=False, externalSim=True):
+    def search(self, query, num_results=10, process=False, externalSim=True, threshold='auto'):
         """
         Search the index and perform a similarity scoring reranker at
         the topn returned documents
@@ -271,6 +280,12 @@ class SentenceSearcher(object):
         """
         if process:
             query = " ".join(preprocess(query))
+        if threshold=='auto':
+            cutoff_score = self.auto_threshold
+        elif type(threshold) == float and 0 < threshold < 1: # if a threshold is manually set betweeen 0-1, use that
+            cutoff_score = threshold
+        else:
+            cutoff_score = self.auto_threshold
 
         logger.info(f"Sentence searching for: {query}")
         if len(query) > 2:
@@ -288,6 +303,10 @@ class SentenceSearcher(object):
                 for idx, doc in enumerate(top_results):
                     doc["text_length"] = length_scores[idx]
                     doc["score"] = doc["score"]
+                    if doc["score"] >= cutoff_score:
+                        doc["passing_result"] = 1
+                    else:
+                        doc["passing_result"] = 0
                     finalResults.append(doc)
                 finalResults = sorted(
                     finalResults, key=lambda i: i["score"], reverse=True

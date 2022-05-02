@@ -81,7 +81,7 @@ class EmbedderConfig:
     }
     FINETUNE = {"shuffle": True, "batch_size": 32,
                 "epochs": 3, "warmup_steps": 100}
-
+    DEFAULT_THRESHOLD = 0.7 # if no threshold is recommended in evals, this is the default min score for the sent index
 
 class SimilarityConfig:
     BASE_MODEL = "distilbart-mnli-12-3"

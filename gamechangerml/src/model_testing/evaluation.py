@@ -323,9 +323,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             "false_negatives",
             "true_negatives",
             "reciprocal_rank",
-            "average_precision",
-            f"precision@{k}",
-            f"recall@{k}"
+            "average_precision"
         ]
         ## make name for the csv of results
         if "/" in index:
@@ -342,6 +340,8 @@ class RetrieverEvaluator(TransformerEvaluator):
             csvwriter.writerow(columns)
 
             # collect metrics for each query made + results generated
+            hit_scores = []
+            no_hit_scores = []
             query_count = tp = tn = fp = fn = total_expected = 0
             for idx, query in data.queries.items():
                 logger.info("\n\nQ-{}: {}".format(query_count, query))
@@ -397,6 +397,10 @@ class RetrieverEvaluator(TransformerEvaluator):
                                    (k - len(doc_ids)))
                 else:  # if there are k predictions, there are no predicted negatives
                     false_neg = true_neg = 0
+                if len(hits) > 0:
+                    hit_scores.append(hits[0]['score'])
+                else:
+                    no_hit_scores.append(doc_scores[0])
                 fn += false_neg
                 tn += true_neg
                 tp += true_pos
@@ -422,13 +426,13 @@ class RetrieverEvaluator(TransformerEvaluator):
                 csvwriter.writerows(row)
                 query_count += 1
 
-        return pd.read_csv(csv_filename), tp, tn, fp, fn, total_expected
+        return pd.read_csv(csv_filename), tp, tn, fp, fn, total_expected, hit_scores, no_hit_scores
 
     def eval(
         self, data, index, retriever, data_name, eval_path, model_name, k=retriever_k
         ):
 
-        df, tp, tn, fp, fn, total_expected = self.predict(
+        df, tp, tn, fp, fn, total_expected, hit_scores, no_hit_scores = self.predict(
             data, index, retriever, eval_path, k
         )
         num_queries = df["queries"].shape[0]
@@ -438,6 +442,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             recall = get_recall(
                 true_positives=tp, false_negatives=(total_expected - tp)
             )
+            best_threshold, max_score = get_optimum_threshold(hit_scores, no_hit_scores)
         else:
             _mrr = _map = recall = 0
 
@@ -454,6 +459,8 @@ class RetrieverEvaluator(TransformerEvaluator):
             "MRR": _mrr,
             "mAP": _map,
             "recall": recall,
+            "best_f1": max_score,
+            "best_threshold": best_threshold
         }
 
         logger.info(f"** Eval Results: {str(agg_results)}")

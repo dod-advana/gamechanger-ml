@@ -16,7 +16,7 @@ def eval_qa(model_name, sample_limit, eval_type="original"):
     else:
         logger.info("No eval_type selected. Options: ['original', 'gamechanger'].")
 
-def eval_sent(model_name, validation_data, eval_type="domain"):
+def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
     if "sent_index" in model_name:
         logger.info("Evaluating a sentence index")
         metadata = open_json('metadata.json', os.path.join(MODEL_PATH, model_name))
@@ -43,7 +43,7 @@ def eval_sent(model_name, validation_data, eval_type="domain"):
                 data_path = None
         results = {}
         for level in ['gold', 'silver']:
-            domainEval = IndomainRetrieverEvaluator(index=index, data_path=data_path, data_level=level, encoder_model_name=encoder, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
+            domainEval = IndomainRetrieverEvaluator(index=index, data_path=data_path, data_level=level, encoder_model_name=encoder, retriever=retriever, sim_model_name=SimilarityConfig.BASE_MODEL, **EmbedderConfig.MODEL_ARGS)
             results[level] = domainEval.results
     elif eval_type == "original":
         originalEval = MSMarcoRetrieverEvaluator(**EmbedderConfig.MODEL_ARGS, encoder_model_name=EmbedderConfig.BASE_MODEL, sim_model_name=SimilarityConfig.BASE_MODEL)
