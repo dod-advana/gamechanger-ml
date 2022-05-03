@@ -211,14 +211,13 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(
-            f"Loading Sentence Searcher with sent index path: {index_path}")
+        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
             if MODEL_LOAD_FLAG:
                 ModelLoader.__sentence_searcher = SentenceSearcher(
                     sim_model_name=SimilarityConfig.BASE_MODEL,
                     index_path=index_path,
-                    transformer_path=transformer_path
+                    transformer_path=transformer_path,
                 )
 
                 sim_model = ModelLoader.__sentence_searcher.similarity
@@ -260,8 +259,7 @@ class ModelLoader:
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
             if MODEL_LOAD_FLAG:
-                ModelLoader.__sparse_reader = sparse.SparseReader(
-                    model_name=model_name)
+                ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
                 logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")

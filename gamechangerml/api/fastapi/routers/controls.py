@@ -259,8 +259,7 @@ async def delete_local_model(model: dict, response: Response):
 
     def removeDirectory(dir):
         try:
-            logger.info(
-                f'Removing directory {os.path.join(dir,model["model"])}')
+            logger.info(f'Removing directory {os.path.join(dir,model["model"])}')
             shutil.rmtree(os.path.join(dir, model["model"]))
         except OSError as e:
             logger.error(e)
@@ -391,8 +390,7 @@ async def download(response: Response):
     def download_s3_thread():
         try:
             logger.info("Attempting to download dependencies from S3")
-            output = subprocess.call(
-                ["gamechangerml/scripts/download_dependencies.sh"])
+            output = subprocess.call(["gamechangerml/scripts/download_dependencies.sh"])
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)
             processmanager.update_status(
@@ -510,8 +508,7 @@ async def download_s3_file(file_dict: dict, response: Response):
                 except Exception as e:
                     failedExtracts.append(member.name)
 
-            logger.warning(
-                f"Could not extract {failedExtracts} with permission errors")
+            logger.warning(f"Could not extract {failedExtracts} with permission errors")
             processmanager.update_status(
                 f's3: {file_dict["file"]}',
                 failed=True,
@@ -675,10 +672,8 @@ async def reload_models(model_dict: dict, response: Response):
         thread = MlThread(reload_thread, args)
         thread.start()
         processmanager.running_threads[thread.ident] = thread
-        thread_name = processmanager.reloading + \
-            " ".join([key for key in model_dict])
-        processmanager.update_status(
-            thread_name, 0, total, thread_id=thread.ident)
+        thread_name = processmanager.reloading + " ".join([key for key in model_dict])
+        processmanager.update_status(thread_name, 0, total, thread_id=thread.ident)
     except Exception as e:
         logger.warning(e)
 
@@ -700,8 +695,7 @@ async def download_corpus(corpus_dict: dict, response: Response):
         # then passes in where to dowload the corpus locally.
         if not corpus_dict["corpus"]:
             corpus_dict = S3_CORPUS_PATH
-        args = {
-            "s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+        args = {"s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
         logger.info(args)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()
@@ -873,7 +867,7 @@ def run_evals(model_dict):
         "eval_type": model_dict["eval_type"],
         "sample_limit": sample_limit,
         "validation_data": model_dict["validation_data"],
-        "retriever": retriever
+        "retriever": retriever,
     }
     pipeline.run(
         build_type=model_dict["build_type"],
@@ -885,8 +879,7 @@ def run_evals(model_dict):
 def train_topics(model_dict):
     logger.info("Attempting to train topic model")
     logger.info(model_dict)
-    args = {"sample_rate": model_dict["sample_rate"],
-            "upload": model_dict["upload"]}
+    args = {"sample_rate": model_dict["sample_rate"], "upload": model_dict["upload"]}
     pipeline.run(
         build_type=model_dict["build_type"],
         run_name=datetime.now().strftime("%Y%m%d"),
@@ -933,12 +926,10 @@ async def train_model(model_dict: dict, response: Response):
         training_method = training_switch.get(build_type)
 
         if not training_method:
-            raise Exception(
-                f"No training method mapped for build type {build_type}")
+            raise Exception(f"No training method mapped for build type {build_type}")
 
         # Set the training method to be loaded onto the thread
-        training_thread = MlThread(training_method, args={
-                                   "model_dict": model_dict})
+        training_thread = MlThread(training_method, args={"model_dict": model_dict})
         training_thread.start()
         processmanager.running_threads[training_thread.ident] = training_thread
         processmanager.update_status(
@@ -976,7 +967,8 @@ async def stop_process(thread_dict: dict, response: Response):
         thread_id=thread_id,
     )
 
-    return {'stopped':thread_id}
+    return {"stopped": thread_id}
+
 
 @router.post("/sendUserAggregations")
 async def get_user_data(data_dict: dict, response: Response):
@@ -987,11 +979,9 @@ async def get_user_data(data_dict: dict, response: Response):
     Returns:
         confirmation of data download
     """
-    data = data_dict['params']['data']
-    GC_USER_DATA = os.path.join(
-        DATA_PATH, "user_data", "UserAggregations.json"
-    )
-    with open(GC_USER_DATA,'w') as f:
-        json.dump(data,f)
+    data = data_dict["params"]["data"]
+    GC_USER_DATA = os.path.join(DATA_PATH, "user_data", "UserAggregations.json")
+    with open(GC_USER_DATA, "w") as f:
+        json.dump(data, f)
 
-    return f'wrote {len(data)} user data to file'
+    return f"wrote {len(data)} user data to file"

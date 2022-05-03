@@ -62,7 +62,7 @@ class BertSummConfig:
 
 class QAConfig:
     BASE_MODEL = "bert-base-cased-squad2"
-    #BASE_MODEL = "multi-qa-MiniLM-L6-cos-v1"
+    # BASE_MODEL = "multi-qa-MiniLM-L6-cos-v1"
     MODEL_ARGS = {
         # options are: ["scored_answer", "simple_answer"]
         "qa_type": "scored_answer",
@@ -79,10 +79,12 @@ class EmbedderConfig:
         "verbose": True,  # for creating LocalCorpus
         "return_id": True,  # for creating LocalCorpus
     }
-    FINETUNE = {"shuffle": True, "batch_size": 32,
-                "epochs": 3, "warmup_steps": 100}
-    DEFAULT_THRESHOLD = 0.7 # if no threshold is recommended in evals, this is the default min score for the sent index
-    THRESHOLD_MULTIPLIER = 0.8
+    FINETUNE = {"shuffle": True, "batch_size": 32, "epochs": 3, "warmup_steps": 100}
+    DEFAULT_THRESHOLD = 0.7  # if no threshold is recommended in evals, this is the default min score for the sent index
+    THRESHOLD_MULTIPLIER = (
+        0.8  # makes the default threshold less strict (to use exact default, set to 1)
+    )
+
 
 class SimilarityConfig:
     BASE_MODEL = "distilbart-mnli-12-3"
