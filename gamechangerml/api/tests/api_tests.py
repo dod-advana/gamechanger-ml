@@ -181,6 +181,17 @@ def test_postSentSearch():
     #     assert abs(resp.json()[i]['score'] - verified[i]['score']) < .01
     assert len(resp.json()) > 5
 
+def test_sent_index_threshold():
+    test_data = TestSet.sentence_test_data
+    #threshold = "0.6"
+    resp = http.post(API_URL + "/transSentenceSearch?threshold=0.5", json=test_data)
+    resp_data = resp.json()
+    for i in resp_data:
+        if float(i['score']) >= 0.5:
+            assert int(i['passing_result']) == 1
+        else:
+            assert int(i['passing_result']) == 0
+
 
 def test_recommender():
     test_data = TestSet.recommender_data

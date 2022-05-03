@@ -10,14 +10,14 @@ MODELS = ModelLoader()
 
 @router.on_event("startup")
 async def load_models():
-    #MODELS.initQA()
-    #MODELS.initQE()
-    #MODELS.initQEJBook()
+    MODELS.initQA()
+    MODELS.initQE()
+    MODELS.initQEJBook()
     MODELS.initSentenceEncoder()
     MODELS.initSentenceSearcher()
-    #MODELS.initWordSim()
-    #MODELS.initTopics()
-    #MODELS.initRecommender()
+    MODELS.initWordSim()
+    MODELS.initTopics()
+    MODELS.initRecommender()
 
 
 @router.on_event("startup")
