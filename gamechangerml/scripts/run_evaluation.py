@@ -19,8 +19,11 @@ def eval_qa(model_name, sample_limit, eval_type="original"):
 def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
     if "sent_index" in model_name:
         logger.info("Evaluating a sentence index")
-        metadata = open_json('metadata.json', os.path.join(MODEL_PATH, model_name))
-        encoder = metadata['encoder_model']
+        try:
+            metadata = open_json('metadata.json', os.path.join(MODEL_PATH, model_name))
+            encoder = metadata['encoder_model']
+        except:
+            encoder = 'msmarco-distilbert-base-v2'
         index = model_name
         logger.info(f"Evaluating {model_name} created with {encoder}")
     else:
