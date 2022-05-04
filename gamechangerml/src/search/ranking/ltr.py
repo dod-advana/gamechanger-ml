@@ -14,8 +14,12 @@ from gamechangerml import MODEL_PATH, DATA_PATH
 import typing as t
 import base64
 from urllib.parse import urljoin
-from datetime import datetime,timedelta
-from gamechangerml.src.utilities import gc_web_api, es_utils
+from datetime import datetime, timedelta
+from gamechangerml.src.utilities import (
+    gc_web_api,
+    es_utils,
+    user_utils as user,
+)
 
 
 logger = logging.getLogger("gamechanger")
@@ -101,7 +105,8 @@ class LTR:
                 self.mappings = self.request_mappings(daysBack)
             else:
                 logger.info(
-                    "LTR - Not production environment, defaulting to local mappings")
+                    "LTR - Not production environment, defaulting to local mappings"
+                )
                 self.mappings = pd.read_csv(path)
         except Exception as e:
             logger.warning("LTR - Could not request or read mappings")
@@ -111,9 +116,13 @@ class LTR:
     def request_mappings(self, daysBack: int = 180):
         mappings = None
         try:
-            start_date=(datetime.now()-timedelta(days=daysBack)).replace(hour=0, minute=0)
-            end_date=datetime.now()
-            mappings = gcClient.getSearchMappings(start_date=start_date,end_date=end_date)
+            start_date = (datetime.now() - timedelta(days=daysBack)).replace(
+                hour=0, minute=0
+            )
+            end_date = datetime.now()
+            mappings = gcClient.getSearchMappings(
+                start_date=start_date, end_date=end_date
+            )
             mappings = json.loads(mappings)
             mappings = pd.DataFrame(mappings["data"])
         except Exception as e:
@@ -251,6 +260,8 @@ class LTR:
             count_df: cleaned dataframe with search mapped data
         """
         self.read_mappings(remote_mappings=remote_mappings, daysBack=daysBack)
+        mapped_keywords = user.process_keywords(self.mappings)
+        """
         searches = self.mappings[["search", "document"]]
         searches.dropna(inplace=True)
         searches.search.replace("&quot;", "", regex=True, inplace=True)
@@ -270,6 +281,9 @@ class LTR:
                     tup = (clean[0], row.document)
                     word_tuples.append(tup)
         tuple_df = pd.DataFrame(word_tuples, columns=["search", "document"])
+        """
+
+        """
         count_df = pd.DataFrame()
         for keyword in tuple_df.search.unique():
             a = tuple_df[tuple_df.search == keyword]
@@ -278,14 +292,16 @@ class LTR:
             count_df = count_df.append(tmp_df)
         count_df.sort_values("search")
         arr = count_df.search.copy()
-        count_df["ranking"] = self.normalize(arr)
+        count_df["ranking"] = user.normalize(arr)
         count_df.ranking = count_df.ranking.apply(np.ceil)
         count_df.ranking = count_df.ranking.astype(int)
         le = LabelEncoder()
         count_df["qid"] = le.fit_transform(count_df.keyword)
-        self.judgement = count_df
+        """
+        ranked_docs = user.rank_docs(mapped_keywords)
+        self.judgement = ranked_docs
 
-        return count_df
+        return ranked_docs
 
     def query_es_fts(self, df):
         """query ES features: gets ES feature logs from judgement list
@@ -544,16 +560,3 @@ class LTR:
         endpoint = f"/_ltr/_model/{model_name}"
         r = esu.delete(endpoint)
         return r.content
-
-    def normalize(self, arr, start=0, end=4):
-        """normalize: basic normalize between two numbers function
-        params:
-            arr: array to normalize
-            start: beginning number integer
-            end: ending number integer
-        returns: normalized array
-        """
-        arr = np.log(arr)
-        width = end - start
-        res = (arr - arr.min()) / (arr.max() - arr.min()) * width + start
-        return res

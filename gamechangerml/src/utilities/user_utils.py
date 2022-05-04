@@ -20,12 +20,18 @@ def normalize(arr, start=0, end=4):
     return res
 
 
-def process_keywords(search_mapping_path: str):
-    searches = pd.read_csv(search_mapping_path)
+def process_keywords(searches: pd.DataFrame, multiplier: int = 2):
+    """
+    process_keywords - processes a user search and actions dataframe
+    params:
+        searches - dataframe of user DataFrame
+        multiplier - multiplies specific actions like export to weigh more
+    output:
+        tuple_df - a cleaned and processed keyword dataframe
+    """
     searches.value = searches.value.ffill(axis=0)
     searches.value.replace("&quot;", "", regex=True, inplace=True)
     # multiple the factor of these types of actions for ranking
-    multiplier = 2
     export_df = searches[searches.action == "ExportDocument"]
     for i in range(0, multiplier):
         export_df = export_df.append(export_df)
@@ -54,8 +60,16 @@ def process_keywords(search_mapping_path: str):
 
 
 def rank_docs(tuple_df: pd.DataFrame):
+    """
+    rank_docs - ranks documents by keyword count for judgement list
+    params:
+        tuple_df - processed dataframe from proess_keywords
+    output:
+        count_df - ranked and counts of keywords in dataframe
+    """
+
     count_df = pd.DataFrame()
-    for keyword in tuple_df.search.unique():
+    for keyword in tqdm(tuple_df.search.unique()):
         a = tuple_df[tuple_df.search == keyword]
         tmp_df = a.groupby("document").count()
         tmp_df["keyword"] = keyword
@@ -67,3 +81,4 @@ def rank_docs(tuple_df: pd.DataFrame):
     count_df.ranking = count_df.ranking.astype(int)
     le = LabelEncoder()
     count_df["qid"] = le.fit_transform(count_df.keyword)
+    return count_df
