@@ -29,6 +29,14 @@ function download_and_unpack_deps() {
   echo "S3 TOPIC MODEL: $S3_TOPICS_PATH"
   aws s3 cp "$S3_TOPICS_PATH" "$models_dest_dir" --no-progress
 
+  echo "Downloading NER Model"
+  echo "S3 NER MODEL PATH: $S3_NER_MODEL_PATH"
+  aws s3 cp "$S3_NER_MODEL_PATH" "$models_dest_dir" --no-progress
+
+  echo "Downloading NER Tokenizer"
+  echo "S3 NER TOKENIZER PATH: $S3_NER_TOKENIZER_PATH"
+  aws s3 cp "$S3_NER_TOKENIZER_PATH" "$models_dest_dir" --no-progress
+
   echo "Downloading Data Folder"
   echo "DATA DIRECTORY: $S3_ML_DATA_PATH"
   aws s3 cp "$S3_ML_DATA_PATH" "$data_dest_dir" --no-progress

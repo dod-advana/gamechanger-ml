@@ -13,6 +13,7 @@ from gamechangerml.src.search.sent_transformer.model import (
     SentenceEncoder,
 )
 from gamechangerml.src.recommender.recommend import Recommender
+from gamechangerml.src.featurization.ner.extract import NERExtractor
 from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import (
     logger,
@@ -27,6 +28,8 @@ from gamechangerml.api.fastapi.settings import (
     latest_intel_model_sim,
     latest_intel_model_trans,
     QA_MODEL,
+    NER_MODEL,
+    NER_TOKENIZER,
 )
 from gamechangerml.src.featurization.word_sim import WordSim
 from gamechangerml.src.featurization.topic_modeling import Topics
@@ -48,6 +51,7 @@ class ModelLoader:
         __sparse_reader = None
         __topic_model = None
         __recommender = None
+        __ner = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -117,6 +121,12 @@ class ModelLoader:
             ModelLoader.initRecommender()
         return ModelLoader.__recommender
 
+    def getNER(self):
+        if ModelLoader.__ner is None:
+            logger.warning("ner was not set and was attempted to be used. Running init")
+            ModelLoader.initNER()
+        return ModelLoader.__ner
+
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
 
@@ -131,6 +141,7 @@ class ModelLoader:
     word_sim = property(getWordSim, set_error)
     topic_model = property(getTopicModel, set_error)
     recommender = property(getRecommender, set_error)
+    ner = property(getNER, set_error)
 
     @staticmethod
     def initQA(qa_model_name=QA_MODEL.value):
@@ -211,8 +222,7 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(
-            f"Loading Sentence Searcher with sent index path: {index_path}")
+        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
             if MODEL_LOAD_FLAG:
                 ModelLoader.__sentence_searcher = SentenceSearcher(
@@ -260,8 +270,7 @@ class ModelLoader:
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
             if MODEL_LOAD_FLAG:
-                ModelLoader.__sparse_reader = sparse.SparseReader(
-                    model_name=model_name)
+                ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
                 logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
@@ -296,3 +305,15 @@ class ModelLoader:
                 logger.info("Finished loading Recommender")
         except OSError:
             logger.error(f"** Could not load Recommender")
+
+    @staticmethod
+    def initNER(model_name=NER_MODEL.value, tokenizer=NER_TOKENIZER.value):
+        """initNER - loads the NER class on start"""
+        try:
+            if MODEL_LOAD_FLAG:
+                logger.info("Loading NER Extractor")
+                ModelLoader.__ner = NERExtractor(model_name, tokenizer)
+                logger.info("Finished loading NER model")
+        except OSError as e:
+            logger.error(f"** could not load NER model")
+            logger.error(e)

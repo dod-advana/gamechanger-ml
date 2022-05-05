@@ -18,6 +18,7 @@ async def load_models():
     MODELS.initWordSim()
     MODELS.initTopics()
     MODELS.initRecommender()
+    MODELS.initNER()
 
 
 @router.on_event("startup")
@@ -53,6 +54,7 @@ async def check_health():
     logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")
     logger.info(f"-- Topics model name: {TOPICS_MODEL.value}")
+    logger.info(f"-- NER model name: {NER_MODEL.value}")
 
 
 def check_dep_exist():
@@ -75,6 +77,10 @@ def check_dep_exist():
 
     if not os.path.isdir(QEXP_JBOOK_MODEL_NAME.value):
         logger.warning(f"{QEXP_JBOOK_MODEL_NAME.value} does NOT exist")
+        healthy = False
+
+    if not os.path.isdir(NER_MODEL.value):
+        logger.warning(f"{NER_MODEL.value} does NOT exist")
         healthy = False
 
     return healthy

@@ -1,5 +1,6 @@
 import os
 import logging
+from sqlite3 import adapt
 from gamechangerml.api.fastapi.model_config import Config
 
 logger = logging.getLogger()
@@ -122,6 +123,37 @@ def get_model_paths():
         logger.error(e)
         logger.info("Cannot get Topics model path")
         TOPICS_PATH = "gamechangerml/models/"
+    
+    # NER
+    try:
+        ner_model_dirs = [
+            name
+            for name in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            if "ner_" in name
+            and os.path.isdir(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
+        ]
+        ner_model_dirs.sort(reverse=True)
+
+        if len(ner_model_dirs) > 0:
+            NER_MODEL_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, ner_model_dirs[0]
+            )
+        else:
+            raise ValueError(f"No ner_<date> folders in {Config.LOCAL_PACKAGED_MODELS_DIR}")
+        
+        logger.info(f"NER PATH: {NER_MODEL_PATH}")
+
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get NER model path")
+        NER_MODEL_PATH = os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR,"distilroBERTa_ner_20220414")
+
+    try:
+        NER_TOKENIZER_PATH = os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, "distilroberta-base")
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get NER tokenizer path")
+        NER_TOKENIZER_PATH = NER_MODEL_PATH
 
     model_dict = {
         "transformers": LOCAL_TRANSFORMERS_DIR,
@@ -130,5 +162,7 @@ def get_model_paths():
         "qexp_jbook": QEXP_JBOOK_MODEL_PATH,
         "word_sim": WORD_SIM_MODEL_PATH,
         "topics": TOPICS_PATH,
+        "ner_model": NER_MODEL_PATH,
+        "ner_tokenizer": NER_TOKENIZER_PATH
     }
     return model_dict

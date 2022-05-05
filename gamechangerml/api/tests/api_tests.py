@@ -133,6 +133,13 @@ def test_recommender():
     assert len(data['results']) == 5
     assert len(set(expected['results']).intersection(data['results'])) > 0
 
+def test_ner():
+    test_data=TestSet.ner_paragraph
+    test_results = TestSet.ner_results
+    resp =  http.post(API_URL + "/extractEntities", json=test_data)
+    data = resp.json()
+    assert data == test_results
+
 # QA Tests
 
 
