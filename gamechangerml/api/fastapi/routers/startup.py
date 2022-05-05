@@ -25,14 +25,14 @@ MODELS = ModelLoader()
 @router.on_event("startup")
 async def load_models():
     if MODEL_LOAD_FLAG:
-        MODELS.initQA()
-        MODELS.initQE()
-        MODELS.initQEJBook()
-        MODELS.initSentenceEncoder()
-        MODELS.initSentenceSearcher()
-        MODELS.initWordSim()
-        MODELS.initTopics()
-        MODELS.initRecommender()
+        # MODELS.initQA()
+        # MODELS.initQE()
+        # MODELS.initQEJBook()
+        # MODELS.initSentenceEncoder()
+        # MODELS.initSentenceSearcher()
+        # MODELS.initWordSim()
+        # MODELS.initTopics()
+        # MODELS.initRecommender()
         MODELS.initDocumentCompareEncoder()
         MODELS.initDocumentCompareSearcher()
         logger.info("AFTER LOAD MODELS")
@@ -73,7 +73,8 @@ async def check_health():
     logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")
     logger.info(f"-- Topics model name: {TOPICS_MODEL.value}")
-    logger.info(f"-- Doc Compare Similarity model name: {latest_doc_compare_sim.value}")
+    logger.info(
+        f"-- Doc Compare Similarity model name: {latest_doc_compare_sim.value}")
     logger.info(
         f"-- Doc Compare Encoder model name: {latest_doc_compare_encoder.value}"
     )

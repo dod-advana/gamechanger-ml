@@ -14,6 +14,10 @@ from gamechangerml.src.search.sent_transformer.model import (
     SentenceSearcher,
     SentenceEncoder,
 )
+from gamechangerml.src.search.doc_compare.model import (
+    DocCompareSentenceSearcher,
+    DocCompareSentenceEncoder,
+)
 from gamechangerml.src.recommender.recommend import Recommender
 from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import (
@@ -292,7 +296,7 @@ class ModelLoader:
         """
         logger.info(f"Loading Document Compare Searcher with index path: {index_path}")
         try:
-            ModelLoader.__document_compare_searcher = SentenceSearcher(
+            ModelLoader.__document_compare_searcher = DocCompareSentenceSearcher(
                 sim_model_name=DocCompareSimilarityConfig.BASE_MODEL,
                 index_path=index_path,
                 transformer_path=transformer_path,
@@ -318,7 +322,7 @@ class ModelLoader:
         """
         logger.info(f"Loading document compare encoder model")
         try:
-            ModelLoader.__document_compare_encoder = SentenceEncoder(
+            ModelLoader.__document_compare_encoder = DocCompareSentenceEncoder(
                 encoder_model_name=DocCompareEmbedderConfig.BASE_MODEL,
                 transformer_path=transformer_path,
                 **DocCompareEmbedderConfig.MODEL_ARGS,
