@@ -34,6 +34,7 @@ RUN dnf install -y \
         cairo \
         cryptsetup-libs \
         cyrus-sasl-lib \
+        gzip \
     && dnf clean all \
     && rm -rf /var/cache/yum
 

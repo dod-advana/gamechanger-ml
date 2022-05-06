@@ -864,11 +864,16 @@ def run_evals(model_dict):
         sample_limit = int(model_dict["sample_limit"])
     except:
         sample_limit = 15000
+    if "sent_index" in model_dict["model_name"]:
+        retriever = MODELS.sentence_searcher
+    else:
+        retriever = None
     args = {
         "model_name": model_dict["model_name"],
         "eval_type": model_dict["eval_type"],
         "sample_limit": sample_limit,
         "validation_data": model_dict["validation_data"],
+        "retriever": retriever,
     }
     pipeline.run(
         build_type=model_dict["build_type"],
