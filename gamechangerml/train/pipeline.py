@@ -151,19 +151,19 @@ class Pipeline:
     def create_metadata(
         self,
         meta_steps,
-        testing_only:bool,
+        testing_only: bool,
         corpus_dir: t.Union[str, os.PathLike] = CORPUS_DIR,
         index_path: t.Union[str, os.PathLike] = os.path.join(
             MODEL_PATH, "sent_index_20210715"
         ),
         days: int = 80,
         prod_data_file=PROD_DATA_FILE,
-        n_returns: int=50,
-        level: str='silver',
-        update_eval_data: bool=True,
+        n_returns: int = 50,
+        level: str = "silver",
+        update_eval_data: bool = True,
         retriever=None,
         upload: bool = True,
-        version: str = "v1"
+        version: str = "v1",
     ) -> None:
         """
         create_metadata: combines datasets to create readable sets for ingest
@@ -192,7 +192,10 @@ class Pipeline:
         if "update_sent_data" in meta_steps:
             try:
                 make_training_data(
-                    index_path=index_path, level=level, update_eval_data=update_eval_data, testing_only=testing_only
+                    index_path=index_path,
+                    level=level,
+                    update_eval_data=update_eval_data,
+                    testing_only=testing_only,
                 )
             except Exception as e:
                 logger.warning(e, exc_info=True)
@@ -216,11 +219,11 @@ class Pipeline:
         warmup_steps: int = 100,
         testing_only: bool = False,
         remake_train_data: bool = True,
-        retriever = None,
-        model = None,
-        version: str = "v1"
+        retriever=None,
+        model=None,
+        version: str = "v1",
     ) -> t.Dict[str, str]:
-        """finetune_sent: finetunes the sentence transformer - saves new model, 
+        """finetune_sent: finetunes the sentence transformer - saves new model,
            a csv file of old/new cos sim scores, and a metadata file.
         Args:
             batch_size [int]: batch_size
@@ -237,49 +240,50 @@ class Pipeline:
                     LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
                 )
             else:
-                model_load_path = os.path.join(
-                    LOCAL_TRANSFORMERS_DIR, model
-                )
+                model_load_path = os.path.join(LOCAL_TRANSFORMERS_DIR, model)
 
             logger.info(f"Model load path set to: {str(model_load_path)}")
-            no_data=False
+            no_data = False
             base_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
 
-            ## check if training data exists
+            # check if training data exists
             if remake_train_data:
                 no_data = True
-            elif not os.path.isdir(base_dir): # if no training data directory exists
-                no_data=True
-                os.makedirs(base_dir)
-            elif len(os.listdir(base_dir))==0: # if base dir exists but there are no files
-                no_data=True
-            elif get_most_recent_dir(base_dir)==None:
+            # if no training data directory exists
+            elif not os.path.isdir(base_dir):
                 no_data = True
-            elif len(os.listdir(get_most_recent_dir(base_dir)))==0:
-                no_data=True
+                os.makedirs(base_dir)
+            elif (
+                len(os.listdir(base_dir)) == 0
+            ):  # if base dir exists but there are no files
+                no_data = True
+            elif get_most_recent_dir(base_dir) == None:
+                no_data = True
+            elif len(os.listdir(get_most_recent_dir(base_dir))) == 0:
+                no_data = True
             logger.info(f"No data flag is set to: {str(no_data)}")
 
-            #if we don't have data, make training data
-            if no_data: 
+            # if we don't have data, make training data
+            if no_data:
                 make_training_data(
                     index_path=SENT_INDEX,
-                    level='silver', 
+                    level="silver",
                     update_eval_data=True,
-                    testing_only=testing_only
+                    testing_only=testing_only,
                 )
 
             data_path = get_most_recent_dir(base_dir)
-            timestamp = str(data_path).split('/')[-1]
+            timestamp = str(data_path).split("/")[-1]
 
-            ## set model save path
+            # set model save path
             if testing_only:
-                model_save_path = model_load_path + '_TEST_' + timestamp
+                model_save_path = model_load_path + "_TEST_" + timestamp
             else:
                 model_id = datetime.now().strftime("%Y%m%d")
                 model_save_path = model_load_path + "_" + model_id
             logger.info(
                 f"Setting {str(model_save_path)} as save path for new model")
-            
+
             logger.info(f"Loading in domain data to finetune from {data_path}")
             finetuner = STFinetuner(
                 model_load_path=model_load_path,
@@ -297,16 +301,15 @@ class Pipeline:
 
             # eval finetuned model
             logger.info("Done making finetuned model, runnin evals")
-            model_name = model_save_path.split('/')[-1]
+            model_name = model_save_path.split("/")[-1]
             train_meta = open_json("training_metadata.json", data_path)
-            validation_data = train_meta['validation_data_used'].split('/')[-1]
+            validation_data = train_meta["validation_data_used"].split("/")[-1]
             evals = eval_sent(model_name, validation_data, eval_type="domain")
 
             try:
                 for metric in evals:
                     if metric != "model_name":
-                        mlflow.log_metric(
-                            key=metric, value=evals[metric])
+                        mlflow.log_metric(key=metric, value=evals[metric])
             except Exception as e:
                 logger.warning(e)
 
@@ -347,8 +350,7 @@ class Pipeline:
             elif "msmarco-distilbert" in model_name:
                 for e_type in ["domain", "original"]:
                     results[e_type] = eval_sent(
-                        model_name, validation_data, e_type
-                    )
+                        model_name, validation_data, e_type)
             elif "multi-qa-MiniLM" in model_name:
                 results["domain"] = eval_sent(
                     model_name, validation_data, eval_type="domain"
@@ -620,7 +622,12 @@ class Pipeline:
     def create_ltr(self, daysBack: int = 180):
         try:
             ltr = self.ltr
-            processmanager.update_status(processmanager.ltr_creation, 0, 4,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.ltr_creation,
+                0,
+                4,
+                thread_id=threading.current_thread().ident,
+            )
             logger.info("Attempting to create judgement list")
             # NOTE: always set it false right now since there needs to be API changes in the WEB
             remote_mappings = False
@@ -629,15 +636,30 @@ class Pipeline:
             judgements = ltr.generate_judgement(
                 remote_mappings=remote_mappings, daysBack=daysBack
             )
-            processmanager.update_status(processmanager.ltr_creation, 1, 4,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.ltr_creation,
+                1,
+                4,
+                thread_id=threading.current_thread().ident,
+            )
             logger.info("Attempting to get features")
             fts = ltr.generate_ft_txt_file(judgements)
-            processmanager.update_status(processmanager.ltr_creation, 2, 4,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.ltr_creation,
+                2,
+                4,
+                thread_id=threading.current_thread().ident,
+            )
             logger.info("Attempting to read in data")
             ltr.data = ltr.read_xg_data()
             logger.info("Attempting to train LTR model")
             bst, model = ltr.train()
-            processmanager.update_status(processmanager.ltr_creation, 3, 4,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.ltr_creation,
+                3,
+                4,
+                thread_id=threading.current_thread().ident,
+            )
             logger.info("Created LTR model")
             with open(os.path.join(MODEL_PATH, "ltr/xgb-model.json")) as f:
                 model = json.load(f)
@@ -646,11 +668,18 @@ class Pipeline:
             logger.info(resp)
             resp = ltr.post_model(model, model_name="ltr_model")
             logger.info("Posted LTR model")
-            processmanager.update_status(processmanager.ltr_creation, 4, 4,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.ltr_creation,
+                4,
+                4,
+                thread_id=threading.current_thread().ident,
+            )
         except Exception as e:
             logger.error("Could not create LTR")
 
-    def create_topics(self, sample_rate=None, upload=False, corpus_dir=CORPUS_DIR, version="v2"):
+    def create_topics(
+        self, sample_rate=None, upload=False, corpus_dir=CORPUS_DIR, version="v2"
+    ):
         try:
             model_id = datetime.now().strftime("%Y%m%d%H%M%S")
             model_dir = DefaultConfig.LOCAL_MODEL_DIR
@@ -736,12 +765,20 @@ class Pipeline:
 
                 self.mlflow_record(metadata, evals)
                 processmanager.update_status(
-                    processmanager.training, 0, 1, f"training {build_type} model",thread_id=threading.current_thread().ident
+                    processmanager.training,
+                    0,
+                    1,
+                    f"training {build_type} model",
+                    thread_id=threading.current_thread().ident,
                 )
 
             mlflow.end_run()
             processmanager.update_status(
-                processmanager.training, 1, 1, f"trained {build_type} model",thread_id=threading.current_thread().ident
+                processmanager.training,
+                1,
+                1,
+                f"trained {build_type} model",
+                thread_id=threading.current_thread().ident,
             )
         except Exception as e:
             logger.warning(f"Error building {build_type} with MLFlow")
@@ -765,10 +802,18 @@ class Pipeline:
                         f"Started pipeline with unknown build_type: {build_type}"
                     )
                 processmanager.update_status(
-                    processmanager.training, 0, 1, f"training {build_type} model",thread_id=threading.current_thread().ident
+                    processmanager.training,
+                    0,
+                    1,
+                    f"training {build_type} model",
+                    thread_id=threading.current_thread().ident,
                 )
                 processmanager.update_status(
-                    processmanager.training, 1, 1, f"trained {build_type} model",thread_id=threading.current_thread().ident
+                    processmanager.training,
+                    1,
+                    1,
+                    f"trained {build_type} model",
+                    thread_id=threading.current_thread().ident,
                 )
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
@@ -777,13 +822,13 @@ class Pipeline:
                     processmanager.loading_corpus,
                     message="failed to load corpus",
                     failed=True,
-                    thread_id=threading.current_thread().ident
+                    thread_id=threading.current_thread().ident,
                 )
                 processmanager.update_status(
                     processmanager.training,
                     message="failed to train " + build_type + " model",
                     failed=True,
-                    thread_id=threading.current_thread().ident
+                    thread_id=threading.current_thread().ident,
                 )
 
     def mlflow_record(self, metadata, evals):
