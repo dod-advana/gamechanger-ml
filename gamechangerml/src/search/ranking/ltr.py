@@ -261,43 +261,6 @@ class LTR:
         """
         self.read_mappings(remote_mappings=remote_mappings, daysBack=daysBack)
         mapped_keywords = user.process_keywords(self.mappings)
-        """
-        searches = self.mappings[["search", "document"]]
-        searches.dropna(inplace=True)
-        searches.search.replace("&quot;", "", regex=True, inplace=True)
-        word_tuples = []
-        for row in tqdm(searches.itertuples()):
-            words = row.search.split(" ")
-            clean_phr = re.sub(r"[^\w\s]", "", row.search)
-            clean_phr = preprocess(clean_phr, remove_stopwords=True)
-            if clean_phr:
-                word_tuples.append((" ".join(clean_phr), row.document))
-
-            for word in words:
-                clean = word.lower()
-                clean = re.sub(r"[^\w\s]", "", clean)
-                clean = preprocess(clean, remove_stopwords=True)
-                if clean:
-                    tup = (clean[0], row.document)
-                    word_tuples.append(tup)
-        tuple_df = pd.DataFrame(word_tuples, columns=["search", "document"])
-        """
-
-        """
-        count_df = pd.DataFrame()
-        for keyword in tuple_df.search.unique():
-            a = tuple_df[tuple_df.search == keyword]
-            tmp_df = a.groupby("document").count()
-            tmp_df["keyword"] = keyword
-            count_df = count_df.append(tmp_df)
-        count_df.sort_values("search")
-        arr = count_df.search.copy()
-        count_df["ranking"] = user.normalize(arr)
-        count_df.ranking = count_df.ranking.apply(np.ceil)
-        count_df.ranking = count_df.ranking.astype(int)
-        le = LabelEncoder()
-        count_df["qid"] = le.fit_transform(count_df.keyword)
-        """
         ranked_docs = user.rank_docs(mapped_keywords)
         self.judgement = ranked_docs
 
