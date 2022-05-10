@@ -873,7 +873,6 @@ def train_sentence(model_dict):
         "gpu": bool(model_dict["gpu"]),
         "upload": bool(model_dict["upload"]),
         "version": model_dict["version"],
-        "build_type": build_type
     }
     logger.info(args)
     pipeline.run(
