@@ -70,7 +70,7 @@ def get_model_paths():
 
         logger.info("Cannot get word sim model path")
 
-    # SENTENCE INDEX
+    # SENTENCE INDEX AND DOC COMPARE INDEX
     # get largest file name with sent_index prefix (by date)
     try:
         sent_index_name = [
@@ -90,43 +90,20 @@ def get_model_paths():
             INDEX_PATH = os.path.join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, sent_index_name[0]
             )
+            DOC_COMPARE_INDEX_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, sent_index_name[0]
+            )
         else:
             print("defaulting INDEX_PATH to sent_index")
-            INDEX_PATH = os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
+            INDEX_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
+            DOC_COMPARE_INDEX_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
     except Exception as e:
         logger.error(e)
         INDEX_PATH = "gamechangerml/models/"
-        logger.info("Cannot get Sentence Index model path")
-
-    # DOC COMPARE INDEX
-    # get largest file name with sent_index prefix (by date)
-    try:
-        doc_compare_index_name = [
-            f
-            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if ("doc_compare_index" in f)
-            and (".tar" not in f)
-            and (
-                os.path.isfile(
-                    os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f, "config")
-                )
-            )
-        ]
-
-        doc_compare_index_name.sort(reverse=True)
-        if len(doc_compare_index_name) > 0:
-            DOC_COMPARE_INDEX_PATH = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, doc_compare_index_name[0]
-            )
-        else:
-            print("defaulting DOC COMPARE INDEX_PATH to doc_compare_index")
-            DOC_COMPARE_INDEX_PATH = os.path.join(
-                Config.LOCAL_PACKAGED_MODELS_DIR, "doc_compare_index"
-            )
-    except Exception as e:
-        logger.error(e)
-        DOC_COMPARE_INDEX_PATH = "gamechangerml/models/"
-        logger.info("Cannot get Doc Compare Index model path")
+        DOC_COMPARE_INDEX_PATH = INDEX_PATH
+        logger.info(f"Cannot get Sentence Index model path {e}",)
 
     # TOPICS
     try:

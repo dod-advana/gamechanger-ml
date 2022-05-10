@@ -79,7 +79,8 @@ class EmbedderConfig:
         "verbose": True,  # for creating LocalCorpus
         "return_id": True,  # for creating LocalCorpus
     }
-    FINETUNE = {"shuffle": True, "batch_size": 32, "epochs": 3, "warmup_steps": 100}
+    FINETUNE = {"shuffle": True, "batch_size": 32,
+                "epochs": 3, "warmup_steps": 100}
 
 
 class SimilarityConfig:
@@ -93,7 +94,8 @@ class DocCompareEmbedderConfig:
         "verbose": True,  # for creating LocalCorpus
         "return_id": True,  # for creating LocalCorpus
     }
-    FINETUNE = {"shuffle": True, "batch_size": 32, "epochs": 3, "warmup_steps": 100}
+    FINETUNE = {"shuffle": True, "batch_size": 32,
+                "epochs": 3, "warmup_steps": 100}
 
 
 class DocCompareSimilarityConfig:

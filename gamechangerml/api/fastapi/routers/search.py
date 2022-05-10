@@ -249,7 +249,8 @@ async def document_compare_infer(
         body: dict; json format of query
             {
                 <str> "text": "i am text",
-                <?array[[threshold, display]] "confidences": optional array of 2 tuples (threshold, display) where score < threshold -> display :: default [[0.5, "Low"], [0.8, "Medium"], [2, "High"]]
+                <?array[[threshold, display]] "confidences": optional array of 2 tuples (threshold, display) where score > threshold -> display :: default [[0.8, "High"], [0.5, "Medium"], [0.4, "Low"]]
+                <?float> "cutoff": optional cutoff to filter result scores by
             }
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:

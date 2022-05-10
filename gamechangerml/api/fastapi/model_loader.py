@@ -240,7 +240,8 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
+        logger.info(
+            f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
             if MODEL_LOAD_FLAG:
                 ModelLoader.__sentence_searcher = SentenceSearcher(
@@ -294,7 +295,8 @@ class ModelLoader:
         Args: 
         Returns:
         """
-        logger.info(f"Loading Document Compare Searcher with index path: {index_path}")
+        logger.info(
+            f"Loading Document Compare Searcher with index path: {index_path}")
         try:
             ModelLoader.__document_compare_searcher = DocCompareSentenceSearcher(
                 sim_model_name=DocCompareSimilarityConfig.BASE_MODEL,
@@ -330,7 +332,8 @@ class ModelLoader:
             encoder_model = ModelLoader.__document_compare_encoder.encoder_model
             # set cache variable defined in settings.py
             latest_doc_compare_encoder.value = encoder_model
-            logger.info(f"** Loaded Doc Compare Encoder Model from {encoder_model}")
+            logger.info(
+                f"** Loaded Doc Compare Encoder Model from {encoder_model}")
 
         except Exception as e:
             logger.warning("** Could not load Doc Compare Encoder model")
@@ -340,7 +343,8 @@ class ModelLoader:
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
             if MODEL_LOAD_FLAG:
-                ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
+                ModelLoader.__sparse_reader = sparse.SparseReader(
+                    model_name=model_name)
                 logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")

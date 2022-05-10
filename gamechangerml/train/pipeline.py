@@ -54,8 +54,6 @@ from gamechangerml.src.utilities import utils
 from gamechangerml.configs.config import (
     DefaultConfig,
     D2VConfig,
-    DocCompareEmbedderConfig,
-    DocCompareSimilarityConfig,
     QexpConfig,
     QAConfig,
     EmbedderConfig,
@@ -609,158 +607,6 @@ class Pipeline:
             utils.upload(s3_path, dst_path, "sentence_index", model_id)
         return metadata, evals
 
-    def create_doc_compare_embedding(
-        self,
-        corpus,
-        existing_embeds=None,
-        encoder_model="msmarco-distilbert-base-v2_2021-10-17",
-        gpu=True,
-        upload=False,
-        version="v1",
-        validate=True,
-    ):
-        """
-        create_embedding: creates a sentence embedding for document compare
-        Args:
-            params for sentence configuration
-        Returns:
-            metadata: params or meta information for qexp
-            evals: evaluation results dict
-        """
-        # Error fix for saving index and model to tgz
-        # https://github.com/huggingface/transformers/issues/5486
-        try:
-            os.environ["TOKENIZERS_PARALLELISM"] = "false"
-        except Exception as e:
-            logger.warning(e)
-
-        # GPU check
-        use_gpu = gpu
-        if use_gpu and not torch.cuda.is_available:
-            logger.info(
-                "GPU is not available. Setting `gpu` argument to False")
-            use_gpu = False
-
-        # Define model saving directories
-        model_dir = MODEL_PATH
-        model_id = datetime.now().strftime("%Y%m%d")
-        model_name = "doc_compare_index_" + model_id
-        local_doc_compare_index_dir = os.path.join(model_dir, model_name)
-
-        # Define new index directory
-        if not os.path.isdir(local_doc_compare_index_dir):
-            os.mkdir(local_doc_compare_index_dir)
-        logger.info(
-            "-------------- Building Doc Compare Sentence Embeddings --------------"
-        )
-        logger.info("Loading Doc Compare Encoder Model...")
-        logger.info(f"existing_embeds  {existing_embeds}")
-
-        # If existing index exists, copy content from reference index
-        if existing_embeds is not None:
-            copy_tree(existing_embeds, local_doc_compare_index_dir)
-
-        # Building the Index
-        try:
-            logger.info(
-                f"Creating Document Compare SentenceEncoder with {encoder_model} on {corpus}"
-            )
-            encoder = DocCompareSentenceEncoder(
-                encoder_model_name=encoder_model,
-                use_gpu=use_gpu,
-                transformer_path=LOCAL_TRANSFORMERS_DIR,
-                **DocCompareEmbedderConfig.MODEL_ARGS,
-            )
-            logger.info(
-                f"Creating Document Compare Embeddings with {encoder_model} on {corpus}"
-            )
-            logger.info("-------------- Indexing Documents--------------")
-            start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            encoder.index_documents(
-                corpus_path=corpus, index_path=local_doc_compare_index_dir
-            )
-            end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            logger.info("-------------- Completed Indexing --------------")
-            user = get_user(logger)
-
-            # Checking length of IDs
-            try:
-                DOC_COMPARE_INDEX_PATH = model_path_dict["doc_compare"]
-                old_index_len = get_index_size(DOC_COMPARE_INDEX_PATH)
-                new_index_len = len(encoder.embedder.config["ids"])
-                if new_index_len < old_index_len:
-                    logger.warning(
-                        f"Length of index ({str(new_index_len)}) is shorter than previous index ({str(old_index_len)})"
-                    )
-                    logger.info(
-                        f"Old index location: {str(DOC_COMPARE_INDEX_PATH)}")
-            except Exception as e:
-                logger.warning(
-                    f"Could not compare length to old index: {str(DOC_COMPARE_INDEX_PATH)}"
-                )
-                logger.error(e)
-
-            # Generating process metadata
-            metadata = {
-                "user": user,
-                "date_started": start_time,
-                "date_finished": end_time,
-                "doc_id_count": len(encoder.embedder.config["ids"]),
-                "corpus_name": corpus,
-                "encoder_model": encoder_model,
-            }
-
-            # Create metadata file
-            metadata_path = os.path.join(
-                local_doc_compare_index_dir, "metadata.json")
-            with open(metadata_path, "w") as fp:
-                json.dump(metadata, fp)
-
-            logger.info(f"Saved metadata.json to {metadata_path}")
-            # Create .tgz file
-            dst_path = local_doc_compare_index_dir + ".tar.gz"
-            utils.create_tgz_from_dir(
-                src_dir=local_doc_compare_index_dir, dst_archive=dst_path
-            )
-
-            logger.info(f"Created tgz file and saved to {dst_path}")
-            logger.info("-------------- Running Evaluation --------------")
-
-            try:
-                evals = {}
-                for level in ["gold", "silver"]:
-                    evaluation = IndomainRetrieverEvaluator(
-                        encoder=encoder,
-                        index=model_name,
-                        data_level=level,
-                        encoder_model_name=DocCompareEmbedderConfig.BASE_MODEL,
-                        sim_model_name=DocCompareSimilarityConfig.BASE_MODEL,
-                        **DocCompareEmbedderConfig.MODEL_ARGS,
-                    )
-                    evals[level] = evaluation.results
-                    logger.info(
-                        f"Evals for {level} standard validation: {(str(evaluation.results))}"
-                    )
-            except Exception as e:
-                logger.warning(
-                    "Could not create evaluations for the new doc compare sentence index"
-                )
-                logger.error(e)
-
-            logger.info(
-                "-------------- Finished Doc Compare Sentence Embedding--------------"
-            )
-        except Exception as e:
-            logger.warning("Error with creating doc compare embedding")
-            logger.error(e)
-        # Upload to S3
-        if upload:
-            S3_MODELS_PATH = "bronze/gamechanger/models"
-            s3_path = os.path.join(
-                S3_MODELS_PATH, f"doc_compare_sent_index/{version}")
-            utils.upload(s3_path, dst_path, "doc_compare_sent_index", model_id)
-        return metadata, evals
-
     def init_ltr(self):
         try:
             ltr = self.ltr
@@ -918,7 +764,7 @@ class Pipeline:
                 elif build_type == "meta":
                     self.create_metadata(**params)
                 elif build_type == "doc_compare_sentence":
-                    metadata, evals = self.create_doc_compare_embedding(
+                    metadata, evals = self.create_embedding(
                         **params)
 
                 self.mlflow_record(metadata, evals)
@@ -956,7 +802,7 @@ class Pipeline:
                 elif build_type == "meta":
                     self.create_metadata(**params)
                 elif build_type == "doc_compare_sentence":
-                    metadata, evals = self.create_doc_compare_embedding(
+                    metadata, evals = self.create_embedding(
                         **params)
                 else:
                     logger.info(

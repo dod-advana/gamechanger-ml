@@ -125,7 +125,6 @@ def get_downloaded_models_list():
     qexp_list = {}
     jbook_qexp_list = {}
     sent_index_list = {}
-    doc_compare_index_list = {}
     transformer_list = {}
     topic_models = {}
     ltr_list = {}
@@ -210,29 +209,6 @@ def get_downloaded_models_list():
         logger.error(e)
         logger.info("Cannot get Sentence Index model path")
 
-    # DOC COMPARE SENTENCE INDEX
-    # get largest file name with doc_compare_index prefix (by date)
-    try:
-        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
-            if ("doc_compare_index" in f) and ("tar" not in f):
-                logger.info(f"doc_compare_index sent indices: {str(f)}")
-                doc_compare_index_list[f] = {}
-                meta_path = os.path.join(
-                    Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json"
-                )
-                if os.path.isfile(meta_path):
-                    meta_file = open(meta_path)
-                    doc_compare_index_list[f] = json.load(meta_file)
-                    doc_compare_index_list[f]["evaluation"] = {}
-
-                    doc_compare_index_list[f]["evaluation"] = handle_sent_evals(
-                        os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
-                    )
-                    meta_file.close()
-    except Exception as e:
-        logger.error(e)
-        logger.info("Cannot get Doc Compare Index model path")
-
     # TOPICS MODELS
     try:
 
@@ -287,7 +263,6 @@ def get_downloaded_models_list():
         "jbook_qexp": jbook_qexp_list,
         "topic_models": topic_models,
         "ltr": ltr_list,
-        "doc_compare_sentence": doc_compare_index_list,
     }
     return model_list
 
@@ -302,7 +277,8 @@ async def delete_local_model(model: dict, response: Response):
 
     def removeDirectory(dir):
         try:
-            logger.info(f'Removing directory {os.path.join(dir,model["model"])}')
+            logger.info(
+                f'Removing directory {os.path.join(dir,model["model"])}')
             shutil.rmtree(os.path.join(dir, model["model"]))
         except OSError as e:
             logger.error(e)
@@ -436,7 +412,8 @@ async def download(response: Response):
     def download_s3_thread():
         try:
             logger.info("Attempting to download dependencies from S3")
-            output = subprocess.call(["gamechangerml/scripts/download_dependencies.sh"])
+            output = subprocess.call(
+                ["gamechangerml/scripts/download_dependencies.sh"])
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)
             processmanager.update_status(
@@ -554,7 +531,8 @@ async def download_s3_file(file_dict: dict, response: Response):
                 except Exception as e:
                     failedExtracts.append(member.name)
 
-            logger.warning(f"Could not extract {failedExtracts} with permission errors")
+            logger.warning(
+                f"Could not extract {failedExtracts} with permission errors")
             processmanager.update_status(
                 f's3: {file_dict["file"]}',
                 failed=True,
@@ -717,8 +695,10 @@ async def reload_models(model_dict: dict, response: Response):
         thread = MlThread(reload_thread, args)
         thread.start()
         processmanager.running_threads[thread.ident] = thread
-        thread_name = processmanager.reloading + " ".join([key for key in model_dict])
-        processmanager.update_status(thread_name, 0, total, thread_id=thread.ident)
+        thread_name = processmanager.reloading + \
+            " ".join([key for key in model_dict])
+        processmanager.update_status(
+            thread_name, 0, total, thread_id=thread.ident)
     except Exception as e:
         logger.warning(e)
 
@@ -864,11 +844,11 @@ def finetune_sentence(model_dict):
 
 
 def train_sentence(model_dict):
-    logger.info("Attempting to start sentence pipeline")
-    try:
-        corpus_dir = model_dict["corpus_dir"]
-    except:
-        corpus_dir = CORPUS_DIR
+
+    build_type = model_dict["build_type"]
+    logger.info(f"Attempting to start {build_type} pipeline")
+
+    corpus_dir = model_dict.get("corpus_dir", CORPUS_DIR)
     if not os.path.exists(corpus_dir):
         logger.warning(f"Corpus is not in local directory {str(corpus_dir)}")
         raise Exception("Corpus is not in local directory")
@@ -878,6 +858,7 @@ def train_sentence(model_dict):
         "gpu": bool(model_dict["gpu"]),
         "upload": bool(model_dict["upload"]),
         "version": model_dict["version"],
+        "build_type": build_type
     }
     logger.info(args)
     pipeline.run(
@@ -947,7 +928,8 @@ def run_evals(model_dict):
 def train_topics(model_dict):
     logger.info("Attempting to train topic model")
     logger.info(model_dict)
-    args = {"sample_rate": model_dict["sample_rate"], "upload": model_dict["upload"]}
+    args = {"sample_rate": model_dict["sample_rate"],
+            "upload": model_dict["upload"]}
     pipeline.run(
         build_type=model_dict["build_type"],
         run_name=datetime.now().strftime("%Y%m%d"),
@@ -972,14 +954,15 @@ async def train_model(model_dict: dict, response: Response):
             "eval": run_evals,
             "meta": update_metadata,
             "topics": train_topics,
-            "doc_compare_sentence": train_doc_compare_sentence,
+            "doc_compare_sentence": train_sentence,
         }
 
         # Set the training method to be loaded onto the thread
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
         else:  # PLACEHOLDER
-            logger.warn("No build type specified in model_dict, defaulting to sentence")
+            logger.warn(
+                "No build type specified in model_dict, defaulting to sentence")
             model_dict["build_type"] = "sentence"
             training_method = training_switch[model_dict["build_type"]]
 
@@ -987,10 +970,12 @@ async def train_model(model_dict: dict, response: Response):
         training_method = training_switch.get(build_type)
 
         if not training_method:
-            raise Exception(f"No training method mapped for build type {build_type}")
+            raise Exception(
+                f"No training method mapped for build type {build_type}")
 
         # Set the training method to be loaded onto the thread
-        training_thread = MlThread(training_method, args={"model_dict": model_dict})
+        training_thread = MlThread(training_method, args={
+                                   "model_dict": model_dict})
         training_thread.start()
         processmanager.running_threads[training_thread.ident] = training_thread
         processmanager.update_status(
@@ -1041,9 +1026,9 @@ async def get_user_data(data_dict: dict, response: Response):
         confirmation of data download
     """
     data = data_dict["params"]["data"]
-    GC_USER_DATA = os.path.join(DATA_PATH, "user_data", "UserAggregations.json")
+    GC_USER_DATA = os.path.join(
+        DATA_PATH, "user_data", "UserAggregations.json")
     with open(GC_USER_DATA, "w") as f:
         json.dump(data, f)
 
     return f"wrote {len(data)} user data to file"
-
