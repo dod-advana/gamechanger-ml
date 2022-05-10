@@ -763,9 +763,6 @@ class Pipeline:
                     metadata, evals = self.create_topics(**params)
                 elif build_type == "meta":
                     self.create_metadata(**params)
-                elif build_type == "doc_compare_sentence":
-                    metadata, evals = self.create_embedding(
-                        **params)
 
                 self.mlflow_record(metadata, evals)
                 processmanager.update_status(
@@ -801,9 +798,6 @@ class Pipeline:
                     metadata, evals = self.create_topics(**params)
                 elif build_type == "meta":
                     self.create_metadata(**params)
-                elif build_type == "doc_compare_sentence":
-                    metadata, evals = self.create_embedding(
-                        **params)
                 else:
                     logger.info(
                         f"Started pipeline with unknown build_type: {build_type}"

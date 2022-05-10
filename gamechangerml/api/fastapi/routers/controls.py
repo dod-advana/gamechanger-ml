@@ -885,31 +885,6 @@ def train_sentence(model_dict):
     )
 
 
-def train_doc_compare_sentence(model_dict):
-
-    logger.info("Attempting to start doc compare sentence pipeline")
-
-    corpus_dir = model_dict.get("corpus_dir", CORPUS_DIR)
-
-    if not os.path.exists(corpus_dir):
-        logger.warning(f"Corpus is not in local directory {str(corpus_dir)}")
-        raise Exception("Corpus is not in local directory")
-
-    args = {
-        "corpus": corpus_dir,
-        "encoder_model": model_dict["encoder_model"],
-        "gpu": bool(model_dict["gpu"]),
-        "upload": bool(model_dict["upload"]),
-        "version": model_dict["version"],
-    }
-    logger.info(f"starting pipeline run with args {args}")
-    pipeline.run(
-        build_type=model_dict["build_type"],
-        run_name=datetime.now().strftime("%Y%m%d"),
-        params=args,
-    )
-
-
 def train_qexp(model_dict):
     logger.info("Attempting to start qexp pipeline")
     args = {
@@ -971,7 +946,6 @@ async def train_model(model_dict: dict, response: Response):
             "eval": run_evals,
             "meta": update_metadata,
             "topics": train_topics,
-            "doc_compare_sentence": train_sentence,
         }
 
         # Set the training method to be loaded onto the thread
