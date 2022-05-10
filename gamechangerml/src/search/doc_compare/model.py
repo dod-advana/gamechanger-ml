@@ -220,9 +220,9 @@ class SimilarityRanker():
         return results
 
 
-DEFAULT_SCORES = (
-    (0.8, "High"), (0.5, "Medium"), (0.4, "Low")
-)
+DEFAULT_SCORES = [
+    [0.8, "High"], [0.5, "Medium"], [0.4, "Low"], [0.0, "Very Low"]
+]
 DEFAULT_CUTOFF = 0.25
 
 

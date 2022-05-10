@@ -621,6 +621,23 @@ async def reload_models(model_dict: dict, response: Response):
                         total,
                         thread_id=threading.current_thread().ident,
                     )
+                if "doc_compare_sentence" in model_dict:
+                    doc_compare_sentence_path = os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["doc_compare_sentence"]
+                    )
+                    # uses DOC_COMPARE_SENT_INDEX_PATH by default
+                    logger.info(
+                        "Attempting to load Doc Compare Sentence Transformer")
+                    MODELS.initDocumentCompareSearcher(
+                        doc_compare_sentence_path)
+                    DOC_COMPARE_SENT_INDEX_PATH.value = doc_compare_sentence_path
+                    progress += 1
+                    processmanager.update_status(
+                        thread_name,
+                        progress,
+                        total,
+                        thread_id=threading.current_thread().ident,
+                    )
                 if "qexp" in model_dict:
                     qexp_name = os.path.join(
                         Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
