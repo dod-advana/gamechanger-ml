@@ -17,10 +17,6 @@ function download_and_unpack_deps() {
   echo "S3 MODEL PATH SENTENCE INDEX: $S3_SENT_INDEX_PATH"
   aws s3 cp "$S3_SENT_INDEX_PATH" "$models_dest_dir" --no-progress
 
- echo "Downloading Doc Compare Sentence Index"
-  echo "S3 MODEL PATH DOC COMPARE SENTENCE INDEX: $S3_DOC_COMPARE_SENT_INDEX_PATH"
-  aws s3 cp "$S3_DOC_COMPARE_SENT_INDEX_PATH" "$models_dest_dir" --no-progress
-
   echo "Downloading QE Model"
   echo "S3 QE MODEL: $S3_QEXP_PATH"
   aws s3 cp "$S3_QEXP_PATH" "$models_dest_dir" --no-progress
