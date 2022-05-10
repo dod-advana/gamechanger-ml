@@ -89,6 +89,7 @@ async def trans_sentence_infer(
     num_results: int = 10,
     process: bool = True,
     externalSim: bool = False,
+    threshold="auto",
 ) -> dict:
     """trans_sentence_infer - endpoint for sentence transformer inference
     Args:
@@ -103,12 +104,15 @@ async def trans_sentence_infer(
     try:
         query_text = body["text"]
         results = MODELS.sentence_searcher.search(
-            query_text, num_results, process=process, externalSim=False
+            query_text,
+            num_results,
+            process=process,
+            externalSim=False,
+            threshold=threshold,
         )
         logger.info(results)
     except Exception:
-        logger.error(
-            f"Unable to get results from sentence transformer for {body}")
+        logger.error(f"Unable to get results from sentence transformer for {body}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise
     return results
@@ -177,8 +181,7 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
         # Removes original word from the return terms unless it is combined with another word
         logger.info(f"original expanded terms: {expansion_list}")
         finalTerms = remove_original_kw(expansion_list, terms_string)
-        expansion_dict[terms_string] = [
-            '"{}"'.format(exp) for exp in finalTerms]
+        expansion_dict[terms_string] = ['"{}"'.format(exp) for exp in finalTerms]
         logger.info(f"-- Expanded {terms_string} to \n {finalTerms}")
         # Perform word similarity
         logger.info(f"Finding similiar words for: {terms_string}")
@@ -226,8 +229,7 @@ async def post_recommender(body: dict, response: Response) -> dict:
             if body["sample"]:
                 sample = body["sample"]
         logger.info(f"Recommending similar documents to {filenames}")
-        results = MODELS.recommender.get_recs(
-            filenames=filenames, sample=sample)
+        results = MODELS.recommender.get_recs(filenames=filenames, sample=sample)
         if results["results"] != []:
             logger.info(f"Found similar docs: \n {str(results)}")
         else:

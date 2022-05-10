@@ -735,12 +735,10 @@ async def download_corpus(corpus_dict: dict, response: Response):
         logger.info("Attempting to download corpus from S3")
         # grabs the s3 path to the corpus from the post in "corpus"
         # then passes in where to dowload the corpus locally.
-        if not corpus_dict.get("corpus", None):
-            s3_corpus_dir = S3_CORPUS_PATH
-        else:
-            s3_corpus_dir = corpus_dict.get("corpus")
 
+        s3_corpus_dir = corpus_dict.get("corpus", S3_CORPUS_PATH)
         args = {"s3_corpus_dir": s3_corpus_dir, "output_dir": CORPUS_DIR}
+
         logger.info(args)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()
@@ -904,11 +902,16 @@ def run_evals(model_dict):
         sample_limit = int(model_dict["sample_limit"])
     except:
         sample_limit = 15000
+    if "sent_index" in model_dict["model_name"]:
+        retriever = MODELS.sentence_searcher
+    else:
+        retriever = None
     args = {
         "model_name": model_dict["model_name"],
         "eval_type": model_dict["eval_type"],
         "sample_limit": sample_limit,
         "validation_data": model_dict["validation_data"],
+        "retriever": retriever,
     }
     pipeline.run(
         build_type=model_dict["build_type"],

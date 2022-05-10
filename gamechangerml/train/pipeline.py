@@ -224,7 +224,7 @@ class Pipeline:
         model=None,
         version: str = "v1",
     ) -> t.Dict[str, str]:
-        """finetune_sent: finetunes the sentence transformer - saves new model, 
+        """finetune_sent: finetunes the sentence transformer - saves new model,
            a csv file of old/new cos sim scores, and a metadata file.
         Args:
             batch_size [int]: batch_size
@@ -327,7 +327,8 @@ class Pipeline:
         model_name: str,
         sample_limit: int,
         validation_data: str = "latest",
-        eval_type: str = "original",
+        eval_type: str = "domain",
+        retriever=None,
         upload: bool = True,
         version: str = "v1",
     ) -> t.Dict[str, str]:
@@ -351,14 +352,15 @@ class Pipeline:
             elif "msmarco-distilbert" in model_name:
                 for e_type in ["domain", "original"]:
                     results[e_type] = eval_sent(
-                        model_name, validation_data, e_type)
+                        model_name, validation_data, e_type, retriever
+                    )
             elif "multi-qa-MiniLM" in model_name:
                 results["domain"] = eval_sent(
-                    model_name, validation_data, eval_type="domain"
+                    model_name, validation_data, eval_type="domain", retriever=retriever
                 )
             elif "sent_index" in model_name:
                 results["domain"] = eval_sent(
-                    model_name, validation_data, eval_type="domain"
+                    model_name, validation_data, eval_type="domain", retriever=retriever
                 )
             elif "distilbart-mnli-12-3" in model_name:
                 results[eval_type] = eval_sim(
@@ -565,15 +567,8 @@ class Pipeline:
                 json.dump(metadata, fp)
 
             logger.info(f"Saved metadata.json to {metadata_path}")
-            # Create .tgz file
-            dst_path = local_sent_index_dir + ".tar.gz"
-            utils.create_tgz_from_dir(
-                src_dir=local_sent_index_dir, dst_archive=dst_path
-            )
 
-            logger.info(f"Created tgz file and saved to {dst_path}")
             logger.info("-------------- Running Evaluation --------------")
-
             try:
                 evals = {}
                 for level in ["gold", "silver"]:
@@ -595,6 +590,13 @@ class Pipeline:
                 )
                 logger.error(e)
 
+            # Create .tgz file
+            dst_path = local_sent_index_dir + ".tar.gz"
+            utils.create_tgz_from_dir(
+                src_dir=local_sent_index_dir, dst_archive=dst_path
+            )
+
+            logger.info(f"Created tgz file and saved to {dst_path}")
             logger.info(
                 "-------------- Finished Sentence Embedding--------------")
         except Exception as e:
