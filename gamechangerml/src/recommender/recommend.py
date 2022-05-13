@@ -7,6 +7,7 @@ from collections import Counter
 import networkx as nx
 from typing import List, Dict, Union
 from gamechangerml.api.utils.logger import logger
+from gamechangerml.src.utilities.user_utils import process_keywords
 from gamechangerml import DATA_PATH, REPO_PATH
 
 CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
@@ -43,8 +44,9 @@ class Recommender:
                 DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
             )
             user = pd.read_csv(user_file)
+            user = process_keywords(user)
             user.dropna(subset=["document"], inplace=True)
-            user["clean_search"] = user["value"].apply(
+            user["clean_search"] = user["search"].apply(
                 lambda x: str(x).replace("&quot;", '"')
             )
             user["clean_doc"] = user["document"].apply(
