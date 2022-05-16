@@ -990,4 +990,4 @@ async def get_user_data(data_dict: dict, response: Response):
     GC_SEARCH_DATA = os.path.join(DATA_PATH, "user_data", "search_history","SearchPdfMapping.csv")
     df.to_csv(GC_SEARCH_DATA)
 
-    return f"wrote {len(userData)} user data and searchs to file"
+    return f"wrote {len(userData)} user data and searches to file"
