@@ -990,7 +990,7 @@ async def get_user_data(data_dict: dict, response: Response):
         confirmation of data download
     """
 
-    data = data_dict["params"]["userData"]
+    userData = data_dict["params"]["userData"]
     GC_USER_DATA = os.path.join(
         DATA_PATH, "user_data", "search_history", "UserAggregations.json"
     )
