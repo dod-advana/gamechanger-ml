@@ -284,7 +284,6 @@ class Pipeline:
                 model_save_path = model_load_path + "_" + model_id
             logger.info(
                 f"Setting {str(model_save_path)} as save path for new model")
-
             logger.info(f"Loading in domain data to finetune from {data_path}")
             finetuner = STFinetuner(
                 model_load_path=model_load_path,

@@ -1020,7 +1020,8 @@ async def get_user_data(data_dict: dict, response: Response):
     """
     data = data_dict["params"]["data"]
     GC_USER_DATA = os.path.join(
-        DATA_PATH, "user_data", "UserAggregations.json")
+        DATA_PATH, "user_data", "search_history", "UserAggregations.json"
+    )
     with open(GC_USER_DATA, "w") as f:
         json.dump(data, f)
 

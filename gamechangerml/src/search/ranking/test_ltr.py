@@ -1,4 +1,5 @@
 from gamechangerml.src.search.ranking.ltr import LTR
+from gamechangerml.src.utilities.user_utils import normalize
 import pandas as pd
 import numpy as np
 
@@ -147,7 +148,7 @@ def test_process_ltr_log():
 
 
 def test_normalize():
-    norm = ltr.normalize(np.array([1, 3, 4, 5]))
+    norm = normalize(np.array([1, 3, 4, 5]))
     assert np.array_equal(
         norm.tolist(), [0.0, 2.7304247779439415, 3.4454124645871445, 4.0]
     )
