@@ -13,8 +13,26 @@ from gamechangerml.src.utilities import utils
 from gamechangerml.src.utilities.es_utils import ESUtils
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
-from gamechangerml.api.fastapi.settings import *
-from gamechangerml.api.fastapi.routers.startup import *
+
+from gamechangerml.api.fastapi.settings import (
+    logger,
+    TOPICS_MODEL,
+    CORPUS_DIR,
+    QEXP_JBOOK_MODEL_NAME,
+    QEXP_MODEL_NAME,
+    WORD_SIM_MODEL,
+    LOCAL_TRANSFORMERS_DIR,
+    SENT_INDEX_PATH,
+    latest_intel_model_encoder,
+    latest_intel_model_sim,
+    latest_doc_compare_encoder,
+    latest_doc_compare_sim,
+    DOC_COMPARE_SENT_INDEX_PATH,
+    S3_CORPUS_PATH,
+    QA_MODEL,
+    ignore_files,
+)
+
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
@@ -277,7 +295,7 @@ async def delete_local_model(model: dict, response: Response):
     logger.info(model)
     if model["type"] == "transformers":
         removeDirectory(LOCAL_TRANSFORMERS_DIR.value)
-    elif model["type"] == "sentence" or model["type"] == "qexp":
+    elif model["type"] in ("sentence", "qexp", "doc_compare_sentence"):
         removeDirectory(Config.LOCAL_PACKAGED_MODELS_DIR)
         removeFiles(Config.LOCAL_PACKAGED_MODELS_DIR)
 
@@ -378,6 +396,9 @@ async def get_current_models():
         "topic_model": TOPICS_MODEL.value,
         "wordsim_model": WORD_SIM_MODEL.value,
         "qa_model": QA_MODEL.value,
+        "doc_compare_sim_model": latest_doc_compare_sim.value,
+        "doc_compare_encoder_model": latest_doc_compare_encoder.value,
+        "doc_compare_sentence_index": DOC_COMPARE_SENT_INDEX_PATH.value,
     }
 
 
@@ -600,6 +621,23 @@ async def reload_models(model_dict: dict, response: Response):
                         total,
                         thread_id=threading.current_thread().ident,
                     )
+                if "doc_compare_sentence" in model_dict:
+                    doc_compare_sentence_path = os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["doc_compare_sentence"]
+                    )
+                    # uses DOC_COMPARE_SENT_INDEX_PATH by default
+                    logger.info(
+                        "Attempting to load Doc Compare Sentence Transformer")
+                    MODELS.initDocumentCompareSearcher(
+                        doc_compare_sentence_path)
+                    DOC_COMPARE_SENT_INDEX_PATH.value = doc_compare_sentence_path
+                    progress += 1
+                    processmanager.update_status(
+                        thread_name,
+                        progress,
+                        total,
+                        thread_id=threading.current_thread().ident,
+                    )
                 if "qexp" in model_dict:
                     qexp_name = os.path.join(
                         Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qexp"]
@@ -648,8 +686,7 @@ async def reload_models(model_dict: dict, response: Response):
                     )
                 if "qa_model" in model_dict:
                     qa_model_name = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR,
-                        model_dict["qa_model"],
+                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qa_model"],
                     )
 
                     logger.info("Attempting to load QA model")
@@ -698,10 +735,10 @@ async def download_corpus(corpus_dict: dict, response: Response):
         logger.info("Attempting to download corpus from S3")
         # grabs the s3 path to the corpus from the post in "corpus"
         # then passes in where to dowload the corpus locally.
-        if not corpus_dict["corpus"]:
-            corpus_dict = S3_CORPUS_PATH
-        args = {
-            "s3_corpus_dir": corpus_dict["corpus"], "output_dir": CORPUS_DIR}
+
+        s3_corpus_dir = corpus_dict.get("corpus", S3_CORPUS_PATH)
+        args = {"s3_corpus_dir": s3_corpus_dir, "output_dir": CORPUS_DIR}
+
         logger.info(args)
         corpus_thread = MlThread(utils.get_s3_corpus, args)
         corpus_thread.start()
@@ -822,11 +859,11 @@ def finetune_sentence(model_dict):
 
 
 def train_sentence(model_dict):
-    logger.info("Attempting to start sentence pipeline")
-    try:
-        corpus_dir = model_dict["corpus_dir"]
-    except:
-        corpus_dir = CORPUS_DIR
+
+    build_type = model_dict["build_type"]
+    logger.info(f"Attempting to start {build_type} pipeline")
+
+    corpus_dir = model_dict.get("corpus_dir", CORPUS_DIR)
     if not os.path.exists(corpus_dir):
         logger.warning(f"Corpus is not in local directory {str(corpus_dir)}")
         raise Exception("Corpus is not in local directory")
@@ -894,16 +931,6 @@ def train_topics(model_dict):
     )
 
 
-training_switch = {
-    "sentence": train_sentence,
-    "qexp": train_qexp,
-    "sent_finetune": finetune_sentence,
-    "eval": run_evals,
-    "meta": update_metadata,
-    "topics": train_topics,
-}
-
-
 @router.post("/trainModel", status_code=200)
 async def train_model(model_dict: dict, response: Response):
     """load_latest_models - endpoint for updating the transformer model
@@ -922,10 +949,13 @@ async def train_model(model_dict: dict, response: Response):
             "meta": update_metadata,
             "topics": train_topics,
         }
+
         # Set the training method to be loaded onto the thread
         if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
         else:  # PLACEHOLDER
+            logger.warn(
+                "No build type specified in model_dict, defaulting to sentence")
             model_dict["build_type"] = "sentence"
             training_method = training_switch[model_dict["build_type"]]
 

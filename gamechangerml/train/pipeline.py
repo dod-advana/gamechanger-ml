@@ -1,5 +1,6 @@
 import argparse
 from gamechangerml import MODEL_PATH, DATA_PATH, REPO_PATH
+from gamechangerml.src.search.doc_compare.model import DocCompareSentenceEncoder
 from gamechangerml.src.search.ranking.ltr import LTR
 from gamechangerml.src.featurization.topic_modeling import Topics
 import logging

@@ -90,6 +90,21 @@ class SimilarityConfig:
     BASE_MODEL = "distilbart-mnli-12-3"
 
 
+class DocCompareEmbedderConfig:
+    BASE_MODEL = "msmarco-distilbert-base-v2"
+    MODEL_ARGS = {
+        "min_token_len": 25,
+        "verbose": True,  # for creating LocalCorpus
+        "return_id": True,  # for creating LocalCorpus
+    }
+    FINETUNE = {"shuffle": True, "batch_size": 32,
+                "epochs": 3, "warmup_steps": 100}
+
+
+class DocCompareSimilarityConfig:
+    BASE_MODEL = "distilbart-mnli-12-3"
+
+
 class QexpConfig:
     MODEL_ARGS = {
         "init": {  # args for creating QE object

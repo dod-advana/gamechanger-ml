@@ -2,7 +2,7 @@ import os
 
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
-from gamechangerml.api.utils.redisdriver import *
+from gamechangerml.api.utils.redisdriver import CacheVariable, REDIS_HOST, REDIS_PORT
 from gamechangerml import CORPUS_PATH
 from gamechangerml.configs.config import QAConfig
 
@@ -30,6 +30,11 @@ latest_intel_model_sim = CacheVariable(
 )
 latest_intel_model_encoder = CacheVariable("latest encoder model", True)
 latest_intel_model_trans = CacheVariable("latest_intel_model_trans")
+latest_doc_compare_encoder = CacheVariable(
+    "latest doc compare encoder model", True)
+latest_doc_compare_sim = CacheVariable(
+    "latest doc compare searcher (similarity model + sent index)", True
+)
 
 LOCAL_TRANSFORMERS_DIR = CacheVariable("LOCAL_TRANSFORMERS_DIR")
 SENT_INDEX_PATH = CacheVariable("SENT_INDEX_PATH")
@@ -38,6 +43,7 @@ QEXP_JBOOK_MODEL_NAME = CacheVariable("QEXP_JBOOK_MODEL_NAME")
 WORD_SIM_MODEL = CacheVariable("WORD_SIM_MODEL")
 TOPICS_MODEL = CacheVariable("TOPICS_MODEL")
 QA_MODEL = CacheVariable("QA_MODEL")
+DOC_COMPARE_SENT_INDEX_PATH = CacheVariable("DOC_COMPARE_SENT_INDEX_PATH")
 
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]
@@ -47,6 +53,7 @@ QEXP_JBOOK_MODEL_NAME.value = model_path_dict["qexp_jbook"]
 WORD_SIM_MODEL.value = model_path_dict["word_sim"]
 TOPICS_MODEL.value = model_path_dict["topics"]
 QA_MODEL.value = QAConfig.BASE_MODEL
+DOC_COMPARE_SENT_INDEX_PATH.value = model_path_dict["doc_compare"]
 
 t_list = []
 try:
@@ -62,5 +69,7 @@ logger.info(f"API AVAILABLE TRANSFORMERS are: {t_list}")
 # validate correct configurations
 logger.info(f"API TRANSFORMERS DIRECTORY is: {LOCAL_TRANSFORMERS_DIR.value}")
 logger.info(f"API INDEX PATH is: {SENT_INDEX_PATH.value}")
+logger.info(
+    f"API DOC COMPARE INDEX PATH is: {DOC_COMPARE_SENT_INDEX_PATH.value}")
 logger.info(f"API REDIS HOST is: {REDIS_HOST}")
 logger.info(f"API REDIS PORT is: {REDIS_PORT}")

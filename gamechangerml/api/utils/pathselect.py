@@ -63,15 +63,14 @@ def get_model_paths():
     # WORK SIM MODEL PATH
     try:
         WORD_SIM_MODEL_PATH = os.path.join(
-            LOCAL_TRANSFORMERS_DIR,
-            "wiki-news-300d-1M.bin"
+            LOCAL_TRANSFORMERS_DIR, "wiki-news-300d-1M.bin"
         )
     except Exception as e:
         logger.error(e)
 
         logger.info("Cannot get word sim model path")
 
-    # SENTENCE INDEX
+    # SENTENCE INDEX AND DOC COMPARE INDEX
     # get largest file name with sent_index prefix (by date)
     try:
         sent_index_name = [
@@ -91,14 +90,20 @@ def get_model_paths():
             INDEX_PATH = os.path.join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, sent_index_name[0]
             )
+            DOC_COMPARE_INDEX_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, sent_index_name[0]
+            )
         else:
             print("defaulting INDEX_PATH to sent_index")
             INDEX_PATH = os.path.join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
+            DOC_COMPARE_INDEX_PATH = os.path.join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
     except Exception as e:
         logger.error(e)
         INDEX_PATH = "gamechangerml/models/"
-        logger.info("Cannot get Sentence Index model path")
+        DOC_COMPARE_INDEX_PATH = INDEX_PATH
+        logger.info(f"Cannot get Sentence Index model path {e}",)
 
     # TOPICS
     try:
@@ -116,7 +121,9 @@ def get_model_paths():
                 Config.LOCAL_PACKAGED_MODELS_DIR, topic_model_dirs[0]
             )
         else:
-            raise ValueError(f"No topic_model_<date> folders in {Config.LOCAL_PACKAGED_MODELS_DIR}")
+            raise ValueError(
+                f"No topic_model_<date> folders in {Config.LOCAL_PACKAGED_MODELS_DIR}"
+            )
 
     except Exception as e:
         logger.error(e)
@@ -130,5 +137,6 @@ def get_model_paths():
         "qexp_jbook": QEXP_JBOOK_MODEL_PATH,
         "word_sim": WORD_SIM_MODEL_PATH,
         "topics": TOPICS_PATH,
+        "doc_compare": DOC_COMPARE_INDEX_PATH,
     }
     return model_dict

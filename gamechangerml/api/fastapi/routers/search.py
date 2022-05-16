@@ -242,6 +242,39 @@ async def post_recommender(body: dict, response: Response) -> dict:
     return results
 
 
+@router.post("/documentCompare", status_code=200)
+async def document_compare_infer(
+    body: dict, response: Response, num_results: int = 10, process: bool = True,
+) -> dict:
+    """document_compare_infer - endpoint for document compare inference
+    Args:
+        body: dict; json format of query
+            {
+                <str> "text": "i am text",
+                <?array[[threshold, display]] "confidences": optional array of 2 tuples (threshold, display) where score > threshold -> display :: default [[0.8, "High"], [0.5, "Medium"], [0.4, "Low"]]
+                <?float> "cutoff": optional cutoff to filter result scores by
+            }
+        Response: Response class; for status codes(apart of fastapi do not need to pass param)
+    Returns:
+        results: dict; results of inference
+    """
+    logger.debug("DOCUMENT COMPARE INFER - predicting query: " + str(body))
+    results = {}
+    try:
+        query_text = body["text"]
+        results = MODELS.document_compare_searcher.search(
+            query_text, num_results, body, process=process, externalSim=False
+        )
+        logger.info(results)
+    except Exception:
+        logger.error(
+            f"Unable to get results from doc compare sentence transformer for {body}"
+        )
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise
+    return results
+
+
 def unquoted(term):
     """unquoted - unquotes string
     Args:

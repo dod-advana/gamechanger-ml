@@ -1,7 +1,21 @@
 from fastapi import APIRouter
 from fastapi_utils.tasks import repeat_every
 import os
-from gamechangerml.api.fastapi.settings import *
+from gamechangerml.api.fastapi.settings import (
+    DOC_COMPARE_SENT_INDEX_PATH,
+    logger,
+    TOPICS_MODEL,
+    MODEL_LOAD_FLAG,
+    QEXP_JBOOK_MODEL_NAME,
+    QEXP_MODEL_NAME,
+    LOCAL_TRANSFORMERS_DIR,
+    SENT_INDEX_PATH,
+    latest_intel_model_encoder,
+    latest_intel_model_sim,
+    latest_intel_model_sent,
+    latest_doc_compare_sim,
+    latest_doc_compare_encoder,
+)
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 router = APIRouter()
@@ -10,14 +24,20 @@ MODELS = ModelLoader()
 
 @router.on_event("startup")
 async def load_models():
-    MODELS.initQA()
-    MODELS.initQE()
-    MODELS.initQEJBook()
-    MODELS.initSentenceEncoder()
-    MODELS.initSentenceSearcher()
-    MODELS.initWordSim()
-    MODELS.initTopics()
-    MODELS.initRecommender()
+    if MODEL_LOAD_FLAG:
+        MODELS.initQA()
+        MODELS.initQE()
+        MODELS.initQEJBook()
+        MODELS.initSentenceEncoder()
+        MODELS.initSentenceSearcher()
+        MODELS.initWordSim()
+        MODELS.initTopics()
+        MODELS.initRecommender()
+        MODELS.initDocumentCompareEncoder()
+        MODELS.initDocumentCompareSearcher()
+        logger.info("AFTER LOAD MODELS")
+    else:
+        logger.info("MODEL_LOAD_FLAG set to False, no models loaded")
 
 
 @router.on_event("startup")
@@ -46,13 +66,21 @@ async def check_health():
 
     # logger.info(f"-- Transformer model name: {new_trans_model_name}")
     # logger.info(f"-- Sentence Transformer model name: {new_sent_model_name}")
-    logger.info(f"-- Similarity model name: {new_sim_model_name}")
-    logger.info(f"-- Encoder model name: {new_encoder_model_name}")
+    logger.info(f"-- Sentence Similarity model name: {new_sim_model_name}")
+    logger.info(f"-- Sentence Encoder model name: {new_encoder_model_name}")
     logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
     logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
     logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
     logger.info(f"-- QA model name: {new_qa_model_name}")
     logger.info(f"-- Topics model name: {TOPICS_MODEL.value}")
+    logger.info(
+        f"-- Doc Compare Similarity model name: {latest_doc_compare_sim.value}")
+    logger.info(
+        f"-- Doc Compare Encoder model name: {latest_doc_compare_encoder.value}"
+    )
+    logger.info(
+        f"-- Doc Compare Sentence index name: {DOC_COMPARE_SENT_INDEX_PATH.value}"
+    )
 
 
 def check_dep_exist():
@@ -63,6 +91,10 @@ def check_dep_exist():
 
     if not os.path.isdir(SENT_INDEX_PATH.value):
         logger.warning(f"{SENT_INDEX_PATH.value} does NOT exist")
+        healthy = False
+
+    if not os.path.isdir(DOC_COMPARE_SENT_INDEX_PATH.value):
+        logger.warning(f"{DOC_COMPARE_SENT_INDEX_PATH.value} does NOT exist")
         healthy = False
 
     if not os.path.isdir(QEXP_MODEL_NAME.value):
