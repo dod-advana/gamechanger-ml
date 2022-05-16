@@ -6,6 +6,7 @@ import json
 import tarfile
 import shutil
 import threading
+import pandas as pd
 
 from datetime import datetime
 from gamechangerml import DATA_PATH
@@ -979,9 +980,14 @@ async def get_user_data(data_dict: dict, response: Response):
     Returns:
         confirmation of data download
     """
-    data = data_dict["params"]["data"]
+    userData = data_dict["params"]["userData"]
     GC_USER_DATA = os.path.join(DATA_PATH, "user_data", "UserAggregations.json")
     with open(GC_USER_DATA, "w") as f:
-        json.dump(data, f)
+        json.dump(userData, f)
 
-    return f"wrote {len(data)} user data to file"
+    searchData = data_dict["params"]["searchData"]
+    df = pd.DataFrame(searchData)
+    GC_SEARCH_DATA = os.path.join(DATA_PATH, "user_data", "search_history","SearchPdfMapping.csv")
+    df.to_csv(GC_SEARCH_DATA)
+
+    return f"wrote {len(userData)} user data and searchs to file"
