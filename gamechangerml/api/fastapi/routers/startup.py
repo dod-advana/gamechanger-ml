@@ -71,7 +71,6 @@ async def check_health():
     logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
     logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
     logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
-    logger.info(f"-- QA model name: {new_qa_model_name}")
     logger.info(f"-- Topics model name: {TOPICS_MODEL.value}")
     logger.info(
         f"-- Doc Compare Similarity model name: {latest_doc_compare_sim.value}")
