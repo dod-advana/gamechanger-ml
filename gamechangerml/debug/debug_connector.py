@@ -2,17 +2,22 @@ import os
 from gamechangerml.api.fastapi.settings import logger
 
 
-def debug_if_flagged():
+def check_debug_flagged():
     env_flag = "ENABLE_DEBUGGER"
     flag_str = os.getenv(env_flag, "false")
+    return flag_str == 'true'
 
-    if flag_str == 'true':
+
+def debug_if_flagged():
+
+    if check_debug_flagged():
         try:
             import debugpy
             debugger_port = 5678
             debugpy.listen(('0.0.0.0', debugger_port))
             logger.info(f"\n Debugger listening on {debugger_port}  🥾🦟 \n")
-            debugpy.wait_for_client()
+
+            # debugpy.wait_for_client()
             # debugpy.breakpoint()
         except Exception as e:
             import time
