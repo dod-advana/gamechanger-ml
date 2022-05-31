@@ -35,14 +35,15 @@ class Recommender:
 
         self.graph = self.get_user_graph()
 
-    def get_user_graph(self):
+    def get_user_graph(self, user_file=None):
         """Makes graph out of user searches + docs opened"""
 
         logger.info(" ****    BUILDING RECOMMENDER: Making user graph")
         try:
-            user_file = os.path.join(
-                DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
-            )
+            if not user_file:
+                user_file = os.path.join(
+                    DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
+                )
             user = pd.read_csv(user_file)
             user = process_keywords(user)
             user.dropna(subset=["document"], inplace=True)
