@@ -225,7 +225,7 @@ class ModelLoader:
         logger.info(f"Loading Word Sim Model from {model_path}")
         try:
             if MODEL_LOAD_FLAG:
-                ModelLoader.__word_sim = WordSim(model_path)
+                # ModelLoader.__word_sim = WordSim(model_path)
                 logger.info("** Loaded Word Sim Model")
         except Exception as e:
             logger.warning("** Could not load Word Sim model")
@@ -240,7 +240,8 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
+        logger.info(
+            f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
             if MODEL_LOAD_FLAG:
                 ModelLoader.__sentence_searcher = SentenceSearcher(
@@ -291,12 +292,13 @@ class ModelLoader:
     ):
         """
         initDocumentCompareSearcher - loads SentenceSearcher class on start
-        Args: 
+        Args:
         Returns:
         """
         logger.info(
             f"Loading Document Compare Searcher with index path: {index_path}")
         try:
+            """
             ModelLoader.__document_compare_searcher = DocCompareSentenceSearcher(
                 sim_model_name=DocCompareSimilarityConfig.BASE_MODEL,
                 index_path=index_path,
@@ -306,6 +308,7 @@ class ModelLoader:
             sim_model = ModelLoader.__document_compare_searcher.similarity
             # set cache variable defined in settings.py
             latest_doc_compare_sim.value = sim_model.sim_model
+            """
             logger.info(
                 f"** Loaded Doc Compare Similarity model from {sim_model.sim_model} and sent index from {index_path}"
             )
@@ -342,7 +345,8 @@ class ModelLoader:
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
             if MODEL_LOAD_FLAG:
-                ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
+                ModelLoader.__sparse_reader = sparse.SparseReader(
+                    model_name=model_name)
                 logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
