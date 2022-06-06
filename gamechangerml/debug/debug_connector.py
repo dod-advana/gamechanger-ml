@@ -1,9 +1,10 @@
 import os
 from gamechangerml.api.fastapi.settings import logger
 
+env_flag = "ENABLE_DEBUGGER"
+
 
 def check_debug_flagged():
-    env_flag = "ENABLE_DEBUGGER"
     flag_str = os.getenv(env_flag, "false")
     return flag_str == 'true'
 
