@@ -15,8 +15,7 @@ if MODEL_LOAD_FLAG in ["False", "false", "0"]:
     MODEL_LOAD_FLAG = False
 else:
     MODEL_LOAD_FLAG = True
-SECONDS_DAY = 86400
-CACHE_EXPIRE_S = SECONDS_DAY * 30
+CACHE_EXPIRE_DAYS = 15
 if GC_ML_HOST == "":
     GC_ML_HOST = "localhost"
 ignore_files = ["._.DS_Store", ".DS_Store", "index"]

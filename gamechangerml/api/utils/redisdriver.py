@@ -40,9 +40,10 @@ class CacheVariable:
         if self._encode:
             value = json.dumps(value)
         if expire:
-            return self._connection.set(self._key, value, ex=expire)
+            self._connection.set(self._key, value)
+            self._connection.expireat(self._key, expire)
         else:
-            return self._connection.set(self._key, value)
+            self._connection.set(self._key, value)
 
     # Default delete method, removes key from redis
     def del_value(self):

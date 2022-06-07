@@ -3,6 +3,7 @@ import time
 import requests
 import base64
 import hashlib
+import datetime
 
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
@@ -14,7 +15,8 @@ from gamechangerml.api.utils.redisdriver import CacheVariable
 
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
 # from gamechangerml.src.featurization.summary import GensimSumm
-from gamechangerml.api.fastapi.settings import *
+from gamechangerml.api.fastapi.settings import CACHE_EXPIRE_DAYS
+from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 from gamechangerml.configs.config import QexpConfig
@@ -107,10 +109,9 @@ async def trans_sentence_infer(
         cache = CacheVariable(query_text, True)
         cached_value = cache.get_value()
         if cached_value:
-            logger.debug("Searched is cached:", cached_value)
+            logger.info("Searched was found in cache")
             results = cached_value
         else:
-            logger.debug("Searched is not cached")
             results = MODELS.sentence_searcher.search(
                 query_text,
                 num_results,
@@ -118,7 +119,15 @@ async def trans_sentence_infer(
                 externalSim=False,
                 threshold=threshold,
             )
-            cache.set_value(results, expire=CACHE_EXPIRE_S)
+            cache.set_value(
+                results,
+                expire=int(
+                    (
+                        datetime.datetime.utcnow()
+                        + datetime.timedelta(days=CACHE_EXPIRE_DAYS)
+                    ).timestamp()
+                ),
+            )
         logger.info(results)
     except Exception:
         logger.error(
@@ -179,7 +188,7 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
     query_expander = (
         MODELS.query_expander
         if body.get("qe_model", "gc_core") != "jbook"
-        or MODELS.query_expander_jbook == None
+        or MODELS.query_expander_jbook is None
         else MODELS.query_expander_jbook
     )
     try:
