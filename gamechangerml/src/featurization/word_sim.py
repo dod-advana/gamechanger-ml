@@ -11,8 +11,9 @@ class WordSim:
         self.model_dir = model_dir
         try:
             self.model = gensim.models.KeyedVectors.load_word2vec_format(
-                self.model_dir)
+                self.model_dir, binary=True)
         except Exception as e:
+            print(e)
             self.model = None
             print("Cannot load pretrained vector for Word Similarity")
 
@@ -20,7 +21,7 @@ class WordSim:
         text = remove_stopwords(text)
         return list(gensim.utils.tokenize(text))
 
-    def most_similiar_tokens(self, text: str, sim_thresh=0.65, top_n=2):
+    def most_similiar_tokens(self, text: str, sim_thresh=0.7, top_n=2):
         tokens = self.tokenize(text)
         similar_tokens = {}
         for word in tokens:

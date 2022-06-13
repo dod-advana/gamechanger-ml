@@ -2,7 +2,8 @@ import logging
 import re
 from typing import Dict, Generator, Union
 
-from gensim.summarization.summarizer import summarize
+# import fails in gensim 4.
+# from gensim.summarization.summarizer import summarize
 # from summarizer import Summarizer
 # from summarizer.sentence_handler import SentenceHandler
 

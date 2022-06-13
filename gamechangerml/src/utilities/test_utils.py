@@ -1,13 +1,24 @@
-import math
-import numpy as np
 import os
 import re
 import json
+import pandas as pd
+import math
+import numpy as np
+from dateutil import parser
 from datetime import date, datetime
 import signal
-from gamechangerml.api.utils.logger import logger
-
 import torch
+import random
+import shutil
+from gamechangerml.api.utils.logger import logger
+from gamechangerml.configs.config import ValidationConfig
+
+MATAMO_DIR = ValidationConfig.DATA_ARGS['matamo_dir']
+SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']
+
+MATAMO_TEST_FILE = "gamechangerml/data/test_data/MatamoFeedback_TEST.csv"
+SEARCH_TEST_FILE = "gamechangerml/data/test_data/SearchPDFMapping_TEST.csv"
+
 
 # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
 class TimeoutException(Exception):   # Custom exception class
@@ -21,7 +32,7 @@ def init_timer():
     signal.signal(signal.SIGALRM, timeout_handler)
     logger.info("Created timer.")
 
-    return 
+    return
 
 def check_file_size(filename, path):
     '''Returns the filesize (in bytes) of a file'''
@@ -66,6 +77,11 @@ def open_txt(filepath):
     '''Opens a txt file'''
     with open(filepath, "r") as fp:
         return fp.readlines()
+
+def get_index_size(sent_index_path):
+    '''Checks the size of a sentence index by # of doc ids.'''
+    doc_ids = open_txt(os.path.join(sent_index_path, 'doc_ids.txt'))
+    return len(doc_ids)
 
 def timestamp_filename(filename, extension):
     '''Makes a filename that include a %Y-%m-%d timestamp'''
@@ -136,6 +152,31 @@ def collect_evals(directory):
                 evaldict[name] = {}
         return evaldict
 
+def collect_sent_evals_gc(index_path):
+    '''gets evals for index'''
+    eval_dict = {}
+    subdict = {}
+    evals_path = os.path.join(index_path, 'evals_gc')
+    logger.info(f"evals path: {evals_path}")
+    for level in ['gold', 'silver']:
+        fullpath = os.path.join(evals_path, level)
+        file = get_most_recent_eval(fullpath)
+        logger.info(f"file: {file}")
+        if file != '':
+            subdict[level] = open_json(file, fullpath)
+        else:
+            subdict[level] = ''
+    
+    eval_dict["gc"] = subdict
+    return eval_dict
+
+def handle_sent_evals(index_path):
+    try:
+        return collect_sent_evals_gc(index_path)
+    except Exception as e:
+        logger.warning(e)
+        return collect_evals(index_path)
+        
 # from sentence_transformers==2.0.0
 #https://github.com/UKPLab/sentence-transformers/blob/master/sentence_transformers/util.py
 def cos_sim(a, b):
@@ -230,14 +271,18 @@ def update_meta_relations(metadata, df, query_col, return_col):
             
     return metadata
     
-def filter_rels(metadata, min_correct_matches):
+def filter_rels(metadata, min_correct_matches, max_results):
     '''Filter relations by criteria'''
     
     correct_rels = {}
     incorrect_rels = {}
+    logger.info(f"Generating data for {str(len(metadata))} queries with {str(max_results)} max results and {str(min_correct_matches)} min correct matches")
     for key in metadata:
         acceptable_positive_results = []
         negative_results = []
+        if max_results and len(metadata[key]) > max_results: # if we have more than n max results, skip this match
+            logger.info(f"Skipping {key}: has {str(len(metadata[key]))} unique matches")
+            continue
         for match in metadata[key]:
             result = metadata[key][match]
             sources = [i['source'] for i in result['exact_matches']]
@@ -246,6 +291,8 @@ def filter_rels(metadata, min_correct_matches):
                     acceptable_positive_results.append(match)
                 elif result['times_matched'] >= min_correct_matches: # only pull history matches occurring more than x times
                     acceptable_positive_results.append(match)
+                else:
+                    logger.info(f"Skipping {key}, {match}: matched {str(result['times_matched'])} times")
             elif result['correct_match'] == False:
                 negative_results.append(match)
 
@@ -253,5 +300,106 @@ def filter_rels(metadata, min_correct_matches):
             correct_rels[key] = acceptable_positive_results
         if negative_results != []:
             incorrect_rels[key] = negative_results
+
+    logger.info(f"Generated {str(len(correct_rels))} correct queries")
+    logger.info(f"Generated {str(len(incorrect_rels))} incorrect queries")
         
     return correct_rels, incorrect_rels
+
+def convert_timestamp_to_datetime(timestamp):
+    return pd.to_datetime(parser.parse(timestamp).strftime("%Y-%m-%d"))
+
+## filter users and dates when csv read in
+def filter_date_range(df, start_date, end_date):
+    if 'createdAt' in df.columns:
+        timecol = 'createdAt'
+    elif 'searchtime' in df.columns:
+        timecol = 'searchtime'
+    df['dt'] = df[timecol].apply(lambda x: convert_timestamp_to_datetime(x))
+    logger.info(f"Available date range: {str(min(df['dt']))} - {str(max(df['dt']))}")
+    subset = df.copy()
+    if start_date:
+        subset = subset[subset['dt'] >= pd.to_datetime(start_date)]
+    if end_date:
+        subset = subset[subset['dt'] <= pd.to_datetime(end_date)]
+    logger.info(f"New date range: {str(min(subset['dt']))} - {str(max(subset['dt']))}")
+    return subset
+
+def concat_csvs(directory):
+    '''Combines csvs in directory into one df; drops entirely null columns'''
+    df = pd.DataFrame()
+    logger.info(str(directory))
+    csvs = [i for i in os.listdir(directory) if i.split('.')[-1]=='csv']
+    csvs = [i for i in csvs if i[:2] != '._']
+    logger.info(f"Combining csvs: {str(csvs)}")
+    for i in csvs:
+        try:
+            f = pd.read_csv(os.path.join(directory, i))
+            df = pd.concat([df, f])
+        except Exception as e:
+            logger.warning(e)
+            pass
+    return df
+
+def concat_matamo(testing_only=False):
+    if testing_only:
+        return pd.read_csv(MATAMO_TEST_FILE)
+    else:
+        return concat_csvs(MATAMO_DIR)
+
+def concat_search_hist(testing_only=False):
+    if testing_only:
+        return pd.read_csv(SEARCH_TEST_FILE)
+    else:
+        return concat_csvs(SEARCH_HIST)
+
+def get_most_recent_dir(parent_dir):
+    
+    subdirs = [os.path.join(parent_dir, d) for d in os.listdir(parent_dir) if os.path.isdir(os.path.join(parent_dir, d))]
+    if len(subdirs) > 0:
+        return max(subdirs, key=os.path.getctime)
+    else:
+        logger.error("There are no subdirectories to retrieve most recent data from")
+        return None
+
+def make_test_corpus(
+    corpus_dir, # main corpus dir
+    save_dir, # where to save the test corpus
+    percent_random, # float from 0-1 percentage of index to make from random docs
+    max_size=1000, # max size of the index (to save on time building)
+    include_ids=None, # if any IDs need to be in the test, pass as list
+    max_file_size=100000 # max size of random files to add to the test corpus
+    ):
+    '''Makes a small test corpus for checking validation'''
+    all_files = [f.split('.json')[0] + '.json' for f in os.listdir(corpus_dir) if os.path.isfile(os.path.join(corpus_dir, f))]
+    if percent_random > 1:
+        percent_random = percent_random / 100
+    if include_ids:
+        logger.info(f"{str(len(include_ids))} ids required in test corpus")
+        include_ids = [f.split('.json')[0] + '.json' for f in include_ids] # make sure json at end of filenames
+        subset = list(set(all_files).intersection(include_ids)) # only get ids in the main corpus
+        if len(subset) < len(include_ids):
+            logger.info(f"Did not find all required ids in the main corpus dir.")
+            logger.info(f"Found {str(len(subset))} / {str(len(include_ids))} ids")
+        other = [i for i in all_files if i not in include_ids]
+        if percent_random > 0:
+            num_add = round(len(subset)/percent_random - len(subset))
+        else:
+            num_add = 0
+    else:
+        subset = []
+        other = all_files
+        num_add = max_size
+    
+    ## add random docs
+    for i in range(num_add):
+        filesize = 1000000
+        while filesize > max_file_size: # as we iterate, skip large files
+            random_index = random.randint(0,len(other)-1)
+            file = other[random_index] # pick a random file
+            filesize = check_file_size(file, corpus_dir) # if filesize is smaller than max, break loop
+        subset.append(file)
+        subset = list(set(subset)) # remove duplicates
+
+    logger.info(f"Collected {str(len(subset))} jsons")
+    return subset

@@ -217,8 +217,7 @@ $RECYCLE.BIN/
 # Logs
 gamechanger.log
 gc.log
-api/logs/gc_ml_gpu_log.txt
-
+gamechangerml/api/logs
 # DS directories
 src/modelzoo/semantic/packaged_models/*
 !src/modelzoo/semantic/packaged_models/.gitkeep
@@ -234,9 +233,8 @@ mlruns/
 
 # Transformer models
 models/transformers
-
 # Corpus files
-corpus
+corpus/*
 
 # Don't ignore .gitkeep files
 !**/.gitkeep
@@ -246,6 +244,7 @@ models/topic_models/models
 models/sent_index*
 models/qexp_model*
 models/transformers
-
+models/
+redis-data/
 # Ignore override for non local deployment
 docker-compose.override.yml

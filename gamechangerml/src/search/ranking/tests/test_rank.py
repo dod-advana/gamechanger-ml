@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def rank_obj():
-    from gamechangerml.src.search.ranking.rank import Rank
+    from gamechangerml.src.featurization.rank_features.rank import Rank
 
     return Rank()
 

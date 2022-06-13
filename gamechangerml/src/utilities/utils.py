@@ -5,6 +5,9 @@ import os
 import shutil
 import glob
 import tarfile
+import threading
+import typing as t
+from pathlib import Path
 from gamechangerml.src.utilities.aws_helper import *
 from gamechangerml.configs.config import S3Config
 from gamechangerml import REPO_PATH
@@ -39,22 +42,28 @@ def save_all_s3(models_path, model_name, s3_model_dir=S3Config.S3_MODELS_DIR):
     logger.debug("Saved {model_name} files to S3")
 
 
-def get_model_s3(filename, s3_model_dir):
+def get_model_s3(filename, s3_model_dir,download_dir=""):
     """
     read_model_s3 - read from s3 bucket
         params: filename (with ext)
         output:
     """
+    files = []
     bucket = s3_connect()
     model_path = os.path.join(s3_model_dir, filename)
+    logger.info(model_path)
     try:
         for obj in bucket.objects.filter(Prefix=model_path):
-            print(obj.key)
-            bucket.download_file(obj.key, obj.key.split("/")[-1])
-    except RuntimeError:
+            if obj.size != 0:
+                logger.info(f'Downloading {obj.key}')
+                bucket.download_file(obj.key, os.path.join(download_dir,obj.key.split("/")[-1]))
+                files.append(os.path.join(download_dir,obj.key.split("/")[-1]))
+    except RuntimeError as e:
         # print("cant download")
-        logger.debug(filename + " failed to download from S3")
+        logger.info(e)
 
+        logger.error(filename + " failed to download from S3")
+    return files
 
 def store_corpus_s3(data, filename):
     """
@@ -93,7 +102,7 @@ def create_model_schema(model_dir, file_prefix):
     return file_prefix
 
 
-def read_corpus_s3(filename, corpus_dir, output_dir="corpus"):
+def read_corpus_s3(filename, s3_corpus_dir, output_dir="corpus"):
     """
     read_corpus_s3 - read from s3 bucket
         params: filename (with ext)
@@ -104,7 +113,7 @@ def read_corpus_s3(filename, corpus_dir, output_dir="corpus"):
         os.makedirs(output_dir)
     try:
         bucket.download_file(
-            f"{corpus_dir}/" + filename, os.path.join(output_dir, filename)
+            f"{s3_corpus_dir}/" + filename, os.path.join(output_dir, filename)
         )
     except RuntimeError:
         # print("cant download")
@@ -120,11 +129,10 @@ def get_s3_corpus_list():
     return corp
 
 
-def get_s3_corpus(corpus_dir, output_dir="corpus"):
+def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
     corp = []
     try:
         bucket = s3_connect()
-
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         else:
@@ -133,21 +141,24 @@ def get_s3_corpus(corpus_dir, output_dir="corpus"):
             progress = 0
             if total > 0:
                 processmanager.update_status(
-                    processmanager.delete_corpus, progress, total)
+                    processmanager.delete_corpus, progress, total,thread_id=threading.current_thread().ident
+                )
                 logger.info("Removing existing corpus files.")
                 for f in files:
                     os.remove(os.path.join(output_dir, f))
                     progress += 1
                     processmanager.update_status(
-                        processmanager.delete_corpus, progress, total)
+                        processmanager.delete_corpus, progress, total,thread_id=threading.current_thread().ident
+                    )
         # get the s3.Bucket.objectsCollection of objects that meet the prefix
-        filter = bucket.objects.filter(Prefix=f"{corpus_dir}/")
+        filter = bucket.objects.filter(Prefix=f"{s3_corpus_dir}/")
         total = len(list(filter))
         completed = 0
         # Initialize Progress
         processmanager.update_status(
-            processmanager.corpus_download, completed, total)
-        logger.info("Downloading corpus from " + corpus_dir)
+            processmanager.corpus_download, completed, total,thread_id=threading.current_thread().ident
+        )
+        logger.info("Downloading corpus from " + s3_corpus_dir)
         for obj in filter:
             corp.append(obj.key)
             filename = os.path.basename(obj.key)
@@ -159,14 +170,16 @@ def get_s3_corpus(corpus_dir, output_dir="corpus"):
                     completed += 1
                 # Update Progress
                 processmanager.update_status(
-                    processmanager.corpus_download, completed, total)
+                    processmanager.corpus_download, completed, total,thread_id=threading.current_thread().ident
+                )
             except RuntimeError:
                 logger.debug(f"Could not retrieve {filename}")
     except Exception as error:
         logger.warning(error)
-        processmanager.update_status(processmanager.delete_corpus, failed=True)
+        processmanager.update_status(processmanager.delete_corpus, failed=True,thread_id=threading.current_thread().ident)
         processmanager.update_status(
-            processmanager.corpus_download, failed=True)
+            processmanager.corpus_download, failed=True,thread_id=threading.current_thread().ident
+        )
     return corp
 
 
@@ -236,21 +249,18 @@ def download_latest_model_package(s3_models_dir, local_packaged_models_dir):
         bucket = s3_connect()
         package_folder = s3_models_dir + model_name
         logger.debug(
-            "Downloading latest model package from {}".format(package_folder)
-        )
+            "Downloading latest model package from {}".format(package_folder))
 
         for obj in bucket.objects.filter(Prefix=package_folder):
             filename = obj.key.rpartition("/")[2]
             download_path = "{}/{}".format(package_dir, filename)
-            logger.debug(
-                "Getting {} to download to {}".format(obj.key, download_path)
-            )
+            logger.debug("Getting {} to download to {}".format(
+                obj.key, download_path))
             bucket.Object(obj.key).download_file(download_path)
 
     except Exception as e:
         logger.error(
-            "Error downloading all model files, removing any local downloads"
-        )
+            "Error downloading all model files, removing any local downloads")
         logger.error(e)
         shutil.rmtree(package_dir)
         os.rmdir(package_dir)
@@ -272,11 +282,9 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
         bucket = s3_connect()
         package_folder = s3_models_dir
         logger.debug(
-            "Downloading latest model package from {}".format(package_folder)
-        )
+            "Downloading latest model package from {}".format(package_folder))
         curr_local_models = get_local_model_package_names(
-            local_packaged_models_dir
-        )
+            local_packaged_models_dir)
         model_diff_list = []
         if select == "all":
             s3_models = get_models_list(s3_models_dir)
@@ -294,8 +302,7 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
             filename = obj.key.split("/")[3]
             if model_prefix in model_diff_list:
                 package_dir = "{}/{}".format(
-                    local_packaged_models_dir, model_prefix
-                )
+                    local_packaged_models_dir, model_prefix)
                 download_path = "{}/{}".format(package_dir, filename)
                 bucket = s3_connect()
                 logger.debug("Checking  package dir {}".format(package_dir))
@@ -308,20 +315,17 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
                             os.makedirs(package_dir)
                     except Exception as e:
                         logger.error(
-                            "Could not create directory for packaged models"
-                        )
+                            "Could not create directory for packaged models")
                         raise e
                 logger.debug(
                     "Getting {} to download to {}".format(
-                        obj.key, download_path
-                    )
+                        obj.key, download_path)
                 )
                 bucket.Object(obj.key).download_file(download_path)
 
     except Exception as e:
         logger.error(
-            "Error downloading all model files, removing any local downloads"
-        )
+            "Error downloading all model files, removing any local downloads")
         logger.error(e)
         shutil.rmtree(package_dir)
         os.rmdir(package_dir)
@@ -329,14 +333,9 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
     return model_diff_list
 
 
-def get_transformers(
-    model_path="transformers_v4/transformers.tar", overwrite=False
-):
+def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=False):
     bucket = s3_connect()
-    models_path = os.path.join(
-        REPO_PATH,
-        "gamechangerml/models"
-    )
+    models_path = os.path.join(REPO_PATH, "gamechangerml/models")
     try:
         if glob.glob(os.path.join(models_path, "transformer*")):
             if not overwrite:
@@ -368,10 +367,7 @@ def get_transformers(
 
 def get_sentence_index(model_path="sent_index/", overwrite=False):
     bucket = s3_connect()
-    models_path = os.path.join(
-        REPO_PATH,
-        "gamechangerml/models"
-    )
+    models_path = os.path.join(REPO_PATH, "gamechangerml/models")
     try:
         if glob.glob(os.path.join(models_path, "sent_index*")):
             if not overwrite:
@@ -404,9 +400,8 @@ def get_sentence_index(model_path="sent_index/", overwrite=False):
 def get_local_model_package_names(local_packaged_models_dir):
     return list(
         filter(
-            lambda x: os.path.isdir(
-                os.path.join(local_packaged_models_dir, x)
-            ),
+            lambda x: os.path.isdir(os.path.join(
+                local_packaged_models_dir, x)),
             os.listdir(local_packaged_models_dir),
         )
     )
@@ -476,8 +471,7 @@ def download_eval_data(dataset_name, save_dir, version=None):
             all_datasets.add(dataset)
     except:
         logger.debug(
-            "Failed to query dataset version. Maybe the dataset doesn't exist"
-        )
+            "Failed to query dataset version. Maybe the dataset doesn't exist")
 
     if dataset_name not in all_datasets:
         logger.debug(f"{dataset_name} not in available datasets.")
@@ -493,8 +487,7 @@ def download_eval_data(dataset_name, save_dir, version=None):
             all_versions.add(object_ver)
     except:
         logger.debug(
-            "Failed to query dataset version. Maybe the dataset doesn't exist"
-        )
+            "Failed to query dataset version. Maybe the dataset doesn't exist")
 
     if version is None:
         version = max(all_versions)
@@ -512,3 +505,24 @@ def download_eval_data(dataset_name, save_dir, version=None):
             bucket.download_file(obj.key, save_name)
     except:
         logger.debug(f"Failed to download {obj.key}")
+
+
+def create_tgz_from_dir(
+    src_dir: t.Union[str, Path],
+    dst_archive: t.Union[str, Path],
+    exclude_junk: bool = False,
+) -> None:
+    with tarfile.open(dst_archive, "w:gz") as tar:
+        tar.add(src_dir, arcname=os.path.basename(src_dir))
+
+
+def upload(s3_path, local_path, model_prefix, model_name):
+    # Loop through each file and upload to S3
+    logger.info(f"Uploading files to {s3_path}")
+    logger.info(f"\tUploading: {local_path}")
+    # local_path = os.path.join(dst_path)
+    s3_path = os.path.join(
+        s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
+    upload_file(local_path, s3_path)
+    logger.info(f"Successfully uploaded files to {s3_path}")
+    logger.info("-------------- Finished Uploading --------------")

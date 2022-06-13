@@ -1,13 +1,13 @@
 from datetime import datetime
 from os import environ
 import os
-from gamechangerml import REPO_PATH
+from gamechangerml import REPO_PATH, DATA_PATH, MODEL_PATH
 
 
 class DefaultConfig:
 
-    DATA_DIR = os.path.join(REPO_PATH, "common/data/processed")
-    LOCAL_MODEL_DIR = os.path.join(REPO_PATH, "gamechangerml/models")
+    DATA_DIR = DATA_PATH
+    LOCAL_MODEL_DIR = MODEL_PATH
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
 
 
@@ -28,7 +28,7 @@ class D2VConfig:
         "epochs": 20,
         "alpha": 0.020,
         "min_alpha": 0.005,
-        # 'workers': multiprocessing.cpu_count() // 2 # to allow some portion of the cores to perform generator tasks
+        # "workers": multiprocessing.cpu_count() // 2 # to allow some portion of the cores to perform generator tasks
     }
 
 
@@ -44,7 +44,7 @@ class BertSummConfig:
             "custom_tokenizer": None,
             # Needs to be negative, but allows you to pick which layer you want the embeddings to come from.
             "hidden": -2,
-            # It can be 'mean', 'median', or 'max'. This reduces the embedding layer for pooling.
+            # It can be "mean", "median", or "max". This reduces the embedding layer for pooling.
             "reduce_option": "mean",
         },
         "fit": {
@@ -61,37 +61,56 @@ class BertSummConfig:
 
 
 class QAConfig:
+    BASE_MODEL = "bert-base-cased-squad2"
+    # BASE_MODEL = "multi-qa-MiniLM-L6-cos-v1"
     MODEL_ARGS = {
-        "model_name": "bert-base-cased-squad2",
-        # options are: ['scored_answer', 'simple_answer']
+        # options are: ["scored_answer", "simple_answer"]
         "qa_type": "scored_answer",
         "nbest": 1,  # number of answers to retrieve from each context for comparison
-        # if diff between the answer score and null answer score is greater than this threshold, don't return answer
+        # if diff between the answer score and null answer score is greater than this threshold, don"t return answer
         "null_threshold": -3,
     }
 
 
 class EmbedderConfig:
+    BASE_MODEL = "msmarco-distilbert-base-v2"
     MODEL_ARGS = {
-        "encoder_model_name": "msmarco-distilbert-base-v2",
-        "min_token_len": 10,
-        "overwrite": False,
+        "min_token_len": 25,
         "verbose": True,  # for creating LocalCorpus
         "return_id": True,  # for creating LocalCorpus
-        "n_returns": 5, #this will be unused after this point, but the model default will be 5
     }
-    FINETUNE = {"shuffle": True, "batch_size": 16,
-                "epochs": 1, "warmup_steps": 100}
+    FINETUNE = {"shuffle": True, "batch_size": 32, "epochs": 3, "warmup_steps": 100}
+    DEFAULT_THRESHOLD = 0.7  # if no threshold is recommended in evals, this is the default min score for the sent index
+    THRESHOLD_MULTIPLIER = (
+        0.8  # makes the default threshold less strict (to use exact default, set to 1)
+    )
 
 
 class SimilarityConfig:
-    MODEL_ARGS = {"model_name": "distilbart-mnli-12-3"}  # SOURCE
+    BASE_MODEL = "distilbart-mnli-12-3"
+
+
+class DocCompareEmbedderConfig:
+    BASE_MODEL = "msmarco-distilbert-base-v2"
+    MODEL_ARGS = {
+        "min_token_len": 25,
+        "verbose": True,  # for creating LocalCorpus
+        "return_id": True,  # for creating LocalCorpus
+    }
+    FINETUNE = {"shuffle": True, "batch_size": 32,
+                "epochs": 3, "warmup_steps": 100}
+
+
+class DocCompareSimilarityConfig:
+    BASE_MODEL = "distilbart-mnli-12-3"
 
 
 class QexpConfig:
     MODEL_ARGS = {
         "init": {  # args for creating QE object
-            "qe_files_dir": "gamechangerml/src/search/query_expansion",
+            "qe_files_dir": os.path.join(
+                REPO_PATH, "gamechangerml", "src", "search", "query_expansion"
+            ),
             "method": "emb",
         },
         "expansion": {  # configs for getting expanded terms
@@ -102,8 +121,9 @@ class QexpConfig:
         "bqe": {
             "num_trees": 125,
             "num_keywords": 2,
-            "ngram": (1, 2),
+            "ngram": (1, 3),
             "abbrv_file": None,
+            "merge_word_sim": True,
         },
     }
 
@@ -111,31 +131,49 @@ class QexpConfig:
 class ValidationConfig:
     DATA_ARGS = {
         # need to have validation data in here
-        "validation_dir": "gamechangerml/data/validation",
-        "evaluation_dir": "gamechangerml/data/evaluation",
-        # location with smaller set of corpus JSONs
-        "test_corpus_dir": "gamechanger/data/test_corpus",
-        "squad": {"dev": "squad2.0/dev-v2.0.json", "train": "squad2.0/train-v2.0.json"},
+        "validation_dir": os.path.join(DATA_PATH, "validation"),
+        "evaluation_dir": os.path.join(DATA_PATH, "evaluation"),
+        "user_dir": os.path.join(DATA_PATH, "user_data"),
+        "test_corpus_dir": "gamechangerml/test_corpus",
+        "squad": {
+            "dev": "original/squad2.0/dev-v2.0.json",
+            "train": "original/squad2.0/train-v2.0.json",
+        },
         "nli": {
-            "matched": "multinli_1.0/multinli_1.0_dev_matched.jsonl",
-            "mismatched": "multinli_1.0/multinli_1.0_dev_mismatched.jsonl",
+            "matched": "original/multinli_1.0/multinli_1.0_dev_matched.jsonl",
+            "mismatched": "original/multinli_1.0/multinli_1.0_dev_mismatched.jsonl",
         },
         "msmarco": {
-            "collection": "msmarco_1k/collection.json",
-            "queries": "msmarco_1k/queries.json",
-            "relations": "msmarco_1k/relations.json",
-            "metadata": "msmarco_1k/metadata.json",
+            "collection": "original/msmarco_1k/collection.json",
+            "queries": "original/msmarco_1k/queries.json",
+            "relations": "original/msmarco_1k/relations.json",
+            "metadata": "original/msmarco_1k/metadata.json",
         },
-        "question_gc": {"queries": "QA_domain_data.json"},
+        "question_gc": {"queries": "domain/question_answer/QA_domain_data.json"},
         "retriever_gc": {"gold_standard": "gold_standard.csv"},
-        "matamo_feedback_file": "matamo_feedback.csv",
-        "search_history_file": "SearchPdfMapping.csv",
-        "qe_gc": "QE_domain.json",
+        "matamo_dir": os.path.join(DATA_PATH, "user_data", "matamo_feedback"),
+        "search_hist_dir": os.path.join(DATA_PATH, "user_data", "search_history"),
+        "qe_gc": "domain/query_expansion/QE_domain.json",
+    }
+
+    TRAINING_ARGS = {
+        "start_date": "2020-12-01",  # earliest date to include search hist/feedback data from
+        "end_date": "2025-12-01",  # last date to include search hist/feedback data from
+        "exclude_searches": ["pizza", "shark"],
+        "min_correct_matches": {"gold": 3, "silver": 2, "any": 0},
+        "max_results": {"gold": 7, "silver": 10, "any": 100},
     }
 
 
 class TrainingConfig:
     DATA_ARGS = {
-        "training_data_dir": "gamechangerml/data/training",
+        "training_data_dir": os.path.join(DATA_PATH, "training"),
         "train_test_split_ratio": 0.8,
     }
+
+
+class TopicsConfig:
+
+    # topic models should be in folders named gamechangerml/models/topic_model_<date>
+    # this path will look for bigrams.phr, tfidf.model, tfidf_dictionary.dic in gamechangerml/models folder as a last resort
+    DATA_ARGS = {"LOCAL_MODEL_DIR": MODEL_PATH}

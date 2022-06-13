@@ -7,16 +7,17 @@ import numpy as np
 import pandas as pd
 import pickle
 import torch
+import time
+import threading
 
 from gamechangerml.src.text_handling.corpus import LocalCorpus
+from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.test_utils import *
+from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
-
-model_path_dict = get_model_paths()
-LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-SENT_INDEX_PATH = model_path_dict["sentence"]
+from gamechangerml.configs.config import EmbedderConfig
 
 
 class SentenceEncoder(object):
@@ -33,26 +34,25 @@ class SentenceEncoder(object):
     def __init__(
         self,
         encoder_model_name,
-        overwrite,
         min_token_len,
-        return_id, 
+        return_id,
         verbose,
-        model = None,
-        sent_index=SENT_INDEX_PATH,
+        transformer_path,
+        model=None,
         use_gpu=False,
+        bert_tokenize=False,
     ):
 
         if model:
             self.encoder_model = model
         else:
-            self.encoder_model = os.path.join(
-            LOCAL_TRANSFORMERS_DIR, encoder_model_name
-        )
+            self.encoder_model = os.path.join(transformer_path, encoder_model_name)
+        self.bert_tokenizer = None
+        if bert_tokenize:
+            self.bert_tokenizer = self.encoder_model
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
-        self.overwrite = overwrite
-        self.index_path = sent_index
 
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = use_gpu
@@ -63,7 +63,7 @@ class SentenceEncoder(object):
             {"method": "transformers", "path": self.encoder_model, "gpu": self.use_gpu}
         )
 
-    def _index(self, corpus):
+    def _index(self, corpus, index_path, overwrite=False, save_embedding=False):
         """
         Builds an embeddings index.
         Args:
@@ -73,10 +73,11 @@ class SentenceEncoder(object):
             overwrite: Boolean check to predict whether if an
                 existing index will be overwritten
         """
-
         # Transform documents to embeddings vectors
+        logger.info("Getting ids, dimensions, stream")
         ids, dimensions, stream = self.embedder.model.index(corpus)
 
+        logger.info("Loading embeddings into memory")
         # Load streamed embeddings back to memory
         embeddings = np.empty((len(ids), dimensions), dtype=np.float32)
         with open(stream, "rb") as queue:
@@ -84,22 +85,22 @@ class SentenceEncoder(object):
                 embeddings[x] = pickle.load(queue)
 
         # Remove temporary file
+        logger.info("Removing temporary file")
         os.remove(stream)
-
+        logger.info("Making dataframe")
         all_text = []
         for para_id, text, _ in corpus:
             all_text.append([text, para_id])
 
         df = pd.DataFrame(all_text, columns=["text", "paragraph_id"])
 
-        embedding_path = os.path.join(
-            self.index_path, "embeddings.npy")
-        dataframe_path = os.path.join(
-            self.index_path, "data.csv")
-        ids_path = os.path.join(self.index_path, "doc_ids.txt")
+        embedding_path = os.path.join(index_path, "embeddings.npy")
+        dataframe_path = os.path.join(index_path, "data.csv")
+        ids_path = os.path.join(index_path, "doc_ids.txt")
 
+        """
         # Load new data
-        if os.path.isfile(embedding_path) and (self.overwrite is False):
+        if os.path.isfile(embedding_path) and (overwrite is False):
             logger.info(f"Loading new data from {embedding_path}")
 
             # Load existing embeddings
@@ -119,14 +120,17 @@ class SentenceEncoder(object):
             # Append new dataframe
             old_df = pd.read_csv(dataframe_path)
             df = pd.concat([old_df, df])
+        """
 
         # Store embeddings and document index
         # for future reference
-        np.save(embedding_path, embeddings)
+        if save_embedding:
+            np.save(embedding_path, embeddings)
         with open(ids_path, "w") as fp:
             fp.writelines([i + "\n" for i in ids])
 
         # Save data csv
+        logger.info(f"Saving data.csv to {str(dataframe_path)}")
         df.to_csv(dataframe_path, index=False)
 
         # Normalize embeddings
@@ -145,7 +149,7 @@ class SentenceEncoder(object):
         self.embedder.embeddings.index(embeddings)
         logger.info(f"Built the embeddings index")
 
-    def index_documents(self, corpus_path):
+    def index_documents(self, corpus_path, index_path, files_to_use=None):
         """
         Create the index and accompanying dataframe to perform text
         and paragraph id search
@@ -163,9 +167,14 @@ class SentenceEncoder(object):
                 return_id=self.return_id,
                 min_token_len=self.min_token_len,
                 verbose=self.verbose,
+                bert_based_tokenizer=self.bert_tokenizer,
+                files_to_use=files_to_use,
             )
-            corpus = [(para_id, " ".join(tokens), None)
-                      for tokens, para_id in corp]
+            corpus = [(para_id, " ".join(tokens), None) for tokens, para_id in corp]
+            logger.info(
+                f"\nLength of batch (in par ids) for indexing : {str(len(corpus))}"
+            )
+
         else:
             logger.info(
                 "Did not include path to corpus, making test index with msmarco data"
@@ -173,30 +182,42 @@ class SentenceEncoder(object):
             data = MSMarcoData()
             corpus = data.corpus
 
-        self._index(corpus)
+        processmanager.update_status(
+            processmanager.training,
+            0,
+            1,
+            "building sent index",
+            thread_id=threading.current_thread().ident,
+        )
 
-        self.embedder.save(self.index_path)
-        logger.info(f"Saved embedder to {self.index_path}")
+        self._index(corpus, index_path)
+        processmanager.update_status(
+            processmanager.training,
+            1,
+            1,
+            "finished building sent index",
+            thread_id=threading.current_thread().ident,
+        )
+
+        self.embedder.save(index_path)
+        logger.info(f"Saved embedder to {index_path}")
 
 
 class SimilarityRanker(object):
-    def __init__(
-        self,
-        sim_model_name,
-        transformers_path=LOCAL_TRANSFORMERS_DIR,
-    ):
+    def __init__(self, sim_model_name, transformer_path):
 
-        self.sim_model = os.path.join(
-            transformers_path, sim_model_name)
+        self.sim_model = os.path.join(transformer_path, sim_model_name)
         self.similarity = Similarity(self.sim_model)
 
-    def re_rank(self, query, texts, ids):
+    def re_rank(self, query, top_docs):
         results = []
-        for idx, score in self.similarity(query, texts):
+        texts = [x["text"] for x in top_docs]
+        scores = self.similarity(query, texts)
+        for idx, score in scores:
             doc = {}
             doc["score"] = score
-            doc["id"] = ids[idx]
-            doc["text"] = texts[idx]
+            doc["id"] = top_docs[idx]["id"]
+            doc["text"] = top_docs[idx]["text"]
             results.append(doc)
         return results
 
@@ -217,51 +238,51 @@ class SentenceSearcher(object):
             and txtai to calculate similarity between query and document
     """
 
-    def __init__(
-        self,
-        sim_model_name,
-        encoder_model_name,
-        n_returns=5,
-        encoder = None,
-        sim_model = None,
-        index_path=SENT_INDEX_PATH,
-        transformers_path=LOCAL_TRANSFORMERS_DIR
-    ):
+    def __init__(self, sim_model_name, index_path, transformer_path, sim_model=None):
 
         self.embedder = Embeddings()
-        if encoder:
-            self.encoder_model = encoder
-        else:
-            self.encoder_model = os.path.join(
-            transformers_path, encoder_model_name
-        )
         self.embedder.load(index_path)
         # replace this with looking up ES
         self.data = pd.read_csv(
             os.path.join(index_path, "data.csv"), dtype={"paragraph_id": str}
         )
-        self.n_returns = n_returns
+        try:
+            silver_eval_file = get_most_recent_eval(
+                os.path.join(index_path, "evals_gc", "silver")
+            )
+            silver_eval = open_json(
+                silver_eval_file, os.path.join(index_path, "evals_gc", "silver")
+            )
+            self.auto_threshold = EmbedderConfig.THRESHOLD_MULTIPLIER * float(
+                silver_eval["best_threshold"]
+            )
+            logger.info(f"Setting automatic cutoff score to {self.auto_threshold}")
+        except Exception as e:
+            logger.error(
+                f"Do not have best threshold available in eval data, defaulting to {EmbedderConfig.DEFAULT_THRESHOLD}"
+            )
+            self.auto_threshold = EmbedderConfig.DEFAULT_THRESHOLD
         if sim_model:
             self.similarity = sim_model
         else:
-            self.similarity = SimilarityRanker(sim_model_name, transformers_path)
+            self.similarity = SimilarityRanker(sim_model_name, transformer_path)
 
-    def retrieve_topn(self, query, num_results):
-
+    def retrieve_topn(self, query, num_results=10):
         retrieved = self.embedder.search(query, limit=num_results)
-        doc_ids = []
-        doc_texts = []
-        doc_scores = []
+        results = []
         for doc_id, score in retrieved:
-            doc_ids.append(doc_id)
-            doc_scores.append(score)
-            text = self.data[self.data["paragraph_id"]
-                             == str(doc_id)].iloc[0]["text"]
-            doc_texts.append(text)
+            doc = {}
+            text = self.data[self.data["paragraph_id"] == str(doc_id)].iloc[0]["text"]
+            doc["id"] = doc_id
+            doc["text"] = text
+            doc["text_length"] = len(text)
+            doc["score"] = score
+            results.append(doc)
+        return results
 
-        return doc_texts, doc_ids, doc_scores
-
-    def search(self, query, num_results):
+    def search(
+        self, query, num_results=10, process=False, externalSim=True, threshold="auto"
+    ):
         """
         Search the index and perform a similarity scoring reranker at
         the topn returned documents
@@ -271,5 +292,46 @@ class SentenceSearcher(object):
             rerank (list): List of tuples following a (score, paragraph_id,
                 paragraph_text) format ranked based on similarity with query
         """
-        top_texts, top_ids, top_scores = self.retrieve_topn(query, num_results)
-        return self.similarity.re_rank(query, top_texts, top_ids)
+        if process:
+            query = " ".join(preprocess(query))
+        if threshold == "auto":
+            cutoff_score = self.auto_threshold
+        else:
+            try:
+                threshold = float(threshold)
+                if (
+                    threshold < 1 and threshold > 0
+                ):  # if a threshold is manually set betweeen 0-1, use that
+                    cutoff_score = threshold
+                    logger.info(f"Manually setting threshold to {threshold}")
+            except:
+                cutoff_score = self.auto_threshold
+
+        logger.info(f"Sentence searching for: {query}")
+        if len(query) > 2:
+            top_results = self.retrieve_topn(query, num_results)
+            # choose to use an external similarity transformer
+            if externalSim:
+                return self.similarity.re_rank(query, top_results)
+            else:
+                # adding normalize text length to score and sorting
+                finalResults = []
+                result_text = [len(x["text"]) for x in top_results]
+                length_scores = np.interp(
+                    result_text, (min(result_text), max(result_text)), (0, 0.2)
+                )
+                for idx, doc in enumerate(top_results):
+                    doc["text_length"] = length_scores[idx]
+                    doc["score"] = doc["score"]
+                    if doc["score"] >= cutoff_score:
+                        doc["passing_result"] = 1
+                    else:
+                        doc["passing_result"] = 0
+                    finalResults.append(doc)
+                finalResults = sorted(
+                    finalResults, key=lambda i: i["score"], reverse=True
+                )
+
+                return finalResults
+        else:
+            return []

@@ -1,7 +1,16 @@
 from gensim.parsing.preprocessing import STOPWORDS
 from gensim.utils import simple_preprocess
+from gamechangerml import MODEL_PATH
+from transformers import BertTokenizer, AutoTokenizer
+import os
 
-from transformers import BertTokenizer
+
+def get_tokenizer(
+    model_name: str = os.path.join(
+        MODEL_PATH, "transformers/msmarco-distilbert-base-v2"
+    )
+):
+    return AutoTokenizer.from_pretrained(model_name)
 
 
 def preprocess(
@@ -54,8 +63,7 @@ class bert_tokenizer(object):
         if vocab_file is None:
             vocab_file = "./assets/bert_vocab.txt"
         self.tokenizer = BertTokenizer(
-            vocab_file=vocab_file, do_lower_case=True
-        )
+            vocab_file=vocab_file, do_lower_case=True)
 
     def tokenize(self, text):
         tokens = self.tokenizer.tokenize(text)
