@@ -223,6 +223,9 @@ class SimilarityRanker():
 DEFAULT_SCORES = [
     [0.8, "High"], [0.5, "Medium"], [0.4, "Low"], [0.0, "Very Low"]
 ]
+# Metadata for the model these scores we're derived from
+#{"user": null, "date_started": "2022-04-29 16:06:06", "date_finished": "2022-04-29 19:52:52", "doc_id_count": 1495122, "corpus_name": "/opt/app-root/src/gamechangerml/corpus", "encoder_model": "multi-qa-MiniLM-L6-cos-v1"}
+
 DEFAULT_CUTOFF = 0.25
 
 

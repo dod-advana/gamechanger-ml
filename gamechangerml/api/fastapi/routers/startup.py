@@ -24,17 +24,18 @@ MODELS = ModelLoader()
 
 @router.on_event("startup")
 async def load_models():
+
     if MODEL_LOAD_FLAG:
         MODELS.initQA()
         MODELS.initQE()
         MODELS.initQEJBook()
-        MODELS.initSentenceEncoder()
         MODELS.initSentenceSearcher()
+        # MODELS.initSentenceEncoder()
         MODELS.initWordSim()
         MODELS.initTopics()
         MODELS.initRecommender()
         MODELS.initDocumentCompareEncoder()
-        MODELS.initDocumentCompareSearcher()
+        # MODELS.initDocumentCompareSearcher()
         logger.info("AFTER LOAD MODELS")
     else:
         logger.info("MODEL_LOAD_FLAG set to False, no models loaded")
@@ -71,7 +72,6 @@ async def check_health():
     logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
     logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
     logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
-    logger.info(f"-- QA model name: {new_qa_model_name}")
     logger.info(f"-- Topics model name: {TOPICS_MODEL.value}")
     logger.info(
         f"-- Doc Compare Similarity model name: {latest_doc_compare_sim.value}")
