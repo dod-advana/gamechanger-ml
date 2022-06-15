@@ -6,7 +6,7 @@ import os
 import sys
 
 ROOT_PATH = Path(os.path.dirname(os.path.abspath(__file__))).resolve()
-REQUIREMENTS_PATH = Path(ROOT_PATH, "requirements.txt")
+REQUIREMENTS_PATH = Path(ROOT_PATH, "requirements_db.txt")
 DEV_REQUIREMENTS_PATH = Path(ROOT_PATH, "dev.requirements.txt")
 README_PATH = Path(ROOT_PATH, "README.md")
 
@@ -61,7 +61,7 @@ setuptools.setup(
         "License :: ",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.8.0",
+    python_requires=">=3.7.10",
     install_requires=[
         p
         for p in parse_requirements(REQUIREMENTS_PATH)
