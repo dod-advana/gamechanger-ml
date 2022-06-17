@@ -19,6 +19,80 @@ SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']
 MATAMO_TEST_FILE = "gamechangerml/data/test_data/MatamoFeedback_TEST.csv"
 SEARCH_TEST_FILE = "gamechangerml/data/test_data/SearchPDFMapping_TEST.csv"
 
+def verify_attribute(test_obj, obj, attr_name, expected_attr_type, fail_msg):
+    """Helper function used to verify that an object attribute exists and is 
+    the correct type.
+
+    Will fail if the attribute does not exist or is not of the expected type.
+
+    Args:
+        test_obj (child of unittest.TestCase)
+        obj (any): The object to verify an attribute for.
+        attr_name (str): Name of the attribute to verify.
+        expected_attr_type (type): Expected type of the attribute.
+        fail_msg (str): Message to include upon failure.
+    """
+    # Check that the attribute exists.
+    test_obj.assertTrue(
+        hasattr(obj, attr_name), fail_msg + " Attribute is missing."
+    )
+    # Check that the attribute is of the expected type.
+    attr = getattr(obj, attr_name)
+    test_obj.assertIsInstance(
+        attr,
+        expected_attr_type,
+        fail_msg + f" Unexpected attribute type. Expected type: "
+        f"{str(expected_attr_type)}. Actual type: {str(type(attr))}.",
+    )
+
+
+def verify_output(test_obj, expected_output, actual_output, fail_msg):
+    """Helper function used to compare an expected output vs actual output.
+
+    Will fail if the expected and actual outputs are not equal.
+    
+    Args:
+        test_obj (child of unittest.TestCase)
+        expected_output (any): Expected output from a function.
+        actual_output (any): Actual output from a function.
+        fail_msg (str): Message to include upon failure.
+    """
+    expected_type = type(expected_output)
+    test_obj.assertIsInstance(
+        actual_output,
+        expected_type,
+        fail_msg + f" Expected type: {expected_type}. Actual type: "
+        f"{str(type(actual_output))}.",
+    )
+    test_obj.assertEqual(
+        expected_output,
+        actual_output,
+        fail_msg + f" Expected output: {expected_output}. Actual output: "
+        f"{actual_output}",
+    )
+
+
+def verify_func(test_obj, func, data, fail_msg):
+    """Helper function used to verify expected output of a function.
+
+    Will fail if the expected and actual outputs are not equal.
+
+    Args:
+        test_obj (unittest.TestCase)
+        func (function): The function to verify outputs of.
+        data (dictionary): Dictionary such that keys are inputs and values are 
+            expected outputs.
+        fail_msg (_type_): Message to include upon failure.
+    """
+    for input, expected_output in data.items():
+        actual_output = func(input)
+        verify_output(
+            test_obj,
+            expected_output,
+            actual_output,
+            fail_msg + f" Input: {input}.",
+        )
+
 
 # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
 class TimeoutException(Exception):   # Custom exception class

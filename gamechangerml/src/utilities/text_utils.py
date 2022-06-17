@@ -11,6 +11,37 @@ logger = logging.getLogger(__name__)
 
 punct = set(punctuation)
 
+def normalize_whitespace(text):
+    """Remove duplicate whitespaces, leading & trailing whitespaces, and
+    whitespace formatting (e.g., "\n" and "\t").
+
+    Args:
+        text (str)
+    Returns:
+        str
+    """
+    return " ".join(text.split()).strip()
+
+
+def is_text_empty(text, min_len=1):
+    """Check if text is empty.
+
+    Text is considered empty if it is None, is only whitespaces, or has length
+    less than min_len.
+
+    Args:
+        text (str): The text to check
+        min_len (int, optional): Minimum length of the text for it to
+            be considered non-empty. Default is 1.
+    Returns:
+        bool
+    """
+    return (
+        text is None
+        or re.fullmatch(r"\s+", text) is not None
+        or len(text) < min_len
+    )
+
 
 def translate_to_ascii_string(_s: Union[str, bytes]) -> str:
     """
