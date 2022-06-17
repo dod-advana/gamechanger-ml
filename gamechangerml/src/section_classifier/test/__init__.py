@@ -1,0 +1,3 @@
+from .test_document_section import DocumentSectionTest
+from .test_document_sections import DocumentSectionsTest
+from .test_section_classifier import SectionClassifierTest
