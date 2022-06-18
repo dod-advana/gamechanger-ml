@@ -3,6 +3,7 @@ import time
 import requests
 import base64
 import hashlib
+import datetime
 
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
@@ -10,10 +11,12 @@ from gamechangerml.src.featurization.keywords.extract_keywords import get_keywor
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.src.utilities import gc_web_api
+from gamechangerml.api.utils.redisdriver import CacheVariable
 
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
 # from gamechangerml.src.featurization.summary import GensimSumm
-from gamechangerml.api.fastapi.settings import *
+from gamechangerml.api.fastapi.settings import CACHE_EXPIRE_DAYS
+from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 from gamechangerml.configs.config import QexpConfig
@@ -89,6 +92,7 @@ async def trans_sentence_infer(
     num_results: int = 10,
     process: bool = True,
     externalSim: bool = False,
+    threshold="auto",
 ) -> dict:
     """trans_sentence_infer - endpoint for sentence transformer inference
     Args:
@@ -102,9 +106,28 @@ async def trans_sentence_infer(
     results = {}
     try:
         query_text = body["text"]
-        results = MODELS.sentence_searcher.search(
-            query_text, num_results, process=process, externalSim=False
-        )
+        cache = CacheVariable(query_text, True)
+        cached_value = cache.get_value()
+        if cached_value:
+            logger.info("Searched was found in cache")
+            results = cached_value
+        else:
+            results = MODELS.sentence_searcher.search(
+                query_text,
+                num_results,
+                process=process,
+                externalSim=False,
+                threshold=threshold,
+            )
+            cache.set_value(
+                results,
+                expire=int(
+                    (
+                        datetime.datetime.utcnow()
+                        + datetime.timedelta(days=CACHE_EXPIRE_DAYS)
+                    ).timestamp()
+                ),
+            )
         logger.info(results)
     except Exception:
         logger.error(
@@ -165,7 +188,7 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
     query_expander = (
         MODELS.query_expander
         if body.get("qe_model", "gc_core") != "jbook"
-        or MODELS.query_expander_jbook == None
+        or MODELS.query_expander_jbook is None
         else MODELS.query_expander_jbook
     )
     try:
@@ -237,6 +260,42 @@ async def post_recommender(body: dict, response: Response) -> dict:
         logger.warning(e)
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
+    return results
+
+
+@router.post("/documentCompare", status_code=200)
+async def document_compare_infer(
+    body: dict,
+    response: Response,
+    num_results: int = 10,
+    process: bool = True,
+) -> dict:
+    """document_compare_infer - endpoint for document compare inference
+    Args:
+        body: dict; json format of query
+            {
+                <str> "text": "i am text",
+                <?array[[threshold, display]] "confidences": optional array of 2 tuples (threshold, display) where score > threshold -> display :: default [[0.8, "High"], [0.5, "Medium"], [0.4, "Low"]]
+                <?float> "cutoff": optional cutoff to filter result scores by
+            }
+        Response: Response class; for status codes(apart of fastapi do not need to pass param)
+    Returns:
+        results: dict; results of inference
+    """
+    logger.debug("DOCUMENT COMPARE INFER - predicting query: " + str(body))
+    results = {}
+    try:
+        query_text = body["text"]
+        results = MODELS.document_compare_searcher.search(
+            query_text, num_results, body, process=process, externalSim=False
+        )
+        logger.info(results)
+    except Exception:
+        logger.error(
+            f"Unable to get results from doc compare sentence transformer for {body}"
+        )
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise
     return results
 
 

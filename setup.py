@@ -48,7 +48,7 @@ def parse_readme(readme: Path) -> str:
 
 setuptools.setup(
     name="gamechangerml",
-    version="1.5.0",
+    version="1.7.0",
     author="Booz Allen Hamilton",
     author_email="gamechanger@advana",
     description="Package for GAMECHANGER ML modules",

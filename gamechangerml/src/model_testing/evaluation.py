@@ -40,8 +40,9 @@ model_path_dict = get_model_paths()
 try:
     LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 except:
-    LOCAL_TRANSFORMERS_DIR = 'gamechangerml/models/transformers'
+    LOCAL_TRANSFORMERS_DIR = "gamechangerml/models/transformers"
 SENT_INDEX_PATH = model_path_dict["sentence"]
+
 
 class TransformerEvaluator:
     def __init__(self, transformer_path=LOCAL_TRANSFORMERS_DIR, use_gpu=False):
@@ -151,14 +152,12 @@ class QAEvaluator(TransformerEvaluator):
             for query in data.queries:
                 signal.alarm(20)
                 try:
-                    logger.info(
-                        "Q-{}: {}".format(query_count, query["question"]))
+                    logger.info("Q-{}: {}".format(query_count, query["question"]))
                     actual = query["expected"]
                     context = query["search_context"]
                     if type(context) == str:
                         context = [context]
-                    prediction = self.model.answer(
-                        query["question"], context)[0]
+                    prediction = self.model.answer(query["question"], context)[0]
                     (
                         exact_match,
                         partial_match,
@@ -261,8 +260,7 @@ class SQuADQAEvaluator(QAEvaluator):
         )
 
         self.data = SQuADData(sample_limit)
-        self.eval_path = check_directory(
-            os.path.join(self.model_path, "evals_squad"))
+        self.eval_path = check_directory(os.path.join(self.model_path, "evals_squad"))
         self.results = self.eval(data=self.data, eval_path=self.eval_path)
 
 
@@ -291,8 +289,7 @@ class IndomainQAEvaluator(QAEvaluator):
         )
 
         self.data = QADomainData()
-        self.eval_path = check_directory(
-            os.path.join(self.model_path, "evals_gc"))
+        self.eval_path = check_directory(os.path.join(self.model_path, "evals_gc"))
         self.results = self.eval(data=self.data, eval_path=self.eval_path)
 
 
@@ -324,16 +321,13 @@ class RetrieverEvaluator(TransformerEvaluator):
             "true_negatives",
             "reciprocal_rank",
             "average_precision",
-            f"precision@{k}",
-            f"recall@{k}"
         ]
         ## make name for the csv of results
         if "/" in index:
             fname = index.split("/")[-1]
         else:
             fname = index
-        csv_filename = os.path.join(
-            eval_path, timestamp_filename(fname, ".csv"))
+        csv_filename = os.path.join(eval_path, timestamp_filename(fname, ".csv"))
         logger.info(f"Making a csv of test results, saved at: {csv_filename}")
 
         # make the csv
@@ -342,6 +336,8 @@ class RetrieverEvaluator(TransformerEvaluator):
             csvwriter.writerow(columns)
 
             # collect metrics for each query made + results generated
+            hit_scores = []
+            no_hit_scores = []
             query_count = tp = tn = fp = fn = total_expected = 0
             for idx, query in data.queries.items():
                 logger.info("\n\nQ-{}: {}".format(query_count, query))
@@ -362,8 +358,7 @@ class RetrieverEvaluator(TransformerEvaluator):
                 if type(expected_ids) == str:
                     expected_ids = [expected_ids]
                 expected_docs = [data.collection[x] for x in expected_ids]
-                expected_docs = list(
-                    set([i.split(".pdf")[0] for i in expected_docs]))
+                expected_docs = list(set([i.split(".pdf")[0] for i in expected_docs]))
                 logger.info(f"expected: {str(expected_docs)}")
                 total_expected += min(
                     len(expected_docs), k
@@ -393,16 +388,20 @@ class RetrieverEvaluator(TransformerEvaluator):
                     false_neg = min(
                         len([i for i in expected_docs if i not in doc_ids], remainder)
                     )
-                    true_neg = min((k - len(expected_docs)),
-                                   (k - len(doc_ids)))
+                    true_neg = min((k - len(expected_docs)), (k - len(doc_ids)))
                 else:  # if there are k predictions, there are no predicted negatives
                     false_neg = true_neg = 0
+                if len(hits) > 0:
+                    hit_scores.append(hits[0]["score"])
+                else:
+                    no_hit_scores.append(doc_scores[0])
                 fn += false_neg
                 tn += true_neg
                 tp += true_pos
                 fp += false_pos
                 logger.info(
-                    f"Metrics: fn: {str(fn)}, fp: {str(fp)}, tn: {str(tn)}, tp: {str(tp)}")
+                    f"Metrics: fn: {str(fn)}, fp: {str(fp)}, tn: {str(tn)}, tp: {str(tp)}"
+                )
                 # save metrics to csv
                 row = [
                     [
@@ -422,13 +421,22 @@ class RetrieverEvaluator(TransformerEvaluator):
                 csvwriter.writerows(row)
                 query_count += 1
 
-        return pd.read_csv(csv_filename), tp, tn, fp, fn, total_expected
+        return (
+            pd.read_csv(csv_filename),
+            tp,
+            tn,
+            fp,
+            fn,
+            total_expected,
+            hit_scores,
+            no_hit_scores,
+        )
 
     def eval(
         self, data, index, retriever, data_name, eval_path, model_name, k=retriever_k
-        ):
+    ):
 
-        df, tp, tn, fp, fn, total_expected = self.predict(
+        df, tp, tn, fp, fn, total_expected, hit_scores, no_hit_scores = self.predict(
             data, index, retriever, eval_path, k
         )
         num_queries = df["queries"].shape[0]
@@ -438,6 +446,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             recall = get_recall(
                 true_positives=tp, false_negatives=(total_expected - tp)
             )
+            best_threshold, max_score = get_optimum_threshold(hit_scores, no_hit_scores)
         else:
             _mrr = _map = recall = 0
 
@@ -454,13 +463,14 @@ class RetrieverEvaluator(TransformerEvaluator):
             "MRR": _mrr,
             "mAP": _map,
             "recall": recall,
+            "best_f1": max_score,
+            "best_threshold": best_threshold,
         }
 
         logger.info(f"** Eval Results: {str(agg_results)}")
         output_file = timestamp_filename("retriever_eval", ".json")
         save_json(output_file, eval_path, agg_results)
-        logger.info(
-            f"Saved evaluation to {str(os.path.join(eval_path, output_file))}")
+        logger.info(f"Saved evaluation to {str(os.path.join(eval_path, output_file))}")
 
         return agg_results
 
@@ -483,13 +493,11 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
 
         super().__init__(transformer_path, encoder_model_name, use_gpu)
         logger.info("Model path: {}".format(self.model_path))
-        self.index_path = os.path.join(
-            os.path.dirname(transformer_path), index)
+        self.index_path = os.path.join(os.path.dirname(transformer_path), index)
         if not os.path.exists(self.index_path):
             logger.info("MSMARCO index path doesn't exist.")
             logger.info(
-                "Making new embeddings index at {}".format(
-                    str(self.index_path))
+                "Making new embeddings index at {}".format(str(self.index_path))
             )
             os.makedirs(self.index_path)
             if encoder:
@@ -514,8 +522,7 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
                 index_path=self.index_path,
                 transformer_path=transformer_path,
             )
-        self.eval_path = check_directory(
-            os.path.join(self.index_path, "evals_msmarco"))
+        self.eval_path = check_directory(os.path.join(self.index_path, "evals_msmarco"))
         logger.info("Evals path: {}".format(self.eval_path))
         self.results = self.eval(
             data=self.data,
@@ -525,6 +532,7 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
             eval_path=self.eval_path,
             model_name=encoder_model_name,
         )
+
 
 class IndomainRetrieverEvaluator(RetrieverEvaluator):
     def __init__(
@@ -542,8 +550,8 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         retriever=None,
         transformer_path=LOCAL_TRANSFORMERS_DIR,
         overwrite_test_corpus=True,
-        use_gpu=False
-        ):
+        use_gpu=False,
+    ):
 
         super().__init__(transformer_path, encoder_model_name, use_gpu)
 
@@ -551,11 +559,13 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         self.data_path = data_path
         self.data_level = data_level
         logger.info(f"Using {str(self.data_path)} for validation data")
-        if not index: # if there is no index to evaluate, we need to make one
-            logger.info("No index provided for evaluating. Checking if test index exists.")
+        if not index:  # if there is no index to evaluate, we need to make one
+            logger.info(
+                "No index provided for evaluating. Checking if test index exists."
+            )
             self.index_path = os.path.join(
-                    transformer_path, encoder_model_name, "sent_index_TEST"
-                )
+                transformer_path, encoder_model_name, "sent_index_TEST"
+            )
             # make evaluations path
             self.eval_path = check_directory(
                 os.path.join(self.model_path, "evals_gc", data_level)
@@ -564,20 +574,19 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                 logger.info("Found a test index for this model, using that.")
             else:
                 logger.info("Did not find a test index - creating one.")
-                if create_index: # make test index in the encoder model directory               
+                if create_index:  # make test index in the encoder model directory
                     # create directory for the test index
                     if not os.path.exists(self.index_path):
                         os.makedirs(self.index_path)
                     logger.info(
-                        "Making new embeddings index at {}".format(
-                            str(self.index_path))
+                        "Making new embeddings index at {}".format(str(self.index_path))
                     )
 
                     # set up the encoder to make the index
-                    if encoder: # if encoder model is passed, use that
+                    if encoder:  # if encoder model is passed, use that
                         logger.info(f"Using pre-init encoder to make the index")
                         self.encoder = encoder
-                    else: # otherwise init an encoder to make the index
+                    else:  # otherwise init an encoder to make the index
                         logger.info(f"Loading {encoder_model_name} to make the index")
                         self.encoder = SentenceEncoder(
                             encoder_model_name=encoder_model_name,
@@ -585,13 +594,15 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                             return_id=return_id,
                             verbose=verbose,
                             use_gpu=use_gpu,
-                            transformer_path=LOCAL_TRANSFORMERS_DIR
+                            transformer_path=LOCAL_TRANSFORMERS_DIR,
                         )
 
                     # create the test corpus
                     include_ids = self.collect_docs_for_index()
                     if len(include_ids) > 0:
-                        logger.info(f"Collected {str(len(include_ids))} doc IDs to include in test index")
+                        logger.info(
+                            f"Collected {str(len(include_ids))} doc IDs to include in test index"
+                        )
                         logger.info(f"{str(include_ids[:5])}")
                     else:
                         logger.warning("Function to retrieve doc IDs didn't work")
@@ -603,7 +614,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                         encoder=self.encoder,
                         corpus_path=CORPUS_PATH,
                         index_path=self.index_path,
-                        files_to_use=include_ids
+                        files_to_use=include_ids,
                     )
 
                     ## save index metadata
@@ -619,20 +630,18 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     logger.info("Saved metadata to the index dir")
 
             index = self.index_path
-        else: # if a full index is passed, use that for evaluating
-            self.index_path = os.path.join(
-                os.path.dirname(transformer_path), index)
+        else:  # if a full index is passed, use that for evaluating
+            self.index_path = os.path.join(os.path.dirname(transformer_path), index)
 
             # make evaluations path
             self.eval_path = check_directory(
                 os.path.join(self.index_path, "evals_gc", data_level)
             )
 
-        if self.index_path: # at this point, there should be an index path
+        if self.index_path:  # at this point, there should be an index path
             # collect all the doc ids in the index
-            self.doc_ids = open_txt(os.path.join(
-                self.index_path, "doc_ids.txt"))
-            
+            self.doc_ids = open_txt(os.path.join(self.index_path, "doc_ids.txt"))
+
             # if retriever exists, use that, otherwise make one
             if retriever:
                 self.retriever = retriever
@@ -646,7 +655,9 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             # make the validation data
             logger.info("Collecting query/result pairs for testing")
             self.data = UpdatedGCRetrieverData(
-                available_ids=self.doc_ids, level=self.data_level, data_path=self.data_path
+                available_ids=self.doc_ids,
+                level=self.data_level,
+                data_path=self.data_path,
             )
 
             logger.info("Generating results")
@@ -661,23 +672,30 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             )
 
     def collect_docs_for_index(self):
-        '''Check if the model has an associated training data file with IDs to include in test index.'''
+        """Check if the model has an associated training data file with IDs to include in test index."""
 
         if os.path.isfile(os.path.join(self.model_path, "metadata.json")):
-            logger.info("This is a finetuned model: collecting training data IDs for index")
+            logger.info(
+                "This is a finetuned model: collecting training data IDs for index"
+            )
             metadata = open_json("metadata.json", self.model_path)
-            train_data_path = metadata['training_data_dir']
+            train_data_path = metadata["training_data_dir"]
             training_data = pd.read_csv(train_data_path)
-            include_ids = [i.split('.pdf_')[0] for i in list(set(training_data['doc']))]
+            include_ids = [i.split(".pdf_")[0] for i in list(set(training_data["doc"]))]
         else:
-            logger.info("This is a base model: collecting validation data IDs for index")
+            logger.info(
+                "This is a base model: collecting validation data IDs for index"
+            )
             base_val_path = os.path.join(self.data_path, self.data_level)
             validation_data = open_json("intelligent_search_data.json", base_val_path)
             validation_data = json.loads(validation_data)
-            include_ids = [i.strip().lstrip() for i in validation_data['collection'].values()]
-        
-        include_ids = [i + '.json' if i[-5:] != 'json' else i for i in include_ids]
+            include_ids = [
+                i.strip().lstrip() for i in validation_data["collection"].values()
+            ]
+
+        include_ids = [i + ".json" if i[-5:] != "json" else i for i in include_ids]
         return include_ids
+
 
 class SimilarityEvaluator(TransformerEvaluator):
     def __init__(
@@ -701,14 +719,12 @@ class SimilarityEvaluator(TransformerEvaluator):
         """Get summary stats of predicted vs. expected ranking for NLI"""
 
         df = predictions
-        csv_filename = os.path.join(
-            eval_path, timestamp_filename("nli_eval", ".csv"))
+        csv_filename = os.path.join(eval_path, timestamp_filename("nli_eval", ".csv"))
         df.to_csv(csv_filename)
 
         # get overall stats
         all_accuracy = np.round(df["match"].mean(), 2)
-        top_accuracy = np.round(
-            df[df["expected_rank"] == 0]["match"].mean(), 2)
+        top_accuracy = np.round(df[df["expected_rank"] == 0]["match"].mean(), 2)
 
         # get MRR
         top_only = df[
@@ -738,8 +754,7 @@ class SimilarityEvaluator(TransformerEvaluator):
 
         output_file = timestamp_filename("sim_model_eval", ".json")
         save_json(output_file, eval_path, agg_results)
-        logger.info(
-            f"Saved evaluation to {str(os.path.join(eval_path, output_file))}")
+        logger.info(f"Saved evaluation to {str(os.path.join(eval_path, output_file))}")
 
         return agg_results
 
@@ -757,8 +772,7 @@ class NLIEvaluator(SimilarityEvaluator):
         super().__init__(sim_model_name, model, transformer_path, use_gpu)
 
         self.data = NLIData(sample_limit)
-        self.eval_path = check_directory(
-            os.path.join(self.model_path, "evals_nli"))
+        self.eval_path = check_directory(os.path.join(self.model_path, "evals_nli"))
         self.results = self.eval(
             predictions=self.predict_nli(), eval_path=self.eval_path
         )
@@ -787,8 +801,7 @@ class NLIEvaluator(SimilarityEvaluator):
         df["predicted_rank"] = df["pairID"].map(ranks)
         df.dropna(subset=["predicted_rank"], inplace=True)
         df["predicted_rank"] = df["predicted_rank"].map(int)
-        df["match"] = np.where(df["predicted_rank"] ==
-                               df["expected_rank"], 1, 0)
+        df["match"] = np.where(df["predicted_rank"] == df["expected_rank"], 1, 0)
 
         return df
 
@@ -806,8 +819,7 @@ class GCSimEvaluator(SimilarityEvaluator):
         super().__init__(sim_model_name, model, transformer_path, use_gpu)
 
         # self.data = NLIData(sample_limit)
-        self.eval_path = check_directory(
-            os.path.join(self.model_path, "evals_gc"))
+        self.eval_path = check_directory(os.path.join(self.model_path, "evals_gc"))
         # self.results = self.eval(predictions=self.predict_nli(), eval_path=self.eval_path)
 
 
@@ -859,8 +871,7 @@ class QexpEvaluator:
                 num_matching += len(set(expected).intersection(results))
                 num_expected += min(len(results), self.topn)
                 any_match = bool(num_matching)
-                row = [[str(query), str(expected),
-                        str(results), str(any_match)]]
+                row = [[str(query), str(expected), str(results), str(any_match)]]
                 csvwriter.writerows(row)
                 query_count += 1
 
