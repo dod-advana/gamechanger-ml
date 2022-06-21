@@ -241,11 +241,11 @@ corpus/*
 
 # Ignore model files
 models/*
-models/topic_models/models
+#models/topic_models/models
 models/sent_index*
 models/qexp_model*
 models/transformers
-redis-data/
+#redis-data/
 # Ignore override for non local deployment
 docker-compose.override.yml
 
