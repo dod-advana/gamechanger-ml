@@ -1,7 +1,6 @@
 import threading
 from datetime import datetime
 from gamechangerml.api.utils.redisdriver import CacheVariable
-from gamechangerml.api.fastapi.settings import logger
 # Process Keys
 clear_corpus = "corpus: corpus_download"
 corpus_download = "corpus: corpus_download"

@@ -6,14 +6,14 @@ import glob
 import json
 import networkx as nx
 import logging
-import en_core_web_lg
+import en_core_web_md
 from collections import Counter
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml import DATA_PATH
 
 logger = logging.getLogger("gamechanger")
 
-nlp = en_core_web_lg.load()
+nlp = en_core_web_md.load()
 
 
 class Rank:
