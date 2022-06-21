@@ -42,6 +42,10 @@ uvloop = "^0.16.0"
 wikipedia = "^1.4.0"
 xgboost = "^1.5.2"
 ipykernel = "^6.13.0"
+en-core-web-lg = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.2.0/en_core_web_lg-3.2.0.tar.gz"}
+en-core-web-md = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.2.0/en_core_web_md-3.2.0.tar.gz"}
+en-core-web-sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.2.0/en_core_web_sm-3.2.0.tar.gz"}
+huggingface-hub = "^0.8.0"
 
 [tool.poetry.dev-dependencies]
 hypothesis = "^6.43.1"

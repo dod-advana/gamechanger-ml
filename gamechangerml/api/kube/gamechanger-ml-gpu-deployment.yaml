@@ -44,6 +44,7 @@ spec:
               value: /usr/local/cuda/lib64/
             - name: MLFLOW_TRACKING_URI
             - name: NVIDIA_VISIBLE_DEVICES
+              value: "0"
             - name: PULL_MODELS
             - name: REDIS_HOST
             - name: REDIS_PORT

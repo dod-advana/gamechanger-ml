@@ -3,6 +3,6 @@ services:
   gamechanger-ml-gpu:
     environment:
       - CONTAINER_RELOAD=true
-      - ENV_TYPE=dev
+      - ENV_TYPE=devlocal
     volumes:
       - "../../gamechangerml/:/opt/app-root/src/gamechangerml/"

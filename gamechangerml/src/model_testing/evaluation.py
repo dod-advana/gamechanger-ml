@@ -4,7 +4,6 @@ import pandas as pd
 import csv
 import math
 from datetime import datetime
-from sentence_transformers import util
 from gamechangerml import REPO_PATH, CORPUS_PATH
 from gamechangerml.src.search.sent_transformer.model import (
     SentenceEncoder,
@@ -77,9 +76,7 @@ class QAEvaluator(TransformerEvaluator):
         if model:
             self.model = model
         else:
-            self.model = QAReader(
-                transformer_path, model_name, qa_type, nbest, null_threshold, use_gpu
-            )
+            self.model = QAReader(transformer_path, model_name, qa_type, nbest, null_threshold, use_gpu)
         self.data_name = data_name
 
     def compare(self, prediction, query):
@@ -101,9 +98,7 @@ class QAEvaluator(TransformerEvaluator):
             false_positive = 1
         else:
             clean_pred = normalize_answer(prediction["text"])
-            clean_answers = set(
-                [normalize_answer(i["text"]) for i in query["expected"]]
-            )
+            clean_answers = set([normalize_answer(i["text"]) for i in query["expected"]])
             if clean_pred in clean_answers:
                 exact_match = partial_match = best_partial_f1 = 1
             else:
@@ -142,9 +137,7 @@ class QAEvaluator(TransformerEvaluator):
 
         query_count = 0
 
-        csv_filename = os.path.join(
-            eval_path, timestamp_filename(self.data_name, ".csv")
-        )
+        csv_filename = os.path.join(eval_path, timestamp_filename(self.data_name, ".csv"))
         with open(csv_filename, "w") as csvfile:
             csvwriter = csv.writer(csvfile)
             csvwriter.writerow(columns)
@@ -206,9 +199,7 @@ class QAEvaluator(TransformerEvaluator):
             precision = get_precision(true_positives, false_positives)
             recall = get_recall(true_positives, false_negatives)
             f1 = get_f1(precision, recall)
-            average_f1 = np.round(
-                np.mean(df["best_partial_f1"].map(float).to_list()), 3
-            )
+            average_f1 = np.round(np.mean(df["best_partial_f1"].map(float).to_list()), 3)
         else:
             exact_match = precision = recall = f1 = average_f1 = 0
         user = get_user(logger)
@@ -294,9 +285,7 @@ class IndomainQAEvaluator(QAEvaluator):
 
 
 class RetrieverEvaluator(TransformerEvaluator):
-    def __init__(
-        self, encoder_model_name, transformer_path=LOCAL_TRANSFORMERS_DIR, use_gpu=False
-    ):
+    def __init__(self, encoder_model_name, transformer_path=LOCAL_TRANSFORMERS_DIR, use_gpu=False):
 
         super().__init__(transformer_path, use_gpu)
 
@@ -349,20 +338,14 @@ class RetrieverEvaluator(TransformerEvaluator):
                 doc_scores = [x["score"] for x in doc_results]
                 if fname != "msmarco_index":
                     doc_ids = [".".join(i.split(".")[:-1]) for i in doc_ids]
-                logger.info(
-                    f"retrieved: {str(doc_texts)}, {str(doc_ids)}, {str(doc_scores)}"
-                )
-                expected_ids = data.relations[
-                    idx
-                ]  # collect the expected results (ground truth)
+                logger.info(f"retrieved: {str(doc_texts)}, {str(doc_ids)}, {str(doc_scores)}")
+                expected_ids = data.relations[idx]  # collect the expected results (ground truth)
                 if type(expected_ids) == str:
                     expected_ids = [expected_ids]
                 expected_docs = [data.collection[x] for x in expected_ids]
                 expected_docs = list(set([i.split(".pdf")[0] for i in expected_docs]))
                 logger.info(f"expected: {str(expected_docs)}")
-                total_expected += min(
-                    len(expected_docs), k
-                )  # if we have more than k expected, set this to k
+                total_expected += min(len(expected_docs), k)  # if we have more than k expected, set this to k
                 # collect ordered metrics
                 recip_rank = reciprocal_rank(doc_ids, expected_docs)
                 avg_p = average_precision(doc_ids, expected_docs)
@@ -381,13 +364,9 @@ class RetrieverEvaluator(TransformerEvaluator):
                         true_pos += 1
                     else:
                         false_pos += 1
-                if (
-                    len(doc_ids) < k
-                ):  # if there are not k predictions, there are pred negatives
+                if len(doc_ids) < k:  # if there are not k predictions, there are pred negatives
                     remainder = k - len(doc_ids)
-                    false_neg = min(
-                        len([i for i in expected_docs if i not in doc_ids], remainder)
-                    )
+                    false_neg = min(len([i for i in expected_docs if i not in doc_ids], remainder))
                     true_neg = min((k - len(expected_docs)), (k - len(doc_ids)))
                 else:  # if there are k predictions, there are no predicted negatives
                     false_neg = true_neg = 0
@@ -399,9 +378,7 @@ class RetrieverEvaluator(TransformerEvaluator):
                 tn += true_neg
                 tp += true_pos
                 fp += false_pos
-                logger.info(
-                    f"Metrics: fn: {str(fn)}, fp: {str(fp)}, tn: {str(tn)}, tp: {str(tp)}"
-                )
+                logger.info(f"Metrics: fn: {str(fn)}, fp: {str(fp)}, tn: {str(tn)}, tp: {str(tp)}")
                 # save metrics to csv
                 row = [
                     [
@@ -432,9 +409,7 @@ class RetrieverEvaluator(TransformerEvaluator):
             no_hit_scores,
         )
 
-    def eval(
-        self, data, index, retriever, data_name, eval_path, model_name, k=retriever_k
-    ):
+    def eval(self, data, index, retriever, data_name, eval_path, model_name, k=retriever_k):
 
         df, tp, tn, fp, fn, total_expected, hit_scores, no_hit_scores = self.predict(
             data, index, retriever, eval_path, k
@@ -443,9 +418,7 @@ class RetrieverEvaluator(TransformerEvaluator):
         if num_queries > 0:
             _mrr = get_MRR(list(df["reciprocal_rank"].map(float)))
             _map = get_MAP(list(df["average_precision"].map(float)))
-            recall = get_recall(
-                true_positives=tp, false_negatives=(total_expected - tp)
-            )
+            recall = get_recall(true_positives=tp, false_negatives=(total_expected - tp))
             best_threshold, max_score = get_optimum_threshold(hit_scores, no_hit_scores)
         else:
             _mrr = _map = recall = 0
@@ -496,9 +469,7 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
         self.index_path = os.path.join(os.path.dirname(transformer_path), index)
         if not os.path.exists(self.index_path):
             logger.info("MSMARCO index path doesn't exist.")
-            logger.info(
-                "Making new embeddings index at {}".format(str(self.index_path))
-            )
+            logger.info("Making new embeddings index at {}".format(str(self.index_path)))
             os.makedirs(self.index_path)
             if encoder:
                 self.encoder = encoder
@@ -510,9 +481,7 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
                     verbose=verbose,
                     use_gpu=use_gpu,
                 )
-            self.make_index(
-                encoder=self.encoder, corpus_path=None, index_path=self.index_path
-            )
+            self.make_index(encoder=self.encoder, corpus_path=None, index_path=self.index_path)
         self.data = MSMarcoData()
         if retriever:
             self.retriever = retriever
@@ -560,16 +529,10 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         self.data_level = data_level
         logger.info(f"Using {str(self.data_path)} for validation data")
         if not index:  # if there is no index to evaluate, we need to make one
-            logger.info(
-                "No index provided for evaluating. Checking if test index exists."
-            )
-            self.index_path = os.path.join(
-                transformer_path, encoder_model_name, "sent_index_TEST"
-            )
+            logger.info("No index provided for evaluating. Checking if test index exists.")
+            self.index_path = os.path.join(transformer_path, encoder_model_name, "sent_index_TEST")
             # make evaluations path
-            self.eval_path = check_directory(
-                os.path.join(self.model_path, "evals_gc", data_level)
-            )
+            self.eval_path = check_directory(os.path.join(self.model_path, "evals_gc", data_level))
             if os.path.isdir(self.index_path) and len(os.listdir(self.index_path)) > 0:
                 logger.info("Found a test index for this model, using that.")
             else:
@@ -578,9 +541,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     # create directory for the test index
                     if not os.path.exists(self.index_path):
                         os.makedirs(self.index_path)
-                    logger.info(
-                        "Making new embeddings index at {}".format(str(self.index_path))
-                    )
+                    logger.info("Making new embeddings index at {}".format(str(self.index_path)))
 
                     # set up the encoder to make the index
                     if encoder:  # if encoder model is passed, use that
@@ -600,9 +561,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     # create the test corpus
                     include_ids = self.collect_docs_for_index()
                     if len(include_ids) > 0:
-                        logger.info(
-                            f"Collected {str(len(include_ids))} doc IDs to include in test index"
-                        )
+                        logger.info(f"Collected {str(len(include_ids))} doc IDs to include in test index")
                         logger.info(f"{str(include_ids[:5])}")
                     else:
                         logger.warning("Function to retrieve doc IDs didn't work")
@@ -634,9 +593,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             self.index_path = os.path.join(os.path.dirname(transformer_path), index)
 
             # make evaluations path
-            self.eval_path = check_directory(
-                os.path.join(self.index_path, "evals_gc", data_level)
-            )
+            self.eval_path = check_directory(os.path.join(self.index_path, "evals_gc", data_level))
 
         if self.index_path:  # at this point, there should be an index path
             # collect all the doc ids in the index
@@ -675,23 +632,17 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         """Check if the model has an associated training data file with IDs to include in test index."""
 
         if os.path.isfile(os.path.join(self.model_path, "metadata.json")):
-            logger.info(
-                "This is a finetuned model: collecting training data IDs for index"
-            )
+            logger.info("This is a finetuned model: collecting training data IDs for index")
             metadata = open_json("metadata.json", self.model_path)
             train_data_path = metadata["training_data_dir"]
             training_data = pd.read_csv(train_data_path)
             include_ids = [i.split(".pdf_")[0] for i in list(set(training_data["doc"]))]
         else:
-            logger.info(
-                "This is a base model: collecting validation data IDs for index"
-            )
+            logger.info("This is a base model: collecting validation data IDs for index")
             base_val_path = os.path.join(self.data_path, self.data_level)
             validation_data = open_json("intelligent_search_data.json", base_val_path)
             validation_data = json.loads(validation_data)
-            include_ids = [
-                i.strip().lstrip() for i in validation_data["collection"].values()
-            ]
+            include_ids = [i.strip().lstrip() for i in validation_data["collection"].values()]
 
         include_ids = [i + ".json" if i[-5:] != "json" else i for i in include_ids]
         return include_ids
@@ -727,9 +678,7 @@ class SimilarityEvaluator(TransformerEvaluator):
         top_accuracy = np.round(df[df["expected_rank"] == 0]["match"].mean(), 2)
 
         # get MRR
-        top_only = df[
-            df["expected_rank"] == 0
-        ].copy()  # take only the expected top results
+        top_only = df[df["expected_rank"] == 0].copy()  # take only the expected top results
         top_only["reciprocal_rank"] = top_only["predicted_rank"].apply(
             lambda x: 1 / (x + 1)
         )  # add one because ranks are 0-indexed
@@ -773,9 +722,7 @@ class NLIEvaluator(SimilarityEvaluator):
 
         self.data = NLIData(sample_limit)
         self.eval_path = check_directory(os.path.join(self.model_path, "evals_nli"))
-        self.results = self.eval(
-            predictions=self.predict_nli(), eval_path=self.eval_path
-        )
+        self.results = self.eval(predictions=self.predict_nli(), eval_path=self.eval_path)
 
     def predict_nli(self):
         """Get rank predictions from similarity model"""
@@ -850,9 +797,7 @@ class QexpEvaluator:
     def predict(self):
 
         columns = ["query", "expected", "received", "any_match"]
-        csv_filename = os.path.join(
-            self.model_path, timestamp_filename("qe_domain", ".csv")
-        )
+        csv_filename = os.path.join(self.model_path, timestamp_filename("qe_domain", ".csv"))
         with open(csv_filename, "w") as csvfile:
             csvwriter = csv.writer(csvfile)
             csvwriter.writerow(columns)
@@ -863,9 +808,7 @@ class QexpEvaluator:
             num_results = 0
             for query, expected in self.data.items():
                 logger.info("Query {}: {}".format(str(query_count), query))
-                results = self.QE.expand(
-                    query, self.topn, self.threshold, self.min_tokens
-                )
+                results = self.QE.expand(query, self.topn, self.threshold, self.min_tokens)
                 results = remove_original_kw(results, query)
                 num_results += len(results)
                 num_matching += len(set(expected).intersection(results))
@@ -901,8 +844,6 @@ class QexpEvaluator:
 
         output_file = timestamp_filename("qe_model_eval", ".json")
         save_json(output_file, self.model_path, agg_results)
-        logger.info(
-            f"Saved evaluation to {str(os.path.join(self.model_path, output_file))}"
-        )
+        logger.info(f"Saved evaluation to {str(os.path.join(self.model_path, output_file))}")
 
         return agg_results

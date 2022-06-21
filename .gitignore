@@ -248,3 +248,5 @@ models/transformers
 redis-data/
 # Ignore override for non local deployment
 docker-compose.override.yml
+
+**corpus**

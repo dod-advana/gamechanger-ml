@@ -16,25 +16,25 @@ ENV LANG="C.utf8" \
 
 # App & Dep Preqrequisites
 RUN dnf install -y \
-        gcc \
-        gcc-c++ \
-        glibc-langpack-en \
-        python38 \
-        python38-devel \
-        git \
-        zip \
-        unzip \
-        python3-cffi \
-        libffi-devel \
-        libpq \
-        libpq-devel \
-        libomp \
-        libomp-devel \
-        openblas \
-        cairo \
-        cryptsetup-libs \
-        cyrus-sasl-lib \
-        gzip \
+    gcc \
+    gcc-c++ \
+    glibc-langpack-en \
+    python38 \
+    python38-devel \
+    git \
+    zip \
+    unzip \
+    python3-cffi \
+    libffi-devel \
+    libpq \
+    libpq-devel \
+    libomp \
+    libomp-devel \
+    openblas \
+    cairo \
+    cryptsetup-libs \
+    cyrus-sasl-lib \
+    gzip \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
@@ -50,9 +50,9 @@ ARG APP_GID=1001
 
 # ensure user/group exists, formally
 RUN ( (getent group $APP_GID &> /dev/null) \
-        || groupadd --system --gid $APP_GID app_default \
+    || groupadd --system --gid $APP_GID app_default \
     ) && ((getent passwd $APP_UID &> /dev/null) \
-        || useradd --system --shell /sbin/nologin --gid $APP_GID --uid $APP_UID app_default \
+    || useradd --system --shell /sbin/nologin --gid $APP_GID --uid $APP_UID app_default \
     )
 
 # key directories
@@ -81,7 +81,7 @@ ENV MLAPP_VENV_DIR="${APP_VENV}"
 WORKDIR "$APP_DIR"
 EXPOSE 5000
 
-ENV ENV_TYPE="DEV" \
+ENV ENV_TYPE="DEVLOCAL" \
     DOWNLOAD_DEP="false" \
     CONTAINER_RELOAD="false" \
     PYTHONPATH="${APP_DIR}"
