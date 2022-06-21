@@ -17,10 +17,12 @@ class MlThread(threading.Thread):
 
     def run(self):
         try:
-            if not check_debug_flagged():
+            if check_debug_flagged():
                 logger.info(
-                    "Debugger not compatible with sys.settrace, globaltrace not activated for MlThread")
+                    "Debugger from debugpy package is not compatible with sys.settrace, so globaltrace not activated for MlThread")
+            else:
                 sys.settrace(self.globaltrace)
+
             self.function(**self.args)
         except Exception as e:
             logger.error(e)
