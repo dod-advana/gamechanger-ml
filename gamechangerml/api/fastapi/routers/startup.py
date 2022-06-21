@@ -24,17 +24,18 @@ MODELS = ModelLoader()
 
 @router.on_event("startup")
 async def load_models():
+
     if MODEL_LOAD_FLAG:
         MODELS.initQA()
         MODELS.initQE()
         MODELS.initQEJBook()
-        MODELS.initSentenceEncoder()
         MODELS.initSentenceSearcher()
+        # MODELS.initSentenceEncoder()
         MODELS.initWordSim()
         MODELS.initTopics()
         MODELS.initRecommender()
         MODELS.initDocumentCompareEncoder()
-        MODELS.initDocumentCompareSearcher()
+        # MODELS.initDocumentCompareSearcher()
         logger.info("AFTER LOAD MODELS")
     else:
         logger.info("MODEL_LOAD_FLAG set to False, no models loaded")

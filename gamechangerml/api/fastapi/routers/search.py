@@ -3,6 +3,7 @@ import time
 import requests
 import base64
 import hashlib
+import datetime
 
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
@@ -10,10 +11,12 @@ from gamechangerml.src.featurization.keywords.extract_keywords import get_keywor
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.src.utilities import gc_web_api
+from gamechangerml.api.utils.redisdriver import CacheVariable
 
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
 # from gamechangerml.src.featurization.summary import GensimSumm
-from gamechangerml.api.fastapi.settings import *
+from gamechangerml.api.fastapi.settings import CACHE_EXPIRE_DAYS
+from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
 from gamechangerml.configs.config import QexpConfig
@@ -103,16 +106,32 @@ async def trans_sentence_infer(
     results = {}
     try:
         query_text = body["text"]
-        results = MODELS.sentence_searcher.search(
-            query_text,
-            num_results,
-            process=process,
-            externalSim=False,
-            threshold=threshold,
-        )
+        cache = CacheVariable(query_text, True)
+        cached_value = cache.get_value()
+        if cached_value:
+            logger.info("Searched was found in cache")
+            results = cached_value
+        else:
+            results = MODELS.sentence_searcher.search(
+                query_text,
+                num_results,
+                process=process,
+                externalSim=False,
+                threshold=threshold,
+            )
+            cache.set_value(
+                results,
+                expire=int(
+                    (
+                        datetime.datetime.utcnow()
+                        + datetime.timedelta(days=CACHE_EXPIRE_DAYS)
+                    ).timestamp()
+                ),
+            )
         logger.info(results)
     except Exception:
-        logger.error(f"Unable to get results from sentence transformer for {body}")
+        logger.error(
+            f"Unable to get results from sentence transformer for {body}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise
     return results
@@ -169,7 +188,7 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
     query_expander = (
         MODELS.query_expander
         if body.get("qe_model", "gc_core") != "jbook"
-        or MODELS.query_expander_jbook == None
+        or MODELS.query_expander_jbook is None
         else MODELS.query_expander_jbook
     )
     try:
@@ -181,7 +200,8 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
         # Removes original word from the return terms unless it is combined with another word
         logger.info(f"original expanded terms: {expansion_list}")
         finalTerms = remove_original_kw(expansion_list, terms_string)
-        expansion_dict[terms_string] = ['"{}"'.format(exp) for exp in finalTerms]
+        expansion_dict[terms_string] = [
+            '"{}"'.format(exp) for exp in finalTerms]
         logger.info(f"-- Expanded {terms_string} to \n {finalTerms}")
         # Perform word similarity
         logger.info(f"Finding similiar words for: {terms_string}")
@@ -229,7 +249,8 @@ async def post_recommender(body: dict, response: Response) -> dict:
             if body["sample"]:
                 sample = body["sample"]
         logger.info(f"Recommending similar documents to {filenames}")
-        results = MODELS.recommender.get_recs(filenames=filenames, sample=sample)
+        results = MODELS.recommender.get_recs(
+            filenames=filenames, sample=sample)
         if results["results"] != []:
             logger.info(f"Found similar docs: \n {str(results)}")
         else:
@@ -244,7 +265,10 @@ async def post_recommender(body: dict, response: Response) -> dict:
 
 @router.post("/documentCompare", status_code=200)
 async def document_compare_infer(
-    body: dict, response: Response, num_results: int = 10, process: bool = True,
+    body: dict,
+    response: Response,
+    num_results: int = 10,
+    process: bool = True,
 ) -> dict:
     """document_compare_infer - endpoint for document compare inference
     Args:
