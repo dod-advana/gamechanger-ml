@@ -1,25 +1,33 @@
 import re
 from gamechangerml.src.utilities.text_utils import is_text_empty
-from .configs import SECTION_BODY, REFERENCES_MIN_SCORE
+from .configs import (
+    SECTION_BODY,
+    REFERENCES_MIN_SCORE,
+    PAGES_FIELD,
+    PAGE_RAW_TEXT_FIELD,
+)
 from .section_classifier import SectionClassifier
 
 
 class DocumentSections:
-    """
+    """Parse a document into sections and apply labels to those sections. 
+
     Attributes
-        record (dict): JSON representation of the document
+        record (dict): JSON representation of the document.
         all_sections (DocumentSection[]): All sections labeled by the section
             parsing model.
         body_sections (DocumentSection[]): Sections labeled as body by the
             section parsing model.
         reference_section (str): References section from the document.
     """
+
     def __init__(self, record, tokenizer, pipe):
         """
         Args:
             record (dict): The document in JSON format.
-            tokenizer (transformers.RobertaTokenizer)
-            pipe (transformers.pipe): Pre-trained section parsing model.
+            tokenizer (transformers.PreTrainedTokenizer): The tokenizer that 
+                will be used by the pipeline to encode data for the model.
+            pipe (transformers.Pipeline): Token classification pipeline.
         """
         self.record = record
         self.all_sections = self.get_all_sections(tokenizer, pipe)
@@ -30,18 +38,20 @@ class DocumentSections:
         """Parse and classify all sections in the document.
 
         Args:
-            tokenizer (transformers.RobertaTokenizer)
+            tokenizer (transformers.PreTrainedTokenizer): The tokenizer that 
+                will be used by the pipeline to encode data for the model.
+            pipe (transformers.Pipeline) Token classification pipeline.
         
         Returns: 
             list of DocumentSection
         """
-        pages = self.record.get("pages")
+        pages = self.record.get(PAGES_FIELD)
         if pages is None:
             return []
 
         sections = []
         for page in pages:
-            text = page.get("p_raw_text")
+            text = page.get(PAGE_RAW_TEXT_FIELD)
             if text is None:
                 continue
             sections += SectionClassifier.get_sections(text, tokenizer, pipe)

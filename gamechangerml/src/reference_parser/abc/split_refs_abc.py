@@ -25,9 +25,9 @@ def split_refs_abc(text):
     for ref in refs:
         if not is_text_empty(ref):
             ref = split_by_date_and_kws_abc(ref)
-
             for x in ref:
                 x = rm_see_enclosure(x)
-                if not is_text_empty(x) and len(x) > 5:
+                if not is_text_empty(x, 5):
                     clean_refs.append(x)
+
     return clean_refs

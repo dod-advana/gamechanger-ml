@@ -1,7 +1,8 @@
 from gamechangerml.src.utilities.date_utils import get_months
 
-"""Patterns to help identify the end of a reference. """
+"""Patterns and functions to help identify the end of a reference. """
 
+# Pattern for keywords that signal the end of a reference.
 REF_END_KWS_PATTERN = rf"""
     (?:
         (,?\s+as\s+amended\s{{0,}})
@@ -25,8 +26,8 @@ DATE_PATTERN = rf"""
 """
 
 
-def start_char_join(seq, start_char):
-    """If a character is at the beginning of a line, join the line with the 
+def join_by_start_char(seq, start_char):
+    """If the given character is at the beginning of a line, join the line with the 
     previous line.
     
     For example, a comma at the beginning of a line implies that the line is a 
@@ -42,9 +43,7 @@ def start_char_join(seq, start_char):
     i = 0
     end = len(start_char) + 1
     while i < len(seq):
-        # A comma at the beginning of a line implies that the line is a
-        # continuation of the previous line.
-        if i > 0 and "," in seq[i][:end]:
+        if i > 0 and start_char in seq[i][:end]:
             seq[i - 1] += seq.pop(i)
         i += 1
 

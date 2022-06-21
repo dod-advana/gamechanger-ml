@@ -84,7 +84,6 @@ class SectionClassifierTest(unittest.TestCase):
     def test_is_enclosure_line(self):
         """Verifies SectionClassifier.is_enclosure_line."""
         fail_msg = "Failed to determine if text is enclosure line."
-        # Keys are input, values are expected output.
         data = {
             "See enclosure 12": True,
             "EnClosure 5": True,

@@ -2,7 +2,7 @@ import os
 import itertools
 from gamechangerml.src.utilities.unique import unique
 from ..pdf_to_docx import DocxDocument, PDFDocument, pdf_to_docx
-from ..shared import start_char_join
+from ..shared import join_by_start_char
 from .utils import clean_ref_line, filter_refs, split_by_date_and_kws_non_abc
 
 
@@ -22,8 +22,9 @@ def split_refs_non_abc(
             instead of the text from the docx file, because the section parsing 
             model was trained on different paragraph formatting than what is 
             extracted from the docx files.
-        tokenizer (transformers.RobertaTokenizer): _description_
-        pipe (transformers.Pipeline): Pre-trained section parsing model
+        tokenizer (transformers.PreTrainedTokenizer): The tokenizer that 
+                will be used by the pipeline to encode data for the model.
+        pipe (transformers.Pipeline): Token classification pipeline.
         delete_docx (bool, optional): True to delete the docx document after
             it is used to extract references, False otherwise. Defaults to True.
 
@@ -46,7 +47,7 @@ def split_refs_non_abc(
         lines = paragraph.split("\n")
         # A tab at the beginning of a line implies that the line is a
         # continuation of the previous line.
-        references += start_char_join(lines, "\t")
+        references += join_by_start_char(lines, "\t")
 
     fn = os.path.splitext(os.path.basename(pdf_path))[0]
     references = list(map(lambda x: clean_ref_line(x, fn), references))

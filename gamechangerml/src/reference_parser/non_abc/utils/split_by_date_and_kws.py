@@ -3,13 +3,13 @@ from gamechangerml.src.utilities.text_utils import (
     normalize_whitespace,
     is_text_empty,
 )
-from ...shared import REF_END_KWS_PATTERN, DATE_PATTERN, start_char_join
+from ...shared import REF_END_KWS_PATTERN, DATE_PATTERN, join_by_start_char
 
 
 def split_by_date_and_kws_non_abc(text):
     """If multiple references exist in the input text and are separated
-    by a date or keywords, this function will split them into separate
-    references.
+    by a date and/ or certain keywords, this function will split them into 
+    separate references.
 
     Args:
         text (str)
@@ -17,46 +17,49 @@ def split_by_date_and_kws_non_abc(text):
     Returns:
         list of str
     """
-    pattern_1 = re.compile(
+    # Look for a date, optionally followed by keywords, that indicates the end
+    # of a reference.
+    date_kw_pattern = re.compile(
         rf"{DATE_PATTERN}(.{{0,5}}{REF_END_KWS_PATTERN})?",
         flags=re.VERBOSE | re.IGNORECASE | re.DOTALL,
     )
-    matches_1 = [
+    date_kw_matches = [
         match
-        for match in re.finditer(pattern_1, text)
+        for match in re.finditer(date_kw_pattern, text)
         if not text.endswith(match.group())
     ]
 
-    if matches_1:
-        split_1 = []
+    if date_kw_matches:
+        split = []
         start = 0
-        for match in matches_1:
-            split_1.append(text[start : match.end()])
+        for match in date_kw_matches:
+            split.append(text[start : match.end()])
             start = match.end()
-        split_1.append(text[start:])
+        split.append(text[start:])
     else:
-        split_1 = [text]
+        split = [text]
 
-    pattern_2 = re.compile(
+    kw_pattern = re.compile(
         rf"{REF_END_KWS_PATTERN}(?!$)",
         flags=re.VERBOSE | re.IGNORECASE | re.DOTALL,
     )
+    result = []
 
-    split_2 = []
-    for text in split_1:
-        matches_2 = [
+    for text in split:
+        # Look for keywords that commonly indicate the end of a reference.
+        kw_matches = [
             match
-            for match in re.finditer(pattern_2, text)
+            for match in re.finditer(kw_pattern, text)
             if not text.endswith(match.group())
         ]
         start = 0
-        for match in matches_2:
-            split_2.append(text[start : match.end()])
+        for match in kw_matches:
+            result.append(text[start : match.end()])
             start = match.end()
-        split_2.append(text[start:])
+        result.append(text[start:])
 
-    split_2 = [normalize_whitespace(x) for x in split_2]
-    split_2 = list(filter(lambda x: not is_text_empty(x, 2), split_2))
-    split_2 = start_char_join(split_2, ",")
+    result = [normalize_whitespace(x) for x in result]
+    result = list(filter(lambda x: not is_text_empty(x, 2), result))
+    result = join_by_start_char(result, ",")
 
-    return split_2
+    return result

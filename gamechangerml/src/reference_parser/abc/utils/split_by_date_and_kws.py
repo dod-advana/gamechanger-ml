@@ -3,7 +3,7 @@ from gamechangerml.src.utilities.text_utils import (
     is_text_empty,
     normalize_whitespace,
 )
-from ...shared import REF_END_KWS_PATTERN, DATE_PATTERN, start_char_join
+from ...shared import REF_END_KWS_PATTERN, DATE_PATTERN, join_by_start_char
 
 
 def split_by_date_and_kws_abc(text):
@@ -58,6 +58,6 @@ def split_by_date_and_kws_abc(text):
 
     split = [normalize_whitespace(x) for x in split]
     split = list(filter(lambda x: not is_text_empty(x, 2), split))
-    split = start_char_join(split, ",")
+    split = join_by_start_char(split, ",")
 
     return split

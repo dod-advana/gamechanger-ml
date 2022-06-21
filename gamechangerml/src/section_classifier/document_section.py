@@ -1,5 +1,6 @@
 import re
 from string import punctuation
+from gamechangerml.src.utilities.text_utils import normalize_whitespace
 
 
 class DocumentSection:
@@ -10,6 +11,7 @@ class DocumentSection:
         text_label (str): Section label 
         score (float): Measure of confidence of the label assigned
     """
+
     def __init__(self, header, text, text_label, score):
         """
         Args:
@@ -32,17 +34,15 @@ class DocumentSection:
 
         Modifies the object's header attribute in place.
         """
-        # Normalize whitespaces.
-        self.header = " ".join(self.header.split()).strip()
+        self.header = normalize_whitespace(self.header)
 
         # Remove number list formatting.
-        # Starting with: a number, (optional) period, and space(s).
         # e.g., "1. hello" --> "hello"
         self.header = re.sub(r"^(\d(\.)?\s)", "", self.header)
 
         # Remove punctuation at the start and end.
         self.header = self.header.strip(punctuation).strip()
-
+        
         # Remove "Part x" at start.
         # e.g., "Part I. hello" --> "hello"
         self.header = re.sub(

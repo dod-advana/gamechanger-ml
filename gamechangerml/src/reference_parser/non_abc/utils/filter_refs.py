@@ -6,15 +6,17 @@ from gamechangerml.src.section_classifier import SectionClassifier
 def filter_refs(refs_list, refs_section, tokenizer, pipe):
     """Filter a list of references.
 
-    1. Remove references that are not labeled as Section Body by the section
-        parsing model.
-    2. Normalize whitespace.
+    1. Remove items that are None or have <= 5 characters.
+    2. Remove items that are not labeled as Section Body by the section 
+        classifier model.
+    3. Normalize whitespace.
 
     Args:
         refs_list (list of str): List of references.
         refs_section (str): The References section text.
-        tokenizer (transformers.RobertaTokenizer)
-        pipe (transformers.Pipeline): Pre-trained section parsing model.
+        tokenizer (transformers.PreTrainedTokenizer): The tokenizer that 
+                will be used by the pipeline to encode data for the model.
+        pipe (transformers.Pipeline): Token classification pipeline.
 
     Returns:
         list of str: The filtered list of references, with non-body

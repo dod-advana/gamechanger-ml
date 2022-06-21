@@ -18,7 +18,6 @@ class DocumentSectionTest(unittest.TestCase):
 
     def test_should_verify_attributes(self):
         """Verifies that attributes were properly created upon object init."""
-        # Keys are attribute names, values are expected types.
         data = {"header": str, "text": str, "label": str, "score": float}
         
         for attr_name, expected_type in data.items():

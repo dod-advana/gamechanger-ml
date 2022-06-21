@@ -36,7 +36,7 @@ gamechangerml/src/reference_parser/
 │  ├──README.md
 │  ├──test_abc.py
 │  ├──test_abc.py
-│  └──ref_end_patterns.py
+│  └──test_shared.py
 ```
 
 ## Example Usage

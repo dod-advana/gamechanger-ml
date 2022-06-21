@@ -34,7 +34,6 @@ class DocumentSectionsTest(unittest.TestCase):
 
     def test_verify_attributes(self):
         """Verifies that the object's attributes were initialized properly."""
-        # Keys are attribute names, values are expected types.
         data = {
             "record": dict,
             "all_sections": list,

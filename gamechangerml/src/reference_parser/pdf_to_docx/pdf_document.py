@@ -6,7 +6,7 @@ class PDFDocument:
     def bookmark_dict(reader, bookmark_list):
         """Get bookmark pages for a PDF.
 
-        @remark Page numbers start at 0.
+        Page numbers start at 0.
 
         Args:
             reader (Py2PDF.PdfFileReader)

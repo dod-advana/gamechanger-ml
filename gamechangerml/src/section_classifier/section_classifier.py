@@ -20,8 +20,9 @@ class SectionClassifier:
     """Parse and label document sections.
     
     Attributes:
-        tokenizer (transformers.RobertaTokenizer)
-        pipeline (transformers.Pipeline): Pre-trained section classifier model.
+        tokenizer (transformers.PreTrainedTokenizer): The tokenizer that 
+            will be used by the pipeline to encode data for the model.
+        pipeline (transformers.Pipeline): Token classifier pipeline.
     """
 
     """Token Labels dictionary."""
@@ -41,12 +42,43 @@ class SectionClassifier:
             base_model_name (str, optional): Name of a predefined tokenizer 
                 hosted inside a model repo on huggingface.co. Defaults to 
                 BASE_MODEL_NAME.
-            model_path (str, optional): Path to the pre-trained section 
-                classifier model. Defaults to MODEL_PATH.
+            model_path (str, optional): Path to pretrained token classification 
+                model. Defaults to MODEL_PATH.
         """
-        self.tokenizer = RobertaTokenizer.from_pretrained(base_model_name)
-        self.pipeline = pipeline(
-            "token-classification", model=model_path, tokenizer=self.tokenizer
+        self.tokenizer = SectionClassifier.load_tokenizer(base_model_name)
+        self.pipeline = SectionClassifier.load_pipeline(
+            self.tokenizer, model_path
+        )
+
+    @staticmethod
+    def load_tokenizer(base_model_name=BASE_MODEL_NAME):
+        """Load the tokenizer that will be used by the pipeline to encode data 
+        for the model.
+
+        Args:
+            base_model_name (str, optional):  Name of a predefined tokenizer 
+                hosted inside a model repo on huggingface.co. Defaults to 
+                BASE_MODEL_NAME.
+
+        Returns:
+            transformers.RobertaTokenizer
+        """
+        return RobertaTokenizer.from_pretrained(base_model_name)
+
+    @staticmethod
+    def load_pipeline(tokenizer, model_path=MODEL_PATH):
+        """Load the token classification pipeline.
+
+        Args:
+            tokenizer (transformers.PreTrainedTokenizer): The tokenizer that 
+                will be used by the pipeline to encode data for the model.
+            model_path (str): Path to the pre-trained model to load.
+        
+        Returns:
+            transformers.Pipeline: Token classification pipeline.
+        """
+        return pipeline(
+            "token-classification", model=model_path, tokenizer=tokenizer
         )
 
     @staticmethod
@@ -79,7 +111,7 @@ class SectionClassifier:
 
         Args:
             text (str)
-            pipe (transformers.Pipeline)
+            pipe (transformers.Pipeline): Token classification pipeline.
         Returns:
             list of tuples, each of length 3: List of labeled sections. Each 
             tuple contains:
@@ -106,8 +138,9 @@ class SectionClassifier:
 
         Args:
             text (str)
-            tokenizer (transformers.RobertaTokenizer)
-            pipe (transformers.Pipeline)
+            tokenizer (transformers.PreTrainedTokenizer): The tokenizer that 
+                will be used by the pipeline to encode data for the model.
+            pipe (transformers.Pipeline): Token classification pipeline.
         
         Returns: 
             list of DocumentSection[]

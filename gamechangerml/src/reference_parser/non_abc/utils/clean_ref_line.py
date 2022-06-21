@@ -10,7 +10,10 @@ def clean_ref_line(line, filename):
     """Clean a line of text from a document's References section.
 
     Returns None if the line should not be included in the document's
-    parsed references.
+    parsed references. A line should not be included if:
+        - it is the title/ header of the section
+        - it contains the document's file name
+        - it is empty or only whitespace
 
     Args:
         line (str): The line of text.
@@ -21,10 +24,11 @@ def clean_ref_line(line, filename):
         str or None: If str, the cleaned line. None indicates the line should 
         not be included in the document's parsed references.
     """
+    # Check if the line is the header/ title of the References section.
     title_pattern = rf"""
-        references
-        \s{{0,}}
-        \d{{0,}}
+        references      # 'references'
+        \s{{0,}}        # optional: whitespaces
+        \d{{0,}}        # optional: digits
     """
     if line is None:
         return line

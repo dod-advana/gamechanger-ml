@@ -1,6 +1,6 @@
 import unittest
 from gamechangerml.src.utilities.test_utils import verify_func, verify_output
-from ..shared import is_abc_format, start_char_join
+from ..shared import is_abc_format, join_by_start_char
 
 
 class ReferenceParserSharedTest(unittest.TestCase):
@@ -17,8 +17,8 @@ class ReferenceParserSharedTest(unittest.TestCase):
         }
         verify_func(self, is_abc_format, data, fail_msg)
 
-    def test_start_char_join(self):
-        """Verifies start_char_join()."""
+    def test_join_by_start_char(self):
+        """Verifies join_by_start_char()."""
         fail_msg = "Failed case for join_by_commas()."
         data = {
             (
@@ -38,7 +38,7 @@ class ReferenceParserSharedTest(unittest.TestCase):
         for inputs, expected_output in data.items():
             seq = inputs[0]
             char = inputs[1]
-            actual_output = start_char_join(seq, char)
+            actual_output = join_by_start_char(seq, char)
             verify_output(self, expected_output, actual_output, fail_msg)
 
 
