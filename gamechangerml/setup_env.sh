@@ -76,7 +76,7 @@ function setup_dev() {
     export GC_ENABLE_SSL="${GC_ENABLE_SSL:-false}"
 
     export ML_WEB_TOKEN="${ML_WEB_TOKEN:-eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJtcyI6WyJHYW1lY2hhbmdlciBBZG1pbiJdLCJjbiI6IjAwNyIsImNzcmYtdG9rZW4iOiI0ZWE1YzUwOGE2NTY2ZTc2MjQwNTQzZjhmZWIwNmZkNDU3Nzc3YmUzOTU0OWM0MDE2NDM2YWZkYTY1ZDIzMzBlIiwiaWF0IjoxNjQ0MzQyMjI0fQ.ezxT-36a25IMFJPea3re7sUwYZfm8ivZvDVAv_zti1W6DRkM2Hs7WwFuy-gR092m-p7Z7ohb7yM2AKVbJAn4CMtI3_1j0_VzzYb6yhQj7YIPg-Cax5Em9JCrIlCEx7r26o-zV1me0mIYMATJTMInKikeBvg2RJErvLwkgZNQVT8gQyR-JxM4mhjmylcel9-kt5FpJJuUKnzPI8BqVeG_eL6ktevA9odJRx56w9n2LivUaoQUCiXreLOLmSEwkkhIFnsyMcCCwkPpx4lMrkzjIr3B08_gRk5wIv4pV01OcSYR4QkXM7ZsNZZzRf-JtPHYn9SlT9DvwRVbYniYUCA7IM0OegFKSTt_-i7qvuKuYFHGDStfkijX2T6g_49oY1qfLsKldisccoOLfsaROpB1NiE9DBeM5OzAo-R98H_UiUFjsFVNvlunETbhuqX2yZFUjKxxerS_-1_DW8BmoD25Ofl188KM8gqUXo5lJs4bPTf41_N_V-57muZxdAq8kBazDKhaudAzskFNFF1B9dxwgxeE8wd5Gh_beCuCoP3K-9GwRVFfrdOCO19FDjqpLr0k94UfZzuflP5SDGXth2-AzZIslurPDL_1F4iadxq06GJggwryMxC7_Uc4_FQST53-gl9SXEFVSNdr6gsw318JNiyz8bxbBpIj7posqQeEaDg}"
-
+    export ENABLE_DEBUGGER="${ENABLE_DEBUGGER:-true}"
 }
 
 
@@ -97,6 +97,7 @@ function setup_devlocal() {
   export ES_ENABLE_AUTH="${ES_ENABLE_AUTH:-false}"
 
   export DEV_ENV="DEVLOCAL"
+  export ENABLE_DEBUGGER="${ENABLE_DEBUGGER:-true}"
 }
 
 function setup_k8s_dev() {
