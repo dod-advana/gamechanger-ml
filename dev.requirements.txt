@@ -10,3 +10,4 @@ matplotlib
 seaborn
 autopep8
 black
+debugpy
