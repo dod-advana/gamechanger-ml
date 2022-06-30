@@ -1,6 +1,7 @@
 import threading
 from datetime import datetime
 from gamechangerml.api.utils.redisdriver import CacheVariable
+#from gamechangerml.api.fastapi.settings import logger   # commenting out because of API calls failing for gamechanger-data
 # Process Keys
 clear_corpus = "corpus: corpus_download"
 corpus_download = "corpus: corpus_download"
@@ -38,10 +39,14 @@ try:
 except Exception as e:
     print(e)
 
-if PROCESS_STATUS.value == None:
-    PROCESS_STATUS.value = {"flags": default_flags}
-if COMPLETED_PROCESS.value == None:
-    COMPLETED_PROCESS.value = []
+# adding try-catch around process_status in case calling the API for the CacheVariable fails
+try:
+    if PROCESS_STATUS.value == None:
+        PROCESS_STATUS.value = {"flags": default_flags}
+    if COMPLETED_PROCESS.value == None:
+        COMPLETED_PROCESS.value = []
+except Exception as e:
+    print(e)
 
 
 def update_status(name, progress=0, total=100, message="", failed=False, thread_id="", completed_max=20):
