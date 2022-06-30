@@ -23,7 +23,7 @@ try:
     here = os.path.dirname(os.path.realpath(__file__))
     p = Path(here)
     test_data_dir = os.path.join(p.parents[3], "data", "test_data")
-    aux_path = os.path.join(str(p.parent), "aux_data")
+    aux_path = os.path.join("gamechangerml/data", "features")
     word_wt = os.path.join(aux_path, "enwiki_vocab_min200.txt")
     assert os.path.isfile(word_wt)
 except (AttributeError, FileExistsError) as e:
@@ -39,9 +39,7 @@ def ann_index_dir(tmpdir_factory):
 @pytest.fixture(scope="session")
 def qe_obj(ann_index_dir):
     main(test_data_dir, ann_index_dir, word_wt_file=word_wt)
-    return QE(
-        ann_index_dir, method="emb", vocab_file="enwiki_vocab_min200.txt"
-    )
+    return QE(ann_index_dir, method="emb", vocab_file="enwiki_vocab_min200.txt")
 
 
 @pytest.fixture(scope="session")
