@@ -24,26 +24,30 @@ CORPUS_DIR = CORPUS_PATH
 S3_CORPUS_PATH = os.environ.get("S3_CORPUS_PATH")
 
 # Redis Cache Variables
-latest_intel_model_sent = CacheVariable("latest_intel_model_sent", True)
-latest_intel_model_sim = CacheVariable(
-    "latest sentence searcher (similarity model + sent index)", True
-)
-latest_intel_model_encoder = CacheVariable("latest encoder model", True)
-latest_intel_model_trans = CacheVariable("latest_intel_model_trans")
-latest_doc_compare_encoder = CacheVariable(
-    "latest doc compare encoder model", True)
-latest_doc_compare_sim = CacheVariable(
-    "latest doc compare searcher (similarity model + sent index)", True
-)
+try:
+    latest_intel_model_sent = CacheVariable("latest_intel_model_sent", True)
+    latest_intel_model_sim = CacheVariable(
+        "latest sentence searcher (similarity model + sent index)", True
+    )
+    latest_intel_model_encoder = CacheVariable("latest encoder model", True)
+    latest_intel_model_trans = CacheVariable("latest_intel_model_trans")
+    latest_doc_compare_encoder = CacheVariable(
+        "latest doc compare encoder model", True)
+    latest_doc_compare_sim = CacheVariable(
+        "latest doc compare searcher (similarity model + sent index)", True
+    )
 
-LOCAL_TRANSFORMERS_DIR = CacheVariable("LOCAL_TRANSFORMERS_DIR")
-SENT_INDEX_PATH = CacheVariable("SENT_INDEX_PATH")
-QEXP_MODEL_NAME = CacheVariable("QEXP_MODEL_NAME")
-QEXP_JBOOK_MODEL_NAME = CacheVariable("QEXP_JBOOK_MODEL_NAME")
-WORD_SIM_MODEL = CacheVariable("WORD_SIM_MODEL")
-TOPICS_MODEL = CacheVariable("TOPICS_MODEL")
-QA_MODEL = CacheVariable("QA_MODEL")
-DOC_COMPARE_SENT_INDEX_PATH = CacheVariable("DOC_COMPARE_SENT_INDEX_PATH")
+    LOCAL_TRANSFORMERS_DIR = CacheVariable("LOCAL_TRANSFORMERS_DIR")
+    SENT_INDEX_PATH = CacheVariable("SENT_INDEX_PATH")
+    QEXP_MODEL_NAME = CacheVariable("QEXP_MODEL_NAME")
+    QEXP_JBOOK_MODEL_NAME = CacheVariable("QEXP_JBOOK_MODEL_NAME")
+    WORD_SIM_MODEL = CacheVariable("WORD_SIM_MODEL")
+    TOPICS_MODEL = CacheVariable("TOPICS_MODEL")
+    QA_MODEL = CacheVariable("QA_MODEL")
+    DOC_COMPARE_SENT_INDEX_PATH = CacheVariable("DOC_COMPARE_SENT_INDEX_PATH")
+except Exception as e:
+    print('naw')
+
 
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]

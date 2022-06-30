@@ -1,6 +1,7 @@
 annoy~=1.17.0
 bert-extractive-summarizer~=0.5.2
 boto3~=1.15.18
+click==7.1.2
 elasticsearch==7.13.4
 en-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.0.0/en_core_web_lg-3.0.0.tar.gz
 en-core-web-md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.0.0/en_core_web_md-3.0.0.tar.gz
