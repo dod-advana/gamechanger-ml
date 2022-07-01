@@ -32,6 +32,7 @@ gold_standard_path = os.path.join(
     "gamechangerml/data/user_data",
     ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"],
 )
+DOD_DICTIONARY_TRAINING_FILEPATH = "gamechangerml/data/features/dod_dictionary_training_data.json"
 
 corpus_docs = []
 try:
@@ -54,9 +55,11 @@ scores = {
 gcClient = gc_web_api.GCWebClient()
 esu = es_utils.ESUtils()
 
+
 def clean_id(id_1: str) -> str:
     """Normalizes doc ids to compare"""
     return id_1.split('.pdf')[0].upper().strip().lstrip()
+
 
 def get_matching_es_result(query, doc):
 
@@ -69,6 +72,7 @@ def get_matching_es_result(query, doc):
         logger.warning("Failed to get ES results")
         logger.warning(e)
 
+
 def get_any_es_result(query):
 
     try:
@@ -78,6 +82,7 @@ def get_any_es_result(query):
     except Exception as e:
         logger.warning("Failed to get ES results")
         logger.warning(e)
+
 
 def get_paragraph_results(resp):
     """Get list of paragraph texts for each search result"""
@@ -91,10 +96,12 @@ def get_paragraph_results(resp):
             for par in hits:
                 par_id = doc_id + "_" + str(par["_nested"]["offset"])
                 par_text = par["fields"]["paragraphs.par_raw_text_t"][0]
-                processed = ' '.join(simple_preprocess(par_text, min_len=2, max_len=100))
+                processed = ' '.join(simple_preprocess(
+                    par_text, min_len=2, max_len=100))
                 texts.append({"par_id": par_id, "par_text": processed})
 
     return texts
+
 
 def format_matching_paragraphs(query, doc, uid, score):
     """Retrieve & format matching positive/negative paragraphs from ES"""
@@ -117,8 +124,9 @@ def format_matching_paragraphs(query, doc, uid, score):
         logger.error(f"Could not get results for {query} / {doc}")
         logger.error(e)
         not_found[uid] = {"query": query, "doc": doc, "label": score}
-    
+
     return found, not_found
+
 
 def format_nonmatching_paragraphs(query, matching_docs, single_matching_docs, par_count):
     found = {}
@@ -128,19 +136,20 @@ def format_nonmatching_paragraphs(query, matching_docs, single_matching_docs, pa
         previous_text = ''
         logger.info(f"Positive num: {par_count}")
         for r in results:
-            if len(found) >= (par_count * 4): # stop getting negatives after 1:4 ratio
+            if len(found) >= (par_count * 4):  # stop getting negatives after 1:4 ratio
                 logger.info("Exceeded balance, stop retrieving paragraphs")
                 break
             else:
                 doc_id = r['par_id'].split('.pdf_')[0]
                 if doc_id in matching_docs:
-                    logger.info("Paragraph comes from a matching doc, skipping")
+                    logger.info(
+                        "Paragraph comes from a matching doc, skipping")
                 else:
                     if doc_id in single_matching_docs:
                         label = scores["weak_match"]
                     else:
                         label = scores["neutral"]
-                    if r['par_text'] != previous_text: # skip duplicate paragraphs
+                    if r['par_text'] != previous_text:  # skip duplicate paragraphs
                         uid = query + "_|_" + r['par_id']
                         resultdict = {
                             "query": query,
@@ -151,18 +160,23 @@ def format_nonmatching_paragraphs(query, matching_docs, single_matching_docs, pa
                         found[uid] = resultdict
                         previous_text = r['par_text']
     except Exception as e:
-        logger.warning(f"Could not get non-matching results from ES for {query}")
-    
+        logger.warning(
+            f"Could not get non-matching results from ES for {query}")
+
     return found
+
 
 def get_any_matches(any_matches, matching_docs, query):
     """Collect docs that were clicked on at all for this query (so we can adjust their score)"""
     try:
-        single_matching_docs = [clean_id(i) for i in any_matches[query] if clean_id(i) not in matching_docs]
-        logger.info(f"Found {str(len(single_matching_docs))} other docs opened for this query.")
+        single_matching_docs = [
+            clean_id(i) for i in any_matches[query] if clean_id(i) not in matching_docs]
+        logger.info(
+            f"Found {str(len(single_matching_docs))} other docs opened for this query.")
         return single_matching_docs
     except:
         return []
+
 
 def collect_paragraphs_es(correct, incorrect, queries, collection, any_matches):
     """Query ES for search/doc matches and negative samples and add them to query results with a label"""
@@ -179,12 +193,13 @@ def collect_paragraphs_es(correct, incorrect, queries, collection, any_matches):
         query = queries[i]
         matching_docs = []
         par_count = 0
-        for k in correct[i]: # for each possible match, collect positive samples
-            doc = collection[k] # get the docid
+        for k in correct[i]:  # for each possible match, collect positive samples
+            doc = collection[k]  # get the docid
             uid = query + "_|_" + doc
             matching_docs.append(doc)
             logger.info(f" *** Querying ES: {query} / {doc} (POS)***")
-            p_found, p_not_found = format_matching_paragraphs(query, doc, uid, score=scores['strong_match'])
+            p_found, p_not_found = format_matching_paragraphs(
+                query, doc, uid, score=scores['strong_match'])
             found.update(p_found)
             notfound.update(p_not_found)
             par_count += len(p_found)
@@ -192,26 +207,30 @@ def collect_paragraphs_es(correct, incorrect, queries, collection, any_matches):
         # check for negative samples
         if i in list(incorrect.keys()):
             for n in incorrect[i]:
-                doc = collection[n] # get the docid
+                doc = collection[n]  # get the docid
                 uid = query + "_|_" + doc
                 matching_docs.append(doc)
                 logger.info(f" *** Querying ES: {query} / {doc} (NEG)***")
-                n_found, n_not_found = format_matching_paragraphs(query, doc, uid, score=scores['negative'])
+                n_found, n_not_found = format_matching_paragraphs(
+                    query, doc, uid, score=scores['negative'])
                 found.update(n_found)
                 notfound.update(n_not_found)
 
         if par_count > 0:
-            single_matching_docs = get_any_matches(any_matches, matching_docs, query)
-            neutral_found = format_nonmatching_paragraphs(query, matching_docs, single_matching_docs, par_count)
+            single_matching_docs = get_any_matches(
+                any_matches, matching_docs, query)
+            neutral_found = format_nonmatching_paragraphs(
+                query, matching_docs, single_matching_docs, par_count)
             if len(neutral_found) > 0:
                 found.update(neutral_found)
                 all_found.update(found)
                 all_not_found.update(notfound)
             else:
-                logger.info(f"\n**** No non-matching results retrieved for {query}")
+                logger.info(
+                    f"\n**** No non-matching results retrieved for {query}")
         else:
             logger.info(f"\n**** No matching results retrieved for {query}")
-    
+
     return all_found, all_not_found
 
 
@@ -225,10 +244,12 @@ def add_gold_standard(
     Returns:
         intel [Dict[str,str]: intelligent search evaluation data with manual entries added
     """
-    gold_original = pd.read_csv(gold_standard_path, names=['query', 'document'])
-    logger.info(f"Reading in {gold_original.shape[0]} queries from the Gold Standard data")
+    gold_original = pd.read_csv(
+        gold_standard_path, names=['query', 'document'])
+    logger.info(
+        f"Reading in {gold_original.shape[0]} queries from the Gold Standard data")
 
-    def add_extra_queries(intel: Dict[str,str]) -> Dict[str,str]:
+    def add_extra_queries(intel: Dict[str, str]) -> Dict[str, str]:
         '''Multiply query/doc pairs to add by using title/filename/id as queries'''
         extra_queries = []
         docs = []
@@ -240,17 +261,18 @@ def add_gold_standard(
                 logger.info(f"Added extra queries for {doc_id}")
             except:
                 logger.warning(f"Could not add extra queries for {doc_id}")
-        
+
         df = pd.DataFrame()
         df['query'] = extra_queries
         df['document'] = docs
         return df
-    
+
     extra_queries_df = add_extra_queries(intel)
     gold = pd.concat([gold_original, extra_queries_df])
-    gold.reset_index(inplace = True)
-    logger.info(f"Added {extra_queries_df.shape[0]} extra queries to the Gold Standard")
-    
+    gold.reset_index(inplace=True)
+    logger.info(
+        f"Added {extra_queries_df.shape[0]} extra queries to the Gold Standard")
+
     gold['query_clean'] = gold['query'].apply(lambda x: normalize_query(x))
     gold['docs_split'] = gold['document'].apply(lambda x: x.split(';'))
     all_docs = list(set([a for b in gold['docs_split'].tolist() for a in b]))
@@ -314,10 +336,11 @@ def train_test_split(data: Dict[str, str], tts_ratio: float) -> Tuple[Dict[str, 
     neg_passing = {}
     pos_passing = {}
     for q in queries:
-        subset = {i:data[i] for i in data.keys() if data[i]['query']==q}
-        pos_sample = [i for i in subset.keys() if subset[i]['label']==0.95]
-        neg_sample = [i for i in subset.keys() if subset[i]['label']==-0.5]
-        if len(neg_sample)>0: #since we have so few negative samples, add to neg list if it has a negative ex
+        subset = {i: data[i] for i in data.keys() if data[i]['query'] == q}
+        pos_sample = [i for i in subset.keys() if subset[i]['label'] >= 0.95]
+        neg_sample = [i for i in subset.keys() if subset[i]['label'] <= -0.5]
+        # since we have so few negative samples, add to neg list if it has a negative ex
+        if len(neg_sample) > 0:
             neg_passing[q] = subset
         elif (
             len(pos_sample) > 0
@@ -357,6 +380,7 @@ def train_test_split(data: Dict[str, str], tts_ratio: float) -> Tuple[Dict[str, 
 
     return train, test, metadata
 
+
 def get_all_single_matches(validation_dir):
     directory = os.path.join(validation_dir, "any")
     any_matches = {}
@@ -374,14 +398,14 @@ def get_all_single_matches(validation_dir):
 
     return any_matches
 
+
 def make_training_data_csv(data, label):
-    
+
     df = pd.DataFrame(data).T
     df['match'] = df['label'].apply(lambda x: 1 if x >= 0.95 else 0)
-    matches = df[df['match']==1]
-    non_matches = df[df['match']==0]
-    
-    
+    matches = df[df['match'] == 1]
+    non_matches = df[df['match'] == 0]
+
     def get_docs(mylist):
         try:
             return [i.split('.pdf')[0] for i in mylist]
@@ -389,42 +413,51 @@ def make_training_data_csv(data, label):
             return []
 
     def count_unique(mylist):
-    
+
         return len(set(get_docs(mylist)))
-    
+
     agg_match = pd.DataFrame(matches.groupby('query')['doc'].apply(list))
-    agg_match.rename(columns = {'doc': 'matching_paragraphs'}, inplace = True)
-    agg_match['num_matching_paragraphs'] = agg_match['matching_paragraphs'].apply(lambda x: len(x))
-    agg_match['num_matching_docs'] = agg_match['matching_paragraphs'].apply(lambda x: count_unique(x))
+    agg_match.rename(columns={'doc': 'matching_paragraphs'}, inplace=True)
+    agg_match['num_matching_paragraphs'] = agg_match['matching_paragraphs'].apply(
+        lambda x: len(x))
+    agg_match['num_matching_docs'] = agg_match['matching_paragraphs'].apply(
+        lambda x: count_unique(x))
 
-    agg_nonmatch = pd.DataFrame(non_matches.groupby('query')['doc'].apply(list))
-    agg_nonmatch.rename(columns = {'doc': 'nonmatching_paragraphs'}, inplace = True)
-    agg_nonmatch['num_nonmatching_paragraphs'] = agg_nonmatch['nonmatching_paragraphs'].apply(lambda x: len(x))
-    agg_nonmatch['num_nonmatching_docs'] = agg_nonmatch['nonmatching_paragraphs'].apply(lambda x: count_unique(x))
+    agg_nonmatch = pd.DataFrame(
+        non_matches.groupby('query')['doc'].apply(list))
+    agg_nonmatch.rename(
+        columns={'doc': 'nonmatching_paragraphs'}, inplace=True)
+    agg_nonmatch['num_nonmatching_paragraphs'] = agg_nonmatch['nonmatching_paragraphs'].apply(
+        lambda x: len(x))
+    agg_nonmatch['num_nonmatching_docs'] = agg_nonmatch['nonmatching_paragraphs'].apply(
+        lambda x: count_unique(x))
 
-    combined = agg_match.merge(agg_nonmatch, on='query', how = 'outer')
+    combined = agg_match.merge(agg_nonmatch, on='query', how='outer')
     combined['label'] = label
-        
+
     def check_overlap(list1, list2):
         return len(set(get_docs(list1)).intersection(get_docs(list2)))
-        
-    combined['overlap'] = [check_overlap(x, y) for x, y in zip(combined['matching_paragraphs'], combined['nonmatching_paragraphs'])]
-    combined['par_balance'] = combined['num_matching_paragraphs'] / combined['num_nonmatching_paragraphs']
-    combined['doc_balance'] = combined['num_matching_docs'] / combined['num_nonmatching_docs']
 
-    combined.fillna(0, inplace = True)
-    
+    combined['overlap'] = [check_overlap(x, y) for x, y in zip(
+        combined['matching_paragraphs'], combined['nonmatching_paragraphs'])]
+    combined['par_balance'] = combined['num_matching_paragraphs'] / \
+        combined['num_nonmatching_paragraphs']
+    combined['doc_balance'] = combined['num_matching_docs'] / \
+        combined['num_nonmatching_docs']
+
+    combined.fillna(0, inplace=True)
+
     return combined
-    
+
 
 def make_training_data(
-    index_path: Union[str, os.PathLike],
-    level: str, 
-    update_eval_data: bool, 
-    testing_only: bool=False,
-    gold_standard_path: Union[str,os.PathLike]=gold_standard_path,
-    tts_ratio: float=tts_ratio,
-    training_dir: Union[str,os.PathLike]=training_dir) -> Tuple[Dict[str,str]]:
+        index_path: Union[str, os.PathLike],
+        level: str,
+        update_eval_data: bool,
+        testing_only: bool = False,
+        gold_standard_path: Union[str, os.PathLike] = gold_standard_path,
+        tts_ratio: float = tts_ratio,
+        training_dir: Union[str, os.PathLike] = training_dir) -> Tuple[Dict[str, str]]:
     """Makes training data based on new user search history data
     Args:
         index_path [str|os.PathLike]: path to the sent index for retrieving the training data (should be most recent index)
@@ -465,8 +498,8 @@ def make_training_data(
     save_dir = os.path.join(training_dir, timestamp)
     os.makedirs(save_dir)
     logger.info(f"Created training data save directory {str(save_dir)}")
-    
-    ## gather all possible matches
+
+    # gather all possible matches
     any_matches = get_all_single_matches(validation_dir)
 
     # add gold standard samples
@@ -475,17 +508,22 @@ def make_training_data(
 
     try:
         found, notfound = collect_paragraphs_es(
-            correct=intel['correct'], 
-            incorrect=intel['incorrect'], 
-            queries=intel['queries'], 
+            correct=intel['correct'],
+            incorrect=intel['incorrect'],
+            queries=intel['queries'],
             collection=intel['collection'],
             any_matches=any_matches)
-        logger.info(f"---Number of correct query/result pairs that were not found: {str(len(notfound))}")
+        logger.info(
+            f"---Number of correct query/result pairs that were not found: {str(len(notfound))}")
     except Exception as e:
         logger.warning(e)
         logger.warning("\nCould not retrieve positive matches from ES\n")
 
-    ## train/test split  
+    # add dod dictionary terms to training data
+    dod_dict = get_dod_dict_training_data()
+    found.update(dod_dict)
+
+    # train/test split
     train, test, metadata = train_test_split(found, tts_ratio)
     metadata["sent_index_used"] = index_path
     metadata["validation_data_used"] = validation_dir
@@ -495,14 +533,14 @@ def make_training_data(
 
     logger.info(f"**** Generated training data: \n {metadata}")
 
-    ## Make summary csv of training data
+    # Make summary csv of training data
     train_df = make_training_data_csv(train, "train")
     test_df = make_training_data_csv(test, "test")
     fulldf = pd.concat([train_df, test_df])
     csv_path = os.path.join(save_dir, "retrieved_paragraphs.csv")
     fulldf.to_csv(csv_path)
 
-    ## save data and metadata files
+    # save data and metadata files
     save_json("training_data.json", save_dir, data)
     save_json("training_metadata.json", save_dir, metadata)
     save_json("not_found_search_pairs.json", save_dir, notfound)
@@ -510,3 +548,18 @@ def make_training_data(
     logger.info(f"Finished saving training data files to {save_dir}")
 
     return
+
+
+def get_dod_dict_training_data():
+    try:
+        with open(DOD_DICTIONARY_TRAINING_FILEPATH, 'r') as f:
+            return json.load(f)
+
+    except FileNotFoundError:
+        logger.warning("Failed to open dod dictionary training data at",
+                       DOD_DICTIONARY_TRAINING_FILEPATH)
+        return {}
+    except Exception as e:
+        logger.warning(
+            f"Unexpected error trying to add dod dictionary training data from {DOD_DICTIONARY_TRAINING_FILEPATH}\n", e)
+        raise e
