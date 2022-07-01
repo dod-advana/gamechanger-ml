@@ -1,3 +1,4 @@
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).parent.parent.parent
+PACKAGE_ROOT = Path(__file__).parent
+REPO_ROOT = PACKAGE_ROOT.parent.parent
