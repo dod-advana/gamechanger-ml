@@ -41,3 +41,4 @@ uvloop~=0.14.0
 wikipedia~=1.4.0
 xgboost==1.1.0
 debugpy
+mlflow
