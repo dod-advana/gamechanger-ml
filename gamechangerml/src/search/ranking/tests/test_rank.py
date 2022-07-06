@@ -14,19 +14,19 @@ def rank_obj():
     return Rank()
 
 
-# TODO If ICMP is enabled, try using `os.system("ping -c 1 " + host)`
-@pytest.fixture
-def search_data():
-    import requests
+# # TODO If ICMP is enabled, try using `os.system("ping -c 1 " + host)`
+# @pytest.fixture
+# def search_data():
+#     import requests
 
-    data = {"searchText": "environmental policy", "index": "game_changer", "limit": 100}
-    r = None
-    endpt = f"http://{os.environ.get('ML_API_HOST', 'localhost')}:9346/v2/data/documentSearch"
-    try:
-        r = requests.post(endpt, json=data, timeout=2)
-    except requests.HTTPError:
-        logger.exception("host not reachable")
-    return r
+#     data = {"searchText": "environmental policy", "index": "game_changer", "limit": 100}
+#     r = None
+#     endpt = f"http://{os.environ.get('ML_API_HOST', 'localhost')}:9346/v2/data/documentSearch"
+#     try:
+#         r = requests.post(endpt, json=data, timeout=2)
+#     except requests.HTTPError:
+#         logger.exception("host not reachable")
+#     return r
 
 
 @pytest.fixture
@@ -45,12 +45,12 @@ def test_rank_func_sem(search_data_sem, rank_obj):
     assert rank_obj.rerank(resp)
 
 
-def test_rank_func_kw(search_data, rank_obj):
-    r = search_data
-    if r is None:
-        assert False
-    resp = r.json()["docs"]
-    assert rank_obj.rerank(resp)
+# def test_rank_func_kw(search_data, rank_obj):
+#     r = search_data
+#     if r is None:
+#         assert False
+#     resp = r.json()["docs"]
+#     assert rank_obj.rerank(resp)
 
 
 def test_rank_func_empty(rank_obj):

@@ -40,15 +40,14 @@ def ann_index_dir(tmpdir_factory):
 @pytest.fixture(scope="session")
 def qe_obj(ann_index_dir):
     # main(test_data_dir, ann_index_dir, weight_file=word_wt)
-    print(QEXP_MODEL_NAME.value)
     return QE(
         QEXP_MODEL_NAME.value, **QexpConfig.MODEL_ARGS["init"]
     )
 
 
-@pytest.fixture(scope="session")
-def qe_mlm_obj():
-    return QE(None, method="mlm")
+# @pytest.fixture(scope="session")
+# def qe_mlm_obj():
+#     return QE(QEXP_MODEL_NAME.value, QexpConfig.MODEL_ARGS["init"]["qe_files_dir"], "mlm")
 
 
 @pytest.fixture(scope="session")

@@ -23,36 +23,27 @@ class CacheVariable:
         self._connection = redis.Redis(connection_pool=RedisPool().getPool())
         self._key = key
         self._encode = encode
-        self.value = None
 
     # Default get method, checks if the key is in redis and gets
     # the value whether it is a list, dict or standard type
     def get_value(self):
-        try:
-            if self._connection.exists(self._key):
-                result = self._connection.get(self._key)
-                if self._encode:
-                    result = json.loads(result)
-                return result
-        except Exception as e:
-            print(e)
-            return self.value
+        if self._connection.exists(self._key):
+            result = self._connection.get(self._key)
+            if self._encode:
+                result = json.loads(result)
+            return result
         return None
 
     # Default set method, sets values for dicts and standard types.
     # Note: Should use push if using a list.
     def set_value(self, value, expire=None):
-        try:
-            if self._encode:
-                value = json.dumps(value)
-            if expire:
-                self._connection.set(self._key, value)
-                self._connection.expireat(self._key, expire)
-            else:
-                self._connection.set(self._key, value)
-        except Exception as e:
-            print(e)
-            self.value = value
+        if self._encode:
+            value = json.dumps(value)
+        if expire:
+            self._connection.set(self._key, value)
+            self._connection.expireat(self._key, expire)
+        else:
+            self._connection.set(self._key, value)
 
     # Default delete method, removes key from redis
     def del_value(self):
