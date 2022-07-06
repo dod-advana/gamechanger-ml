@@ -419,10 +419,10 @@ class SearchHistory:
         if self.start_date or self.end_date:
             df = filter_date_range(df, self.start_date, self.end_date)
         # drop all rows where is no search
-        df.dropna(subset=['search'], inplace=True)
+        df.dropna(subset=['value'], inplace=True)
         # drop duplicates
         df.drop_duplicates(
-            subset=['idvisit', 'document', 'search'], inplace=True)
+            subset=['idvisit', 'document', 'value'], inplace=True)
         df['source'] = 'user_history'
 
         def clean_quot(string):
@@ -442,7 +442,7 @@ class SearchHistory:
             else:
                 return bool(set(string.lower().split()).intersection(question_words))
 
-        df.rename(columns={'documenttime': 'date', 'search': 'search_text',
+        df.rename(columns={'documenttime': 'date', 'value': 'search_text',
                   'document': 'title_returned'}, inplace=True)
         df['search_text'] = df['search_text'].apply(lambda x: clean_quot(x))
         df['search_text_clean'] = df['search_text'].apply(
@@ -608,11 +608,13 @@ class IntelSearchData(SearchValidationData):
                 doc_keys = relations[key]
                 docs = [collection[i] for i in doc_keys]
                 vals_dict[query] = docs
-            
+
             return vals_dict
 
-        correct_vals = map_values(intel_search_queries, intel_search_results, correct)
-        incorrect_vals = map_values(intel_search_queries, intel_search_results, incorrect)
+        correct_vals = map_values(
+            intel_search_queries, intel_search_results, correct)
+        incorrect_vals = map_values(
+            intel_search_queries, intel_search_results, incorrect)
 
         def sort_dictionary(dictionary):
 
@@ -623,7 +625,7 @@ class IntelSearchData(SearchValidationData):
                 vals.sort()
                 mydict_new[key] = vals
             return mydict_new
-        
+
         correct_vals = sort_dictionary(correct_vals)
         incorrect_vals = sort_dictionary(incorrect_vals)
 

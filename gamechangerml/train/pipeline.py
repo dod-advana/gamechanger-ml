@@ -319,7 +319,7 @@ class Pipeline:
             logger.warning("Could not finetune sentence model - pipeline")
             logger.error(e)
 
-            return {}
+            raise e
 
     def evaluate(
         self,
