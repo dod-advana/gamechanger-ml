@@ -1030,7 +1030,7 @@ async def get_user_data(data_dict: dict, response: Response):
     searchData = data_dict["params"]["searchData"]
     df = pd.DataFrame(searchData)
     GC_SEARCH_DATA = os.path.join(
-      DATA_PATH, "user_data", "search_history","SearchPdfMapping.csv"
+        DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
     )
     df.to_csv(GC_SEARCH_DATA)
 
