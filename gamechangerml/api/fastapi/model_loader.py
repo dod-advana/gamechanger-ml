@@ -4,9 +4,9 @@ from gamechangerml.configs import (
     QAConfig,
     EmbedderConfig,
     DocCompareEmbedderConfig,
+    SimilarityConfig,
 )
 from gamechangerml.configs.config import (
-    SimilarityConfig,
     QexpConfig,
     TopicsConfig,
     DocCompareSimilarityConfig,

@@ -4,11 +4,10 @@ import os
 import json
 from datetime import date
 from typing import List, Union, Dict, Tuple
-
+from gamechangerml.configs import SimilarityConfig
 from gamechangerml.configs.config import (
     TrainingConfig,
     ValidationConfig,
-    SimilarityConfig,
 )
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.model_testing.query_es import *

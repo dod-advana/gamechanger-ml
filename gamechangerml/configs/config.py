@@ -53,10 +53,6 @@ class BertSummConfig:
     }
 
 
-class SimilarityConfig:
-    BASE_MODEL = "distilbart-mnli-12-3"
-
-
 class DocCompareSimilarityConfig:
     BASE_MODEL = "distilbart-mnli-12-3"
 
