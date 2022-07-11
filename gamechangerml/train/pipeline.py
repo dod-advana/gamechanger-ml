@@ -56,8 +56,8 @@ from gamechangerml.configs import (
     SimilarityConfig,
     QexpConfig,
     D2VConfig,
+    PathConfig
 )
-from gamechangerml.configs.config import DefaultConfig
 
 import pandas as pd
 import urllib3
@@ -390,7 +390,7 @@ class Pipeline:
         model_id=None,
         upload=False,
         corpus=CORPUS_DIR,
-        model_dest=DefaultConfig.LOCAL_MODEL_DIR,
+        model_dest=PathConfig.LOCAL_MODEL_DIR,
         exp_name=modelname,
         validate=True,
         version="v4",
@@ -682,7 +682,7 @@ class Pipeline:
     ):
         try:
             model_id = datetime.now().strftime("%Y%m%d%H%M%S")
-            model_dir = DefaultConfig.LOCAL_MODEL_DIR
+            model_dir = PathConfig.LOCAL_MODEL_DIR
 
             # get model name schema
             model_name = "topic_model_" + model_id
