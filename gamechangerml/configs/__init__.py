@@ -5,3 +5,4 @@ from .doc_compare_embedder_config import DocCompareEmbedderConfig
 from .similarity_config import SimilarityConfig
 from .doc_compare_similarity_config import DocCompareSimilarityConfig
 from .qexp_config import QexpConfig
+from .training_config import TrainingConfig

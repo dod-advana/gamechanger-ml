@@ -51,7 +51,7 @@ class BertSummConfig:
         "coreference": {"greedyness": 0.4},
         "doc_limit": 100000,
     }
-    
+
 
 class ValidationConfig:
     DATA_ARGS = {
@@ -87,13 +87,6 @@ class ValidationConfig:
         "exclude_searches": ["pizza", "shark"],
         "min_correct_matches": {"gold": 3, "silver": 2, "any": 0},
         "max_results": {"gold": 7, "silver": 10, "any": 100},
-    }
-
-
-class TrainingConfig:
-    DATA_ARGS = {
-        "training_data_dir": os.path.join(DATA_PATH, "training"),
-        "train_test_split_ratio": 0.8,
     }
 
 
