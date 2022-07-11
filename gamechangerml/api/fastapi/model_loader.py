@@ -6,9 +6,10 @@ from gamechangerml.configs import (
     DocCompareEmbedderConfig,
     SimilarityConfig,
     DocCompareSimilarityConfig,
+    QexpConfig,
+
 )
 from gamechangerml.configs.config import (
-    QexpConfig,
     TopicsConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
@@ -192,7 +193,7 @@ class ModelLoader:
         logger.info(f"Loading Pretrained Vector from {qexp_model_path}")
         try:
             ModelLoader.__query_expander = qe.QE(
-                qexp_model_path, **QexpConfig.MODEL_ARGS["init"]
+                qexp_model_path, **QexpConfig.INIT_ARGS
             )
             logger.info("** Loaded Query Expansion Model")
         except Exception as e:
@@ -208,7 +209,7 @@ class ModelLoader:
         logger.info(f"Loading Pretrained Vector from {qexp_jbook_model_path}")
         try:
             ModelLoader.__query_expander_jbook = qe.QE(
-                qexp_jbook_model_path, **QexpConfig.MODEL_ARGS["init"]
+                qexp_jbook_model_path, **QexpConfig.INIT_ARGS
             )
             logger.info("** Loaded JBOOK Query Expansion Model")
         except Exception as e:

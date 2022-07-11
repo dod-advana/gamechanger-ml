@@ -51,30 +51,7 @@ class BertSummConfig:
         "coreference": {"greedyness": 0.4},
         "doc_limit": 100000,
     }
-
-
-class QexpConfig:
-    MODEL_ARGS = {
-        "init": {  # args for creating QE object
-            "qe_files_dir": os.path.join(
-                REPO_PATH, "gamechangerml", "src", "search", "query_expansion"
-            ),
-            "method": "emb",
-        },
-        "expansion": {  # configs for getting expanded terms
-            "topn": 2,
-            "threshold": 0.2,
-            "min_tokens": 3,
-        },
-        "bqe": {
-            "num_trees": 125,
-            "num_keywords": 2,
-            "ngram": (1, 3),
-            "abbrv_file": None,
-            "merge_word_sim": True,
-        },
-    }
-
+    
 
 class ValidationConfig:
     DATA_ARGS = {
