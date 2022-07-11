@@ -3,7 +3,7 @@ import json
 from datetime import date
 from typing import List, Union, Tuple, Dict
 from gamechangerml.src.model_testing.validation_data import IntelSearchData
-from gamechangerml.configs.config import ValidationConfig
+from gamechangerml.configs import ValidationConfig
 from gamechangerml.src.utilities.test_utils import (
     make_timestamp_directory, check_directory, NumpyJSONEncoder
 )

@@ -4,8 +4,11 @@ import os
 import json
 from datetime import date
 from typing import List, Union, Dict, Tuple
-from gamechangerml.configs import SimilarityConfig, TrainingConfig
-from gamechangerml.configs.config import ValidationConfig
+from gamechangerml.configs import (
+    SimilarityConfig,
+    TrainingConfig,
+    ValidationConfig,
+)
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.model_testing.query_es import *
 from gamechangerml.src.utilities.text_utils import normalize_query
