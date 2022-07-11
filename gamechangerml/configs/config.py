@@ -53,10 +53,6 @@ class BertSummConfig:
     }
 
 
-class DocCompareSimilarityConfig:
-    BASE_MODEL = "distilbart-mnli-12-3"
-
-
 class QexpConfig:
     MODEL_ARGS = {
         "init": {  # args for creating QE object

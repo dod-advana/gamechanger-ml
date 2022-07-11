@@ -5,11 +5,11 @@ from gamechangerml.configs import (
     EmbedderConfig,
     DocCompareEmbedderConfig,
     SimilarityConfig,
+    DocCompareSimilarityConfig,
 )
 from gamechangerml.configs.config import (
     QexpConfig,
     TopicsConfig,
-    DocCompareSimilarityConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import (
