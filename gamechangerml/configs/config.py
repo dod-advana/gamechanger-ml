@@ -8,22 +8,7 @@ class DefaultConfig:
     DATA_DIR = DATA_PATH
     LOCAL_MODEL_DIR = MODEL_PATH
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
-
-
-class D2VConfig:
-    MODEL_ARGS = {
-        "dm": 1,
-        "dbow_words": 1,
-        "vector_size": 50,
-        "window": 5,
-        "min_count": 5,
-        "sample": 1e-5,
-        "epochs": 20,
-        "alpha": 0.020,
-        "min_alpha": 0.005,
-        # "workers": multiprocessing.cpu_count() // 2 # to allow some portion of the cores to perform generator tasks
-    }
-
+    
 
 # for Bert Extractive Summarizer (https://pypi.org/project/bert-extractive-summarizer/)
 class BertSummConfig:
@@ -74,10 +59,14 @@ class ValidationConfig:
             "relations": "original/msmarco_1k/relations.json",
             "metadata": "original/msmarco_1k/metadata.json",
         },
-        "question_gc": {"queries": "domain/question_answer/QA_domain_data.json"},
+        "question_gc": {
+            "queries": "domain/question_answer/QA_domain_data.json"
+        },
         "retriever_gc": {"gold_standard": "gold_standard.csv"},
         "matamo_dir": os.path.join(DATA_PATH, "user_data", "matamo_feedback"),
-        "search_hist_dir": os.path.join(DATA_PATH, "user_data", "search_history"),
+        "search_hist_dir": os.path.join(
+            DATA_PATH, "user_data", "search_history"
+        ),
         "qe_gc": "domain/query_expansion/QE_domain.json",
     }
 
