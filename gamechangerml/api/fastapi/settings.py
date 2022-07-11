@@ -4,7 +4,7 @@ from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.redisdriver import CacheVariable, REDIS_HOST, REDIS_PORT
 from gamechangerml import CORPUS_PATH
-from gamechangerml.configs.config import QAConfig
+from gamechangerml.configs import QAConfig
 
 # get environ vars
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")

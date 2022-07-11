@@ -6,8 +6,8 @@ from gamechangerml.src.model_testing.evaluation import (
     NLIEvaluator,
     QexpEvaluator,
 )
+from gamechangerml.configs import QAConfig
 from gamechangerml.configs.config import (
-    QAConfig,
     EmbedderConfig,
     SimilarityConfig,
     QexpConfig,

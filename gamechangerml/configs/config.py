@@ -8,7 +8,7 @@ class DefaultConfig:
     DATA_DIR = DATA_PATH
     LOCAL_MODEL_DIR = MODEL_PATH
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
-    
+
 
 class D2VConfig:
     MODEL_ARGS = {
@@ -50,18 +50,6 @@ class BertSummConfig:
         },
         "coreference": {"greedyness": 0.4},
         "doc_limit": 100000,
-    }
-
-
-class QAConfig:
-    BASE_MODEL = "bert-base-cased-squad2"
-    # BASE_MODEL = "multi-qa-MiniLM-L6-cos-v1"
-    MODEL_ARGS = {
-        # options are: ["scored_answer", "simple_answer"]
-        "qa_type": "scored_answer",
-        "nbest": 1,  # number of answers to retrieve from each context for comparison
-        # if diff between the answer score and null answer score is greater than this threshold, don"t return answer
-        "null_threshold": -3,
     }
 
 

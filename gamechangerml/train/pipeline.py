@@ -55,7 +55,6 @@ from gamechangerml.configs.config import (
     DefaultConfig,
     D2VConfig,
     QexpConfig,
-    QAConfig,
     EmbedderConfig,
     SimilarityConfig,
     QexpConfig,
