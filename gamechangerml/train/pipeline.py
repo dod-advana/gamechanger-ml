@@ -51,11 +51,11 @@ from gamechangerml.api.utils.pathselect import get_model_paths
 
 from gamechangerml.src.search.query_expansion.build_ann_cli import build_qe_model as bqe
 from gamechangerml.src.utilities import utils
+from gamechangerml.configs import EmbedderConfig
 from gamechangerml.configs.config import (
     DefaultConfig,
     D2VConfig,
     QexpConfig,
-    EmbedderConfig,
     SimilarityConfig,
     QexpConfig,
 )

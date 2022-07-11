@@ -1,8 +1,7 @@
 import os
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs import QAConfig
+from gamechangerml.configs import QAConfig, EmbedderConfig
 from gamechangerml.configs.config import (
-    EmbedderConfig,
     SimilarityConfig,
     QexpConfig,
     TopicsConfig,
