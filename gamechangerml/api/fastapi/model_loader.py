@@ -14,9 +14,9 @@ from gamechangerml.src.search.sent_transformer.model import (
     SentenceSearcher,
     SentenceEncoder,
 )
-from gamechangerml.src.search.doc_compare.model import (
-    DocCompareSentenceSearcher,
+from gamechangerml.src.search.doc_compare import (
     DocCompareSentenceEncoder,
+    DocCompareSentenceSearcher,
 )
 from gamechangerml.src.recommender.recommend import Recommender
 from gamechangerml.src.search.embed_reader import sparse
