@@ -7,9 +7,6 @@ from gamechangerml.configs import (
     SimilarityConfig,
     DocCompareSimilarityConfig,
     QexpConfig,
-
-)
-from gamechangerml.configs.config import (
     TopicsConfig,
 )
 from gamechangerml.src.search.query_expansion import qe

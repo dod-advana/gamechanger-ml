@@ -9,3 +9,4 @@ from .training_config import TrainingConfig
 from .d2v_config import D2VConfig
 from .validation_config import ValidationConfig
 from .bert_summary_config import BertSummConfig
+from .topics_config import TopicsConfig
