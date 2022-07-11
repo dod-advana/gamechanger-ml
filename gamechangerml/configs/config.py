@@ -1,5 +1,4 @@
 from datetime import datetime
-from os import environ
 import os
 from gamechangerml import REPO_PATH, DATA_PATH, MODEL_PATH
 
@@ -9,13 +8,7 @@ class DefaultConfig:
     DATA_DIR = DATA_PATH
     LOCAL_MODEL_DIR = MODEL_PATH
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
-
-
-class S3Config:
-    STORE_S3 = True
-    S3_MODELS_DIR = "models/v3/"
-    S3_CORPUS_DIR = "corpus/"
-
+    
 
 class D2VConfig:
     MODEL_ARGS = {
