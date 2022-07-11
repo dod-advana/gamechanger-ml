@@ -1,11 +1,14 @@
 import os
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs import QAConfig, EmbedderConfig
+from gamechangerml.configs import (
+    QAConfig,
+    EmbedderConfig,
+    DocCompareEmbedderConfig,
+)
 from gamechangerml.configs.config import (
     SimilarityConfig,
     QexpConfig,
     TopicsConfig,
-    DocCompareEmbedderConfig,
     DocCompareSimilarityConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
