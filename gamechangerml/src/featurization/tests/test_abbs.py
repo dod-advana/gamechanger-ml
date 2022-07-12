@@ -20,22 +20,22 @@ def test_expansion_text():
     assert new_str == text
 
 
-# def test_expansion_no_context_1():
-#     check_str = "DoD"
-#     expansion = ["Department of Defense"]
-#     result = abbreviation.expand_abbreviations_no_context(check_str)
-#     assert expansion == result
+def test_expansion_no_context_1():
+    check_str = "DD"
+    expansion = ["Department of Defense"]
+    result = abbreviation.expand_abbreviations_no_context(check_str)
+    assert expansion == result
 
 
-# def test_expansion_no_context_2():
-#     check_str = "DOD"
-#     expansion = ["Department of Defense"]
-#     result = abbreviation.expand_abbreviations_no_context(check_str)
-#     assert expansion == result
+def test_expansion_no_context_2():
+    check_str = "Dd"
+    expansion = ["Department of Defense"]
+    result = abbreviation.expand_abbreviations_no_context(check_str)
+    assert expansion == result
 
 
-# def test_expansion_no_context_3():
-#     check_str = "CI"
-#     expansion = ["counterintelligence"]
-#     result = abbreviation.expand_abbreviations_no_context(check_str)
-#     assert expansion == result
+def test_expansion_no_context_3():
+    check_str = "CI"
+    expansion = ["configuration item"]
+    result = abbreviation.expand_abbreviations_no_context(check_str)
+    assert expansion == result
