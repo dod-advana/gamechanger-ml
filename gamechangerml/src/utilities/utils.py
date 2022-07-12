@@ -1,7 +1,6 @@
-# package imports
-# import gensim
 import logging
-import os
+from os import mkdir, makedirs, listdir, remove, rmdir, rename
+from os.path import join, isdir, exists, basename, normpath
 import shutil
 import glob
 import tarfile
@@ -9,79 +8,55 @@ import threading
 import typing as t
 from pathlib import Path
 from gamechangerml.src.utilities.aws_helper import *
-from gamechangerml.configs import S3Config
 from gamechangerml import REPO_PATH
 from gamechangerml.api.utils import processmanager
+from gamechangerml.utils import configure_logger
 
 logger = logging.getLogger("gamechanger")
 
+def get_model_s3(
+    filename, s3_model_dir, download_dir="", bucket=None, logger=None
+):
+    """Download a model from S3.
 
-def store_model_s3(data, s3_model_dir, filename):
+    Args:
+        filename (str): File name of the model to download.
+        s3_model_dir (str): Path to S3 directory which contains the model to 
+            download.
+        download_dir (str, optional): Path to local directory to put downloaded
+            files. Defaults to "".
+        bucket (boto3.resources.factory.s3.Bucket or None, optional): Bucket to
+            upload to. If None, uses S3Service.connect_to_bucket(). Default is 
+            None.
+        logger (logging.Logger or None, optional): If None, uses 
+            configure_logger(). Default is None.
+
+    Returns:
+        list of str: Paths to locally downloaded files.
     """
-    store_model_s3 - write to s3 bucket
-        params: data (binary), filename (without ext)
-        output:
-    """
-    bucket = s3_connect()
-    try:
-        bucket.put_object(Body=data, Key=f"{s3_model_dir}" + filename)
-    except:
-        logger.debug(filename + " failed to store in S3")
+    if logger is None:
+        logger = configure_logger()
 
-
-def save_all_s3(models_path, model_name, s3_model_dir=S3Config.S3_MODELS_DIR):
-    saved_models = [
-        filename
-        for filename in os.listdir(f"{models_path}/{model_name}")
-        if filename.startswith(model_name)
-    ]
-    for fileName in saved_models:
-        with open(f"{models_path}/{model_name}/{fileName}", mode="rb") as f:
-            data = f.read()
-            store_model_s3(data, s3_model_dir, f"{model_name}/{fileName}")
-    logger.debug("Saved {model_name} files to S3")
-
-
-def get_model_s3(filename, s3_model_dir,download_dir=""):
-    """
-    read_model_s3 - read from s3 bucket
-        params: filename (with ext)
-        output:
-    """
     files = []
-    bucket = s3_connect()
-    model_path = os.path.join(s3_model_dir, filename)
-    logger.info(model_path)
+    model_path = join(s3_model_dir, filename)
+
     try:
         for obj in bucket.objects.filter(Prefix=model_path):
             if obj.size != 0:
-                logger.info(f'Downloading {obj.key}')
-                bucket.download_file(obj.key, os.path.join(download_dir,obj.key.split("/")[-1]))
-                files.append(os.path.join(download_dir,obj.key.split("/")[-1]))
-    except RuntimeError as e:
-        # print("cant download")
-        logger.info(e)
+                logger.info(f"Downloading {obj.key}")
+                bucket.download_file(
+                    obj.key, join(download_dir, obj.key.split("/")[-1])
+                )
+                files.append(join(download_dir, obj.key.split("/")[-1]))
+    except Exception:
+        logger.exception(f"Failed to download S3 model at {model_path}.")
 
-        logger.error(filename + " failed to download from S3")
     return files
-
-def store_corpus_s3(data, filename):
-    """
-    store_corpus_s3 - write to s3 bucket
-        params: data (binary), filename (without ext)
-        output:
-    """
-    bucket = s3_connect()
-    try:
-        bucket.put_object(Body=data, Key="corpus/" + filename)
-    except RuntimeError:
-        logger.debug(filename + " failed to store in S3")
-
 
 def verify_model_name(model_dir, filePrefix):
     count = 0
 
-    while os.path.isdir(os.path.join(model_dir, filePrefix)):
+    while isdir(join(model_dir, filePrefix)):
         filePrefix = filePrefix.split("_")[0]
         filePrefix = f"{filePrefix}_{count}"
         count = count + 1
@@ -92,9 +67,9 @@ def verify_model_name(model_dir, filePrefix):
 def create_model_schema(model_dir, file_prefix):
     file_prefix = verify_model_name(model_dir, file_prefix)
     fulldir = f"{model_dir}/{file_prefix}"
-    if not os.path.isdir(fulldir):
+    if not isdir(fulldir):
         try:
-            os.mkdir(fulldir)
+            mkdir(fulldir)
         except OSError:
             logger.error("Creation of directory %s failed" % fulldir)
         else:
@@ -102,41 +77,14 @@ def create_model_schema(model_dir, file_prefix):
     return file_prefix
 
 
-def read_corpus_s3(filename, s3_corpus_dir, output_dir="corpus"):
-    """
-    read_corpus_s3 - read from s3 bucket
-        params: filename (with ext)
-        output:
-    """
-    bucket = s3_connect()
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    try:
-        bucket.download_file(
-            f"{s3_corpus_dir}/" + filename, os.path.join(output_dir, filename)
-        )
-    except RuntimeError:
-        # print("cant download")
-        logger.debug(filename + " failed to download from S3")
-
-
-def get_s3_corpus_list():
-    bucket = s3_connect()
-    corp = []
-    for obj in bucket.objects.filter(Prefix="corpus/"):
-        corp.append(obj.key)
-
-    return corp
-
-
 def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
     corp = []
     try:
         bucket = s3_connect()
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if not exists(output_dir):
+            makedirs(output_dir)
         else:
-            files = os.listdir(output_dir)
+            files = listdir(output_dir)
             total = len(files)
             progress = 0
             if total > 0:
@@ -145,7 +93,7 @@ def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
                 )
                 logger.info("Removing existing corpus files.")
                 for f in files:
-                    os.remove(os.path.join(output_dir, f))
+                    remove(join(output_dir, f))
                     progress += 1
                     processmanager.update_status(
                         processmanager.delete_corpus, progress, total,thread_id=threading.current_thread().ident
@@ -161,11 +109,11 @@ def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
         logger.info("Downloading corpus from " + s3_corpus_dir)
         for obj in filter:
             corp.append(obj.key)
-            filename = os.path.basename(obj.key)
+            filename = basename(obj.key)
             try:
-                local_path = os.path.join(output_dir, filename)
+                local_path = join(output_dir, filename)
                 # Only grab file if it is not already downloaded
-                if ".json" in filename and not os.path.exists(local_path):
+                if ".json" in filename and not exists(local_path):
                     bucket.Object(obj.key).download_file(local_path)
                     completed += 1
                 # Update Progress
@@ -188,19 +136,6 @@ def get_models_list(s3_models_dir):
     models = []
     for obj in bucket.objects.filter(Prefix=s3_models_dir):
         models.append((obj.key[len(s3_models_dir):], obj.last_modified))
-    return models
-
-
-def get_models_dict(models_list):
-    models = {}
-    for model in models_list:
-        parts = model[0].rpartition("/")
-        name = parts[0]
-        kind = parts[2]
-        if name not in models.keys():
-            models[name] = []
-        models[name].append(kind)
-    print(models)
     return models
 
 
@@ -227,7 +162,7 @@ def download_latest_model_package(s3_models_dir, local_packaged_models_dir):
     model_name = get_latest_model_name(s3_models_dir)
     if model_name in get_local_model_package_names(local_packaged_models_dir):
         logger.info("Latest model already available locally")
-        if len(os.listdir(f"{local_packaged_models_dir}/{model_name}")) > 3:
+        if len(listdir(f"{local_packaged_models_dir}/{model_name}")) > 3:
             logger.info("Latest has all model files, nothing downloaded")
             return model_name
 
@@ -235,12 +170,12 @@ def download_latest_model_package(s3_models_dir, local_packaged_models_dir):
     package_dir = "{}/{}".format(local_packaged_models_dir, model_name)
     logger.debug("package dir {}".format(package_dir))
 
-    if not os.path.isdir(package_dir):
+    if not isdir(package_dir):
         logger.debug("package dir does not exist")
         try:
             logger.debug("trying make dir")
-            if not os.path.isdir(package_dir):
-                os.makedirs(package_dir)
+            if not isdir(package_dir):
+                makedirs(package_dir)
         except Exception as e:
             logger.error("Could not create directory for packaged models")
             raise e
@@ -263,7 +198,7 @@ def download_latest_model_package(s3_models_dir, local_packaged_models_dir):
             "Error downloading all model files, removing any local downloads")
         logger.error(e)
         shutil.rmtree(package_dir)
-        os.rmdir(package_dir)
+        rmdir(package_dir)
         raise OSError("Could not download model files to system")
     return model_name
 
@@ -307,12 +242,12 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
                 bucket = s3_connect()
                 logger.debug("Checking  package dir {}".format(package_dir))
 
-                if not os.path.isdir(package_dir):
+                if not isdir(package_dir):
                     logger.debug("Model package directory does not exist.")
                     try:
                         logger.debug("Attempting to create model package")
-                        if not os.path.isdir(package_dir):
-                            os.makedirs(package_dir)
+                        if not isdir(package_dir):
+                            makedirs(package_dir)
                     except Exception as e:
                         logger.error(
                             "Could not create directory for packaged models")
@@ -328,16 +263,16 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
             "Error downloading all model files, removing any local downloads")
         logger.error(e)
         shutil.rmtree(package_dir)
-        os.rmdir(package_dir)
+        rmdir(package_dir)
         raise OSError("Could not download model files to system")
     return model_diff_list
 
 
 def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=False):
     bucket = s3_connect()
-    models_path = os.path.join(REPO_PATH, "gamechangerml/models")
+    models_path = join(REPO_PATH, "gamechangerml/models")
     try:
-        if glob.glob(os.path.join(models_path, "transformer*")):
+        if glob.glob(join(models_path, "transformer*")):
             if not overwrite:
                 print(
                     "transformers exists -- not pulling from s3, specify overwrite = True"
@@ -346,14 +281,14 @@ def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=Fa
         for obj in bucket.objects.filter(Prefix=model_path):
             print(obj)
             bucket.download_file(
-                obj.key, os.path.join(models_path, obj.key.split("/")[-1])
+                obj.key, join(models_path, obj.key.split("/")[-1])
             )
             compressed = obj.key.split("/")[-1]
-        cache_path = os.path.join(models_path, compressed)
+        cache_path = join(models_path, compressed)
         print("uncompressing: " + cache_path)
         compressed_filename = compressed.split(".tar")[0]
-        if os.path.isdir(f"{models_path}/{compressed_filename}"):
-            os.rename(
+        if isdir(f"{models_path}/{compressed_filename}"):
+            rename(
                 f"{models_path}/{compressed_filename}",
                 f"{models_path}/{compressed_filename}_backup",
             )
@@ -367,9 +302,9 @@ def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=Fa
 
 def get_sentence_index(model_path="sent_index/", overwrite=False):
     bucket = s3_connect()
-    models_path = os.path.join(REPO_PATH, "gamechangerml/models")
+    models_path = join(REPO_PATH, "gamechangerml/models")
     try:
-        if glob.glob(os.path.join(models_path, "sent_index*")):
+        if glob.glob(join(models_path, "sent_index*")):
             if not overwrite:
                 print(
                     "sent_index exists -- not pulling from s3, specify overwrite = True"
@@ -378,14 +313,14 @@ def get_sentence_index(model_path="sent_index/", overwrite=False):
         for obj in bucket.objects.filter(Prefix=model_path):
             print(obj)
             bucket.download_file(
-                obj.key, os.path.join(models_path, obj.key.split("/")[-1])
+                obj.key, join(models_path, obj.key.split("/")[-1])
             )
             compressed = obj.key.split("/")[-1]
-        cache_path = os.path.join(models_path, compressed)
+        cache_path = join(models_path, compressed)
         print("uncompressing: " + cache_path)
         compressed_filename = compressed.split(".tar")[0]
-        if os.path.isdir(f"{models_path}/{compressed_filename}"):
-            os.rename(
+        if isdir(f"{models_path}/{compressed_filename}"):
+            rename(
                 f"{models_path}/{compressed_filename}",
                 f"{models_path}/{compressed_filename}_backup",
             )
@@ -400,9 +335,9 @@ def get_sentence_index(model_path="sent_index/", overwrite=False):
 def get_local_model_package_names(local_packaged_models_dir):
     return list(
         filter(
-            lambda x: os.path.isdir(os.path.join(
+            lambda x: isdir(join(
                 local_packaged_models_dir, x)),
-            os.listdir(local_packaged_models_dir),
+            listdir(local_packaged_models_dir),
         )
     )
 
@@ -431,18 +366,18 @@ def store_eval_data(folder_path, version):
         output:
     """
     bucket = s3_connect()
-    folder_name = os.path.normpath(folder_path)
-    folder_name = os.path.basename(folder_name)
+    folder_name = normpath(folder_path)
+    folder_name = basename(folder_name)
     s3_directory = f"eval_data/{folder_name}/v{str(version)}"
 
-    if not os.path.isdir(folder_path):
+    if not isdir(folder_path):
         logger.debug(folder_path + "does not exist...")
         return None
 
     try:
-        for fname in os.listdir(folder_path):
-            fpath = os.path.join(folder_path, fname)
-            s3_path = os.path.join(s3_directory, folder_name, fname)
+        for fname in listdir(folder_path):
+            fpath = join(folder_path, fname)
+            s3_path = join(s3_directory, folder_name, fname)
             bucket.Object(s3_path).delete()
             bucket.upload_file(fpath, s3_path)
     except:
@@ -456,9 +391,9 @@ def download_eval_data(dataset_name, save_dir, version=None):
                 version (int), version number of dataset
         output:
     """
-    save_dir = os.path.join(save_dir, dataset_name)
-    if not os.path.isdir(save_dir):
-        os.mkdir(save_dir)
+    save_dir = join(save_dir, dataset_name)
+    if not isdir(save_dir):
+        mkdir(save_dir)
 
     bucket = s3_connect()
 
@@ -501,7 +436,7 @@ def download_eval_data(dataset_name, save_dir, version=None):
     try:
         for obj in bucket.objects.filter(Prefix=prefix):
             fname = obj.key.split("/")[-1]
-            save_name = os.path.join(save_dir, fname)
+            save_name = join(save_dir, fname)
             bucket.download_file(obj.key, save_name)
     except:
         logger.debug(f"Failed to download {obj.key}")
@@ -513,15 +448,14 @@ def create_tgz_from_dir(
     exclude_junk: bool = False,
 ) -> None:
     with tarfile.open(dst_archive, "w:gz") as tar:
-        tar.add(src_dir, arcname=os.path.basename(src_dir))
+        tar.add(src_dir, arcname=basename(src_dir))
 
 
 def upload(s3_path, local_path, model_prefix, model_name):
     # Loop through each file and upload to S3
     logger.info(f"Uploading files to {s3_path}")
     logger.info(f"\tUploading: {local_path}")
-    # local_path = os.path.join(dst_path)
-    s3_path = os.path.join(
+    s3_path = join(
         s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
     upload_file(local_path, s3_path)
     logger.info(f"Successfully uploaded files to {s3_path}")
