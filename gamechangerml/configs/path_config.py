@@ -1,4 +1,3 @@
-from datetime import datetime
 from gamechangerml import DATA_PATH, MODEL_PATH
 
 
