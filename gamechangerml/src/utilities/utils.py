@@ -8,7 +8,7 @@ import threading
 import typing as t
 from pathlib import Path
 from gamechangerml.src.services import S3Service
-from gamechangerml.src.utilities.aws_helper import s3_connect
+from gamechangerml.configs import S3Config
 from gamechangerml import REPO_PATH
 from gamechangerml.api.utils import processmanager
 from gamechangerml.configs import S3Config
@@ -39,16 +39,20 @@ def create_model_schema(model_dir, file_prefix):
     return file_prefix
     
 
-def get_models_list(s3_models_dir):
-    bucket = s3_connect()
+def get_models_list(s3_models_dir, bucket=None):
+    if bucket is None:
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+    
     models = []
     for obj in bucket.objects.filter(Prefix=s3_models_dir):
         models.append((obj.key[len(s3_models_dir):], obj.last_modified))
     return models
 
 
-def get_latest_model_name(s3_models_dir):
-    bucket = s3_connect()
+def get_latest_model_name(s3_models_dir, bucket=None):
+    if bucket is None:
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+
     model_list = []
     for key in bucket.objects.filter(Prefix=s3_models_dir):
         model_list.append((key.key[len(s3_models_dir):], key.last_modified))
@@ -57,7 +61,7 @@ def get_latest_model_name(s3_models_dir):
     return latest_model_name
 
 
-def download_latest_model_package(s3_models_dir, local_packaged_models_dir):
+def download_latest_model_package(s3_models_dir, local_packaged_models_dir, bucket=None):
     """download latest model package: this gets the MOST RECENT uploadted model
     ONLY from s3 model repo
     Args:
@@ -66,6 +70,8 @@ def download_latest_model_package(s3_models_dir, local_packaged_models_dir):
     Returns:
         model_name: str - name of pulled down model
     """
+    if bucket is None:
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
 
     model_name = get_latest_model_name(s3_models_dir)
     if model_name in get_local_model_package_names(local_packaged_models_dir):
@@ -74,7 +80,6 @@ def download_latest_model_package(s3_models_dir, local_packaged_models_dir):
             logger.info("Latest has all model files, nothing downloaded")
             return model_name
 
-    bucket = s3_connect()
     package_dir = "{}/{}".format(local_packaged_models_dir, model_name)
     logger.debug("package dir {}".format(package_dir))
 
@@ -89,7 +94,6 @@ def download_latest_model_package(s3_models_dir, local_packaged_models_dir):
             raise e
 
     try:
-        bucket = s3_connect()
         package_folder = s3_models_dir + model_name
         logger.debug(
             "Downloading latest model package from {}".format(package_folder))
@@ -111,7 +115,7 @@ def download_latest_model_package(s3_models_dir, local_packaged_models_dir):
     return model_name
 
 
-def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
+def download_models(s3_models_dir, local_packaged_models_dir, select="all", bucket=None):
     """download all models: this gets all models that AREN'T already available
     locally from s3 model repo
     Args:
@@ -120,9 +124,10 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
     Returns:
         model_name: list - names of pulled down models
     """
+    if bucket is None:
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
 
     try:
-        bucket = s3_connect()
         package_folder = s3_models_dir
         logger.debug(
             "Downloading latest model package from {}".format(package_folder))
@@ -147,7 +152,6 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
                 package_dir = "{}/{}".format(
                     local_packaged_models_dir, model_prefix)
                 download_path = "{}/{}".format(package_dir, filename)
-                bucket = s3_connect()
                 logger.debug("Checking  package dir {}".format(package_dir))
 
                 if not isdir(package_dir):
@@ -176,8 +180,10 @@ def download_models(s3_models_dir, local_packaged_models_dir, select="all"):
     return model_diff_list
 
 
-def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=False):
-    bucket = s3_connect()
+def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=False, bucket=None):
+    if bucket is None:
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+
     models_path = join(REPO_PATH, "gamechangerml/models")
     try:
         if glob.glob(join(models_path, "transformer*")):
@@ -208,8 +214,10 @@ def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=Fa
         raise
 
 
-def get_sentence_index(model_path="sent_index/", overwrite=False):
-    bucket = s3_connect()
+def get_sentence_index(model_path="sent_index/", overwrite=False, bucket=None):
+    if bucket is None:
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+
     models_path = join(REPO_PATH, "gamechangerml/models")
     try:
         if glob.glob(join(models_path, "sent_index*")):
@@ -250,8 +258,9 @@ def get_local_model_package_names(local_packaged_models_dir):
     )
 
 
-def view_all_datasets():
-    bucket = s3_connect()
+def view_all_datasets(bucket=None):
+    if bucket is None:
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
 
     prefix = "eval_data/"
     all_datasets = set()
@@ -266,14 +275,16 @@ def view_all_datasets():
         logger.info(f"\t{dataset}")
 
 
-def store_eval_data(folder_path, version):
+def store_eval_data(folder_path, version, bucket=None):
     """
     store_eval_data - write eval data to s3 bcuekt
         params: folder_path (str), folder containing data
                 version (int), version number of dataset
         output:
     """
-    bucket = s3_connect()
+    if bucket is None:
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+
     folder_name = normpath(folder_path)
     folder_name = basename(folder_name)
     s3_directory = f"eval_data/{folder_name}/v{str(version)}"
@@ -292,7 +303,7 @@ def store_eval_data(folder_path, version):
         logger.debug(fpath + "failed to store in S3")
 
 
-def download_eval_data(dataset_name, save_dir, version=None):
+def download_eval_data(dataset_name, save_dir, version=None, bucket=None):
     """
     store_eval_data - download eval data to local directory
         params: folder_path (str), folder containing data
@@ -303,7 +314,8 @@ def download_eval_data(dataset_name, save_dir, version=None):
     if not isdir(save_dir):
         mkdir(save_dir)
 
-    bucket = s3_connect()
+    if bucket is None:
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
 
     prefix = "eval_data/"
     try:

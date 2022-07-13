@@ -39,7 +39,6 @@ from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 from gamechangerml.scripts.make_training_data import make_training_data
 
 from gamechangerml.src.utilities import utils as utils
-from gamechangerml.src.utilities import aws_helper as aws_helper
 from gamechangerml.src.utilities.test_utils import (
     get_user,
     get_most_recent_dir,
