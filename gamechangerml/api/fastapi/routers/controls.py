@@ -33,7 +33,7 @@ from gamechangerml.api.fastapi.settings import (
     QA_MODEL,
     ignore_files,
 )
-from gamechangerml.data_transfer import get_model_s3
+from gamechangerml.data_transfer import get_model_s3, download_corpus_s3
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
@@ -216,7 +216,9 @@ def get_downloaded_models_list():
         topic_dirs = [
             name
             for name in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if os.path.isdir(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
+            if os.path.isdir(
+                os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name)
+            )
             and "topic_model_" in name
         ]
         for topic_model_name in topic_dirs:
@@ -279,7 +281,8 @@ async def delete_local_model(model: dict, response: Response):
     def removeDirectory(dir):
         try:
             logger.info(
-                f'Removing directory {os.path.join(dir,model["model"])}')
+                f'Removing directory {os.path.join(dir,model["model"])}'
+            )
             shutil.rmtree(os.path.join(dir, model["model"]))
         except OSError as e:
             logger.error(e)
@@ -414,7 +417,8 @@ async def download(response: Response):
         try:
             logger.info("Attempting to download dependencies from S3")
             output = subprocess.call(
-                ["gamechangerml/scripts/download_dependencies.sh"])
+                ["gamechangerml/scripts/download_dependencies.sh"]
+            )
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)
             processmanager.update_status(
@@ -463,7 +467,7 @@ async def download_s3_file(file_dict: dict, response: Response):
                 filename=file_dict["file"],
                 s3_model_dir=f"bronze/gamechanger/{file_dict['type']}/",
                 download_dir=path,
-                logger=logger
+                logger=logger,
             )
             logger.info(downloaded_files)
 
@@ -536,7 +540,8 @@ async def download_s3_file(file_dict: dict, response: Response):
                     failedExtracts.append(member.name)
 
             logger.warning(
-                f"Could not extract {failedExtracts} with permission errors")
+                f"Could not extract {failedExtracts} with permission errors"
+            )
             processmanager.update_status(
                 f's3: {file_dict["file"]}',
                 failed=True,
@@ -612,7 +617,8 @@ async def reload_models(model_dict: dict, response: Response):
                 logger.info(thread_name)
                 if "sentence" in model_dict:
                     sentence_path = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["sentence"]
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        model_dict["sentence"],
                     )
                     # uses SENT_INDEX_PATH by default
                     logger.info("Attempting to load Sentence Transformer")
@@ -627,14 +633,19 @@ async def reload_models(model_dict: dict, response: Response):
                     )
                 if "doc_compare_sentence" in model_dict:
                     doc_compare_sentence_path = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["doc_compare_sentence"]
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        model_dict["doc_compare_sentence"],
                     )
                     # uses DOC_COMPARE_SENT_INDEX_PATH by default
                     logger.info(
-                        "Attempting to load Doc Compare Sentence Transformer")
+                        "Attempting to load Doc Compare Sentence Transformer"
+                    )
                     MODELS.initDocumentCompareSearcher(
-                        doc_compare_sentence_path)
-                    DOC_COMPARE_SENT_INDEX_PATH.value = doc_compare_sentence_path
+                        doc_compare_sentence_path
+                    )
+                    DOC_COMPARE_SENT_INDEX_PATH.value = (
+                        doc_compare_sentence_path
+                    )
                     progress += 1
                     processmanager.update_status(
                         thread_name,
@@ -659,7 +670,8 @@ async def reload_models(model_dict: dict, response: Response):
                     )
                 if "jbook_qexp" in model_dict:
                     jbook_qexp_name = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["jbook_qexp"]
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        model_dict["jbook_qexp"],
                     )
                     # uses QEXP_MODEL_NAME by default
                     logger.info("Attempting to load Jbook QE")
@@ -675,7 +687,8 @@ async def reload_models(model_dict: dict, response: Response):
 
                 if "topic_models" in model_dict:
                     topics_name = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["topic_models"]
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        model_dict["topic_models"],
                     )
 
                     logger.info("Attempting to load Topics")
@@ -690,7 +703,8 @@ async def reload_models(model_dict: dict, response: Response):
                     )
                 if "qa_model" in model_dict:
                     qa_model_name = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qa_model"],
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        model_dict["qa_model"],
                     )
 
                     logger.info("Attempting to load QA model")
@@ -716,10 +730,12 @@ async def reload_models(model_dict: dict, response: Response):
         thread = MlThread(reload_thread, args)
         thread.start()
         processmanager.running_threads[thread.ident] = thread
-        thread_name = processmanager.reloading + \
-            " ".join([key for key in model_dict])
+        thread_name = processmanager.reloading + " ".join(
+            [key for key in model_dict]
+        )
         processmanager.update_status(
-            thread_name, 0, total, thread_id=thread.ident)
+            thread_name, 0, total, thread_id=thread.ident
+        )
     except Exception as e:
         logger.warning(e)
 
@@ -741,18 +757,21 @@ async def download_corpus(corpus_dict: dict, response: Response):
         # then passes in where to dowload the corpus locally.
 
         s3_corpus_dir = corpus_dict.get("corpus", S3_CORPUS_PATH)
-        args = {"s3_corpus_dir": s3_corpus_dir, "output_dir": CORPUS_DIR}
+        args = {
+            "s3_corpus_dir": s3_corpus_dir,
+            "output_dir": CORPUS_DIR,
+            "logger": logger,
+        }
 
         logger.info(args)
-        corpus_thread = MlThread(utils.get_s3_corpus, args)
+        corpus_thread = MlThread(download_corpus_s3, args)
         corpus_thread.start()
         processmanager.running_threads[corpus_thread.ident] = corpus_thread
         processmanager.update_status(
             processmanager.corpus_download, 0, 1, thread_id=corpus_thread.ident
         )
     except Exception as e:
-        logger.warning(f"Could not get corpus from S3")
-        logger.warning(e)
+        logger.exception("Could not get corpus from S3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         processmanager.update_status(
             processmanager.corpus_download,
@@ -926,8 +945,10 @@ def run_evals(model_dict):
 def train_topics(model_dict):
     logger.info("Attempting to train topic model")
     logger.info(model_dict)
-    args = {"sample_rate": model_dict["sample_rate"],
-            "upload": model_dict["upload"]}
+    args = {
+        "sample_rate": model_dict["sample_rate"],
+        "upload": model_dict["upload"],
+    }
     pipeline.run(
         build_type=model_dict["build_type"],
         run_name=datetime.now().strftime("%Y%m%d"),
@@ -955,11 +976,15 @@ async def train_model(model_dict: dict, response: Response):
         }
 
         # Set the training method to be loaded onto the thread
-        if "build_type" in model_dict and model_dict["build_type"] in training_switch:
+        if (
+            "build_type" in model_dict
+            and model_dict["build_type"] in training_switch
+        ):
             training_method = training_switch[model_dict["build_type"]]
         else:  # PLACEHOLDER
             logger.warn(
-                "No build type specified in model_dict, defaulting to sentence")
+                "No build type specified in model_dict, defaulting to sentence"
+            )
             model_dict["build_type"] = "sentence"
             training_method = training_switch[model_dict["build_type"]]
 
@@ -968,11 +993,13 @@ async def train_model(model_dict: dict, response: Response):
 
         if not training_method:
             raise Exception(
-                f"No training method mapped for build type {build_type}")
+                f"No training method mapped for build type {build_type}"
+            )
 
         # Set the training method to be loaded onto the thread
-        training_thread = MlThread(training_method, args={
-                                   "model_dict": model_dict})
+        training_thread = MlThread(
+            training_method, args={"model_dict": model_dict}
+        )
         training_thread.start()
         processmanager.running_threads[training_thread.ident] = training_thread
         processmanager.update_status(
@@ -982,7 +1009,9 @@ async def train_model(model_dict: dict, response: Response):
         logger.warning(f"Could not train/evaluate the model")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         processmanager.update_status(
-            processmanager.training, failed=True, thread_id=training_thread.ident
+            processmanager.training,
+            failed=True,
+            thread_id=training_thread.ident,
         )
 
     return await get_process_status()

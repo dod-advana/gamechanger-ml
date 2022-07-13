@@ -1,4 +1,4 @@
-from gamechangerml.src.utilities.utils import get_s3_corpus
+from gamechangerml.data_transfer import download_corpus_s3
 import argparse
 
 """
@@ -12,4 +12,4 @@ if __name__ == "__main__":
     parser.add_argument("-c", dest="corpus", help="S3 corpus location")
     args = parser.parse_args()
     corpus = args.corpus
-    get_s3_corpus(corpus)
+    download_corpus_s3(corpus)

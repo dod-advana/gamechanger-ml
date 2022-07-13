@@ -37,61 +37,7 @@ def create_model_schema(model_dir, file_prefix):
         else:
             logger.info("Created directory %s" % fulldir)
     return file_prefix
-
-
-def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
-    corp = []
-    try:
-        bucket = s3_connect()
-        if not exists(output_dir):
-            makedirs(output_dir)
-        else:
-            files = listdir(output_dir)
-            total = len(files)
-            progress = 0
-            if total > 0:
-                processmanager.update_status(
-                    processmanager.delete_corpus, progress, total,thread_id=threading.current_thread().ident
-                )
-                logger.info("Removing existing corpus files.")
-                for f in files:
-                    remove(join(output_dir, f))
-                    progress += 1
-                    processmanager.update_status(
-                        processmanager.delete_corpus, progress, total,thread_id=threading.current_thread().ident
-                    )
-        # get the s3.Bucket.objectsCollection of objects that meet the prefix
-        filter = bucket.objects.filter(Prefix=f"{s3_corpus_dir}/")
-        total = len(list(filter))
-        completed = 0
-        # Initialize Progress
-        processmanager.update_status(
-            processmanager.corpus_download, completed, total,thread_id=threading.current_thread().ident
-        )
-        logger.info("Downloading corpus from " + s3_corpus_dir)
-        for obj in filter:
-            corp.append(obj.key)
-            filename = basename(obj.key)
-            try:
-                local_path = join(output_dir, filename)
-                # Only grab file if it is not already downloaded
-                if ".json" in filename and not exists(local_path):
-                    bucket.Object(obj.key).download_file(local_path)
-                    completed += 1
-                # Update Progress
-                processmanager.update_status(
-                    processmanager.corpus_download, completed, total,thread_id=threading.current_thread().ident
-                )
-            except RuntimeError:
-                logger.debug(f"Could not retrieve {filename}")
-    except Exception as error:
-        logger.warning(error)
-        processmanager.update_status(processmanager.delete_corpus, failed=True,thread_id=threading.current_thread().ident)
-        processmanager.update_status(
-            processmanager.corpus_download, failed=True,thread_id=threading.current_thread().ident
-        )
-    return corp
-
+    
 
 def get_models_list(s3_models_dir):
     bucket = s3_connect()
