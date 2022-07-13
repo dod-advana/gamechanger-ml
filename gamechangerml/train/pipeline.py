@@ -51,14 +51,12 @@ from gamechangerml.api.utils.pathselect import get_model_paths
 
 from gamechangerml.src.search.query_expansion.build_ann_cli import build_qe_model as bqe
 from gamechangerml.src.utilities import utils
-from gamechangerml.configs.config import (
-    DefaultConfig,
-    D2VConfig,
-    QexpConfig,
-    QAConfig,
+from gamechangerml.configs import (
     EmbedderConfig,
     SimilarityConfig,
     QexpConfig,
+    D2VConfig,
+    PathConfig
 )
 
 import pandas as pd
@@ -392,7 +390,7 @@ class Pipeline:
         model_id=None,
         upload=False,
         corpus=CORPUS_DIR,
-        model_dest=DefaultConfig.LOCAL_MODEL_DIR,
+        model_dest=PathConfig.LOCAL_MODEL_DIR,
         exp_name=modelname,
         validate=True,
         version="v4",
@@ -419,7 +417,7 @@ class Pipeline:
         try:
             # build ANN indices
             index_dir = os.path.join(model_dest, model_path)
-            bqe.main(corpus, index_dir, **QexpConfig.MODEL_ARGS["bqe"])
+            bqe.main(corpus, index_dir, **QexpConfig.BUILD_ARGS)
             logger.info(
                 "-------------- Model Training Complete --------------")
             # Create .tgz file
@@ -437,7 +435,7 @@ class Pipeline:
                 logger.info(
                     "-------------- Running Assessment Model Script --------------"
                 )
-                # qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
+                # qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.INIT_ARGS, **QexpConfig.EXPANSION_ARGS, model=None)
                 # evals = qxpeval.results
 
                 logger.info(
@@ -684,7 +682,7 @@ class Pipeline:
     ):
         try:
             model_id = datetime.now().strftime("%Y%m%d%H%M%S")
-            model_dir = DefaultConfig.LOCAL_MODEL_DIR
+            model_dir = PathConfig.LOCAL_MODEL_DIR
 
             # get model name schema
             model_name = "topic_model_" + model_id

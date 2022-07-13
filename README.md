@@ -4,6 +4,10 @@
 2. [Development Rules](#Development-Rules)
 3. [Train Models](#Train-Models)
 4. [ML API](#ML-API)
+5. [Helpful Flags For API](#Helpful-Flags-For-API)
+6. [FAQ](#FAQ)
+7. [Pull Requests](#Pull-Requests)
+
 
 ## Directory
 ```
@@ -107,14 +111,45 @@
 ```
 
 ## Development Rules
-- Everything in gamechangerml/src should be independent of things outside of that structure (should not need to import from dataPipeline, common, etc).
-- Where ever possible, code should be modular and broken down into smallest logical pieces and placed in the most logical subfolder.
-- Include README.md file and/or example scripts demonstrating the functionality of your code.
-- Models/large files should not be stored on Github.
-- Data should not be stored on Github, there is a script in the `gamechangerml/scripts` folder to download a corpus from s3.
-- File paths in gamechangerml/configs config files should be relative to gamechangerml and only used for local testing purposes (feel free to change on your local machine, but do not commit to repo with system specific paths).
-- A config should not be required as an input parameter to a function; however a config can be used to provide parameters to a function (`foo(path=Config.path)`, rather than `foo(Config)`).
-- If a config is used for a piece of code (such as training a model), the config should be placed in the relevant section of the repo (dataPipeline, api, etc.) and should clearly designate which environment the config is for (if relevant).
+- Everything in `gamechangerml/src` should be independent of things outside of that structure (should not need to import from dataPipeline, common, etc).
+
+
+### Configs
+- Config files go in `gamechangerml/configs`. When you add a new class, import it in [gamechangerml/configs/__init__.py](gamechangerml/configs/__init__.py).
+- File paths in `gamechangerml/configs/*` should be relative to `gamechangerml` and only used for local testing purposes. Feel free to change on your local machine, but ***do not commit system specific paths to the repository***.
+- A config class (i.e., from `gamechangerml/configs/*`) should not be required as an input parameter to a function. However, a config class attribute can be used to provide parameters to a function (`foo(path=Config.path)`, rather than `foo(Config)`).
+
+
+### What Can Be Stored On GitHub?
+- Models and large files should *NOT* be stored on Github.
+- Data should *NOT* be stored on Github, there is a script in the `gamechangerml/scripts` folder to download a corpus from s3.
+
+### Use Best Practices
+- Code should be modular, broken down into smallest logical pieces, and placed in the most logical subfolder.
+- All classes, functions, etc. should have clear, concise, and consistent docstrings. 
+  - Function docstrings should include:
+    - A short description 
+    - Any important remarks
+    - Parameter types, defaults, and descriptions
+    - Return types and descriptions
+
+    Example:
+    ```python
+    def say(words, loud=False):
+      """Make the animal say words.
+
+      Args:
+        words (str): Words for the animal to say.
+        loud (bool): True to make the animal say the words loudly, False to 
+          make the animal say the words in a normal tone. Default is False.
+
+      Returns:
+        None
+      """
+    ```
+- Include a maximum of 1 class per file.
+- Include README.md files that contain what, why, and how code is used.
+
 
 ## Getting Started
 ### To use gamechangerml as a python module
@@ -143,7 +178,7 @@
 6. `docker-compose up`
 7. visit `localhost:5000/docs`
 
-## HELPFUL FLAGS FOR API
+## Helpful Flags For API
 - export CONTAINER_RELOAD=True to reload the container on code changes for development
 - export DOWNLOAD_DEP=True to get models and other deps from s3
 - export MODEL_LOAD=False to not load models on API start (only for development needs) 
@@ -160,7 +195,7 @@
 - What if I can't download the dependencies since I am external?
   - We are working on making models publically available. However you can use download pretrained transformers from HuggingFace to include in the models/transformers directory, which will enable you to use some functionality of the API. Without any models, there is still functionality available like text extraction avaiable. 
 
-## PULL REQUESTS
+## Pull Requests
 *Please provide:*
 1. Description - what is the purpose, what are the different features added i.e. bugfix, added upload capability to model, model improving
 2. Reviewer Test - how to test it manually and if it is on a dev/test server. (if applicable) 

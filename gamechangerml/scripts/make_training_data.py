@@ -4,11 +4,10 @@ import os
 import json
 from datetime import date
 from typing import List, Union, Dict, Tuple
-
-from gamechangerml.configs.config import (
+from gamechangerml.configs import (
+    SimilarityConfig,
     TrainingConfig,
     ValidationConfig,
-    SimilarityConfig,
 )
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.model_testing.query_es import *
@@ -27,7 +26,7 @@ random.seed(42)
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SIM_MODEL = SimilarityConfig.BASE_MODEL
 training_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
-tts_ratio = TrainingConfig.DATA_ARGS["train_test_split_ratio"]
+tts_ratio = TrainingConfig.TRAIN_TEST_SPLIT_RATIO
 gold_standard_path = os.path.join(
     "gamechangerml/data/user_data",
     ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"],
