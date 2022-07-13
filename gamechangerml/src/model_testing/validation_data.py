@@ -551,7 +551,7 @@ class IntelSearchData(SearchValidationData):
         # self.data = pd.concat(
         #     [self.matamo_data.intel, self.history_data.intel_matched]
         # ).reset_index()
-        self.data = pd.DataFrame([])
+        self.data = self.data[0:0]
         self.min_correct_matches = min_correct_matches
         self.max_results = max_results
         self.filter_queries = filter_queries
