@@ -10,7 +10,7 @@ from gamechangerml.api.utils import processmanager
 from gamechangerml.data_transfer import delete_local_corpus
 
 
-def get_model_s3(
+def download_model_s3(
     s3_model_dir, filename, download_dir="", bucket=None, logger=None
 ):
     """Download a model from S3.
@@ -61,7 +61,7 @@ def download_corpus_s3(
     rm_existing=True,
 ):
     """Download the corpus from S3.
-    
+
     Args:
         s3_corpus_dir (str): Path to S3 directory that contains the corpus.
         output_dir (str, optional): Path to directory to download files to.
