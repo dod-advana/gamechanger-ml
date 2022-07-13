@@ -1,5 +1,6 @@
 from gamechangerml.src.utilities.utils import *
 from gamechangerml.src.utilities.aws_helper import *
+from gamechangerml.data_transfer import get_model_s3
 from gamechangerml import REPO_PATH
 import os
 import sys
@@ -26,7 +27,7 @@ if sys.argv[1].lower() == "load":
     # download everything from s3
     print(get_models_list(s3_models_dir))
     for s in get_models_list(s3_models_dir):
-        get_model_s3(s[0], s3_models_dir)
+        get_model_s3(filename=s[0], s3_model_dir=s3_models_dir)
     print("\nFinished")
 
 # if we're saving models into s3

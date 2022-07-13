@@ -33,7 +33,7 @@ from gamechangerml.api.fastapi.settings import (
     QA_MODEL,
     ignore_files,
 )
-
+from gamechangerml.data_transfer import get_model_s3
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
@@ -459,8 +459,11 @@ async def download_s3_file(file_dict: dict, response: Response):
                 if file_dict["type"] == "models"
                 else "gamechangerml/"
             )
-            downloaded_files = utils.get_model_s3(
-                file_dict["file"], f"bronze/gamechanger/{file_dict['type']}/", path
+            downloaded_files = get_model_s3(
+                filename=file_dict["file"],
+                s3_model_dir=f"bronze/gamechanger/{file_dict['type']}/",
+                download_dir=path,
+                logger=logger
             )
             logger.info(downloaded_files)
 
