@@ -1,5 +1,5 @@
-from gamechangerml.src.utilities.utils import *
-from gamechangerml.src.utilities.aws_helper import *
+from gamechangerml.src.utilities.utils import get_models_list
+from gamechangerml.src.services import S3Service
 from gamechangerml.data_transfer import get_model_s3
 from gamechangerml import REPO_PATH
 import os
@@ -20,6 +20,10 @@ except:
         '\nArgument not specified. Specify "load" or "save" as an argument into the shell script.'
     )
 
+bucket = S3Service.connect_to_bucket()
+if bucket is None:
+    raise Exception("Failed to connect to S3.")
+    
 # if we're loading models from s3
 if sys.argv[1].lower() == "load":
     print("\nLoading models from s3 \n")
@@ -44,7 +48,11 @@ elif sys.argv[1].lower() == "save":
     # upload everything in the directory to s3
     for s in os.listdir():
         print(f"Uploading {s} ...")
-        upload_file(s, s3_models_dir + s)
+        S3Service.upload_file(
+            bucket=bucket,
+            filename=s,
+            s3_fullpath=s3_models_dir + s
+        )
     print("\nFinished")
 else:
     raise Exception(

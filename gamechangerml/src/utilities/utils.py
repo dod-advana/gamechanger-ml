@@ -7,10 +7,11 @@ import tarfile
 import threading
 import typing as t
 from pathlib import Path
-from gamechangerml.src.utilities.aws_helper import *
+from gamechangerml.src.services import S3Service
+from gamechangerml.src.utilities.aws_helper import s3_connect
 from gamechangerml import REPO_PATH
 from gamechangerml.api.utils import processmanager
-from gamechangerml.utils import configure_logger
+from gamechangerml.configs import S3Config
 
 logger = logging.getLogger("gamechanger")
 
@@ -418,6 +419,12 @@ def upload(s3_path, local_path, model_prefix, model_name):
     logger.info(f"\tUploading: {local_path}")
     s3_path = join(
         s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
-    upload_file(local_path, s3_path)
+    bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+    S3Service.upload_file(
+        bucket=bucket,
+        s3_fullpath=s3_path,
+        filepath=local_path,
+        logger=logger
+    )
     logger.info(f"Successfully uploaded files to {s3_path}")
     logger.info("-------------- Finished Uploading --------------")

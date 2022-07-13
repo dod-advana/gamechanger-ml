@@ -15,8 +15,10 @@ from datetime import datetime, date
 from pathlib import Path
 import typing as t
 
+from gamechangerml.configs import S3Config
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.search.query_expansion.qe import QE
+from gamechangerml.src.services import S3Service
 from gamechangerml.src.utilities.arg_parser import LocalParser
 from gamechangerml.src.model_testing.evaluation import (
     SQuADQAEvaluator,
@@ -731,7 +733,13 @@ class Pipeline:
         s3_path = os.path.join(
             s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
         logger.info(f"s3_path {s3_path}")
-        utils.upload_file(local_path, s3_path)
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+        S3Service.upload_file(
+            bucket=bucket,
+            filepath=local_path,
+            s3_fullpath=s3_path,
+            logger=logger,
+        )
         logger.info(f"Successfully uploaded files to {s3_path}")
         logger.info("-------------- Finished Uploading --------------")
 
