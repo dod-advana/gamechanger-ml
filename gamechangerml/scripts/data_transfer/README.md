@@ -8,6 +8,8 @@ This directory contains scripts to upload/ download data to/ from S3.
 ```
 - gamechangerml/scripts/data_transfer
     |--download_eval_data.py        Download evaluation data
+    |--download_corpus.py           Download the corpus (using Python)
+    |--download_corpus.sh           Download the corpus (using Bash)
 ```
 
 
@@ -19,7 +21,7 @@ This directory contains scripts to upload/ download data to/ from S3.
     b. Run `pip install .`
 
 ## Usage
-Before running any script:
+Before running a Python script:
 - Activate the virtual environment (see [prerequisites](#prerequisites)).
 - `cd` into your local `gamechanger-ml` repository
 - Refresh your token with AWSAML
@@ -30,4 +32,16 @@ python gamechangerml/scripts/data_transfer/download_eval.py
 ```
 - You will be prompted to enter information about what dataset to download and where.
 
+### download_corpus.py
+```
+python gamechangerml/scripts/data_transfer/download_corpus.py
+```
 
+### download_corpus.sh
+```
+bash gamechangerml/scripts/data_transfer/download_eval.sh
+```
+
+
+## Notes
+- Another resource for data transfer operations is [gamechangerml/src/data_transfer](../../../gamechangerml/src/data_transfer/).
