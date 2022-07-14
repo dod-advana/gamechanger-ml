@@ -504,6 +504,8 @@ def make_training_data(
 
     # add gold standard samples
     logger.info("****   Adding gold standard examples")
+    logger.info("$$$$$$$$$$$$ intel going in to add_gold_standard")
+    logger.info(intel)
     intel = add_gold_standard(intel, gold_standard_path)
 
     try:
