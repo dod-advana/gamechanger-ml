@@ -82,3 +82,42 @@ class S3Service:
             raise e
         
         return files
+
+    @staticmethod
+    def get_object_names(bucket, prefix, name_type="path"):
+        """Get object names for the given S3 prefix.
+
+        Args:
+            prefix (str): Get object names with this prefix.
+            bucket (boto3.resources.factory.s3.Bucket): Bucket to get objects 
+                from. See S3Service.connect_to_bucket().
+            name_type (str, optional): The following options are supported:
+                "path": to get paths (paths do not include the prefix)
+                "filename": to get file names
+                "dir": to get parent directory names (i.e., part before the first 
+                    "/" in the object path, not including the prefix)
+                Default is "path".
+        
+        Raises:
+            ValueError: If invalid name_type is given.
+
+        Returns:
+            list of str
+        """
+        name_types = ["path", "filename", "dir"]
+        if name_type not in name_types:
+            raise ValueError(
+                f"Invalid name_type argument. Supported options are: {name_types}."
+            )
+            
+        start_char = len(prefix)
+        names = [obj.key[start_char:] for obj in bucket.objects.filter(Prefix=prefix)]
+        
+        if name_type == "filename":    
+            names = [name.split("/")[-1] for name in names]
+        elif name_type == "dir":
+            names = list(set([
+                name.split("/")[0] for name in names
+            ]))
+
+        return names
