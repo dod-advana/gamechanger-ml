@@ -5,7 +5,6 @@ from os.path import join, exists, basename
 from gamechangerml.src.services.s3_service import S3Service
 from gamechangerml.utils import configure_logger
 from gamechangerml.configs import S3Config
-from gamechangerml.configs import S3Config
 from gamechangerml.api.utils import processmanager
 from gamechangerml.data_transfer import delete_local_corpus
 
@@ -22,8 +21,8 @@ def download_model_s3(
         download_dir (str, optional): Path to local directory to put downloaded
             files. Defaults to "".
         bucket (boto3.resources.factory.s3.Bucket or None, optional): Bucket to
-            upload to. If None, uses S3Service.connect_to_bucket(). Default is
-            None.
+            download from. If None, uses S3Service.connect_to_bucket(). Default 
+            is None.
         logger (logging.Logger or None, optional): If None, uses
             configure_logger(). Default is None.
 
@@ -67,8 +66,8 @@ def download_corpus_s3(
         output_dir (str, optional): Path to directory to download files to.
             Defaults to "corpus".
         bucket (boto3.resources.factory.s3.Bucket or None, optional): Bucket to
-            upload to. If None, uses S3Service.connect_to_bucket(). Default is
-            None.
+            download from. If None, uses S3Service.connect_to_bucket(). Default 
+            is None.
         logger (logging.Logger or None, optional): If None, uses
             configure_logger(). Default is None.
         rm_existing (bool, optional): True to delete existing files in the

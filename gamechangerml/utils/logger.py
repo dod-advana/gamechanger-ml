@@ -4,17 +4,17 @@ from logging import getLogger, StreamHandler, Formatter, FileHandler
 
 
 def configure_logger(
-    name=__name__,
+    name="gamechanger",
     min_level="DEBUG",
     file_path=None,
-    msg_fmt="%(asctime)s - %(levelname)s - %(filename)s - line %(lineno)s - %(message)s",
+    msg_fmt="%(levelname)s - %(asctime)s - %(filename)s - line %(lineno)s - %(message)s",
     date_fmt="%Y-%m-%d %H:%M:%S",
 ):
     """Configure a logger object.
 
     Args:
         name (str or None, optional): If str, name of the logger to get/ create. 
-        If None, will get the root logger. Default is __name__.
+        If None, will get the root logger. Default is "gamechanger".
         min_level (str or int, optional): Denotes the minimum level to log. See 
             https://docs.python.org/3/library/logging.html#levels for options. 
             Defaults to "DEBUG".
