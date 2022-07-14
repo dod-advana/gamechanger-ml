@@ -4,6 +4,7 @@ Also see gamechangerml.src.services.s3_service.py
 """
 
 from threading import current_thread
+from os import makedirs
 from os.path import join, exists, basename
 
 from gamechangerml.src.services.s3_service import S3Service
@@ -11,6 +12,7 @@ from gamechangerml.utils import configure_logger
 from gamechangerml.configs import S3Config
 from gamechangerml.api.utils import processmanager
 from gamechangerml.src.data_transfer import delete_local_corpus
+
 
 def download_corpus_s3(
     s3_corpus_dir,
@@ -84,3 +86,64 @@ def download_corpus_s3(
         )
 
     return corpus
+
+def download_eval_data(
+    bucket,
+    dataset_name,
+    save_dir,
+    logger,
+    version=None,
+    ):
+    """Download evaluation data from S3.
+
+    Args:
+        bucket (boto3.resources.factory.s3.Bucket): Bucket to download data from.
+        dataset_name (str): Name of the dataset to download.
+        save_dir (str): Path to local directory to save data.
+        logger (logging.Logger)
+        version (int or None, optional): Version number of the dataset to 
+            download. If None, downloads the latest version. Default is None.
+
+    Returns:
+        None
+    """
+    save_dir = join(save_dir, dataset_name)
+    makedirs(save_dir, exist_ok=True)
+    
+    # Ensure the dataset name exists
+    prefix = S3Config.EVAL_DATA_DIR
+    all_datasets = S3Service.get_object_names(bucket, prefix, "dir")
+    if dataset_name not in all_datasets:
+        logger.warning(
+            f"{dataset_name} does not exist. Available datasets are: {all_datasets}."
+        )
+        return None
+    
+    # Get version numbers available for the given dataset name
+    prefix = f"{prefix}{dataset_name}/"
+    try:
+        all_versions = [
+            int(x[1:]) for x in S3Service.get_object_names(bucket, prefix, "dir")
+        ]
+    except Exception as e:
+        logger.exception(f"Error occurred when getting eval data versions: {e}.")
+        raise e
+
+    if not all_versions:
+        logger.warning("No versions found, nothing to download.")
+        return
+
+    # If no version arg provided, get the latest version.
+    if version is None:
+        version = max(all_versions)
+    # If a version arg was provided, verify that the requested version exists
+    elif version not in all_versions:
+        logger.warning(
+            f"Version {version} does not exist. Available versions are: "
+            f"{all_versions}"
+        )
+        return None
+
+    logger.info(f"Downloading {dataset_name} version {version}...")
+    S3Service.download(bucket, prefix + f"v{version}", save_dir, logger)
+
