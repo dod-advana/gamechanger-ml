@@ -95,6 +95,7 @@ class STFinetuner():
         self.warmup_steps = warmup_steps
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
+        torch.cuda.empty_cache()
 
     def retrain(self, data_dir, testing_only, version):
 
@@ -200,4 +201,5 @@ class STFinetuner():
             logger.error(e)
             raise e
 
-        return
+        finally:
+            torch.cuda.empty_cache()
