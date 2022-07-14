@@ -12,6 +12,7 @@ from datetime import datetime
 from gamechangerml import DATA_PATH
 from gamechangerml.src.utilities import utils
 from gamechangerml.src.utilities.es_utils import ESUtils
+from gamechangerml.src.services import S3Service
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
 
@@ -33,7 +34,7 @@ from gamechangerml.api.fastapi.settings import (
     QA_MODEL,
     ignore_files,
 )
-from gamechangerml.data_transfer import download_model_s3, download_corpus_s3
+from gamechangerml.data_transfer import download_corpus_s3
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
@@ -463,11 +464,12 @@ async def download_s3_file(file_dict: dict, response: Response):
                 if file_dict["type"] == "models"
                 else "gamechangerml/"
             )
-            downloaded_files = download_model_s3(
-                filename=file_dict["file"],
-                s3_model_dir=f"bronze/gamechanger/{file_dict['type']}/",
-                download_dir=path,
-                logger=logger,
+            bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+            downloaded_files = S3Service.download(
+                bucket, 
+                os.path.join("bronze/gamechanger", file_dict["type"], file_dict["file"]),
+                path,
+                logger
             )
             logger.info(downloaded_files)
 

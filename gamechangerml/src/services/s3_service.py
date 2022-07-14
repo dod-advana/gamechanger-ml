@@ -1,4 +1,5 @@
 from boto3 import Session
+from os.path import join
 
 
 class S3Service:
@@ -18,9 +19,10 @@ class S3Service:
             session = Session()
             s3 = session.resource("s3")
             bucket = s3.Bucket(bucket_name)
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to connect to S3 bucket.")
             bucket = None
+            raise e
 
         return bucket
 
@@ -37,30 +39,46 @@ class S3Service:
 
         Returns:
             None
-        """
+    """
         try:
             bucket.upload_file(filepath, s3_fullpath)
-        except Exception:
+        except Exception as e:
             logger.exception(
                 f"Failed to upload file at {filepath} to S3 {s3_fullpath}."
             )
+            raise e
 
     @staticmethod
-    def put_object(bucket, object, s3_dir, file_name, logger):
-        """_summary_
+    def download(bucket, prefix, output_dir, logger):
+        """Download file(s) from S3.
 
         Args:
-            bucket (boto3.resources.factory.s3.Bucket): Bucket to upload to. 
+            bucket (boto3.resources.factory.s3.Bucket): Bucket to download from. 
                 See S3Service.connect_to_bucket().
-            object (TODO): TODO
-            s3_dir (str): Directory path to store the object in S3.
-            file_name (str): File name to give the object in S3.
+            prefix (str): Prefix for file(s) to download.
+            output_dir (str): Path to local directory to download file(s) to.
             logger (logging.Logger)
 
+        Raises:
+            Exception: If download fails.
+
         Returns:
-            None
+            list of str: Local paths of downloaded files.
         """
+        files = []
         try:
-            bucket.put_object(Body=object, Key=s3_dir + file_name)
-        except Exception:
-            logger.exception(f"Failed to put {file_name} in S3.")
+            for obj in bucket.objects.filter(Prefix=prefix):
+                if obj.size != 0:
+                    logger.info(f"Downloading {obj.key}.")
+                    output_path = join(output_dir, obj.key.split("/")[-1])
+                    bucket.download_file(obj.key, output_path)
+                    files.append(output_path)
+                else:
+                    logger.debug(
+                        f"S3 object size is 0. Skipping download. {obj.key}."
+                    )
+        except Exception as e:
+            logger.exception(f"S3 download failed for {prefix}.")
+            raise e
+        
+        return files

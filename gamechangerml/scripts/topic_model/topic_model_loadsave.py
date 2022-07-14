@@ -2,7 +2,6 @@ from gamechangerml import REPO_PATH
 from gamechangerml.src.services import S3Service
 from gamechangerml.configs import S3Config
 from gamechangerml.utils import configure_logger
-from gamechangerml.data_transfer import get_model_s3
 from os import chdir, listdir
 from os.path import join
 import sys
@@ -26,12 +25,7 @@ def run():
         for obj in BUCKET.objects.filter(Prefix=S3_MODELS_DIR):
             filename = obj.key[start_char:]
             LOGGER.info(f"Downloading {filename}.")
-            get_model_s3(
-                filename=filename, 
-                s3_model_dir=S3_MODELS_DIR, 
-                bucket=BUCKET, 
-                logger=LOGGER
-            )
+            S3Service.download(BUCKET, join(S3_MODELS_DIR, filename), "", LOGGER)
     elif ARG == "save":
         LOGGER.info("Saving models to S3.")
         upload_files = listdir()
