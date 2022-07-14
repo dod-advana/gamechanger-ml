@@ -35,7 +35,7 @@ from gamechangerml.api.fastapi.settings import (
     QA_MODEL,
     ignore_files,
 )
-from gamechangerml.data_transfer import download_corpus_s3
+from gamechangerml.src.data_transfer import download_corpus_s3
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager

@@ -10,7 +10,7 @@ from gamechangerml.src.services.s3_service import S3Service
 from gamechangerml.utils import configure_logger
 from gamechangerml.configs import S3Config
 from gamechangerml.api.utils import processmanager
-from gamechangerml.data_transfer import delete_local_corpus
+from gamechangerml.src.data_transfer import delete_local_corpus
 
 def download_corpus_s3(
     s3_corpus_dir,

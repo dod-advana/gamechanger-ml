@@ -7,7 +7,7 @@ from os import environ, makedirs
 from os.path import join, exists
 
 from gamechangerml.api.fastapi.model_config import Config
-from gamechangerml.data_transfer import get_latest_model_name
+from gamechangerml.src.data_transfer import get_latest_model_name
 from gamechangerml.src.services import S3Service
 from gamechangerml.configs import S3Config
 from gamechangerml.utils import configure_logger

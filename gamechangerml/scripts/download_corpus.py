@@ -1,4 +1,4 @@
-from gamechangerml.data_transfer import download_corpus_s3
+from gamechangerml.src.data_transfer import download_corpus_s3
 import argparse
 
 """
