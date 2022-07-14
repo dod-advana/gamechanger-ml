@@ -10,6 +10,7 @@ import pandas as pd
 
 from datetime import datetime
 from gamechangerml import DATA_PATH
+from gamechangerml.configs.s3_config import S3Config
 from gamechangerml.src.utilities import utils
 from gamechangerml.src.utilities.es_utils import ESUtils
 from gamechangerml.src.services import S3Service
@@ -584,10 +585,16 @@ async def s3_func(function, response: Response):
         logger.info("Retrieving model list from s3::")
         if function == "models":
             s3_path = "bronze/gamechanger/models/"
-            models = utils.get_models_list(s3_path)
         elif function == "data":
             s3_path = "bronze/gamechanger/ml-data/"
-            models = utils.get_models_list(s3_path)
+        
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+        start_char = len(s3_path)
+        models = [
+            (obj.key[start_char:], obj.last_modified)
+            for obj in bucket.objects.filter(Prefix=s3_path)
+        ]
+
     except:
         logger.warning(f"Could not get model list from s3")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR

@@ -1,7 +1,6 @@
 import logging
-from os import mkdir, makedirs, listdir, remove, rmdir, rename
-from os.path import join, isdir, exists, basename, normpath
-import shutil
+from os import rename, makedirs
+from os.path import join, isdir, basename
 import glob
 import tarfile
 import typing as t
@@ -9,42 +8,20 @@ from pathlib import Path
 from gamechangerml.src.services import S3Service
 from gamechangerml.configs import S3Config
 from gamechangerml import REPO_PATH
-from gamechangerml.configs import S3Config
 
 logger = logging.getLogger("gamechanger")
 
-def verify_model_name(model_dir, filePrefix):
-    count = 0
-
-    while isdir(join(model_dir, filePrefix)):
-        filePrefix = filePrefix.split("_")[0]
-        filePrefix = f"{filePrefix}_{count}"
-        count = count + 1
-    filePrefix = filePrefix.split("/")[-1]
-    return filePrefix
-
 
 def create_model_schema(model_dir, file_prefix):
-    file_prefix = verify_model_name(model_dir, file_prefix)
-    fulldir = f"{model_dir}/{file_prefix}"
-    if not isdir(fulldir):
-        try:
-            mkdir(fulldir)
-        except OSError:
-            logger.error("Creation of directory %s failed" % fulldir)
-        else:
-            logger.info("Created directory %s" % fulldir)
-    return file_prefix
+    num = 0
+    while isdir(join(model_dir, file_prefix)):
+        file_prefix = f"{file_prefix.split('_')[0]}_{num}"
+        count += 1
     
+    dirpath = join(model_dir, file_prefix)
+    makedirs(dirpath)
 
-def get_models_list(s3_models_dir, bucket=None):
-    if bucket is None:
-        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
-    
-    models = []
-    for obj in bucket.objects.filter(Prefix=s3_models_dir):
-        models.append((obj.key[len(s3_models_dir):], obj.last_modified))
-    return models
+    logger.info(f"Created directory: {dirpath}.")
 
 
 def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=False, bucket=None):
@@ -115,16 +92,6 @@ def get_sentence_index(model_path="sent_index/", overwrite=False, bucket=None):
         raise
 
 
-def get_local_model_package_names(local_packaged_models_dir):
-    return list(
-        filter(
-            lambda x: isdir(join(
-                local_packaged_models_dir, x)),
-            listdir(local_packaged_models_dir),
-        )
-    )
-
-
 def view_all_datasets(bucket=None):
     if bucket is None:
         bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
@@ -140,34 +107,6 @@ def view_all_datasets(bucket=None):
     logger.info("Available datasets:")
     for dataset in all_datasets:
         logger.info(f"\t{dataset}")
-
-
-def store_eval_data(folder_path, version, bucket=None):
-    """
-    store_eval_data - write eval data to s3 bcuekt
-        params: folder_path (str), folder containing data
-                version (int), version number of dataset
-        output:
-    """
-    if bucket is None:
-        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
-
-    folder_name = normpath(folder_path)
-    folder_name = basename(folder_name)
-    s3_directory = f"eval_data/{folder_name}/v{str(version)}"
-
-    if not isdir(folder_path):
-        logger.debug(folder_path + "does not exist...")
-        return None
-
-    try:
-        for fname in listdir(folder_path):
-            fpath = join(folder_path, fname)
-            s3_path = join(s3_directory, folder_name, fname)
-            bucket.Object(s3_path).delete()
-            bucket.upload_file(fpath, s3_path)
-    except:
-        logger.debug(fpath + "failed to store in S3")
 
 
 def download_eval_data(dataset_name, save_dir, version=None, bucket=None):
@@ -236,20 +175,3 @@ def create_tgz_from_dir(
 ) -> None:
     with tarfile.open(dst_archive, "w:gz") as tar:
         tar.add(src_dir, arcname=basename(src_dir))
-
-
-def upload(s3_path, local_path, model_prefix, model_name):
-    # Loop through each file and upload to S3
-    logger.info(f"Uploading files to {s3_path}")
-    logger.info(f"\tUploading: {local_path}")
-    s3_path = join(
-        s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
-    bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
-    S3Service.upload_file(
-        bucket=bucket,
-        s3_fullpath=s3_path,
-        filepath=local_path,
-        logger=logger
-    )
-    logger.info(f"Successfully uploaded files to {s3_path}")
-    logger.info("-------------- Finished Uploading --------------")
