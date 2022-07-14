@@ -10,7 +10,7 @@ from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.src.data_transfer import get_latest_model_name
 from gamechangerml.src.services import S3Service
 from gamechangerml.configs import S3Config
-from gamechangerml.utils import configure_logger
+from gamechangerml.src.utilities import configure_logger
 
 
 def poll_alive():

@@ -2,7 +2,7 @@ from os import listdir, remove
 from os.path import join, exists
 from threading import current_thread
 from gamechangerml.api.utils import processmanager
-from gamechangerml.utils import configure_logger
+from gamechangerml.src.utilities import configure_logger
 
 
 def delete_local_corpus(corpus_dir="corpus", logger=None):

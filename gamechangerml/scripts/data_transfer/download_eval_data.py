@@ -3,7 +3,7 @@
 from gamechangerml.src.services import S3Service
 from gamechangerml.configs import S3Config
 from gamechangerml.src.data_transfer import download_eval_data
-from gamechangerml.utils import configure_logger
+from gamechangerml.src.utilities import configure_logger
 
 
 if __name__ == "__main__":
