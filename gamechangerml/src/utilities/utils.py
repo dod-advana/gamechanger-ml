@@ -4,13 +4,11 @@ from os.path import join, isdir, exists, basename, normpath
 import shutil
 import glob
 import tarfile
-import threading
 import typing as t
 from pathlib import Path
 from gamechangerml.src.services import S3Service
 from gamechangerml.configs import S3Config
 from gamechangerml import REPO_PATH
-from gamechangerml.api.utils import processmanager
 from gamechangerml.configs import S3Config
 
 logger = logging.getLogger("gamechanger")
@@ -47,137 +45,6 @@ def get_models_list(s3_models_dir, bucket=None):
     for obj in bucket.objects.filter(Prefix=s3_models_dir):
         models.append((obj.key[len(s3_models_dir):], obj.last_modified))
     return models
-
-
-def get_latest_model_name(s3_models_dir, bucket=None):
-    if bucket is None:
-        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
-
-    model_list = []
-    for key in bucket.objects.filter(Prefix=s3_models_dir):
-        model_list.append((key.key[len(s3_models_dir):], key.last_modified))
-    sorted_models = sorted(model_list, key=lambda x: x[1])
-    latest_model_name = sorted_models[-1][0].split("/")[0]
-    return latest_model_name
-
-
-def download_latest_model_package(s3_models_dir, local_packaged_models_dir, bucket=None):
-    """download latest model package: this gets the MOST RECENT uploadted model
-    ONLY from s3 model repo
-    Args:
-        s3_models_dir: s3 model directory. i.e. models/v3/
-        local_packaged_models_dir: the local directory where models are stored.
-    Returns:
-        model_name: str - name of pulled down model
-    """
-    if bucket is None:
-        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
-
-    model_name = get_latest_model_name(s3_models_dir)
-    if model_name in get_local_model_package_names(local_packaged_models_dir):
-        logger.info("Latest model already available locally")
-        if len(listdir(f"{local_packaged_models_dir}/{model_name}")) > 3:
-            logger.info("Latest has all model files, nothing downloaded")
-            return model_name
-
-    package_dir = "{}/{}".format(local_packaged_models_dir, model_name)
-    logger.debug("package dir {}".format(package_dir))
-
-    if not isdir(package_dir):
-        logger.debug("package dir does not exist")
-        try:
-            logger.debug("trying make dir")
-            if not isdir(package_dir):
-                makedirs(package_dir)
-        except Exception as e:
-            logger.error("Could not create directory for packaged models")
-            raise e
-
-    try:
-        package_folder = s3_models_dir + model_name
-        logger.debug(
-            "Downloading latest model package from {}".format(package_folder))
-
-        for obj in bucket.objects.filter(Prefix=package_folder):
-            filename = obj.key.rpartition("/")[2]
-            download_path = "{}/{}".format(package_dir, filename)
-            logger.debug("Getting {} to download to {}".format(
-                obj.key, download_path))
-            bucket.Object(obj.key).download_file(download_path)
-
-    except Exception as e:
-        logger.error(
-            "Error downloading all model files, removing any local downloads")
-        logger.error(e)
-        shutil.rmtree(package_dir)
-        rmdir(package_dir)
-        raise OSError("Could not download model files to system")
-    return model_name
-
-
-def download_models(s3_models_dir, local_packaged_models_dir, select="all", bucket=None):
-    """download all models: this gets all models that AREN'T already available
-    locally from s3 model repo
-    Args:
-        s3_models_dir: s3 model directory. i.e. models/v3/
-        local_packaged_models_dir: the local directory where models are stored.
-    Returns:
-        model_name: list - names of pulled down models
-    """
-    if bucket is None:
-        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
-
-    try:
-        package_folder = s3_models_dir
-        logger.debug(
-            "Downloading latest model package from {}".format(package_folder))
-        curr_local_models = get_local_model_package_names(
-            local_packaged_models_dir)
-        model_diff_list = []
-        if select == "all":
-            s3_models = get_models_list(s3_models_dir)
-            s3_models = set([x[0].split("/")[0] for x in s3_models])
-            model_diff_list = s3_models - set(curr_local_models)
-        else:
-            if select in curr_local_models:
-                logger.info(f"Model {select} already exists.")
-                return model_diff_list
-            else:
-                model_diff_list = [select]
-
-        for obj in bucket.objects.filter(Prefix=package_folder):
-            model_prefix = obj.key.split("/")[2]
-            filename = obj.key.split("/")[3]
-            if model_prefix in model_diff_list:
-                package_dir = "{}/{}".format(
-                    local_packaged_models_dir, model_prefix)
-                download_path = "{}/{}".format(package_dir, filename)
-                logger.debug("Checking  package dir {}".format(package_dir))
-
-                if not isdir(package_dir):
-                    logger.debug("Model package directory does not exist.")
-                    try:
-                        logger.debug("Attempting to create model package")
-                        if not isdir(package_dir):
-                            makedirs(package_dir)
-                    except Exception as e:
-                        logger.error(
-                            "Could not create directory for packaged models")
-                        raise e
-                logger.debug(
-                    "Getting {} to download to {}".format(
-                        obj.key, download_path)
-                )
-                bucket.Object(obj.key).download_file(download_path)
-
-    except Exception as e:
-        logger.error(
-            "Error downloading all model files, removing any local downloads")
-        logger.error(e)
-        shutil.rmtree(package_dir)
-        rmdir(package_dir)
-        raise OSError("Could not download model files to system")
-    return model_diff_list
 
 
 def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=False, bucket=None):
