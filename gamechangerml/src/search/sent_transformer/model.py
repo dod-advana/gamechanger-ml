@@ -17,7 +17,7 @@ from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
-from gamechangerml.configs.config import EmbedderConfig
+from gamechangerml.configs import EmbedderConfig
 
 
 class SentenceEncoder(object):

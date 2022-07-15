@@ -15,8 +15,10 @@ from datetime import datetime, date
 from pathlib import Path
 import typing as t
 
+from gamechangerml.configs import S3Config
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.search.query_expansion.qe import QE
+from gamechangerml.src.services import S3Service
 from gamechangerml.src.utilities.arg_parser import LocalParser
 from gamechangerml.src.model_testing.evaluation import (
     SQuADQAEvaluator,
@@ -37,7 +39,6 @@ from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 from gamechangerml.scripts.make_training_data import make_training_data
 
 from gamechangerml.src.utilities import utils as utils
-from gamechangerml.src.utilities import aws_helper as aws_helper
 from gamechangerml.src.utilities.test_utils import (
     get_user,
     get_most_recent_dir,
@@ -51,14 +52,12 @@ from gamechangerml.api.utils.pathselect import get_model_paths
 
 from gamechangerml.src.search.query_expansion.build_ann_cli import build_qe_model as bqe
 from gamechangerml.src.utilities import utils
-from gamechangerml.configs.config import (
-    DefaultConfig,
-    D2VConfig,
-    QexpConfig,
-    QAConfig,
+from gamechangerml.configs import (
     EmbedderConfig,
     SimilarityConfig,
     QexpConfig,
+    D2VConfig,
+    PathConfig
 )
 
 import pandas as pd
@@ -201,6 +200,8 @@ class Pipeline:
             except Exception as e:
                 logger.warning(e, exc_info=True)
         if upload:
+            bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+
             try:
                 s3_path = os.path.join(S3_DATA_PATH, f"{version}")
                 logger.info(f"****    Saving new data files to S3: {s3_path}")
@@ -209,7 +210,11 @@ class Pipeline:
                 dst_path = DATA_PATH + model_name + ".tar.gz"
                 utils.create_tgz_from_dir(
                     src_dir=DATA_PATH, dst_archive=dst_path)
-                utils.upload(s3_path, dst_path, model_prefix, model_name)
+                s3_path = os.path.join(
+                    s3_path,
+                    f"{model_prefix}_{model_name}.tar.gz" 
+                )
+                S3Service.upload_file(bucket, dst_path, s3_path, logger)
             except Exception as e:
                 logger.warning(e, exc_info=True)
 
@@ -392,7 +397,7 @@ class Pipeline:
         model_id=None,
         upload=False,
         corpus=CORPUS_DIR,
-        model_dest=DefaultConfig.LOCAL_MODEL_DIR,
+        model_dest=PathConfig.LOCAL_MODEL_DIR,
         exp_name=modelname,
         validate=True,
         version="v4",
@@ -419,7 +424,7 @@ class Pipeline:
         try:
             # build ANN indices
             index_dir = os.path.join(model_dest, model_path)
-            bqe.main(corpus, index_dir, **QexpConfig.MODEL_ARGS["bqe"])
+            bqe.main(corpus, index_dir, **QexpConfig.BUILD_ARGS)
             logger.info(
                 "-------------- Model Training Complete --------------")
             # Create .tgz file
@@ -431,13 +436,13 @@ class Pipeline:
             if upload:
                 S3_MODELS_PATH = "bronze/gamechanger/models"
                 s3_path = os.path.join(S3_MODELS_PATH, f"qexp_model/{version}")
-                utils.upload(s3_path, dst_path, "qexp", model_id, version)
+                self.upload(s3_path, dst_path, "qexp", model_id, version)
 
             if validate:
                 logger.info(
                     "-------------- Running Assessment Model Script --------------"
                 )
-                # qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.MODEL_ARGS['init'], **QexpConfig.MODEL_ARGS['expansion'], model=None)
+                # qxpeval = QexpEvaluator(qe_model_dir=index_dir, **QexpConfig.INIT_ARGS, **QexpConfig.EXPANSION_ARGS, model=None)
                 # evals = qxpeval.results
 
                 logger.info(
@@ -604,8 +609,13 @@ class Pipeline:
         # Upload to S3
         if upload:
             S3_MODELS_PATH = "bronze/gamechanger/models"
-            s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
-            utils.upload(s3_path, dst_path, "sentence_index", model_id)
+            s3_path = os.path.join(
+                S3_MODELS_PATH,
+                f"sentence_index/{version}",
+                f"sentence_index_{model_id}.tar.gz"
+            )
+            bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+            S3Service.upload_file(bucket, dst_path, s3_path, logger)
         return metadata, evals
 
     def init_ltr(self):
@@ -684,7 +694,7 @@ class Pipeline:
     ):
         try:
             model_id = datetime.now().strftime("%Y%m%d%H%M%S")
-            model_dir = DefaultConfig.LOCAL_MODEL_DIR
+            model_dir = PathConfig.LOCAL_MODEL_DIR
 
             # get model name schema
             model_name = "topic_model_" + model_id
@@ -733,7 +743,13 @@ class Pipeline:
         s3_path = os.path.join(
             s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
         logger.info(f"s3_path {s3_path}")
-        utils.upload_file(local_path, s3_path)
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+        S3Service.upload_file(
+            bucket=bucket,
+            filepath=local_path,
+            s3_fullpath=s3_path,
+            logger=logger,
+        )
         logger.info(f"Successfully uploaded files to {s3_path}")
         logger.info("-------------- Finished Uploading --------------")
 
