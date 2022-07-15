@@ -15,13 +15,16 @@ from pathlib import Path
 import typing as t
 
 from gamechangerml.configs import S3Config
-from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
+from gamechangerml.src.search.sent_transformer import (
+    prepare_corpus_for_encoder,
+    SentenceEncoder,
+)
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.services import S3Service
-from gamechangerml.src.utilities.arg_parser import LocalParser
 from gamechangerml.src.model_testing.evaluation import (
     IndomainRetrieverEvaluator,
 )
+
 from gamechangerml.scripts.finetune_sentence_retriever import STFinetuner
 from gamechangerml.scripts.run_evaluation import (
     eval_qa,
@@ -542,21 +545,22 @@ class Pipeline:
         # Building the Index
         try:
             encoder = SentenceEncoder(
-                encoder_model_name=encoder_model,
-                use_gpu=use_gpu,
-                transformer_path=LOCAL_TRANSFORMERS_DIR,
-                **EmbedderConfig.MODEL_ARGS,
+                os.path.join(LOCAL_TRANSFORMERS_DIR, encoder_model),
+                use_gpu
             )
             logger.info(
                 f"Creating Document Embeddings with {encoder_model} on {corpus}"
             )
-            logger.info("-------------- Indexing Documents--------------")
             start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            encoder.index_documents(
-                corpus_path=corpus, index_path=local_sent_index_dir
+            documents = prepare_corpus_for_encoder(
+                corpus_path=corpus,
+                min_token_len=EmbedderConfig.MODEL_ARGS["min_token_len"],
+                return_id=EmbedderConfig.MODEL_ARGS["return_id"],
+                verbose=EmbedderConfig.MODEL_ARGS["verbose"],
+                logger=logger
             )
+            encoder.build_index(documents, local_sent_index_dir, logger, True)
             end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            logger.info("-------------- Completed Indexing --------------")
             user = get_user(logger)
 
             # Checking length of IDs

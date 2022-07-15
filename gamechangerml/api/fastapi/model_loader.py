@@ -1,4 +1,4 @@
-import os
+from os.path import join
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.configs import (
     QAConfig,
@@ -10,10 +10,8 @@ from gamechangerml.configs import (
     TopicsConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
-from gamechangerml.src.search.sent_transformer.model import (
-    SentenceSearcher,
-    SentenceEncoder,
-)
+from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
+from gamechangerml.src.search.sent_transformer import SentenceEncoder
 from gamechangerml.src.search.doc_compare import (
     DocCompareSentenceEncoder,
     DocCompareSentenceSearcher,
@@ -266,18 +264,16 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(f"Loading encoder model")
+        logger.info("Loading Sentence Encoder model.")
         try:
-            ModelLoader.__sentence_encoder = SentenceEncoder(
-                encoder_model_name=EmbedderConfig.BASE_MODEL,
-                transformer_path=transformer_path,
-                **EmbedderConfig.MODEL_ARGS,
-            )
-            encoder_model = ModelLoader.__sentence_encoder.encoder_model
-            # set cache variable defined in settings.py
-            latest_intel_model_encoder.value = encoder_model
-            logger.info(f"** Loaded Encoder Model from {encoder_model}")
 
+            ModelLoader.__sentence_encoder = SentenceEncoder(
+                join(transformer_path, EmbedderConfig.BASE_MODEL)
+            )
+            model_path = ModelLoader.__sentence_encoder.model_path
+            # Set cache variable defined in settings.py
+            latest_intel_model_encoder.value = model_path
+            logger.info(f"** Loaded Encoder Model from {model_path}")
         except Exception as e:
             logger.warning("** Could not load Encoder model")
             logger.warning(e)

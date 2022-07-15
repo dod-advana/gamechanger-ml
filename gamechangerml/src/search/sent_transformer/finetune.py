@@ -1,4 +1,3 @@
-from gamechangerml import DATA_PATH
 from gamechangerml.api.utils import processmanager
 from datetime import datetime
 from gamechangerml.api.utils.logger import logger
@@ -6,23 +5,17 @@ from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities.test_utils import open_json, save_json, timestamp_filename
 from gamechangerml.src.services import S3Service
 from gamechangerml.configs import S3Config
-from gamechangerml.scripts.run_evaluation import eval_sent
 from time import sleep
-import tqdm
 import threading
 import logging
 import gc
 from sentence_transformers import SentenceTransformer, InputExample, losses
 from torch.utils.data import DataLoader
 import pandas as pd
-from datetime import date
 import sys
 import os
 import json
 import torch
-from torch.optim import Adam
-import torch.nn.functional as F
-from torch import nn
 torch.cuda.empty_cache()
 
 S3_DATA_PATH = "bronze/gamechanger/ml-data"

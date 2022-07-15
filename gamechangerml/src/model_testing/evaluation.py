@@ -4,11 +4,13 @@ import pandas as pd
 import csv
 import math
 from datetime import datetime
+from gamechangerml.configs.config import EmbedderConfig
 from gamechangerml import CORPUS_PATH
 from gamechangerml.src.ml import SimilarityRanker
-from gamechangerml.src.search.sent_transformer.model import (
+from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
+from gamechangerml.src.search.sent_transformer import (
     SentenceEncoder,
-    SentenceSearcher,
+    prepare_corpus_for_encoder,
 )
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
@@ -300,8 +302,15 @@ class RetrieverEvaluator(TransformerEvaluator):
         self.model_path = os.path.join(encoder_model_name, transformer_path)
 
     def make_index(self, encoder, corpus_path, index_path, files_to_use=None):
-
-        return encoder.index_documents(corpus_path, index_path, files_to_use)
+        corpus = prepare_corpus_for_encoder(
+            corpus_path,
+            EmbedderConfig.MODEL_ARGS["min_token_len"],
+            EmbedderConfig.MODEL_ARGS["return_id"],
+            EmbedderConfig.MODEL_ARGS["verbose"],
+            logger,
+            files_to_use
+        )
+        encoder.build_index(corpus, index_path, logger)
 
     def predict(self, data, index, retriever, eval_path, k):
 
@@ -500,11 +509,7 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
                 self.encoder = encoder
             else:
                 self.encoder = SentenceEncoder(
-                    encoder_model_name=encoder_model_name,
-                    min_token_len=min_token_len,
-                    return_id=return_id,
-                    verbose=verbose,
-                    use_gpu=use_gpu,
+                    os.path.join(transformer_path, encoder_model_name), use_gpu
                 )
             self.make_index(
                 encoder=self.encoder, corpus_path=None, index_path=self.index_path
@@ -585,12 +590,8 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     else:  # otherwise init an encoder to make the index
                         logger.info(f"Loading {encoder_model_name} to make the index")
                         self.encoder = SentenceEncoder(
-                            encoder_model_name=encoder_model_name,
-                            min_token_len=min_token_len,
-                            return_id=return_id,
-                            verbose=verbose,
-                            use_gpu=use_gpu,
-                            transformer_path=LOCAL_TRANSFORMERS_DIR,
+                           os.path.join(LOCAL_TRANSFORMERS_DIR, encoder_model_name),
+                        use_gpu
                         )
 
                     # create the test corpus
