@@ -4,12 +4,11 @@ import pandas as pd
 import csv
 import math
 from datetime import datetime
-from sentence_transformers import util
-from gamechangerml import REPO_PATH, CORPUS_PATH
+from gamechangerml import CORPUS_PATH
+from gamechangerml.src.ml import SimilarityRanker
 from gamechangerml.src.search.sent_transformer.model import (
     SentenceEncoder,
     SentenceSearcher,
-    SimilarityRanker,
 )
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
@@ -705,10 +704,9 @@ class SimilarityEvaluator(TransformerEvaluator):
 
         super().__init__(transformer_path, use_gpu)
 
-        if model:
-            self.model = model
-        else:
-            self.model = SimilarityRanker(sim_model_name, transformer_path)
+        if model is None:
+            model = SimilarityRanker(os.path.join(transformer_path, sim_model_name))
+        self.model = model
         self.sim_model_name = sim_model_name
         self.model_path = os.path.join(transformer_path, sim_model_name)
 
@@ -788,9 +786,9 @@ class NLIEvaluator(SimilarityEvaluator):
             query = self.data.query_lookup[i]
             logger.info("S-{}: {}".format(count, query))
             rank = 0
-            for result in self.model.re_rank(query, texts, ids):
-                match_id = result["id"]
-                ranks[match_id] = rank
+            
+            for idx, _ in self.model.rank(query, texts):
+                ranks[ids[idx]] = rank
                 rank += 1
 
             count += 1

@@ -4,7 +4,7 @@ from gamechangerml.configs import (
     QAConfig,
     EmbedderConfig,
     DocCompareEmbedderConfig,
-    SimilarityConfig,
+    SimilarityRankerConfig,
     DocCompareSimilarityConfig,
     QexpConfig,
     TopicsConfig,
@@ -229,7 +229,8 @@ class ModelLoader:
 
     @staticmethod
     def initSentenceSearcher(
-        index_path=SENT_INDEX_PATH.value, transformer_path=LOCAL_TRANSFORMERS_DIR.value
+        index_path=SENT_INDEX_PATH.value,
+        transformer_path=LOCAL_TRANSFORMERS_DIR.value,
     ):
         """
         initSentenceSearcher - loads SentenceSearcher class on start
@@ -237,11 +238,12 @@ class ModelLoader:
         Returns:
         """
         logger.info(
-            f"Loading Sentence Searcher with sent index path: {index_path}")
+            f"Loading Sentence Searcher with sent index path: {index_path}"
+        )
         try:
 
             ModelLoader.__sentence_searcher = SentenceSearcher(
-                sim_model_name=SimilarityConfig.BASE_MODEL,
+                sim_model_name=SimilarityRankerConfig.BASE_MODEL_NAME,
                 index_path=index_path,
                 transformer_path=transformer_path,
             )
@@ -291,12 +293,15 @@ class ModelLoader:
         Returns:
         """
         logger.info(
-            f"Loading Document Compare Searcher with index path: {index_path}")
+            f"Loading Document Compare Searcher with index path: {index_path}"
+        )
         try:
-            ModelLoader.__document_compare_searcher = DocCompareSentenceSearcher(
-                sim_model_name=DocCompareSimilarityConfig.BASE_MODEL,
-                index_path=index_path,
-                transformer_path=transformer_path,
+            ModelLoader.__document_compare_searcher = (
+                DocCompareSentenceSearcher(
+                    sim_model_name=DocCompareSimilarityConfig.BASE_MODEL,
+                    index_path=index_path,
+                    transformer_path=transformer_path,
+                )
             )
 
             sim_model = ModelLoader.__document_compare_searcher.similarity
@@ -311,7 +316,9 @@ class ModelLoader:
             logger.warning(e)
 
     @staticmethod
-    def initDocumentCompareEncoder(transformer_path=LOCAL_TRANSFORMERS_DIR.value):
+    def initDocumentCompareEncoder(
+        transformer_path=LOCAL_TRANSFORMERS_DIR.value,
+    ):
         """
         initDocumentCompareEncoder - loads Document Compare Encoder on start
         Args:
@@ -324,11 +331,14 @@ class ModelLoader:
                 transformer_path=transformer_path,
                 **DocCompareEmbedderConfig.MODEL_ARGS,
             )
-            encoder_model = ModelLoader.__document_compare_encoder.encoder_model
+            encoder_model = (
+                ModelLoader.__document_compare_encoder.encoder_model
+            )
             # set cache variable defined in settings.py
             latest_doc_compare_encoder.value = encoder_model
             logger.info(
-                f"** Loaded Doc Compare Encoder Model from {encoder_model}")
+                f"** Loaded Doc Compare Encoder Model from {encoder_model}"
+            )
 
         except Exception as e:
             logger.warning("** Could not load Doc Compare Encoder model")
@@ -338,7 +348,8 @@ class ModelLoader:
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
             ModelLoader.__sparse_reader = sparse.SparseReader(
-                model_name=model_name)
+                model_name=model_name
+            )
             logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")

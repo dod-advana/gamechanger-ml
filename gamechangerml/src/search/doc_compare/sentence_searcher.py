@@ -5,7 +5,7 @@ from pandas import read_csv
 
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.text_handling.process import preprocess
-from .similarity_ranker import SimilarityRanker
+from gamechangerml.src.ml import SimilarityRanker
 
 # Metadata for the model these scores were derived from
 # {"user": null, "date_started": "2022-04-29 16:06:06", "date_finished": "2022-04-29 19:52:52", "doc_id_count": 1495122, "corpus_name": "/opt/app-root/src/gamechangerml/corpus", "encoder_model": "multi-qa-MiniLM-L6-cos-v1"}
@@ -43,12 +43,11 @@ class DocCompareSentenceSearcher:
         self.data = read_csv(
             join(index_path, "data.csv"), dtype={"paragraph_id": str}
         )
-        if sim_model:
-            self.similarity = sim_model
-        else:
-            self.similarity = SimilarityRanker(
-                sim_model_name, transformer_path
-            )
+
+        if sim_model is None:
+            sim_model = SimilarityRanker(join(transformer_path, sim_model_name))
+        self.similarity = sim_model
+        
 
         self.default_score_mapper = self.score_mapper_creator(DEFAULT_SCORES)
 
@@ -92,7 +91,12 @@ class DocCompareSentenceSearcher:
         return mapper
 
     def search(
-        self, query, num_results, body, process=False, externalSim=True,
+        self,
+        query,
+        num_results,
+        body,
+        process=False,
+        externalSim=True,
     ):
         """
         Search the index and perform a similarity scoring reranker at
@@ -124,7 +128,14 @@ class DocCompareSentenceSearcher:
             return []
 
         if externalSim:
-            return self.similarity.re_rank(query, top_results)
+            return [
+                {
+                    "score": score,
+                    "id": top_results[idx]["id"],
+                    "text": top_results[idx]["text"],
+                }
+                for idx, score in self.similarity.rank(query, top_results)
+            ]
         else:
             # adding normalize text length to score and sorting
             finalResults = []
