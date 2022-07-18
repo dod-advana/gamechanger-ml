@@ -289,9 +289,11 @@ class ModelLoader:
         try:
             ModelLoader.__document_compare_searcher = (
                 DocCompareSentenceSearcher(
-                    sim_model_name=SimilarityRankerConfig.BASE_MODEL,
-                    index_path=index_path,
-                    transformer_path=transformer_path,
+                    index_path,
+                    join(
+                        transformer_path, 
+                        SimilarityRankerConfig.BASE_MODEL_NAME
+                    )
                 )
             )
 
