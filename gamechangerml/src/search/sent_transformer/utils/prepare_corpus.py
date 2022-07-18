@@ -1,9 +1,8 @@
 from gamechangerml.src.text_handling.corpus import LocalCorpus
-from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
 
 def prepare_corpus_for_encoder(
-    corpus_path,
+    corpus,
     min_token_len,
     return_id,
     verbose,
@@ -14,7 +13,8 @@ def prepare_corpus_for_encoder(
     """Prepare a corpus for SentenceEncoder.
 
     Args:
-        corpus_path (str or None): Path to the corpus. If None, uses MSMarcoData.
+        corpus (str or MSMarcoData().corpus): If str, path to the corpus. 
+            Otherwise, MSMarcoData().corpus can be used for testing purposes.
         min_token_len: min_token_len argument for LocalCorpus
         return_id: return_id argument for LocalCorpus
         verbose: verbose argument for LocalCorpus
@@ -30,9 +30,9 @@ def prepare_corpus_for_encoder(
             - text at index 1
             - None at index 2
     """
-    if corpus_path:
+    if type(corpus) == str:
         corpus = LocalCorpus(
-            corpus_path,
+            corpus,
             return_id=return_id,
             min_token_len=min_token_len,
             verbose=verbose,
@@ -43,9 +43,6 @@ def prepare_corpus_for_encoder(
             (par_id, " ".join(tokens), None) for tokens, par_id in corpus
         ]
     else:
-        logger.info(
-            "Corpus path not provided. Making test index with MSMarcoData."
-        )
-        corpus = MSMarcoData().corpus
+        logger.info("Preparing test corpus for encoder.")
 
     return corpus

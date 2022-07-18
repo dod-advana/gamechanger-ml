@@ -553,7 +553,7 @@ class Pipeline:
             )
             start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             documents = prepare_corpus_for_encoder(
-                corpus_path=corpus,
+                corpus=corpus,
                 min_token_len=EmbedderConfig.MODEL_ARGS["min_token_len"],
                 return_id=EmbedderConfig.MODEL_ARGS["return_id"],
                 verbose=EmbedderConfig.MODEL_ARGS["verbose"],

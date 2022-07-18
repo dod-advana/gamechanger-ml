@@ -1,14 +1,18 @@
 import pandas as pd
 import numpy as np
+from json import loads
 from collections import OrderedDict
+from os.path import join, exists
+from gamechangerml.src.search.sent_transformer import SentenceTransformerFiles
+from gamechangerml.src.utilities.test_utils import open_json, open_jsonl, concat_matamo, concat_search_hist, update_dictionary, map_ids, update_meta_relations,filter_rels
 from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, filter_title_queries
-from gamechangerml.src.utilities.test_utils import *
+
 from gamechangerml.src.configs import ValidationConfig
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.test_utils import filter_date_range, open_txt
 from gamechangerml import REPO_PATH
 
-CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
+CORPUS_DIR = join(REPO_PATH, "gamechangerml", "corpus")
 
 
 class ValidationData:
@@ -27,9 +31,9 @@ class SQuADData(ValidationData):
 
         super().__init__(validation_dir)
         logger.info(
-            f"Pulling validation data from {str(os.path.join(validation_dir, squad_path))}"
+            f"Pulling validation data from {str(join(validation_dir, squad_path))}"
         )
-        if not os.path.exists(os.path.join(validation_dir, squad_path)):
+        if not exists(join(validation_dir, squad_path)):
             logger.warning("No directory exists for this validation data.")
         self.dev = open_json(squad_path, validation_dir)
         self.queries = self.get_squad_sample(sample_limit)
@@ -146,7 +150,7 @@ class RetrieverGSData(ValidationData):
 
         super().__init__(validation_dir)
         self.samples = pd.read_csv(
-            os.path.join(
+            join(
                 ValidationConfig.DATA_ARGS['user_dir'], gold_standard),
             names=["query", "document"],
         )
@@ -216,14 +220,14 @@ class UpdatedGCRetrieverData(RetrieverGSData):
         new_data = ""
         try:
             if data_path:  # if there is a path for data, use that
-                self.data_path = os.path.join(data_path, level)
+                self.data_path = join(data_path, level)
             else:
-                new_data = get_most_recent_dir(
-                    os.path.join(
+                new_data = SentenceTransformerFiles.most_recent_eval_name(
+                    join(
                         ValidationConfig.DATA_ARGS["validation_dir"], "domain", "sent_transformer"
                     )
                 )
-                self.data_path = os.path.join(new_data, level)
+                self.data_path = join(new_data, level)
             (
                 self.new_queries,
                 self.new_collection,
@@ -238,7 +242,7 @@ class UpdatedGCRetrieverData(RetrieverGSData):
     def load_new_data(self):
 
         f = open_json("intelligent_search_data.json", self.data_path)
-        intel = json.loads(f)
+        intel = loads(f)
         logger.info(
             f"Added {str(len(intel['correct']))} correct query/sent pairs from updated GC retriever data."
         )
@@ -565,7 +569,7 @@ class IntelSearchData(SearchValidationData):
 
         # if filter queries == True, remove queries that are titles/fuzzy match titles
         if self.filter_queries:
-            docs = open_txt(os.path.join(self.index_path, 'doc_ids.txt'))
+            docs = open_txt(join(self.index_path, 'doc_ids.txt'))
             docs = [x.split('.pdf')[0] for x in docs]
             remove = filter_title_queries(int_queries, docs)
             self.exclude_searches.extend(remove)
