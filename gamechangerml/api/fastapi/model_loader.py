@@ -3,19 +3,14 @@ from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.configs import (
     QAConfig,
     EmbedderConfig,
-    DocCompareEmbedderConfig,
     SimilarityRankerConfig,
-    DocCompareSimilarityConfig,
     QexpConfig,
     TopicsConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.search.sent_transformer import SentenceEncoder
-from gamechangerml.src.search.doc_compare import (
-    DocCompareSentenceEncoder,
-    DocCompareSentenceSearcher,
-)
+from gamechangerml.src.search.doc_compare import DocCompareSentenceSearcher
 from gamechangerml.src.recommender.recommend import Recommender
 from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import (
@@ -294,7 +289,7 @@ class ModelLoader:
         try:
             ModelLoader.__document_compare_searcher = (
                 DocCompareSentenceSearcher(
-                    sim_model_name=DocCompareSimilarityConfig.BASE_MODEL,
+                    sim_model_name=SimilarityRankerConfig.BASE_MODEL,
                     index_path=index_path,
                     transformer_path=transformer_path,
                 )
@@ -322,10 +317,9 @@ class ModelLoader:
         """
         logger.info(f"Loading document compare encoder model")
         try:
-            ModelLoader.__document_compare_encoder = DocCompareSentenceEncoder(
-                encoder_model_name=DocCompareEmbedderConfig.BASE_MODEL,
-                transformer_path=transformer_path,
-                **DocCompareEmbedderConfig.MODEL_ARGS,
+
+            ModelLoader.__document_compare_encoder = SentenceEncoder(
+                join(transformer_path, EmbedderConfig.BASE_MODEL)
             )
             encoder_model = (
                 ModelLoader.__document_compare_encoder.encoder_model

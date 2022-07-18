@@ -1,2 +1,1 @@
-from .sentence_encoder import DocCompareSentenceEncoder
 from .sentence_searcher import DocCompareSentenceSearcher

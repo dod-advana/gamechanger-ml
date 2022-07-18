@@ -1,4 +1,3 @@
-# TODO: rename to SimilarityRankerConfig ?
 class SimilarityRankerConfig:
     """Configurations for the Sentence Searcher/ Similarity model."""
 
