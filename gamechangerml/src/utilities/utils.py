@@ -1,16 +1,27 @@
 import logging
-from os import rename, makedirs
+from os import rename, makedirs, listdir
 from os.path import join, isdir, basename
 import glob
 import tarfile
 import typing as t
 from pathlib import Path
-from gamechangerml.src.services import S3Service
 from gamechangerml.configs import S3Config
-from gamechangerml import REPO_PATH
+from gamechangerml import REPO_PATH, MODEL_PATH
+from gamechangerml.src.services import S3Service
 
 logger = logging.getLogger("gamechanger")
 
+def get_local_model_prefix(prefix: str, folder: str = MODEL_PATH):
+    """get_local_model_prefix: gets all folders or models with the prefix, i.e. sent_index
+    folder: PATH folder of models
+    prefix: string of model name i.e. sent_index
+    returns: list of names
+    """
+    return [
+        filename
+        for filename in listdir(folder)
+        if filename.startswith(prefix) and "tar" not in filename
+    ]
 
 def create_model_schema(model_dir, file_prefix):
     num = 0

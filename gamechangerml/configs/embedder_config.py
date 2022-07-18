@@ -32,3 +32,4 @@ class EmbedderConfig:
     """Makes the default threshold less strict. To use exact default, set to 1."""
     THRESHOLD_MULTIPLIER = 0.8
 
+    SENT_INDEX = "sent_index_20210715"
