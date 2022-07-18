@@ -25,7 +25,7 @@ class SimilarityRanker:
 
         Args:
             query (str or list)
-            texts (_type_): _description_
+            texts (list of str): Texts to rank
 
         Returns:
             list of (id, score)

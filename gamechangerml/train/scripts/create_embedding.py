@@ -1,4 +1,4 @@
-from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
+from gamechangerml.src.search.sent_transformer.sentence_searcher import SentenceEncoder
 from gamechangerml.src.utilities.arg_parser import LocalParser
 
 from gamechangerml.src.utilities import utils as utils

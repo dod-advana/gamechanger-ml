@@ -9,7 +9,6 @@ from gamechangerml.configs import (
     TrainingConfig,
     ValidationConfig,
 )
-from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.model_testing.query_es import *
 from gamechangerml.src.utilities.text_utils import normalize_query
 from gamechangerml.src.utilities.test_utils import *

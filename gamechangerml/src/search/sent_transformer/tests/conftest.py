@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
+from gamechangerml.src.search.sent_transformer.sentence_searcher import SentenceSearcher
 from gamechangerml.src.search.sent_transformer import SentenceEncoder
 from gamechangerml import REPO_PATH
 

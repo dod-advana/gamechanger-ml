@@ -6,9 +6,9 @@ import math
 from datetime import datetime
 from gamechangerml.configs.config import EmbedderConfig
 from gamechangerml import CORPUS_PATH
-from gamechangerml.src.ml import SimilarityRanker
-from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.search.sent_transformer import (
+    SimilarityRanker,
+    SentenceSearcher,
     SentenceEncoder,
     prepare_corpus_for_encoder,
 )

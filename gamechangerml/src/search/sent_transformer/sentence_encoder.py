@@ -8,6 +8,7 @@ from threading import current_thread
 import numpy as np
 import torch
 from gamechangerml.api.utils import processmanager
+from .utils import SentenceTransformerFiles
 
 
 class SentenceEncoder:
@@ -93,7 +94,10 @@ class SentenceEncoder:
             [(doc[0], doc[1]) for doc in corpus],
             columns=["text", "paragraph_id"],
         )
-        df.to_csv(join(save_dir, "data.csv"), index=False)
+        df.to_csv(
+            join(save_dir, SentenceTransformerFiles.DATA_FILE_NAME), 
+            index=False
+        )
 
         # Normalize embeddings.
         self.embedder.normalize(embeddings)

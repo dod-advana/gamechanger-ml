@@ -8,7 +8,7 @@ from gamechangerml.configs import (
     TopicsConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
-from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
+from gamechangerml.src.search.sent_transformer.sentence_searcher import SentenceSearcher
 from gamechangerml.src.search.sent_transformer import SentenceEncoder
 from gamechangerml.src.search.doc_compare import DocCompareSentenceSearcher
 from gamechangerml.src.recommender.recommend import Recommender

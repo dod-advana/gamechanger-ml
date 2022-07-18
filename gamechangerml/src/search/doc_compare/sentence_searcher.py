@@ -5,7 +5,7 @@ from pandas import read_csv
 
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.text_handling.process import preprocess
-from gamechangerml.src.ml import SimilarityRanker
+from gamechangerml.src.search.sent_transformer import SimilarityRanker
 
 # Metadata for the model these scores were derived from
 # {"user": null, "date_started": "2022-04-29 16:06:06", "date_finished": "2022-04-29 19:52:52", "doc_id_count": 1495122, "corpus_name": "/opt/app-root/src/gamechangerml/corpus", "encoder_model": "multi-qa-MiniLM-L6-cos-v1"}
