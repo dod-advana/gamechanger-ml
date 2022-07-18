@@ -5,10 +5,10 @@ from gamechangerml import REPO_PATH, DATA_PATH, MODEL_PATH
 
 
 class DefaultConfig:
-
     DATA_DIR = DATA_PATH
     LOCAL_MODEL_DIR = MODEL_PATH
     DEFAULT_FILE_PREFIX = datetime.now().strftime("%Y%m%d")
+    TRANSFORMER_PATH = os.path.join(MODEL_PATH, "transformers")
 
 
 class S3Config:
@@ -74,15 +74,19 @@ class QAConfig:
 
 class EmbedderConfig:
     BASE_MODEL = "msmarco-distilbert-base-v2"
+    SENT_INDEX = "sent_index_20210715"
     MODEL_ARGS = {
         "min_token_len": 25,
         "verbose": True,  # for creating LocalCorpus
         "return_id": True,  # for creating LocalCorpus
     }
-    FINETUNE = {"shuffle": True, "batch_size": 32, "epochs": 3, "warmup_steps": 100}
-    DEFAULT_THRESHOLD = 0.7  # if no threshold is recommended in evals, this is the default min score for the sent index
+    FINETUNE = {"shuffle": True, "batch_size": 32,
+                "epochs": 3, "warmup_steps": 100}
+    # if no threshold is recommended in evals, this is the default min score for the sent index
+    DEFAULT_THRESHOLD = 0.7
     THRESHOLD_MULTIPLIER = (
-        0.8  # makes the default threshold less strict (to use exact default, set to 1)
+        # makes the default threshold less strict (to use exact default, set to 1)
+        0.8
     )
 
 

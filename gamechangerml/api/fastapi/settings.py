@@ -45,6 +45,7 @@ TOPICS_MODEL = CacheVariable("TOPICS_MODEL")
 QA_MODEL = CacheVariable("QA_MODEL")
 DOC_COMPARE_SENT_INDEX_PATH = CacheVariable("DOC_COMPARE_SENT_INDEX_PATH")
 
+
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]
 SENT_INDEX_PATH.value = model_path_dict["sentence"]
