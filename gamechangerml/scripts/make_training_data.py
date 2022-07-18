@@ -4,7 +4,7 @@ import os
 import json
 from datetime import date
 from typing import List, Union, Dict, Tuple
-from gamechangerml.configs import (
+from gamechangerml.src.configs import (
     SimilarityRankerConfig,
     TrainingConfig,
     ValidationConfig,

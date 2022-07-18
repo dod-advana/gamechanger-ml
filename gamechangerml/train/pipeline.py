@@ -14,7 +14,7 @@ from datetime import datetime, date
 from pathlib import Path
 import typing as t
 
-from gamechangerml.configs import S3Config
+from gamechangerml.src.configs import S3Config
 from gamechangerml.src.search.sent_transformer import (
     prepare_corpus_for_encoder,
     SentenceEncoder,
@@ -54,7 +54,7 @@ from gamechangerml.src.search.query_expansion.build_ann_cli import (
     build_qe_model as bqe,
 )
 from gamechangerml.src.utilities import utils
-from gamechangerml.configs import (
+from gamechangerml.src.configs import (
     EmbedderConfig,
     SimilarityRankerConfig,
     QexpConfig,

@@ -1,6 +1,6 @@
 from os.path import join
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs import (
+from gamechangerml.src.configs import (
     QAConfig,
     EmbedderConfig,
     SimilarityRankerConfig,

@@ -10,7 +10,7 @@ import signal
 import torch
 import random
 from gamechangerml.api.utils.logger import logger
-from gamechangerml.configs import ValidationConfig
+from gamechangerml.src.configs import ValidationConfig
 from gamechangerml.src.search.sent_transformer import SentenceTransformerFiles
 
 MATAMO_DIR = ValidationConfig.DATA_ARGS['matamo_dir']

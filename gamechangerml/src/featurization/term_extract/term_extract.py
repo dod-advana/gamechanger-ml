@@ -9,7 +9,7 @@ from operator import itemgetter
 import en_core_web_sm
 from spacy.matcher import Matcher
 
-from gamechangerml.configs import PathConfig
+from gamechangerml.src.configs import PathConfig
 import gamechangerml.src.modelzoo.semantic.term_extract.version_ as v
 
 logger = logging.getLogger("gamechanger")

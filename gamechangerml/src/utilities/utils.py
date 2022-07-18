@@ -6,7 +6,7 @@ import tarfile
 import typing as t
 from pathlib import Path
 from gamechangerml.src.services import S3Service
-from gamechangerml.configs import S3Config
+from gamechangerml.src.configs import S3Config
 from gamechangerml import REPO_PATH
 
 logger = logging.getLogger("gamechanger")

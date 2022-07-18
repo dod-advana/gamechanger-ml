@@ -5,7 +5,7 @@ from gamechangerml.src.search.sent_transformer.utils.files import (
     SentenceTransformerFiles,
 )
 from gamechangerml.src.text_handling.process import preprocess
-from gamechangerml.configs import EmbedderConfig
+from gamechangerml.src.configs import EmbedderConfig
 from gamechangerml.src.search.sent_transformer import SimilarityRanker
 
 

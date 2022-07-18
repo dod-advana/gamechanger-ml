@@ -4,7 +4,7 @@ from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities.test_utils import open_json, save_json, timestamp_filename
 from gamechangerml.src.services import S3Service
-from gamechangerml.configs import S3Config
+from gamechangerml.src.configs import S3Config
 from time import sleep
 import threading
 import logging
