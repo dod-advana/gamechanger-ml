@@ -10,6 +10,8 @@ import pytest
 from gamechangerml.src.search.sent_transformer.sentence_searcher import SentenceSearcher
 from gamechangerml.src.search.sent_transformer import SentenceEncoder
 from gamechangerml import REPO_PATH
+from gamechangerml.src.configs import EmbedderConfig
+from gamechangerml.api.fastapi.settings import LOCAL_TRANSFORMERS_DIR
 
 log_fmt = (
     "[%(asctime)s %(levelname)-8s], [%(filename)s:%(lineno)s - "
@@ -42,7 +44,9 @@ def sent_dirs():
 
 @pytest.fixture(scope="session")
 def sent_encoder():
-    return SentenceEncoder(encoder_model_path)
+    return SentenceEncoder(
+        os.path.join(LOCAL_TRANSFORMERS_DIR.value, EmbedderConfig.BASE_MODEL)
+    )
 
 
 @pytest.fixture(scope="session")

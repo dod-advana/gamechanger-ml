@@ -11,7 +11,8 @@ from gamechangerml.src.search.query_expansion.build_ann_cli.build_qe_model impor
     main,
 )
 from gamechangerml.src.search.query_expansion.qe import QE
-
+from gamechangerml.src.configs import QexpConfig
+from gamechangerml.api.fastapi.settings import QEXP_MODEL_NAME
 log_fmt = (
     "[%(asctime)s %(levelname)-8s], [%(filename)s:%(lineno)s - "
     + "%(funcName)s()], %(message)s"
@@ -23,7 +24,7 @@ try:
     here = os.path.dirname(os.path.realpath(__file__))
     p = Path(here)
     test_data_dir = os.path.join(p.parents[3], "data", "test_data")
-    aux_path = os.path.join(str(p.parent), "aux_data")
+    aux_path = os.path.join(p.parents[3], "data", "features")
     word_wt = os.path.join(aux_path, "enwiki_vocab_min200.txt")
     assert os.path.isfile(word_wt)
 except (AttributeError, FileExistsError) as e:
@@ -38,15 +39,15 @@ def ann_index_dir(tmpdir_factory):
 
 @pytest.fixture(scope="session")
 def qe_obj(ann_index_dir):
-    main(test_data_dir, ann_index_dir, word_wt_file=word_wt)
+    # main(test_data_dir, ann_index_dir, weight_file=word_wt)
     return QE(
-        ann_index_dir, method="emb", vocab_file="enwiki_vocab_min200.txt"
+        QEXP_MODEL_NAME.value, **QexpConfig.INIT_ARGS
     )
 
 
-@pytest.fixture(scope="session")
-def qe_mlm_obj():
-    return QE(None, method="mlm")
+# @pytest.fixture(scope="session")
+# def qe_mlm_obj():
+#     return QE(QEXP_MODEL_NAME.value, QexpConfig.INIT_ARGS["qe_files_dir"], "mlm")
 
 
 @pytest.fixture(scope="session")

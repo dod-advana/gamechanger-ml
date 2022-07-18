@@ -24,7 +24,7 @@ def test_sent_encode(
 
     embedder_ids = sent_encoder.embedder.config["ids"]
 
-    assert len(embedder_ids) == 145
+    assert len(embedder_ids) == 82
 
 
 def test_sent_merge(
@@ -44,4 +44,4 @@ def test_sent_merge(
 
     embedder_ids = sent_encoder.embedder.config["ids"]
 
-    assert len(embedder_ids) == 271
+    assert len(embedder_ids) == 79

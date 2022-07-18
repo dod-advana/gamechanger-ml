@@ -114,6 +114,45 @@
 ```
 
 ## Development Rules
+- Everything in `gamechangerml/src` should be independent of things outside of that structure (should not need to import from dataPipeline, common, etc).
+
+
+### Configs
+- Config files go in `gamechangerml/configs`. When you add a new class, import it in [gamechangerml/configs/__init__.py](gamechangerml/configs/__init__.py).
+- File paths in `gamechangerml/configs/*` should be relative to `gamechangerml` and only used for local testing purposes. Feel free to change on your local machine, but ***do not commit system specific paths to the repository***.
+- A config class (i.e., from `gamechangerml/configs/*`) should not be required as an input parameter to a function. However, a config class attribute can be used to provide parameters to a function (`foo(path=Config.path)`, rather than `foo(Config)`).
+
+
+### What Can Be Stored On GitHub?
+- Models and large files should *NOT* be stored on Github.
+- Data should *NOT* be stored on Github, there is a script in the `gamechangerml/scripts` folder to download a corpus from s3.
+
+### Use Best Practices
+- Code should be modular, broken down into smallest logical pieces, and placed in the most logical subfolder.
+- All classes, functions, etc. should have clear, concise, and consistent docstrings. 
+  - Function docstrings should include:
+    - A short description 
+    - Any important remarks
+    - Parameter types, defaults, and descriptions
+    - Return types and descriptions
+
+    Example:
+    ```python
+    def say(words, loud=False):
+      """Make the animal say words.
+
+      Args:
+        words (str): Words for the animal to say.
+        loud (bool): True to make the animal say the words loudly, False to 
+          make the animal say the words in a normal tone. Default is False.
+
+      Returns:
+        None
+      """
+    ```
+- Include a maximum of 1 class per file.
+- Include README.md files that contain what, why, and how code is used.
+
 
 - Everything in `gamechangerml/src` should be independent of things outside of that structure (should not need to import from dataPipeline, common, etc).
 
@@ -229,8 +268,7 @@
 
 ## Pull Requests
 
-_Please provide:_
-
+*Please provide:*
 1. Description - what is the purpose, what are the different features added i.e. bugfix, added upload capability to model, model improving
 2. Reviewer Test - how to test it manually and if it is on a dev/test server. (if applicable)
    ` i.e. hit post endpoint /search with payload {"query": "military"}`
