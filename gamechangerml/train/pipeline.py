@@ -15,8 +15,10 @@ from datetime import datetime, date
 from pathlib import Path
 import typing as t
 
+from gamechangerml.configs import S3Config
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.search.query_expansion.qe import QE
+from gamechangerml.src.services import S3Service
 from gamechangerml.src.utilities.arg_parser import LocalParser
 from gamechangerml.src.model_testing.evaluation import (
     SQuADQAEvaluator,
@@ -37,7 +39,6 @@ from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 from gamechangerml.scripts.make_training_data import make_training_data
 
 from gamechangerml.src.utilities import utils as utils
-from gamechangerml.src.utilities import aws_helper as aws_helper
 from gamechangerml.src.utilities.test_utils import (
     get_user,
     get_most_recent_dir,
@@ -199,6 +200,8 @@ class Pipeline:
             except Exception as e:
                 logger.warning(e, exc_info=True)
         if upload:
+            bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+
             try:
                 s3_path = os.path.join(S3_DATA_PATH, f"{version}")
                 logger.info(f"****    Saving new data files to S3: {s3_path}")
@@ -207,7 +210,11 @@ class Pipeline:
                 dst_path = DATA_PATH + model_name + ".tar.gz"
                 utils.create_tgz_from_dir(
                     src_dir=DATA_PATH, dst_archive=dst_path)
-                utils.upload(s3_path, dst_path, model_prefix, model_name)
+                s3_path = os.path.join(
+                    s3_path,
+                    f"{model_prefix}_{model_name}.tar.gz" 
+                )
+                S3Service.upload_file(bucket, dst_path, s3_path, logger)
             except Exception as e:
                 logger.warning(e, exc_info=True)
 
@@ -429,7 +436,7 @@ class Pipeline:
             if upload:
                 S3_MODELS_PATH = "bronze/gamechanger/models"
                 s3_path = os.path.join(S3_MODELS_PATH, f"qexp_model/{version}")
-                utils.upload(s3_path, dst_path, "qexp", model_id, version)
+                self.upload(s3_path, dst_path, "qexp", model_id, version)
 
             if validate:
                 logger.info(
@@ -602,8 +609,13 @@ class Pipeline:
         # Upload to S3
         if upload:
             S3_MODELS_PATH = "bronze/gamechanger/models"
-            s3_path = os.path.join(S3_MODELS_PATH, f"sentence_index/{version}")
-            utils.upload(s3_path, dst_path, "sentence_index", model_id)
+            s3_path = os.path.join(
+                S3_MODELS_PATH,
+                f"sentence_index/{version}",
+                f"sentence_index_{model_id}.tar.gz"
+            )
+            bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+            S3Service.upload_file(bucket, dst_path, s3_path, logger)
         return metadata, evals
 
     def init_ltr(self):
@@ -731,7 +743,13 @@ class Pipeline:
         s3_path = os.path.join(
             s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
         logger.info(f"s3_path {s3_path}")
-        utils.upload_file(local_path, s3_path)
+        bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+        S3Service.upload_file(
+            bucket=bucket,
+            filepath=local_path,
+            s3_fullpath=s3_path,
+            logger=logger,
+        )
         logger.info(f"Successfully uploaded files to {s3_path}")
         logger.info("-------------- Finished Uploading --------------")
 
