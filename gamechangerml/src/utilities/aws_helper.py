@@ -1,6 +1,6 @@
 import boto3
 import os
-from gamechangerml.configs.config import S3Config
+from gamechangerml.configs import S3Config
 import logging
 
 bucket_name = os.getenv("AWS_BUCKET_NAME", default="advana-data-zone")
