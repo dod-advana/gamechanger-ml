@@ -1,8 +1,7 @@
 # flake8: noqa
 # pylint: skip-file
 
-import logging
-import os
+from os.path import join, dirname, isdir, realpath
 from pathlib import Path
 import pytest
 from gamechangerml.src.search.sent_transformer import (
@@ -12,27 +11,23 @@ from gamechangerml.src.search.sent_transformer import (
 from gamechangerml import REPO_PATH
 from gamechangerml.src.configs import EmbedderConfig
 from gamechangerml.api.fastapi.settings import LOCAL_TRANSFORMERS_DIR
+from gamechangerml.src.utilities import configure_logger
 
-log_fmt = (
-    "[%(asctime)s %(levelname)-8s], [%(filename)s:%(lineno)s - "
-    + "%(funcName)s()], %(message)s"
-)
-logging.basicConfig(level=logging.DEBUG, format=log_fmt)
-logger = logging.getLogger(__name__)
+logger = configure_logger()
 
 try:
-    here = os.path.dirname(os.path.realpath(__file__))
+    here = dirname(realpath(__file__))
     p = Path(here)
     gc_path = REPO_PATH
-    test_data_dir = os.path.join(str(p), "test_data")
-    test_data_2_dir = os.path.join(str(p), "test_data_2")
-    test_index_dir = os.path.join(str(p), "test_index")
+    test_data_dir = join(str(p), "test_data")
+    test_data_2_dir = join(str(p), "test_data_2")
+    test_index_dir = join(str(p), "test_index")
 
-    encoder_model_path = os.path.join(
+    encoder_model_path = join(
         str(gc_path), "gamechangerml/models/transformers/msmarco-distilbert-base-v2"
     )
-    assert os.path.isdir(test_data_dir)
-    assert os.path.isdir(test_index_dir)
+    assert isdir(test_data_dir)
+    assert isdir(test_index_dir)
 except (AttributeError, FileExistsError) as e:
     logger.exception("{}: {}".format(type(e), str(e)), exc_info=True)
 
@@ -45,13 +40,12 @@ def sent_dirs():
 @pytest.fixture(scope="session")
 def sent_encoder():
     return SentenceEncoder(
-        os.path.join(LOCAL_TRANSFORMERS_DIR.value, EmbedderConfig.BASE_MODEL)
+        join(LOCAL_TRANSFORMERS_DIR.value, EmbedderConfig.BASE_MODEL)
     )
-
 
 @pytest.fixture(scope="session")
 def sent_searcher():
-    return SentenceSearcher(test_index_dir)
+    return SentenceSearcher(test_index_dir, encoder_model_path)
 
 
 @pytest.fixture(scope="session")
