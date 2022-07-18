@@ -6,6 +6,10 @@ import pytest
 logger = logging.getLogger(__name__)
 
 
+def check(expanded, exp_len):
+    return 1 <= len(expanded) <= exp_len
+
+
 def test_qe_emb_expand(qe_obj, topn):
     q_str = "security clearance"
     exp = qe_obj.expand(q_str, topn=topn, threshold=0.2, min_tokens=3)
