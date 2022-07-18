@@ -92,7 +92,7 @@ class SentenceEncoder:
         # Save input data.
         df = DataFrame(
             [(doc[0], doc[1]) for doc in corpus],
-            columns=["text", "paragraph_id"],
+            columns=["paragraph_id", "text"],
         )
         df.to_csv(
             join(save_dir, SentenceTransformerFiles.DATA_FILE_NAME), 

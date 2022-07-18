@@ -4,11 +4,11 @@
 import logging
 import os
 from pathlib import Path
-
 import pytest
-
-from gamechangerml.src.search.sent_transformer.sentence_searcher import SentenceSearcher
-from gamechangerml.src.search.sent_transformer import SentenceEncoder
+from gamechangerml.src.search.sent_transformer import (
+    SentenceEncoder,
+    SentenceSearcher,
+)
 from gamechangerml import REPO_PATH
 from gamechangerml.src.configs import EmbedderConfig
 from gamechangerml.api.fastapi.settings import LOCAL_TRANSFORMERS_DIR

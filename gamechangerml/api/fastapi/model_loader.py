@@ -8,8 +8,10 @@ from gamechangerml.src.configs import (
     TopicsConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
-from gamechangerml.src.search.sent_transformer.sentence_searcher import SentenceSearcher
-from gamechangerml.src.search.sent_transformer import SentenceEncoder
+from gamechangerml.src.search.sent_transformer import (
+    SentenceEncoder,
+    SentenceSearcher,
+)
 from gamechangerml.src.search.doc_compare import DocCompareSentenceSearcher
 from gamechangerml.src.recommender.recommend import Recommender
 from gamechangerml.src.search.embed_reader import sparse
@@ -235,16 +237,15 @@ class ModelLoader:
         try:
 
             ModelLoader.__sentence_searcher = SentenceSearcher(
-                sim_model_name=SimilarityRankerConfig.BASE_MODEL_NAME,
-                index_path=index_path,
-                transformer_path=transformer_path,
+                index_path,
+                join(transformer_path, SimilarityRankerConfig.BASE_MODEL_NAME)
             )
 
             sim_model = ModelLoader.__sentence_searcher.similarity
             # set cache variable defined in settings.py
-            latest_intel_model_sim.value = sim_model.sim_model
+            latest_intel_model_sim.value = sim_model.model_path
             logger.info(
-                f"** Loaded Similarity Model from {sim_model.sim_model} and sent index from {index_path}"
+                f"** Loaded Similarity Model from {sim_model.model_path} and sent index from {index_path}"
             )
 
         except Exception as e:
@@ -323,7 +324,7 @@ class ModelLoader:
                 join(transformer_path, EmbedderConfig.BASE_MODEL)
             )
             encoder_model = (
-                ModelLoader.__document_compare_encoder.encoder_model
+                ModelLoader.__document_compare_encoder.model_path
             )
             # set cache variable defined in settings.py
             latest_doc_compare_encoder.value = encoder_model

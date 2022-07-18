@@ -4,7 +4,7 @@ import pandas as pd
 import csv
 import math
 from datetime import datetime
-from gamechangerml.src.configs.config import EmbedderConfig
+from gamechangerml.src.configs import EmbedderConfig
 from gamechangerml import CORPUS_PATH
 from gamechangerml.src.search.sent_transformer import (
     SimilarityRanker,
