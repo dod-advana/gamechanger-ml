@@ -118,9 +118,9 @@
 
 
 ### Configs
-- Config files go in `gamechangerml/configs`. When you add a new class, import it in [gamechangerml/configs/__init__.py](gamechangerml/configs/__init__.py).
-- File paths in `gamechangerml/configs/*` should be relative to `gamechangerml` and only used for local testing purposes. Feel free to change on your local machine, but ***do not commit system specific paths to the repository***.
-- A config class (i.e., from `gamechangerml/configs/*`) should not be required as an input parameter to a function. However, a config class attribute can be used to provide parameters to a function (`foo(path=Config.path)`, rather than `foo(Config)`).
+- Config files go in `gamechangerml/src/configs`. When you add a new class, import it in [gamechangerml/src/configs/__init__.py](gamechangerml/src/configs/__init__.py).
+- File paths in `gamechangerml/src/configs/*` should be relative to `gamechangerml` and only used for local testing purposes. Feel free to change on your local machine, but ***do not commit system specific paths to the repository***.
+- A config class (i.e., from `gamechangerml/src/configs/*`) should not be required as an input parameter to a function. However, a config class attribute can be used to provide parameters to a function (`foo(path=Config.path)`, rather than `foo(Config)`).
 
 
 ### What Can Be Stored On GitHub?
