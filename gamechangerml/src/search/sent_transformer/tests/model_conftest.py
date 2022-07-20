@@ -9,7 +9,7 @@ import pytest
 
 from gamechangerml.src.search.sent_transformer.model import *
 from gamechangerml import REPO_PATH
-from gamechangerml.configs.config import EmbedderConfig
+from gamechangerml.configs import EmbedderConfig
 from gamechangerml.api.fastapi.settings import LOCAL_TRANSFORMERS_DIR
 
 log_fmt = (

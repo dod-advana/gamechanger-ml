@@ -9,7 +9,7 @@ import threading
 import typing as t
 from pathlib import Path
 from gamechangerml.src.utilities.aws_helper import *
-from gamechangerml.configs.config import S3Config
+from gamechangerml.configs import S3Config
 from gamechangerml import REPO_PATH, MODEL_PATH
 from gamechangerml.api.utils import processmanager
 

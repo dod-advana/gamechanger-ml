@@ -19,7 +19,7 @@ from gamechangerml.api.fastapi.settings import CACHE_EXPIRE_DAYS
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
-from gamechangerml.configs.config import QexpConfig
+from gamechangerml.configs import QexpConfig
 
 router = APIRouter()
 MODELS = ModelLoader()
@@ -194,7 +194,7 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
     try:
         terms_string = unquoted(terms_string)
         expansion_list = query_expander.expand(
-            terms_string, **QexpConfig.MODEL_ARGS["expansion"]
+            terms_string, **QexpConfig.EXPANSION_ARGS
         )
         # Pass entire query from frontend to query expansion model and return topn.
         # Removes original word from the return terms unless it is combined with another word
