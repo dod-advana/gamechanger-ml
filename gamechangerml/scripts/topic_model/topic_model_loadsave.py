@@ -1,50 +1,57 @@
-from gamechangerml.src.utilities.utils import *
-from gamechangerml.src.utilities.aws_helper import *
 from gamechangerml import REPO_PATH
-import os
+from gamechangerml.src.services import S3Service
+from gamechangerml.src.configs import S3Config
+from gamechangerml.src.utilities import configure_logger
+from os import chdir, listdir
+from os.path import join
 import sys
 
-topic_model_dir=os.path.join(
-    REPO_PATH,
-    "gamechangerml/models/topic_models/models/"
+
+S3_MODELS_DIR = "models/topic_models/"
+TOPIC_MODEL_DIR = join(
+    REPO_PATH, "gamechangerml/models/topic_models/models/"
 )
 
-os.chdir(topic_model_dir)
-s3_models_dir = "models/topic_models/"
+def run():
+    LOGGER = configure_logger(min_level="INFO")
+    BUCKET = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, LOGGER)
 
-try:
-    sys.argv[1]
-except:
-    raise Exception(
-        '\nArgument not specified. Specify "load" or "save" as an argument into the shell script.'
-    )
+    if BUCKET is None:
+        raise Exception("Failed to connect to S3 Bucket.")
 
-# if we're loading models from s3
-if sys.argv[1].lower() == "load":
-    print("\nLoading models from s3 \n")
+    if ARG == "load":
+        LOGGER.info("Downloading models from S3")
+        start_char = len(S3_MODELS_DIR)
+        for obj in BUCKET.objects.filter(Prefix=S3_MODELS_DIR):
+            filename = obj.key[start_char:]
+            LOGGER.info(f"Downloading {filename}.")
+            S3Service.download(BUCKET, join(S3_MODELS_DIR, filename), "", LOGGER)
+    elif ARG == "save":
+        LOGGER.info("Saving models to S3.")
+        upload_files = listdir()
+        if not upload_files:
+            raise Exception(
+                f"No model files to upload. Load files into {TOPIC_MODEL_DIR}."
+            )
+        for f in upload_files:
+            LOGGER.info(f"Saving {f}.")
+            S3Service.upload_file(BUCKET, f, S3_MODELS_DIR + f, LOGGER)
 
-    # download everything from s3
-    print(get_models_list(s3_models_dir))
-    for s in get_models_list(s3_models_dir):
-        get_model_s3(s[0], s3_models_dir)
-    print("\nFinished")
+    LOGGER.info("Finished")
 
-# if we're saving models into s3
-elif sys.argv[1].lower() == "save":
-    print("\nSaving models into s3\n")
 
-    # check if the directory is empty
-    print(f"List of files being uploaded: {os.listdir()}")
-    if not os.listdir():
-        raise Exception(
-            "\nModels directory is empty. Load models into the directory before saving to s3."
-        )
+if __name__ == "__main__":
+    chdir(TOPIC_MODEL_DIR)
 
-    # upload everything in the directory to s3
-    for s in os.listdir():
-        print(f"Uploading {s} ...")
-        upload_file(s, s3_models_dir + s)
-    print("\nFinished")
-else:
-    raise Exception(
-        'Specify "load" or "save" as an argument into the shell script.')
+    arg_options = ["load", "save"]
+    arg_msg = f"Argument must be one of {arg_options}"
+
+    try:
+        ARG = sys.argv[1].lower()
+    except:
+        raise Exception(arg_msg)
+    else:
+        if ARG not in arg_options:
+            raise Exception(arg_msg)
+
+    run()

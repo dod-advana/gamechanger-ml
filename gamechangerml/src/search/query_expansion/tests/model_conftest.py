@@ -11,7 +11,7 @@ from gamechangerml.src.search.query_expansion.build_ann_cli.build_qe_model impor
     main,
 )
 from gamechangerml.src.search.query_expansion.qe import QE
-from gamechangerml.configs.config import QexpConfig
+from gamechangerml.src.configs import QexpConfig
 from gamechangerml.api.fastapi.settings import QEXP_MODEL_NAME
 log_fmt = (
     "[%(asctime)s %(levelname)-8s], [%(filename)s:%(lineno)s - "
@@ -41,13 +41,13 @@ def ann_index_dir(tmpdir_factory):
 def qe_obj(ann_index_dir):
     # main(test_data_dir, ann_index_dir, weight_file=word_wt)
     return QE(
-        QEXP_MODEL_NAME.value, **QexpConfig.MODEL_ARGS["init"]
+        QEXP_MODEL_NAME.value, **QexpConfig.INIT_ARGS
     )
 
 
 # @pytest.fixture(scope="session")
 # def qe_mlm_obj():
-#     return QE(QEXP_MODEL_NAME.value, QexpConfig.MODEL_ARGS["init"]["qe_files_dir"], "mlm")
+#     return QE(QEXP_MODEL_NAME.value, QexpConfig.INIT_ARGS["qe_files_dir"], "mlm")
 
 
 @pytest.fixture(scope="session")

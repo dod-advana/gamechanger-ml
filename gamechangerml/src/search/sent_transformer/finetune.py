@@ -1,26 +1,21 @@
-from gamechangerml import DATA_PATH
 from gamechangerml.api.utils import processmanager
 from datetime import datetime
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities.test_utils import open_json, save_json, timestamp_filename
-from gamechangerml.scripts.run_evaluation import eval_sent
+from gamechangerml.src.services import S3Service
+from gamechangerml.src.configs import S3Config
 from time import sleep
-import tqdm
 import threading
 import logging
 import gc
 from sentence_transformers import SentenceTransformer, InputExample, losses
 from torch.utils.data import DataLoader
 import pandas as pd
-from datetime import date
 import sys
 import os
 import json
 import torch
-from torch.optim import Adam
-import torch.nn.functional as F
-from torch import nn
 torch.cuda.empty_cache()
 
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
@@ -174,6 +169,8 @@ class STFinetuner():
             # when not testing only, save to S3
             if not testing_only:
                 logger.info("Saving data to S3...")
+                bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
+
                 s3_path = os.path.join(S3_DATA_PATH, f"{version}")
                 logger.info(f"****    Saving new data files to S3: {s3_path}")
                 dst_path = data_dir + ".tar.gz"
@@ -181,8 +178,8 @@ class STFinetuner():
                 logger.info("*** Attempting to save data tar")
                 utils.create_tgz_from_dir(data_dir, dst_path)
                 logger.info("*** Attempting to upload data to s3")
-                utils.upload(s3_path, dst_path, "data", model_name)
-
+                s3_path = os.path.join(s3_path, "data_" + model_name + ".tar.gz")
+                S3Service.upload_file(bucket, dst_path, s3_path, logger)
                 logger.info("Saving model to S3...")
                 dst_path = self.model_save_path + ".tar.gz"
                 utils.create_tgz_from_dir(
@@ -191,8 +188,12 @@ class STFinetuner():
                 logger.info(f"*** Created tgz file and saved to {dst_path}")
 
                 S3_MODELS_PATH = "bronze/gamechanger/models"
-                s3_path = os.path.join(S3_MODELS_PATH, str(version))
-                utils.upload(s3_path, dst_path, "transformers", model_id)
+                s3_path = os.path.join(
+                    S3_MODELS_PATH,
+                    str(version),
+                    "transformers_" + model_id + ".tar.gz"
+                )
+                S3Service.upload_file(bucket, dst_path, s3_path, logger)
                 logger.info(f"*** Saved model to S3: {s3_path}")
 
         except Exception as e:

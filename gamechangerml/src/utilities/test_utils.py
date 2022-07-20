@@ -9,9 +9,9 @@ from datetime import date, datetime
 import signal
 import torch
 import random
-import shutil
 from gamechangerml.api.utils.logger import logger
-from gamechangerml.configs.config import ValidationConfig
+from gamechangerml.src.configs import ValidationConfig
+from gamechangerml.src.search.sent_transformer import SentenceTransformerFiles
 
 MATAMO_DIR = ValidationConfig.DATA_ARGS['matamo_dir']
 SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']
@@ -162,20 +162,6 @@ def clean_nans(value):
 
 # Evaluation utility functions
 
-
-def get_most_recent_eval(directory):
-    '''Gets the most recent eval json from a directory'''
-    files = [f for f in os.listdir(directory) if os.path.isfile(
-        os.path.join(directory, f))]
-    evals = [f for f in files if f.split('.')[-1] == 'json']
-    if evals:
-        evals.sort(key=lambda x: int(
-            x.split('_')[-1].split('.')[0].replace('-', '')))
-        return evals[-1]
-    else:
-        return ''
-
-
 def collect_evals(directory):
     '''Checks if a model directory has any evaluations'''
     sub_dirs = [d for d in os.listdir(
@@ -188,7 +174,7 @@ def collect_evals(directory):
         evaldict = {}
         for i in eval_dirs:
             name = i.split('_')[1]
-            file = get_most_recent_eval(i)
+            file = SentenceTransformerFiles.most_recent_eval_name(i)
             if file != '':
                 evaldict[name] = open_json(file, i)
             else:
@@ -204,7 +190,7 @@ def collect_sent_evals_gc(index_path):
     logger.info(f"evals path: {evals_path}")
     for level in ['gold', 'silver']:
         fullpath = os.path.join(evals_path, level)
-        file = get_most_recent_eval(fullpath)
+        file = SentenceTransformerFiles.most_recent_eval_name(fullpath)
         logger.info(f"file: {file}")
         if file != '':
             subdict[level] = open_json(file, fullpath)
