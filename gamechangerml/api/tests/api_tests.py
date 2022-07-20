@@ -102,7 +102,7 @@ def getCurrentTrans():
     return resp.json()
 
 
-## Sent Index Processing Tests
+# Sent Index Processing Tests
 
 
 def test_has_many_short_tokens():
@@ -182,10 +182,36 @@ def test_postSentSearch():
     assert len(resp.json()) > 5
 
 
+def test_sentSearch_dupes():
+    test_data = TestSet.sentence_test_data
+    verified = TestSet.sentence_search_expect
+
+    resp = http.post(API_URL + "/transSentenceSearch", json=test_data)
+    resp_data = resp.json()
+    num_results = len(resp_data)
+    print(num_results)
+    unique = set([x["id"] for x in resp_data])
+    if len(unique) == num_results:
+        assert True
+    else:
+        assert False
+
+
+def test_sentSearch_properFields():
+    test_data = TestSet.sentence_test_data
+    verified = TestSet.sentence_search_expect
+
+    resp = http.post(API_URL + "/transSentenceSearch", json=test_data)
+    resp_data = resp.json()
+    if "id" in resp_data[0].keys():
+        assert True
+
+
 def test_sent_index_threshold():
     test_data = TestSet.sentence_test_data
     # threshold = "0.6"
-    resp = http.post(API_URL + "/transSentenceSearch?threshold=0.5", json=test_data)
+    resp = http.post(
+        API_URL + "/transSentenceSearch?threshold=0.5", json=test_data)
     resp_data = resp.json()
     for i in resp_data:
         if float(i["score"]) >= 0.5:
@@ -214,7 +240,8 @@ def send_qa(query, context):
     post = {"query": query, "search_context": context}
     data = json.dumps(post).encode("utf-8")
     headers = {"Content-Type": "application/json"}
-    response = http.post(API_URL + "/questionAnswer", data=data, headers=headers)
+    response = http.post(API_URL + "/questionAnswer",
+                         data=data, headers=headers)
 
     end = time.perf_counter()
     took = float(f"{end-start:0.4f}")
