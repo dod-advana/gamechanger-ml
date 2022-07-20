@@ -6,10 +6,10 @@ from gamechangerml.src.model_testing.evaluation import (
     NLIEvaluator,
     QexpEvaluator,
 )
-from gamechangerml.configs import (
+from gamechangerml.src.configs import (
     QAConfig,
     EmbedderConfig,
-    SimilarityConfig,
+    SimilarityRankerConfig,
     QexpConfig,
 )
 from gamechangerml.src.utilities.test_utils import *
@@ -25,20 +25,28 @@ def eval_qa(model_name, sample_limit, eval_type="original"):
             f"Evaluating QA model on SQuAD dataset with sample limit of {str(sample_limit)}."
         )
         originalEval = SQuADQAEvaluator(
-            model_name=model_name, sample_limit=sample_limit, **QAConfig.MODEL_ARGS
+            model_name=model_name,
+            sample_limit=sample_limit,
+            **QAConfig.MODEL_ARGS,
         )
         return originalEval.results
     elif eval_type == "domain":
-        logger.info("No in-domain gamechanger evaluation available for the QA model.")
+        logger.info(
+            "No in-domain gamechanger evaluation available for the QA model."
+        )
     else:
-        logger.info("No eval_type selected. Options: ['original', 'gamechanger'].")
+        logger.info(
+            "No eval_type selected. Options: ['original', 'gamechanger']."
+        )
 
 
 def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
     if "sent_index" in model_name:
         logger.info("Evaluating a sentence index")
         try:
-            metadata = open_json("metadata.json", os.path.join(MODEL_PATH, model_name))
+            metadata = open_json(
+                "metadata.json", os.path.join(MODEL_PATH, model_name)
+            )
             encoder = metadata["encoder_model"]
         except:  # older sent indexes don't have a metadata file, just default to msmarco-v2
             encoder = "msmarco-distilbert-base-v2"
@@ -57,7 +65,9 @@ def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
             if os.path.exists(os.path.join(base_data_dir, validation_data)):
                 data_path = os.path.join(base_data_dir, validation_data)
             else:
-                logger.warning("Could not load validation data, path doesn't exist")
+                logger.warning(
+                    "Could not load validation data, path doesn't exist"
+                )
                 data_path = None
         else:
             try:
@@ -72,7 +82,7 @@ def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
                 data_level=level,
                 encoder_model_name=encoder,
                 retriever=retriever,
-                sim_model_name=SimilarityConfig.BASE_MODEL,
+                sim_model_name=SimilarityRankerConfig.BASE_MODEL_NAME,
                 **EmbedderConfig.MODEL_ARGS,
             )
             results[level] = domainEval.results
@@ -80,7 +90,7 @@ def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
         originalEval = MSMarcoRetrieverEvaluator(
             **EmbedderConfig.MODEL_ARGS,
             encoder_model_name=EmbedderConfig.BASE_MODEL,
-            sim_model_name=SimilarityConfig.BASE_MODEL,
+            sim_model_name=SimilarityRankerConfig.BASE_MODEL_NAME,
         )
         results = originalEval.results
     else:
@@ -146,7 +156,7 @@ def _gc_retriever(limit):
         index="sent_index_20211020",
         **EmbedderConfig.MODEL_ARGS,
         encoder_model_name=EmbedderConfig.BASE_MODEL,
-        sim_model_name=SimilarityConfig.BASE_MODEL,
+        sim_model_name=SimilarityRankerConfig.BASE_MODEL_NAME,
     )
     logger.info(GoldStandardRetrieverEval.results)
     return
@@ -159,7 +169,7 @@ def _msmarco(limit):
         retriever=None,
         **EmbedderConfig.MODEL_ARGS,
         encoder_model_name=EmbedderConfig.BASE_MODEL,
-        sim_model_name=SimilarityConfig.BASE_MODEL,
+        sim_model_name=SimilarityRankerConfig.BASE_MODEL_NAME,
     )
     logger.info(MSMarcoEval.results)
     return
@@ -168,7 +178,9 @@ def _msmarco(limit):
 def _nli(limit):
     logger.info("\nEvaluating Similarity Model with NLI Data...")
     SimilarityEval = NLIEvaluator(
-        model=None, sample_limit=limit, sim_model_name=SimilarityConfig.BASE_MODEL
+        model=None,
+        sample_limit=limit,
+        sim_model_name=SimilarityRankerConfig.BASE_MODEL_NAME,
     )
     logger.info(SimilarityEval.results)
     return

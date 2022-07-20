@@ -1,6 +1,6 @@
 from gamechangerml import REPO_PATH
 from gamechangerml.src.services import S3Service
-from gamechangerml.configs import S3Config
+from gamechangerml.src.configs import S3Config
 from gamechangerml.src.utilities import configure_logger
 from os import chdir, listdir
 from os.path import join

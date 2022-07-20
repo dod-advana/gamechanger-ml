@@ -5,9 +5,10 @@ import glob
 import tarfile
 import typing as t
 from pathlib import Path
-from gamechangerml.configs import S3Config
-from gamechangerml import REPO_PATH, MODEL_PATH
 from gamechangerml.src.services import S3Service
+from gamechangerml.src.configs import S3Config
+from gamechangerml import REPO_PATH, MODEL_PATH
+
 
 logger = logging.getLogger("gamechanger")
 
