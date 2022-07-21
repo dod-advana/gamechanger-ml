@@ -1,13 +1,12 @@
 from os.path import join
 from pandas import DataFrame, read_csv
-from tqdm import tqdm
 from collections import Counter
 from argparse import ArgumentParser
 from glob import glob
 import en_core_web_md
 from gamechangerml.src.utilities import configure_logger, load_json
 from gamechangerml.src.text_handling.process import preprocess
-from gamechangerml.src.featurization.rank_features import search_data as meta
+from gamechangerml.src.featurization.rank_features.search_data import generate_pop_docs
 from gamechangerml.src.featurization.rank_features.rank import Rank
 from gamechangerml import DATA_PATH
 
@@ -28,49 +27,6 @@ corpus_dir = "test/corpus_new"
 prod_data_file = join(
     DATA_PATH, "features", "generated_files", "prod_test_data.csv"
 )
-
-
-def generate_pop_docs(prod_df: DataFrame, corpus_df: DataFrame) -> DataFrame:
-    """Create a DataFrame of corpus documents that are popular based on prod
-    searches.
-
-    Args:
-        prod_df (pandas.DataFrame): DataFrame of prod search data. Expected to
-            have the column `search` with str items. To include multiple values
-            in an item of the `search` column, the item can be a string of
-            values combined by ` AND | OR`.
-        corpus_df (pandas.DataFrame): DataFrame of corpus documents. Expected
-            to contain the columns `id` and `keywords`.
-
-    Returns:
-        DataFrame: DataFrame with columns `id`, `keywords`, and
-            `kw_in_doc_score`.
-    """
-    kw_df = meta.get_top_keywords(prod_df)
-    docs = []
-
-    for row_kw in tqdm(kw_df.itertuples()):
-        for row_corp in corpus_df.itertuples():
-            if len(row_corp.keywords):
-                if row_kw.keywords in row_corp.keywords[0]:
-                    docs.append(
-                        {"id": row_corp.id, "keywords": row_kw.keywords}
-                    )
-    docs_df = DataFrame(docs, columns=["id", "keywords"])
-    counts_df = (
-        docs_df.groupby("id").count().sort_values("keywords", ascending=False)
-    )
-
-    max_ = counts_df["keywords"].max()
-    min_ = counts_df["keywords"].min()
-    scores = [
-        (score - min_) / (max_ - min_) if score != 0 else 0.00001
-        for score in list(counts_df["keywords"])
-    ]
-    counts_df["keywords"] = scores
-    counts_df.rename(columns={"keywords": "kw_in_doc_score"}, inplace=True)
-
-    return counts_df
 
 
 def generate_ft_doc(

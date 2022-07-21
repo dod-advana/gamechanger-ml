@@ -1,122 +1,83 @@
-import pandas as pd
-import re
-from gamechangerml.src.text_handling.process import preprocess
+from pandas import DataFrame
+from re import split, IGNORECASE
 from collections import Counter
-import logging
 from tqdm import tqdm
-import os
-
-logger = logging.getLogger("gamechanger")
+from gamechangerml.src.text_handling.process import preprocess
 
 
-def _logs_toDf(searchLog: list):
-    df = pd.DataFrame(
-        searchLog,
-        columns=[
-            "temp_index",
-            "user_hash",
-            "search",
-            "run_at",
-            "completion_time",
-            "num_results",
-            "had_error",
-            "is_semantic_search",
-        ],
-    )
-    df.drop(columns=["temp_index"], inplace=True)
-    df = process_search_terms(df)
-    return df
+def get_top_keywords(search_df: DataFrame()):
+    """Calculate popularity scores for search keywords.
 
-
-def get_top_keywords(search_df: pd.DataFrame()):
-    """ get top keywords frm searchlogs
     Args:
-        searchLog: LIST requests response from postgres 
+        search_df: (pandas.DataFrame) DataFrame of search data. Should have
+            column `search` with str items. To include multiple values in an
+            item of the `search` column, the item can be a string of values
+            combined by ` AND | OR`.
     Returns:
-        dataframe of top words and counts
+        pandas.DataFrame: DataFrame with columns:
+            - "keywords": (str) Keywords from searches
+            - "amt": (int) The number of searches a keyword appeared in
+            - "pop_score": (float) The calculated popularity score for keywords
+
+            The DataFrame will be sorted in descending order by `pop_score`.
     """
-    cnt = Counter()
+    kw_counts = Counter()
     ignore_words = ["artificial intelligence president"]
+
     for log in tqdm(search_df.itertuples()):
-        split_word = re.split(" AND | OR", log.search, flags=re.IGNORECASE)
-        for terms in split_word:
-            terms = _preprocess_str(terms)
-            if len(terms) > 0:
-                if terms not in ignore_words:
-                    cnt[terms] += 1
+        terms = split(" AND | OR", log.search, flags=IGNORECASE)
+        terms = [" ".join(preprocess(term)) for term in terms]
+        terms = [term for term in terms if term not in ignore_words]
+        for term in terms:
+            kw_counts[term] += 1
 
-    df = pd.DataFrame(columns=["keywords", "amt"], data=cnt.items())
-    df = score_popularity(df)
-    df.sort_values(["pop_score"], ascending=False, inplace=True)
-    return df
-
-
-def scored_logs(search_logs) -> pd.DataFrame:
-    """ gets top keywords and appends score to all cleaned search data 
-        Args:
-            search_logs:
-        Returns:
-            dataframe with pop_score column
-    """
-    if type(search_logs) == list:
-        logger.info("Search logs is a list")
-        try:
-            search_df = _logs_toDf(search_logs)
-        except Exception as e:
-            logger.info("Could not make search df")
-            logger.info(e)
-    elif type(search_logs) == pd.DataFrame:
-        logger.info("Search logs is a dataframe")
-        try:
-            search_df = process_search_terms(search_logs)
-        except Exception as e:
-            logger.info("Could not make search df")
-            logger.info(e)
-    else:
-        logger.error("Wrong type for search logs")
-        return
-    
-    try:
-        top_kw = get_top_keywords(search_df)
-    except Exception as e:
-            logger.info("Could not get top keywords")
-            logger.info(e)
-    try:
-        for row in tqdm(top_kw.itertuples()):
-            search_df.loc[search_df.search ==
-                        row.keywords, "pop_score"] = row.pop_score
-    except Exception as e:
-            logger.info("Could not set row pop scores")
-            logger.info(e)
-    return search_df
-
-
-def process_search_terms(df: pd.DataFrame) -> pd.DataFrame:
-    """ process_search_terms cleans the search key words column
-        Args:
-            df: dataframe of all search data
-        Returns:
-            dataframe with cleaned search terms
-    """
-    df.search = df.search.replace('"', "", regex=True)
-    df.search = df.search.replace("'", "", regex=True)
-    df.search = df.search.apply(_preprocess_str)
-    df = df[df.search != ""]
-    return df
-
-
-def _preprocess_str(terms: list) -> str:
-    """ preprocess back to string """
-    words = preprocess(terms)
-    return " ".join(words)
-
-
-def score_popularity(df: pd.DataFrame) -> pd.DataFrame:
-    """ scores the popularity 
-        Args:
-            df: dataframe of data
-        Returns:
-            Dataframe
-    """
+    df = DataFrame(columns=["keywords", "amt"], data=kw_counts.items())
+    # Add popularity scores and sort the DataFrame by them.
     df["pop_score"] = (df.amt - df.amt.min()) / df.amt.max()
+    df.sort_values(["pop_score"], ascending=False, inplace=True)
+
     return df
+
+
+
+def generate_pop_docs(prod_df: DataFrame, corpus_df: DataFrame) -> DataFrame:
+    """Create a DataFrame of corpus documents that are popular based on prod
+    searches.
+
+    Args:
+        prod_df (pandas.DataFrame): DataFrame of prod search data. Expected to
+            have the column `search` with str items. To include multiple values
+            in an item of the `search` column, the item can be a string of
+            values combined by ` AND | OR`.
+        corpus_df (pandas.DataFrame): DataFrame of corpus documents. Expected
+            to contain the columns `id` and `keywords`.
+
+    Returns:
+        DataFrame: DataFrame with columns `id`, `keywords`, and
+            `kw_in_doc_score`.
+    """
+    kw_df = get_top_keywords(prod_df)
+    docs = []
+
+    for row_kw in tqdm(kw_df.itertuples()):
+        for row_corp in corpus_df.itertuples():
+            if len(row_corp.keywords):
+                if row_kw.keywords in row_corp.keywords[0]:
+                    docs.append(
+                        {"id": row_corp.id, "keywords": row_kw.keywords}
+                    )
+    docs_df = DataFrame(docs, columns=["id", "keywords"])
+    counts_df = (
+        docs_df.groupby("id").count().sort_values("keywords", ascending=False)
+    )
+
+    max_ = counts_df["keywords"].max()
+    min_ = counts_df["keywords"].min()
+    scores = [
+        (score - min_) / (max_ - min_) if score != 0 else 0.00001
+        for score in list(counts_df["keywords"])
+    ]
+    counts_df["keywords"] = scores
+    counts_df.rename(columns={"keywords": "kw_in_doc_score"}, inplace=True)
+
+    return counts_df
