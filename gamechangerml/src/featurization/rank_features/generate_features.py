@@ -29,17 +29,19 @@ PROD_DATA_FILE = join(
 )
 
 
-def generate_ft_doc(corpus_dir, prod_data=PROD_DATA_FILE, logger=None):
+def generate_features(corpus_dir, prod_data=PROD_DATA_FILE, logger=None):
     """Generate feature document.
+
+    Pagerank documents and determine popular documents based on keyword searches.
 
     Saves results as corpus_meta.csv.
 
     Args:
         corpus_dir (str): Path to directory that contains corpus files.
-        prod_data (str, optional): Path to CSV of prod data. Default is 
+        prod_data (str, optional): Path to CSV of prod data. Default is
             PROD_DATA_FILE.
         logger (logging.Logger, optional): If None, uses configure_logger()
-    
+
     Returns:
         None
     """
@@ -186,4 +188,4 @@ if __name__ == "__main__":
     corpus_dir = args.corpus_dir
     prod_data = args.prod_data
 
-    generate_ft_doc(corpus_dir, prod_data)
+    generate_features(corpus_dir, prod_data)
