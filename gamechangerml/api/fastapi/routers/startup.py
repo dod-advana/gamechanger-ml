@@ -17,26 +17,40 @@ from gamechangerml.api.fastapi.settings import (
     latest_doc_compare_encoder,
 )
 from gamechangerml.api.fastapi.model_loader import ModelLoader
+import psutil
 
 router = APIRouter()
 MODELS = ModelLoader()
+model_functions = [
+    MODELS.initQA,
+    MODELS.initQE,
+    MODELS.initQEJBook,
+    MODELS.initSentenceSearcher,
+    # MODELS.initSentenceEncoder,
+    MODELS.initWordSim,
+    MODELS.initTopics,
+    MODELS.initRecommender,
+    # MODELS.initDocumentCompareEncoder,
+    MODELS.initDocumentCompareSearcher,
+]
 
 
 @router.on_event("startup")
 async def load_models():
 
     if MODEL_LOAD_FLAG:
-        MODELS.initQA()
-        MODELS.initQE()
-        MODELS.initQEJBook()
-        MODELS.initSentenceSearcher()
-        # MODELS.initSentenceEncoder()
-        MODELS.initWordSim()
-        MODELS.initTopics()
-        MODELS.initRecommender()
-        # MODELS.initDocumentCompareEncoder()
-        #MODELS.initDocumentCompareSearcher()
-        logger.info("AFTER LOAD MODELS")
+        count = 0
+        for f in model_functions:
+            f()
+            ram_used, surpassed, cpu_usage = get_hw_usage()
+            count += 1
+            if surpassed:
+                logger.warning(
+                    f" ---- WARNING: RAM used is {ram_used}%, which is passed the threshold, will not load any other models"
+                )
+                logger.warning(f"---- Did not load: model_functions[:count]")
+                break
+        logger.info("LOADED MODELS")
     else:
         logger.info("MODEL_LOAD_FLAG set to False, no models loaded")
 
@@ -52,7 +66,7 @@ async def check_health():
     try:
         new_sim_model_name = str(latest_intel_model_sim.value)
         new_encoder_model_name = str(latest_intel_model_encoder.value)
-        new_sent_model_name = str(latest_intel_model_sent.value)
+        ram_used, surpassed, cpu_usage = get_hw_usage()
     except Exception as e:
         logger.info("Could not get one of the model names from redis")
         logger.info(e)
@@ -65,8 +79,6 @@ async def check_health():
     else:
         logger.info("Model Health: POOR")
 
-    # logger.info(f"-- Transformer model name: {new_trans_model_name}")
-    # logger.info(f"-- Sentence Transformer model name: {new_sent_model_name}")
     logger.info(f"-- Sentence Similarity model name: {new_sim_model_name}")
     logger.info(f"-- Sentence Encoder model name: {new_encoder_model_name}")
     logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
@@ -81,6 +93,17 @@ async def check_health():
     logger.info(
         f"-- Doc Compare Sentence index name: {DOC_COMPARE_SENT_INDEX_PATH.value}"
     )
+    logger.info(f"CPU usage: {cpu_usage}")
+    logger.info(f"RAM % used: {ram_used}")
+
+
+def get_hw_usage(threshold: int = 80) -> (float, bool, float):
+    surpassed = False
+    ram_used = psutil.virtual_memory()[2]
+    if ram_used > threshold:
+        surpassed = True
+    cpu_usage = psutil.cpu_percent(4)
+    return ram_used, surpassed, cpu_usage
 
 
 def check_dep_exist():

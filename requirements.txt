@@ -40,5 +40,6 @@ uvicorn~=0.13.4
 uvloop~=0.14.0
 wikipedia~=1.4.0
 xgboost==1.1.0
-debugpy
-mlflow
+debugpy~=1.6.2
+mlflow~=1.27.0
+psutil~=5.9.1
