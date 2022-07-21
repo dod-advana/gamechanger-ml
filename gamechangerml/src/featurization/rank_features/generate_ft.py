@@ -16,31 +16,39 @@ from gamechangerml import DATA_PATH
 """
 Usage:
     example:
-    python -m gamechangerml.src.featurization.rank_features.generate_ft -c test/small_corpus/ -dd 80 --prod gamechangerml/src/search/ranking/generated_files/prod_test_data.csv
+    python -m gamechangerml.src.featurization.rank_features.generate_ft -c test/small_corpus/ --prod gamechangerml/src/search/ranking/generated_files/prod_test_data.csv
 
-optional arguments:
-    --corpus, -c Corpus directory
-    --days -dd days since today to get data
+Arguments:
+    --corpus, -c (required): Path to directory with corpus files.
+    --prod, -p (optional): Path to prod data file.
 """
 
 
-logger = configure_logger()
-corpus_dir = "test/corpus_new"
-prod_data_file = join(
+PROD_DATA_FILE = join(
     DATA_PATH, "features", "generated_files", "prod_test_data.csv"
 )
 
 
-def generate_ft_doc(
-    corpus_dir: str, days: int = 80, prod_data: str = prod_data_file
-):
-    """generate feature document
-    Args:
-        corpus_dir: corpus directory
-        days: how many days to retrieve data
-    Returns:
+def generate_ft_doc(corpus_dir, prod_data=PROD_DATA_FILE, logger=None):
+    """Generate feature document.
 
+    Saves results as corpus_meta.csv.
+
+    Args:
+        corpus_dir (str): Path to directory that contains corpus files.
+        prod_data (str, optional): Path to CSV of prod data. Default is 
+            PROD_DATA_FILE.
+        logger (logging.Logger, optional): If None, uses configure_logger()
+    
+    Returns:
+        None
     """
+    if prod_data is None:
+        prod_data = PROD_DATA_FILE
+
+    if logger is None:
+        logger = configure_logger()
+
     out_dir = join(DATA_PATH, "features", "generated_files")
 
     # Until we get connection to prod data, load prod data from csv.
@@ -165,30 +173,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--corpus", "-c", dest="corpus_dir", help="corpus directory, full path"
     )
-    parser.add_argument(
-        "--days",
-        "-dd",
-        dest="day_delta",
-        default=80,
-        help="days of data to grab since todays date",
-    )
     # Until we can pull data from postgres from production automatically
     # (currently avail in dev)
     parser.add_argument(
         "--prod",
         "-p",
         dest="prod_data",
-        default=join(
-            DATA_PATH,
-            "features",
-            "generated_files",
-            "prod_test_data.csv",
-        ),
+        default=None,
         help="production data historical search logs csv ",
     )
     args = parser.parse_args()
     corpus_dir = args.corpus_dir
-    days = args.day_delta
     prod_data = args.prod_data
 
-    generate_ft_doc(corpus_dir, days, prod_data)
+    generate_ft_doc(corpus_dir, prod_data)
