@@ -53,7 +53,7 @@ def generate_ft_doc(
 
     # Calculate pagerank scores and add them to corp_df.
     logger.info(f"Calculating pagerank scores for {len(corp_df)} documents.")
-    pagerank_df = Rank.get_pr_docs(corpus_docs)
+    pagerank_df = Rank.pagerank_docs(corpus_docs)
     corp_df = corp_df.merge(pagerank_df)
 
     # Generate popular documents and merge into corp_df.
