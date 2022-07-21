@@ -6,7 +6,9 @@ from glob import glob
 import en_core_web_md
 from gamechangerml.src.utilities import configure_logger, load_json
 from gamechangerml.src.text_handling.process import preprocess
-from gamechangerml.src.featurization.rank_features.search_data import generate_pop_docs
+from gamechangerml.src.featurization.rank_features.popular_documents import (
+    generate_popular_documents,
+)
 from gamechangerml.src.featurization.rank_features.rank import Rank
 from gamechangerml import DATA_PATH
 
@@ -56,7 +58,7 @@ def generate_ft_doc(
 
     # Generate popular documents and merge into corp_df.
     logger.info("Generating popular docs")
-    pop_docs = generate_pop_docs(prod_df, corp_df)
+    pop_docs = generate_popular_documents(prod_df, corp_df)
     corp_df = corp_df.merge(pop_docs, on="id", how="outer")
 
     logger.info(f"Saving corpus meta to {out_dir}")
@@ -64,7 +66,7 @@ def generate_ft_doc(
 
 
 def create_corpus(directory, logger, nlp=None):
-    """Load corpus files from the given directory and format them as needed 
+    """Load corpus files from the given directory and format them as needed
     generating feature documents.
 
     Args:
@@ -74,8 +76,8 @@ def create_corpus(directory, logger, nlp=None):
             If None, uses `en_core_web_md`. Default is None.
 
     Returns:
-        list of dict: Corpus documents as a list of dictionaries with keys: 
-            `id`, `doc_id`, `doc_num`, `text`, `keywords`, `orgs`, 
+        list of dict: Corpus documents as a list of dictionaries with keys:
+            `id`, `doc_id`, `doc_num`, `text`, `keywords`, `orgs`,
             `text_length`, and `ref_list`.
     """
     if nlp is None:
@@ -93,7 +95,7 @@ def create_corpus(directory, logger, nlp=None):
         "text",
         "keyw5",
         "page_count",
-        "ref_list"
+        "ref_list",
     ]
     orig_num_docs = len(docs)
     docs = [doc for doc in docs if all(key in doc for key in required_keys)]
@@ -170,7 +172,7 @@ if __name__ == "__main__":
         default=80,
         help="days of data to grab since todays date",
     )
-    # Until we can pull data from postgres from production automatically 
+    # Until we can pull data from postgres from production automatically
     # (currently avail in dev)
     parser.add_argument(
         "--prod",

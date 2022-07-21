@@ -5,7 +5,7 @@ from tqdm import tqdm
 from gamechangerml.src.text_handling.process import preprocess
 
 
-def get_top_keywords(search_df: DataFrame()):
+def score_search_keywords(search_df: DataFrame()):
     """Calculate popularity scores for search keywords.
 
     Args:
@@ -39,8 +39,9 @@ def get_top_keywords(search_df: DataFrame()):
     return df
 
 
-
-def generate_pop_docs(prod_df: DataFrame, corpus_df: DataFrame) -> DataFrame:
+def generate_popular_documents(
+    prod_df: DataFrame, corpus_df: DataFrame
+) -> DataFrame:
     """Create a DataFrame of corpus documents that are popular based on prod
     searches.
 
@@ -56,7 +57,7 @@ def generate_pop_docs(prod_df: DataFrame, corpus_df: DataFrame) -> DataFrame:
         DataFrame: DataFrame with columns `id`, `keywords`, and
             `kw_in_doc_score`.
     """
-    kw_df = get_top_keywords(prod_df)
+    kw_df = score_search_keywords(prod_df)
     docs = []
 
     for row_kw in tqdm(kw_df.itertuples()):
