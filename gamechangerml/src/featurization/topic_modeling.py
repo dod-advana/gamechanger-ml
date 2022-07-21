@@ -1,6 +1,6 @@
 from gamechangerml.src.text_handling.custom_stopwords import custom_stopwords
 from gamechangerml.src.text_handling.process import topic_processing
-from gamechangerml.api.utils import processmanager, status_updater
+# from gamechangerml.api.utils import processmanager, status_updater
 from gamechangerml.src.utilities.test_utils import get_user
 
 import gensim
@@ -174,17 +174,17 @@ class Topics(object):
 
     def train_from_files(self, corpus_dir, sample_rate, local_dir):
         start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        status = status_updater.StatusUpdater(
-            process_key=processmanager.topics_creation, nsteps=6,
-        )
-        status.next_step(message="Started topics model training")
+        # status = status_updater.StatusUpdater(
+        #     process_key=processmanager.topics_creation, nsteps=6,
+        # )
+        # status.next_step(message="Started topics model training")
 
         # Generating process metadata
         user = get_user(logger)
 
         # sample files
         file_list = self.sample_corpus_files(corpus_dir, sample_rate)
-        status.next_step(message="Corpus sampled")
+        # status.next_step(message="Corpus sampled")
 
         # create phrase detection from corpus
         # bigrams.phr
@@ -194,7 +194,7 @@ class Topics(object):
             threshold=50,
             connector_words=ENGLISH_CONNECTOR_WORDS,
         )
-        status.next_step(message="Phrase detector model created")
+        # status.next_step(message="Phrase detector model created")
 
         # apply phrase detection to corpus
         topics_corpus_generator = self.stream_topics_from_files(
@@ -204,12 +204,12 @@ class Topics(object):
         # create dictionary from phrases
         # tfidf_dictionary.dic
         dictionary = corpora.Dictionary(topics_corpus_generator)
-        status.next_step(message="Corpus dictionary created")
+        # status.next_step(message="Corpus dictionary created")
 
         # create tfidf model from corpora dictionary
         # tfidf.model
         tfidf = TfidfModel(dictionary=dictionary)
-        status.next_step(message="Topics model created")
+        # status.next_step(message="Topics model created")
 
         # set to active for self.save
         # this isn't the instance used in ml api
@@ -219,7 +219,7 @@ class Topics(object):
         self.tfidf = tfidf
 
         self.save(local_dir)
-        status.next_step(message="Topic model saved")
+        # status.next_step(message="Topic model saved")
 
         end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         metadata = {

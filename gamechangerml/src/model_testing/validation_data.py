@@ -1,14 +1,15 @@
+import logging
 import pandas as pd
 import numpy as np
 from collections import OrderedDict
 from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_query, filter_title_queries
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.configs import ValidationConfig
-from gamechangerml.api.utils.logger import logger
+from gamechangerml.configs.config import ValidationConfig
 from gamechangerml.src.utilities.test_utils import filter_date_range, open_txt
 from gamechangerml import REPO_PATH
 
 CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
+logger = logging.getLogger(__name__)
 
 
 class ValidationData:

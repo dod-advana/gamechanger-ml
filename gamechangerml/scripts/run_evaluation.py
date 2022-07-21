@@ -13,11 +13,12 @@ from gamechangerml.configs import (
     QexpConfig,
 )
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.api.utils.logger import logger
 import argparse
 import os
+import logging
 from gamechangerml import DATA_PATH, MODEL_PATH
 
+logger = logging.getLogger(__name__)
 
 def eval_qa(model_name, sample_limit, eval_type="original"):
     if eval_type == "original":

@@ -298,7 +298,6 @@ class ModelLoader:
                 index_path=index_path,
                 transformer_path=transformer_path,
             )
-
             sim_model = ModelLoader.__document_compare_searcher.similarity
             # set cache variable defined in settings.py
             latest_doc_compare_sim.value = sim_model.sim_model

@@ -8,13 +8,13 @@ import pandas as pd
 import pickle
 import torch
 import threading
+import logging
 
 from gamechangerml.src.text_handling.corpus import LocalCorpus
-from gamechangerml.api.utils import processmanager
-from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
+logger = logging.getLogger(__name__)
 
 class DocCompareSentenceEncoder():
     """
@@ -179,23 +179,7 @@ class DocCompareSentenceEncoder():
             )
             data = MSMarcoData()
             corpus = data.corpus
-
-        processmanager.update_status(
-            processmanager.training,
-            0,
-            1,
-            "building sent index",
-            thread_id=threading.current_thread().ident,
-        )
-
         self._index(corpus, index_path)
-        processmanager.update_status(
-            processmanager.training,
-            1,
-            1,
-            "finished building sent index",
-            thread_id=threading.current_thread().ident,
-        )
 
         self.embedder.save(index_path)
         logger.info(f"Saved embedder to {index_path}")
