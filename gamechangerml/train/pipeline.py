@@ -14,6 +14,7 @@ from distutils.dir_util import copy_tree
 from datetime import datetime, date
 from pathlib import Path
 import typing as t
+import logging
 
 from gamechangerml.configs import S3Config
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
@@ -46,7 +47,6 @@ from gamechangerml.src.utilities.test_utils import (
     collect_evals,
     open_json,
 )
-from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.utils.pathselect import get_model_paths
 
@@ -68,7 +68,7 @@ os.environ["CURL_CA_BUNDLE"] = ""
 os.environ["PYTHONWARNINGS"] = "ignore:Unverified HTTPS request"
 
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 formatter = logging.Formatter(
     "%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s")

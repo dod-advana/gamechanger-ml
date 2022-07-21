@@ -1,7 +1,5 @@
 from gamechangerml import DATA_PATH
-from gamechangerml.api.utils import processmanager
 from datetime import datetime
-from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities.test_utils import open_json, save_json, timestamp_filename
 from gamechangerml.src.services import S3Service
@@ -27,9 +25,7 @@ torch.cuda.empty_cache()
 
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
-logging.root.addHandler(logging.StreamHandler(sys.stdout))
-logging.basicConfig(force=True)
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def fix_model_config(model_load_path):
@@ -71,7 +67,6 @@ def format_inputs(train, test, data_dir):
         score = float(test[x]["label"])
         all_data.append([test[x]["query"], test[x]["doc"], score, "test"])
         count += 1
-        processmanager.update_status(processmanager.loading_data, count, total)
 
     df = pd.DataFrame(all_data, columns=["key", "doc", "score", "label"])
     df.drop_duplicates(subset=['doc', 'score', 'label'], inplace=True)
@@ -127,9 +122,6 @@ class STFinetuner():
 
             del data
             gc.collect()
-
-            processmanager.update_status(
-                processmanager.training, 0, 1, thread_id=threading.current_thread().ident)
             sleep(0.1)
             # make formatted training data
             train_samples, df_path = format_inputs(train, test, data_dir)
@@ -145,8 +137,6 @@ class STFinetuner():
             logger.info("Finetuning the encoder model...")
             self.model.fit(train_objectives=[
                            (train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
-            processmanager.update_status(
-                processmanager.training, 1, 0, thread_id=threading.current_thread().ident)
             logger.info("Finished finetuning the encoder model")
             # save model
             self.model.save(self.model_save_path)
