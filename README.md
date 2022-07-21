@@ -84,7 +84,6 @@
 │   │   │   ├── abbreviation.py
 │   │   │   ├── abbreviations_utils.py
 │   │   │   ├── extract_improvement
-│   │   │   ├── generated_fts.py
 │   │   │   ├── keywords
 │   │   │   ├── make_meta.py
 │   │   │   ├── rank_features
@@ -93,7 +92,6 @@
 │   │   │   ├── responsibilities.py
 │   │   │   ├── summary.py
 │   │   │   ├── table.py
-│   │   │   ├── term_extract
 │   │   │   ├── test_hf_ner.py
 │   │   │   ├── tests
 │   │   │   ├── topic_modeling.py
