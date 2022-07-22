@@ -6,7 +6,8 @@ from datetime import date
 from typing import List, Union, Dict, Tuple
 import logging
 
-from gamechangerml.configs.config import (
+from gamechangerml.configs import (
+    SimilarityConfig,
     TrainingConfig,
     ValidationConfig,
 )

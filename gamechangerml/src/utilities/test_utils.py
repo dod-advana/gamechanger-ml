@@ -11,7 +11,7 @@ import torch
 import random
 import logging
 
-from gamechangerml.configs.config import ValidationConfig
+from gamechangerml.configs import ValidationConfig
 
 MATAMO_DIR = ValidationConfig.DATA_ARGS['matamo_dir']
 SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']

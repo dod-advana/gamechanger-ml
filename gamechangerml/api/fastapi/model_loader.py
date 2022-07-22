@@ -39,6 +39,7 @@ from gamechangerml.api.fastapi.settings import (
 )
 from gamechangerml.src.featurization.word_sim import WordSim
 from gamechangerml.src.featurization.topic_modeling import Topics
+from gamechangerml.api.utils import processmanager
 
 # A singleton class that loads all of the models.
 # All variables and methods are static so you
@@ -269,6 +270,7 @@ class ModelLoader:
             ModelLoader.__sentence_encoder = SentenceEncoder(
                 encoder_model_name=EmbedderConfig.BASE_MODEL,
                 transformer_path=transformer_path,
+                processmanager=processmanager,
                 **EmbedderConfig.MODEL_ARGS,
             )
             encoder_model = ModelLoader.__sentence_encoder.encoder_model
@@ -321,6 +323,7 @@ class ModelLoader:
             ModelLoader.__document_compare_encoder = DocCompareSentenceEncoder(
                 encoder_model_name=DocCompareEmbedderConfig.BASE_MODEL,
                 transformer_path=transformer_path,
+                processmanager=processmanager,
                 **DocCompareEmbedderConfig.MODEL_ARGS,
             )
             encoder_model = ModelLoader.__document_compare_encoder.encoder_model
