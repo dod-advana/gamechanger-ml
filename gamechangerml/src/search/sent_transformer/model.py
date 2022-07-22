@@ -41,6 +41,7 @@ class SentenceEncoder(object):
         model=None,
         use_gpu=False,
         bert_tokenize=False,
+        processmanager=None,
     ):
 
         if model:
@@ -53,7 +54,7 @@ class SentenceEncoder(object):
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
-
+        self.processmanager = processmanager
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = use_gpu
         else:
@@ -182,6 +183,23 @@ class SentenceEncoder(object):
             data = MSMarcoData()
             corpus = data.corpus
 
+        if self.processmanager:
+            self.processmanager.update_status(
+                self.processmanager.training,
+                0,
+                1,
+                "building sent index",
+                thread_id=threading.current_thread().ident,
+            )
+        self._index(corpus, index_path)
+        if self.processmanager:
+            self.processmanager.update_status(
+                self.processmanager.training,
+                1,
+                1,
+                "finished building sent index",
+                thread_id=threading.current_thread().ident,
+            )
         self.embedder.save(index_path)
         logger.info(f"Saved embedder to {index_path}")
 

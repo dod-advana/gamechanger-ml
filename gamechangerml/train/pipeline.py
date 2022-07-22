@@ -46,7 +46,7 @@ from gamechangerml.src.utilities.test_utils import (
     collect_evals,
     open_json,
 )
-from gamechangerml.api.utils import processmanager
+from gamechangerml.api.utils import processmanager, status_updater
 from gamechangerml.api.utils.pathselect import get_model_paths
 
 from gamechangerml.src.search.query_expansion.build_ann_cli import build_qe_model as bqe
@@ -290,6 +290,7 @@ class Pipeline:
                 batch_size=batch_size,
                 epochs=epochs,
                 warmup_steps=warmup_steps,
+                processmanager = processmanager
             )
             logger.info("Loaded finetuner class...")
             logger.info(f"Testing only is set to: {testing_only}")
@@ -693,7 +694,10 @@ class Pipeline:
                 os.mkdir(local_dir)
 
             # Train topics
-            topics_model = Topics()
+            status = status_updater.StatusUpdater(
+                process_key=processmanager.topics_creation, nsteps=6,
+            )
+            topics_model = Topics(status=status)
             metadata = topics_model.train_from_files(
                 corpus_dir=corpus_dir, sample_rate=sample_rate, local_dir=local_dir
             )
