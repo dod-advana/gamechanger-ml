@@ -624,7 +624,8 @@ async def reload_models(model_dict: dict, response: Response):
                     )
                 if "doc_compare_sentence" in model_dict:
                     doc_compare_sentence_path = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["doc_compare_sentence"]
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        model_dict["doc_compare_sentence"],
                     )
                     # uses DOC_COMPARE_SENT_INDEX_PATH by default
                     logger.info(
@@ -687,7 +688,8 @@ async def reload_models(model_dict: dict, response: Response):
                     )
                 if "qa_model" in model_dict:
                     qa_model_name = os.path.join(
-                        Config.LOCAL_PACKAGED_MODELS_DIR, model_dict["qa_model"],
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        model_dict["qa_model"],
                     )
 
                     logger.info("Attempting to load QA model")
