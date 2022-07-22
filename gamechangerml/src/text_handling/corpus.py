@@ -87,8 +87,7 @@ class LocalCorpus(object):
             except Exception as e:
                 print(e)
                 print(f"Error with {file_name} in creating local corpus")
-        print
-
+                
     def _get_doc(self, file_name):
         with open(file_name, "r") as f:
             line = f.readline()

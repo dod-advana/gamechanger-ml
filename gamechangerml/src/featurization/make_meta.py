@@ -3,10 +3,9 @@ import pandas as pd
 import logging
 from datetime import date
 from typing import Union
-from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.featurization.rank_features.generate_ft import generate_ft_doc
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
 try:
