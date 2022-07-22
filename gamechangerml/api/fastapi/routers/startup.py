@@ -26,11 +26,9 @@ model_functions = [
     MODELS.initQE,
     MODELS.initQEJBook,
     MODELS.initSentenceSearcher,
-    # MODELS.initSentenceEncoder,
     MODELS.initWordSim,
     MODELS.initTopics,
     MODELS.initRecommender,
-    # MODELS.initDocumentCompareEncoder,
     MODELS.initDocumentCompareSearcher,
 ]
 
@@ -48,7 +46,7 @@ async def load_models():
                 logger.warning(
                     f" ---- WARNING: RAM used is {ram_used}%, which is passed the threshold, will not load any other models"
                 )
-                logger.warning(f"---- Did not load: model_functions[:count]")
+                logger.warning(f"---- Did not load: {model_functions[:count]}")
                 break
         logger.info("LOADED MODELS")
     else:
@@ -86,18 +84,13 @@ async def check_health():
     logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
     logger.info(f"-- Topics model name: {TOPICS_MODEL.value}")
     logger.info(
-        f"-- Doc Compare Similarity model name: {latest_doc_compare_sim.value}")
-    logger.info(
-        f"-- Doc Compare Encoder model name: {latest_doc_compare_encoder.value}"
-    )
-    logger.info(
         f"-- Doc Compare Sentence index name: {DOC_COMPARE_SENT_INDEX_PATH.value}"
     )
     logger.info(f"CPU usage: {cpu_usage}")
     logger.info(f"RAM % used: {ram_used}")
 
 
-def get_hw_usage(threshold: int = 80) -> (float, bool, float):
+def get_hw_usage(threshold: int = 70) -> (float, bool, float):
     surpassed = False
     ram_used = psutil.virtual_memory()[2]
     if ram_used > threshold:
