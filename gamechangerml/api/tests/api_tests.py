@@ -58,6 +58,7 @@ def test_expand_terms():
 def test_expand_terms_proper_fields_qexp():
     test_data = {"termsList": ["artificial intelligence"]}
     resp = http.post(API_URL + "/expandTerms", json=test_data)
+    print(resp)
     data = resp.json()
     if "qexp" in data.keys():
         assert True
@@ -287,7 +288,6 @@ def test_recommender():
 # QA Tests
 
 
-@pytest.fixture
 def send_qa(query, context):
 
     start = time.perf_counter()
@@ -446,32 +446,33 @@ def test_qa_outside_scope():
         scores
     )  # assert is best scoring answer
 
+
 def test_get_current_models():
     expected = ""
-    resp = http.get(
-        API_URL + "/getLoadedModels")
+    resp = http.get(API_URL + "/getLoadedModels")
     resp_data = resp.json()
     assert type(resp_data) == dict
- 
+
+
 def test_get_current_models_not_empty():
     expected = ""
-    resp = http.get(
-        API_URL + "/getLoadedModels")
+    resp = http.get(API_URL + "/getLoadedModels")
     resp_data = resp.json()
     assert len(resp_data.keys()) > 0
- 
+
+
 def test_data_dir():
-    resp = http.get(
-        API_URL + "/getDataList")
+    resp = http.get(API_URL + "/getDataList")
     resp_data = resp.json()
     assert type(resp_data) == dict
+
+
 def test_data_dir_not_empty():
-    resp = http.get(
-        API_URL + "/getDataList")
+    resp = http.get(API_URL + "/getDataList")
     resp_data = resp.json()
-    if resp_data['dirs']:
+    if resp_data["dirs"]:
         assert True
- 
+
 
 # Train Model tests
 

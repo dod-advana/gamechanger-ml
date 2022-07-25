@@ -46,7 +46,8 @@ async def load_models():
                 logger.warning(
                     f" ---- WARNING: RAM used is {ram_used}%, which is passed the threshold, will not load any other models"
                 )
-                logger.warning(f"---- Did not load: {model_functions[:count]}")
+                models_not_loaded = model_functions[:count]
+                logger.warning(f"---- Did not load: {models_not_loaded}")
                 break
         logger.info("LOADED MODELS")
     else:
@@ -90,7 +91,7 @@ async def check_health():
     logger.info(f"RAM % used: {ram_used}")
 
 
-def get_hw_usage(threshold: int = 70) -> (float, bool, float):
+def get_hw_usage(threshold: int = 80) -> (float, bool, float):
     surpassed = False
     ram_used = psutil.virtual_memory()[2]
     if ram_used > threshold:
