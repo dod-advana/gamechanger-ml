@@ -37,7 +37,7 @@ def verify_env_var(value, name):
         raise RuntimeError(f"{name} cannot be None. Verify env setup.")
     
 def run(pull_type, logger):
-    """Main function to run for getInitModels.py()
+    """Main function to run for getInitModels.py.
 
     Args:
         pull_type (str): The name of the model to pull. Or, 
