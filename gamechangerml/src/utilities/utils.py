@@ -27,7 +27,7 @@ def create_model_schema(model_dir, file_prefix):
     num = 0
     while isdir(join(model_dir, file_prefix)):
         file_prefix = f"{file_prefix.split('_')[0]}_{num}"
-        count += 1
+        num += 1
     
     dirpath = join(model_dir, file_prefix)
     makedirs(dirpath)
