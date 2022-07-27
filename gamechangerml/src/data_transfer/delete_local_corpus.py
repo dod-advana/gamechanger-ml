@@ -16,7 +16,7 @@ def delete_local_corpus(corpus_dir="corpus", logger=None):
             configure_logger(). Default is None.
     
     Returns:
-        int: 0 if success, 1 if exception.
+        int: True if success, False if exception.
     """
     if logger is None:
         logger = configure_logger()
@@ -54,6 +54,6 @@ def delete_local_corpus(corpus_dir="corpus", logger=None):
             failed=True,
             thread_id=current_thread().ident,
         )
-        return 1
+        return False
     else:
-        return 0
+        return True
