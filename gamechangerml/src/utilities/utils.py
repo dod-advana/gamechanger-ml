@@ -9,11 +9,24 @@ import threading
 import typing as t
 from pathlib import Path
 from gamechangerml.src.utilities.aws_helper import *
-from gamechangerml.configs.config import S3Config
-from gamechangerml import REPO_PATH
+from gamechangerml.configs import S3Config
+from gamechangerml import REPO_PATH, MODEL_PATH
 from gamechangerml.api.utils import processmanager
 
 logger = logging.getLogger("gamechanger")
+
+
+def get_local_model_prefix(prefix: str, folder: str = MODEL_PATH):
+    """get_local_model_prefix: gets all folders or models with the prefix, i.e. sent_index
+    folder: PATH folder of models
+    prefix: string of model name i.e. sent_index
+    returns: list of names
+    """
+    return [
+        filename
+        for filename in os.listdir(folder)
+        if filename.startswith(prefix) and "tar" not in filename
+    ]
 
 
 def store_model_s3(data, s3_model_dir, filename):
@@ -42,7 +55,7 @@ def save_all_s3(models_path, model_name, s3_model_dir=S3Config.S3_MODELS_DIR):
     logger.debug("Saved {model_name} files to S3")
 
 
-def get_model_s3(filename, s3_model_dir,download_dir=""):
+def get_model_s3(filename, s3_model_dir, download_dir=""):
     """
     read_model_s3 - read from s3 bucket
         params: filename (with ext)
@@ -55,15 +68,19 @@ def get_model_s3(filename, s3_model_dir,download_dir=""):
     try:
         for obj in bucket.objects.filter(Prefix=model_path):
             if obj.size != 0:
-                logger.info(f'Downloading {obj.key}')
-                bucket.download_file(obj.key, os.path.join(download_dir,obj.key.split("/")[-1]))
-                files.append(os.path.join(download_dir,obj.key.split("/")[-1]))
+                logger.info(f"Downloading {obj.key}")
+                bucket.download_file(
+                    obj.key, os.path.join(download_dir, obj.key.split("/")[-1])
+                )
+                files.append(os.path.join(
+                    download_dir, obj.key.split("/")[-1]))
     except RuntimeError as e:
         # print("cant download")
         logger.info(e)
 
         logger.error(filename + " failed to download from S3")
     return files
+
 
 def store_corpus_s3(data, filename):
     """
@@ -141,14 +158,20 @@ def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
             progress = 0
             if total > 0:
                 processmanager.update_status(
-                    processmanager.delete_corpus, progress, total,thread_id=threading.current_thread().ident
+                    processmanager.delete_corpus,
+                    progress,
+                    total,
+                    thread_id=threading.current_thread().ident,
                 )
                 logger.info("Removing existing corpus files.")
                 for f in files:
                     os.remove(os.path.join(output_dir, f))
                     progress += 1
                     processmanager.update_status(
-                        processmanager.delete_corpus, progress, total,thread_id=threading.current_thread().ident
+                        processmanager.delete_corpus,
+                        progress,
+                        total,
+                        thread_id=threading.current_thread().ident,
                     )
         # get the s3.Bucket.objectsCollection of objects that meet the prefix
         filter = bucket.objects.filter(Prefix=f"{s3_corpus_dir}/")
@@ -156,7 +179,10 @@ def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
         completed = 0
         # Initialize Progress
         processmanager.update_status(
-            processmanager.corpus_download, completed, total,thread_id=threading.current_thread().ident
+            processmanager.corpus_download,
+            completed,
+            total,
+            thread_id=threading.current_thread().ident,
         )
         logger.info("Downloading corpus from " + s3_corpus_dir)
         for obj in filter:
@@ -170,15 +196,24 @@ def get_s3_corpus(s3_corpus_dir, output_dir="corpus"):
                     completed += 1
                 # Update Progress
                 processmanager.update_status(
-                    processmanager.corpus_download, completed, total,thread_id=threading.current_thread().ident
+                    processmanager.corpus_download,
+                    completed,
+                    total,
+                    thread_id=threading.current_thread().ident,
                 )
             except RuntimeError:
                 logger.debug(f"Could not retrieve {filename}")
     except Exception as error:
         logger.warning(error)
-        processmanager.update_status(processmanager.delete_corpus, failed=True,thread_id=threading.current_thread().ident)
         processmanager.update_status(
-            processmanager.corpus_download, failed=True,thread_id=threading.current_thread().ident
+            processmanager.delete_corpus,
+            failed=True,
+            thread_id=threading.current_thread().ident,
+        )
+        processmanager.update_status(
+            processmanager.corpus_download,
+            failed=True,
+            thread_id=threading.current_thread().ident,
         )
     return corp
 

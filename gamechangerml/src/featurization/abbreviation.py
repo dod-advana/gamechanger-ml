@@ -132,8 +132,8 @@ def expand_abbreviations_no_context(
     if not isinstance(dic, dict):
         with open(dic, "r") as file:
             dic = json.load(file)
-
     words = list(dic.keys())
+
     words = [
         # characters between ^ and ] are the ones allowed by this regex
         re.sub(pattern=r"""[^0-9a-zA-Z_ '"-]""", repl="", string=x)

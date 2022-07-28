@@ -1,7 +1,11 @@
-from fastapi import FastAPI
 import faulthandler
+from fastapi import FastAPI
 
 from gamechangerml.api.fastapi.routers import startup, search, controls
+from gamechangerml.debug.debug_connector import debug_if_flagged
+
+# start debugger if flagged
+debug_if_flagged()
 
 # start API
 app = FastAPI()

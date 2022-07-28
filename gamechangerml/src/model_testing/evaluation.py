@@ -13,9 +13,6 @@ from gamechangerml.src.search.sent_transformer.model import (
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
-from gamechangerml.configs.config import (
-    ValidationConfig,
-)
 from gamechangerml.src.utilities.text_utils import normalize_answer
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.model_testing.validation_data import (

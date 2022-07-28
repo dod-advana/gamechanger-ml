@@ -48,6 +48,7 @@ def fix_model_config(model_load_path):
     except:
         logger.info("Could not update model config file")
 
+
 def format_inputs(train, test, data_dir):
     """Create input data for dataloader and df with train/test split data"""
 
@@ -71,12 +72,14 @@ def format_inputs(train, test, data_dir):
         processmanager.update_status(processmanager.loading_data, count, total)
 
     df = pd.DataFrame(all_data, columns=["key", "doc", "score", "label"])
-    df.drop_duplicates(subset = ['doc', 'score', 'label'], inplace = True)
+    df.drop_duplicates(subset=['doc', 'score', 'label'], inplace=True)
     logger.info(f"Generated training data CSV of {str(df.shape[0])} rows")
-    df_path = os.path.join(data_dir, timestamp_filename("finetuning_data", ".csv"))
+    df_path = os.path.join(
+        data_dir, timestamp_filename("finetuning_data", ".csv"))
     df.to_csv(df_path)
 
     return train_samples, df_path
+
 
 class STFinetuner():
 
@@ -90,8 +93,9 @@ class STFinetuner():
         self.batch_size = batch_size
         self.epochs = epochs
         self.warmup_steps = warmup_steps
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
+
     def retrain(self, data_dir, testing_only, version):
 
         try:
@@ -102,15 +106,28 @@ class STFinetuner():
             if testing_only:
                 logger.info(
                     "Creating smaller dataset just for testing finetuning.")
-                train_queries = list(set([train[i]['query'] for i in train.keys()]))[:30]
-                test_queries = list(set([test[i]['query'] for i in test.keys()]))[:10]
-                train = {k: train[k] for k in train.keys() if train[k]['query'] in train_queries}
-                test = {k: test[k] for k in test.keys() if test[k]['query'] in test_queries}
-            
+                train_queries = list(
+                    set([
+                        train[i]['query'] for i in train.keys()
+                    ]))[:30]
+                test_queries = list(
+                    set([
+                        test[i]['query'] for i in test.keys()
+                    ]))[:10]
+                train = {
+                    k: train[k] for k in train.keys()
+                    if train[k]['query'] in train_queries
+                }
+                test = {
+                    k: test[k] for k in test.keys()
+                    if test[k]['query'] in test_queries
+                }
+
             del data
             gc.collect()
 
-            processmanager.update_status(processmanager.training, 0, 1,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.training, 0, 1, thread_id=threading.current_thread().ident)
             sleep(0.1)
             # make formatted training data
             train_samples, df_path = format_inputs(train, test, data_dir)
@@ -122,11 +139,12 @@ class STFinetuner():
                 train_samples, shuffle=self.shuffle, batch_size=self.batch_size)
             train_loss = losses.CosineSimilarityLoss(model=self.model)
             #del train_samples
-            #gc.collect()
+            # gc.collect()
             logger.info("Finetuning the encoder model...")
             self.model.fit(train_objectives=[
                            (train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
-            processmanager.update_status(processmanager.training, 1, 0,thread_id=threading.current_thread().ident)
+            processmanager.update_status(
+                processmanager.training, 1, 0, thread_id=threading.current_thread().ident)
             logger.info("Finished finetuning the encoder model")
             # save model
             self.model.save(self.model_save_path)
@@ -150,8 +168,9 @@ class STFinetuner():
             }
 
             save_json("metadata.json", self.model_save_path, metadata)
-            logger.info(f"Finetuned model metadata saved to {self.model_save_path}/metadata.json")
-            
+            logger.info(
+                f"Finetuned model metadata saved to {self.model_save_path}/metadata.json")
+
             # when not testing only, save to S3
             if not testing_only:
                 logger.info("Saving data to S3...")
@@ -166,7 +185,8 @@ class STFinetuner():
 
                 logger.info("Saving model to S3...")
                 dst_path = self.model_save_path + ".tar.gz"
-                utils.create_tgz_from_dir(src_dir=self.model_save_path, dst_archive=dst_path)
+                utils.create_tgz_from_dir(
+                    src_dir=self.model_save_path, dst_archive=dst_path)
                 model_id = self.model_save_path.split('_')[1]
                 logger.info(f"*** Created tgz file and saved to {dst_path}")
 
@@ -178,5 +198,6 @@ class STFinetuner():
         except Exception as e:
             logger.warning("Could not complete finetuning")
             logger.error(e)
-        
+            raise e
+
         return

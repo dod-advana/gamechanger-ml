@@ -4,7 +4,7 @@ from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.redisdriver import CacheVariable, REDIS_HOST, REDIS_PORT
 from gamechangerml import CORPUS_PATH
-from gamechangerml.configs.config import QAConfig
+from gamechangerml.configs import QAConfig
 
 # get environ vars
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
@@ -44,6 +44,7 @@ WORD_SIM_MODEL = CacheVariable("WORD_SIM_MODEL")
 TOPICS_MODEL = CacheVariable("TOPICS_MODEL")
 QA_MODEL = CacheVariable("QA_MODEL")
 DOC_COMPARE_SENT_INDEX_PATH = CacheVariable("DOC_COMPARE_SENT_INDEX_PATH")
+
 
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]
