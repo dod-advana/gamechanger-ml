@@ -24,16 +24,17 @@ MODELS = ModelLoader()
 
 @router.on_event("startup")
 async def load_models():
+
     if MODEL_LOAD_FLAG:
         MODELS.initQA()
         MODELS.initQE()
         MODELS.initQEJBook()
-        MODELS.initSentenceEncoder()
         MODELS.initSentenceSearcher()
+        # MODELS.initSentenceEncoder()
         MODELS.initWordSim()
         MODELS.initTopics()
         MODELS.initRecommender()
-        MODELS.initDocumentCompareEncoder()
+        # MODELS.initDocumentCompareEncoder()
         MODELS.initDocumentCompareSearcher()
         logger.info("AFTER LOAD MODELS")
     else:

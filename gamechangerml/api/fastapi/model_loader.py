@@ -1,13 +1,13 @@
 import os
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs.config import (
+from gamechangerml.configs import (
     QAConfig,
     EmbedderConfig,
+    DocCompareEmbedderConfig,
     SimilarityConfig,
+    DocCompareSimilarityConfig,
     QexpConfig,
     TopicsConfig,
-    DocCompareEmbedderConfig,
-    DocCompareSimilarityConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import (
@@ -168,17 +168,16 @@ class ModelLoader:
         Returns:
         """
         try:
-            if MODEL_LOAD_FLAG:
-                logger.info("Starting QA pipeline")
-                ModelLoader.__qa_model = QAReader(
-                    transformer_path=LOCAL_TRANSFORMERS_DIR.value,
-                    use_gpu=True,
-                    model_name=qa_model_name,
-                    **QAConfig.MODEL_ARGS,
-                )
-                # set cache variable defined in settings.py
-                QA_MODEL.value = ModelLoader.__qa_model.READER_PATH
-                logger.info("Finished loading QA Reader")
+            logger.info("Starting QA pipeline")
+            ModelLoader.__qa_model = QAReader(
+                transformer_path=LOCAL_TRANSFORMERS_DIR.value,
+                use_gpu=True,
+                model_name=qa_model_name,
+                **QAConfig.MODEL_ARGS,
+            )
+            # set cache variable defined in settings.py
+            QA_MODEL.value = ModelLoader.__qa_model.READER_PATH
+            logger.info("Finished loading QA Reader")
         except OSError:
             logger.error(f"Could not load Question Answer Model")
 
@@ -190,11 +189,10 @@ class ModelLoader:
         """
         logger.info(f"Loading Pretrained Vector from {qexp_model_path}")
         try:
-            if MODEL_LOAD_FLAG:
-                ModelLoader.__query_expander = qe.QE(
-                    qexp_model_path, **QexpConfig.MODEL_ARGS["init"]
-                )
-                logger.info("** Loaded Query Expansion Model")
+            ModelLoader.__query_expander = qe.QE(
+                qexp_model_path, **QexpConfig.INIT_ARGS
+            )
+            logger.info("** Loaded Query Expansion Model")
         except Exception as e:
             logger.warning("** Could not load QE model")
             logger.warning(e)
@@ -207,11 +205,10 @@ class ModelLoader:
         """
         logger.info(f"Loading Pretrained Vector from {qexp_jbook_model_path}")
         try:
-            if MODEL_LOAD_FLAG:
-                ModelLoader.__query_expander_jbook = qe.QE(
-                    qexp_jbook_model_path, **QexpConfig.MODEL_ARGS["init"]
-                )
-                logger.info("** Loaded JBOOK Query Expansion Model")
+            ModelLoader.__query_expander_jbook = qe.QE(
+                qexp_jbook_model_path, **QexpConfig.INIT_ARGS
+            )
+            logger.info("** Loaded JBOOK Query Expansion Model")
         except Exception as e:
             logger.warning("** Could not load JBOOK QE model")
             logger.warning(e)
@@ -224,9 +221,8 @@ class ModelLoader:
         """
         logger.info(f"Loading Word Sim Model from {model_path}")
         try:
-            if MODEL_LOAD_FLAG:
-                ModelLoader.__word_sim = WordSim(model_path)
-                logger.info("** Loaded Word Sim Model")
+            ModelLoader.__word_sim = WordSim(model_path)
+            logger.info("** Loaded Word Sim Model")
         except Exception as e:
             logger.warning("** Could not load Word Sim model")
             logger.warning(e)
@@ -240,21 +236,22 @@ class ModelLoader:
         Args:
         Returns:
         """
-        logger.info(f"Loading Sentence Searcher with sent index path: {index_path}")
+        logger.info(
+            f"Loading Sentence Searcher with sent index path: {index_path}")
         try:
-            if MODEL_LOAD_FLAG:
-                ModelLoader.__sentence_searcher = SentenceSearcher(
-                    sim_model_name=SimilarityConfig.BASE_MODEL,
-                    index_path=index_path,
-                    transformer_path=transformer_path,
-                )
 
-                sim_model = ModelLoader.__sentence_searcher.similarity
-                # set cache variable defined in settings.py
-                latest_intel_model_sim.value = sim_model.sim_model
-                logger.info(
-                    f"** Loaded Similarity Model from {sim_model.sim_model} and sent index from {index_path}"
-                )
+            ModelLoader.__sentence_searcher = SentenceSearcher(
+                sim_model_name=SimilarityConfig.BASE_MODEL,
+                index_path=index_path,
+                transformer_path=transformer_path,
+            )
+
+            sim_model = ModelLoader.__sentence_searcher.similarity
+            # set cache variable defined in settings.py
+            latest_intel_model_sim.value = sim_model.sim_model
+            logger.info(
+                f"** Loaded Similarity Model from {sim_model.sim_model} and sent index from {index_path}"
+            )
 
         except Exception as e:
             logger.warning("** Could not load Similarity model")
@@ -269,16 +266,15 @@ class ModelLoader:
         """
         logger.info(f"Loading encoder model")
         try:
-            if MODEL_LOAD_FLAG:
-                ModelLoader.__sentence_encoder = SentenceEncoder(
-                    encoder_model_name=EmbedderConfig.BASE_MODEL,
-                    transformer_path=transformer_path,
-                    **EmbedderConfig.MODEL_ARGS,
-                )
-                encoder_model = ModelLoader.__sentence_encoder.encoder_model
-                # set cache variable defined in settings.py
-                latest_intel_model_encoder.value = encoder_model
-                logger.info(f"** Loaded Encoder Model from {encoder_model}")
+            ModelLoader.__sentence_encoder = SentenceEncoder(
+                encoder_model_name=EmbedderConfig.BASE_MODEL,
+                transformer_path=transformer_path,
+                **EmbedderConfig.MODEL_ARGS,
+            )
+            encoder_model = ModelLoader.__sentence_encoder.encoder_model
+            # set cache variable defined in settings.py
+            latest_intel_model_encoder.value = encoder_model
+            logger.info(f"** Loaded Encoder Model from {encoder_model}")
 
         except Exception as e:
             logger.warning("** Could not load Encoder model")
@@ -291,7 +287,7 @@ class ModelLoader:
     ):
         """
         initDocumentCompareSearcher - loads SentenceSearcher class on start
-        Args: 
+        Args:
         Returns:
         """
         logger.info(
@@ -341,9 +337,9 @@ class ModelLoader:
     @staticmethod
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
-            if MODEL_LOAD_FLAG:
-                ModelLoader.__sparse_reader = sparse.SparseReader(model_name=model_name)
-                logger.info(f"Sparse Reader: {model_name} loaded")
+            ModelLoader.__sparse_reader = sparse.SparseReader(
+                model_name=model_name)
+            logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")
             logger.warning(e)
@@ -355,11 +351,10 @@ class ModelLoader:
         Returns:
         """
         try:
-            if MODEL_LOAD_FLAG:
-                logger.info(f"Loading topic model {model_path}")
-                logger.info(TopicsConfig.DATA_ARGS)
-                ModelLoader.__topic_model = Topics(directory=model_path)
-                logger.info("Finished loading Topic Model")
+            logger.info(f"Loading topic model {model_path}")
+            logger.info(TopicsConfig.DATA_ARGS)
+            ModelLoader.__topic_model = Topics(directory=model_path)
+            logger.info("Finished loading Topic Model")
         except Exception as e:
             logger.warning("** Could not load Topic model")
             logger.warning(e)
@@ -371,9 +366,8 @@ class ModelLoader:
         Returns:
         """
         try:
-            if MODEL_LOAD_FLAG:
-                logger.info("Starting Recommender pipeline")
-                ModelLoader.__recommender = Recommender()
-                logger.info("Finished loading Recommender")
+            logger.info("Starting Recommender pipeline")
+            ModelLoader.__recommender = Recommender()
+            logger.info("Finished loading Recommender")
         except OSError:
             logger.error(f"** Could not load Recommender")
