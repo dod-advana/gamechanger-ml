@@ -27,8 +27,6 @@ from .test_examples import TestSet
 logger = logging.getLogger()
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
 API_URL = f"{GC_ML_HOST}:5000" if "http" in GC_ML_HOST else f"http://{GC_ML_HOST}:5000"
-QA_TIMEOUT = 30
-
 
 retries = Retry(total=10, backoff_factor=1)
 adapter = HTTPAdapter(max_retries=retries)
@@ -95,12 +93,6 @@ def test_getTransformerList():
     trans = len(list(response["transformers"].keys()))
     assert trans > 0
     return verified
-
-
-def getCurrentTrans():
-    resp = http.get(API_URL + "/getCurrentTransformer")
-    return resp.json()
-
 
 ## Sent Index Processing Tests
 
