@@ -9,8 +9,7 @@
 ## Downloading a dataset from our S3
 - cd to `gamechanger`
 - Run `. gamechangerml/setup_env.sh`
-- Run `python gamechangerml/src/search/evaluation/dl_data_cli.py`. A list of available datasets to download should show up. The datasets are formatted "<dataset_name>/v<version_num>"
-- Run `python gamechangerml/src/search/evaluation/dl_data_cli.py -d msmarco_100k -c <path/to/local/dataset/dir>`. By default, it will always download the latest dataset.
+- Run `python gamechangerml/scripts/data_transfer/download_eval_data.py`. A list of available datasets to download should show up. The datasets are formatted "<dataset_name>/v<version_num>"
 - After a few seconds, the dataset will be downloaded to your local directory.
 
 ## Evaluating and Logging to MLFlow

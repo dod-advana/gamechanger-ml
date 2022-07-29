@@ -1,7 +1,6 @@
 import logging
 import os
-from pathlib import Path
-import pytest
+
 
 from gamechangerml.src.search.sent_transformer.model import *
 from gamechangerml.src.utilities.utils import get_local_model_prefix
