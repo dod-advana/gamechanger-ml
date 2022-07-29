@@ -171,68 +171,6 @@ def get_vocab(df):
     return vocab_dict, full_tokens, full_tokens_stop
 
 
-def get_agg_df(df, vocab_dict):
-
-    agg_dfs = [
-        df.groupby("source")
-        .agg({"doc_type": "count"})
-        .reset_index()[["source", "doc_type"]],
-        df.groupby("source").count().reset_index()[["source", "filename"]],
-        df.groupby("source")
-        .agg({"doc_token_gensim": "sum"})
-        .reset_index()[["source", "doc_token_gensim"]],
-        df.groupby("source")
-        .agg({"doc_token_gensim": "mean"})
-        .reset_index()[["source", "doc_token_gensim"]],
-        df.groupby("source")
-        .agg({"doc_token_gensim": "median"})
-        .reset_index()[["source", "doc_token_gensim"]],
-        df.groupby("source")
-        .agg({"doc_token_bert": "median"})
-        .reset_index()[["source", "doc_token_bert"]],
-        df.groupby("source")
-        .agg({"doc_token_gensim": "std"})
-        .reset_index()[["source", "doc_token_gensim"]],
-        df.groupby("source")
-        .agg({"num_par": "sum"})
-        .reset_index()[["source", "num_par"]],
-        df.groupby("source")
-        .agg({"num_par": "mean"})
-        .reset_index()[["source", "num_par"]],
-        df.groupby("source")
-        .agg({"num_par": "median"})
-        .reset_index()[["source", "num_par"]],
-        df.groupby("source")
-        .agg({"num_par": "std"})
-        .reset_index()[["source", "num_par"]],
-    ]
-
-    agg = functools.reduce(
-        lambda left, right: pd.merge(left, right, on="source", how="outer"), agg_dfs
-    )
-
-    agg.columns = [
-        "source",
-        "doc_type",
-        "number_docs",
-        "total_tokens",
-        "mean_tokens",
-        "median_tokens_gensim",
-        "median_tokens_bert",
-        "std_tokens",
-        "total_paragraphs",
-        "mean_paragraphs",
-        "median_paragraphs",
-        "std_paragraphs",
-    ]
-
-    agg["unique_vocab"] = agg["source"].map(vocab_dict)
-
-    agg = agg.sort_values(by="number_docs", ascending=False)
-
-    return agg
-
-
 def join_df(corpus_profile: pd.DataFrame, sources: pd.DataFrame) -> pd.DataFrame:
 
     df = corpus_profile.merge(sources, on="doc_type", how="inner")
@@ -240,19 +178,6 @@ def join_df(corpus_profile: pd.DataFrame, sources: pd.DataFrame) -> pd.DataFrame
 
     return df
 
-
-def format_counts(sub, sources):
-
-    count = sub.groupby("doc_type").count().reset_index()
-    count = count[["doc_type", "filename"]]
-    count = count.merge(sources, on="doc_type")
-    count.sort_values(by="filename", ascending=False, inplace=True)
-    count.rename(
-        columns={"doc_type": "Doc Type", "filename": "# Documents", "source": "Source"},
-        inplace=True,
-    )
-
-    return count[["Doc Type", "Source", "# Documents", "Description"]]
 
 if __name__ == "__main__":
 

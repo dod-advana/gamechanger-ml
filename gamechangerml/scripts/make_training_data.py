@@ -24,7 +24,6 @@ model_path_dict = get_model_paths()
 random.seed(42)
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-SIM_MODEL = SimilarityConfig.BASE_MODEL
 training_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
 tts_ratio = TrainingConfig.TRAIN_TEST_SPLIT_RATIO
 gold_standard_path = os.path.join(
