@@ -82,7 +82,6 @@ class Rake(object):
         self._sentence_delimiters = re.compile(
             "[.!?,;:\t\\\\\"\\(\\)\\'\u2019\u2013]|\\s\\-\\s"
         )
-        self.nb_keywords = 0
 
         logger.debug(self.__repr__())
         logger.info(

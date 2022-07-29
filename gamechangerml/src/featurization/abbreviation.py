@@ -174,28 +174,6 @@ def expand_abbreviations_no_context(
 
     return expansion
 
-
-def add_abbreviations(add, path):
-    """
-    Add abbreviations and their expansions to the current Dictionary
-
-    Args:
-        path: current dictionary location
-        add: dictionary of abbreviations with list of definitions
-    """
-    with open(path, "r") as file:
-        dict = json.load(file)
-
-    for k, v in add.items():
-        if k in dict:
-            dict[k] = list(set(dict[k] + v))
-        else:
-            dict[k] = v
-
-    with open(path, "w") as file:
-        json.dump(dict, file)
-
-
 def find_abbreviations(
     text,
     dic: t.Union[
@@ -295,24 +273,3 @@ def find_abbreviations(
     d = dict((k, v) for k, v in d.items() if v)
     return d
 
-
-def count_abbreviations(directory, output):
-    """
-    Create abbreviation dictionary with the counts for the given directory.
-
-    Args:
-        directory: directory of files to be counted
-        output: name of file to save counts to
-    """
-    counts = defaultdict(lambda: defaultdict(int))
-    for file in os.listdir(directory):
-        with open(directory + "/" + file, "r") as f_in:
-            try:
-                doc_dict = json.load(f_in)
-            except:
-                continue
-        abbs = find_abbreviations(doc_dict["raw_text"])
-        for k, v in abbs.items():
-            counts[k][v[0]] += v[1]
-    with open(output, "w") as file:
-        json.dump(dict(counts), file)

@@ -49,23 +49,6 @@ def is_number(s):
         return False
 
 
-def separate_words(text, splitter):
-    """
-    Tokenizes the text into words for scoring, if the token is not a number.
-
-    :param text: given text
-    :type text: str
-    :param splitter: regular expression used for tokenizing
-    :type splitter: _sre.SRE_Pattern
-    :return: list
-    """
-    return [
-        w.strip()
-        for w in splitter.split(text)
-        if w.strip() and not is_number(w)
-    ]
-
-
 def split_sentences(text, sentence_delimiters):
     """
     Tokenizes text into a list of sentences.
