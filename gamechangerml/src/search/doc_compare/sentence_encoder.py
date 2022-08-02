@@ -7,6 +7,8 @@ from pandas import DataFrame
 from threading import current_thread
 import numpy as np
 import torch
+import logging
+import threading
 
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.text_handling.corpus import LocalCorpus
