@@ -1,16 +1,17 @@
-[2022-07-18 11:44:53,702    INFO], [qe.py:80 - __init__()], loading bert-base-uncased
-[2022-07-18 11:44:56,670    INFO], [qe.py:92 - __init__()], QeMLM 0.3.4
-[2022-07-18 11:44:56,672 WARNING], [qe.py:129 - _expand()], number of tokens 1 < min_tokens 3
-[2022-07-18 11:44:58,593    INFO], [test_ebr_query_json.py:17 - test_query_in()], query : blahblahblah
-[2022-07-18 11:44:58,593    INFO], [sparse.py:67 - __init__()], SparseReader 0.5.1
-[2022-07-18 11:44:58,593    INFO], [sparse.py:68 - __init__()], instantiating base reader
-[2022-07-18 11:44:58,594    INFO], [sparse.py:69 - __init__()],          model_name : distilbert-base-uncased-distilled-squad
-[2022-07-18 11:44:58,594    INFO], [sparse.py:70 - __init__()], context_window_size : 150
-[2022-07-18 11:44:58,594    INFO], [sparse.py:71 - __init__()],            use__gpu : False
-[2022-07-18 11:45:00,853    INFO], [sparse.py:118 - predict()], n questions: 10
-[2022-07-18 11:45:00,853    INFO], [sparse.py:119 - predict()], n docs     : 10
-[2022-07-18 11:45:32,092    INFO], [sparse.py:135 - predict()], Length of answers from transformer nlp: 10
-[2022-07-18 11:45:32,095    INFO], [test_ebr_query_json.py:22 - test_query_in()], {'answers': [{'answer': 'Do S guidelines',
+[2022-08-02 10:28:06,416   ERROR], [ltr.py:93 - read_xg_data()], LTR - Could not read in data for training
+[2022-08-02 10:28:07,468    INFO], [qe.py:80 - __init__()], loading bert-base-uncased
+[2022-08-02 10:28:09,863    INFO], [qe.py:92 - __init__()], QeMLM 0.3.4
+[2022-08-02 10:28:09,864 WARNING], [qe.py:130 - _expand()], number of tokens 1 < min_tokens 3
+[2022-08-02 10:28:12,579    INFO], [test_ebr_query_json.py:17 - test_query_in()], query : blahblahblah
+[2022-08-02 10:28:12,579    INFO], [sparse.py:67 - __init__()], SparseReader 0.5.1
+[2022-08-02 10:28:12,581    INFO], [sparse.py:68 - __init__()], instantiating base reader
+[2022-08-02 10:28:12,582    INFO], [sparse.py:69 - __init__()],          model_name : distilbert-base-uncased-distilled-squad
+[2022-08-02 10:28:12,582    INFO], [sparse.py:70 - __init__()], context_window_size : 150
+[2022-08-02 10:28:12,582    INFO], [sparse.py:71 - __init__()],            use__gpu : False
+[2022-08-02 10:28:14,097    INFO], [sparse.py:118 - predict()], n questions: 10
+[2022-08-02 10:28:14,097    INFO], [sparse.py:119 - predict()], n docs     : 10
+[2022-08-02 10:28:14,621    INFO], [sparse.py:136 - predict()], Length of answers from transformer nlp: 10
+[2022-08-02 10:28:14,623    INFO], [test_ebr_query_json.py:22 - test_query_in()], {'answers': [{'answer': 'Do S guidelines',
               'context': 'f . Administer Do D passport and passport agent '
                          'services and ensure that Do D passport and passport '
                          'agent services are instituted according to Do S '
@@ -140,16 +141,16 @@
                       'time Do D employees or members of the Military Services '
                       '.'}],
  'query': 'blahblahblah'}
-[2022-07-18 11:45:32,109    INFO], [test_ebr_query_json.py:29 - test_bad_query()], query : blahblahblah
-[2022-07-18 11:45:32,109    INFO], [sparse.py:67 - __init__()], SparseReader 0.5.1
-[2022-07-18 11:45:32,109    INFO], [sparse.py:68 - __init__()], instantiating base reader
-[2022-07-18 11:45:32,110    INFO], [sparse.py:69 - __init__()],          model_name : distilbert-base-uncased-distilled-squad
-[2022-07-18 11:45:32,110    INFO], [sparse.py:70 - __init__()], context_window_size : 150
-[2022-07-18 11:45:32,110    INFO], [sparse.py:71 - __init__()],            use__gpu : False
-[2022-07-18 11:45:34,451    INFO], [sparse.py:118 - predict()], n questions: 10
-[2022-07-18 11:45:34,451    INFO], [sparse.py:119 - predict()], n docs     : 10
-[2022-07-18 11:46:05,615    INFO], [sparse.py:135 - predict()], Length of answers from transformer nlp: 10
-[2022-07-18 11:46:05,617    INFO], [test_ebr_query_json.py:34 - test_bad_query()], {'answers': [{'answer': 'Do S guidelines',
+[2022-08-02 10:28:14,633    INFO], [test_ebr_query_json.py:29 - test_bad_query()], query : blahblahblah
+[2022-08-02 10:28:14,633    INFO], [sparse.py:67 - __init__()], SparseReader 0.5.1
+[2022-08-02 10:28:14,633    INFO], [sparse.py:68 - __init__()], instantiating base reader
+[2022-08-02 10:28:14,633    INFO], [sparse.py:69 - __init__()],          model_name : distilbert-base-uncased-distilled-squad
+[2022-08-02 10:28:14,633    INFO], [sparse.py:70 - __init__()], context_window_size : 150
+[2022-08-02 10:28:14,633    INFO], [sparse.py:71 - __init__()],            use__gpu : False
+[2022-08-02 10:28:15,685    INFO], [sparse.py:118 - predict()], n questions: 10
+[2022-08-02 10:28:15,685    INFO], [sparse.py:119 - predict()], n docs     : 10
+[2022-08-02 10:28:16,206    INFO], [sparse.py:136 - predict()], Length of answers from transformer nlp: 10
+[2022-08-02 10:28:16,207    INFO], [test_ebr_query_json.py:34 - test_bad_query()], {'answers': [{'answer': 'Do S guidelines',
               'context': 'f . Administer Do D passport and passport agent '
                          'services and ensure that Do D passport and passport '
                          'agent services are instituted according to Do S '
@@ -279,33 +280,8 @@
                       'time Do D employees or members of the Military Services '
                       '.'}],
  'query': 'blahblahblah'}
-[2022-07-18 11:46:05,647    INFO], [build_qe_model.py:138 - main()], gamechangerml.src.search.query_expansion.build_ann_cli.build_qe_model version 0.7.3
-[2022-07-18 11:46:05,649    INFO], [ltr.py:107 - read_mappings()], LTR - Not production environment, defaulting to local mappings
-[2022-07-18 11:46:05,743 WARNING], [ltr.py:112 - read_mappings()], LTR - Could not request or read mappings
-[2022-07-18 11:46:05,743 WARNING], [ltr.py:113 - read_mappings()], The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
-[2022-07-18 11:46:49,994    INFO], [ltr.py:304 - process_ltr_log()], LTR - processing logs
-[2022-07-18 11:46:51,800    INFO], [SentenceTransformer.py:100 - __init__()], Use pytorch device: cpu
-[2022-07-18 11:46:51,801    INFO], [model.py:162 - index_documents()], Indexing documents from /Users/robertha/Documents/gamechanger-project/gamechanger-ml/gamechangerml/src/search/sent_transformer/tests/test_data
-[2022-07-18 11:46:51,828    INFO], [model.py:174 - index_documents()], 
-Length of batch (in par ids) for indexing : 82
-[2022-07-18 11:46:51,829    INFO], [model.py:77 - _index()], Getting ids, dimensions, stream
-[2022-07-18 11:47:00,457    INFO], [model.py:80 - _index()], Loading embeddings into memory
-[2022-07-18 11:47:00,458    INFO], [model.py:88 - _index()], Removing temporary file
-[2022-07-18 11:47:00,458    INFO], [model.py:90 - _index()], Making dataframe
-[2022-07-18 11:47:00,512    INFO], [model.py:133 - _index()], Saving data.csv to /Users/robertha/Documents/gamechanger-project/gamechanger-ml/gamechangerml/src/search/sent_transformer/tests/test_index/data.csv
-[2022-07-18 11:47:00,515    INFO], [model.py:144 - _index()], Creating embeddings and index
-[2022-07-18 11:47:00,516    INFO], [model.py:146 - _index()], Created embeddings
-[2022-07-18 11:47:00,516    INFO], [model.py:150 - _index()], Built the embeddings index
-[2022-07-18 11:47:00,518    INFO], [model.py:203 - index_documents()], Saved embedder to /Users/robertha/Documents/gamechanger-project/gamechanger-ml/gamechangerml/src/search/sent_transformer/tests/test_index
-[2022-07-18 11:47:00,520    INFO], [model.py:162 - index_documents()], Indexing documents from /Users/robertha/Documents/gamechanger-project/gamechanger-ml/gamechangerml/src/search/sent_transformer/tests/test_data_2
-[2022-07-18 11:47:00,557    INFO], [model.py:174 - index_documents()], 
-Length of batch (in par ids) for indexing : 79
-[2022-07-18 11:47:00,557    INFO], [model.py:77 - _index()], Getting ids, dimensions, stream
-[2022-07-18 11:47:12,116    INFO], [model.py:80 - _index()], Loading embeddings into memory
-[2022-07-18 11:47:12,117    INFO], [model.py:88 - _index()], Removing temporary file
-[2022-07-18 11:47:12,117    INFO], [model.py:90 - _index()], Making dataframe
-[2022-07-18 11:47:12,118    INFO], [model.py:133 - _index()], Saving data.csv to /Users/robertha/Documents/gamechanger-project/gamechanger-ml/gamechangerml/src/search/sent_transformer/tests/test_index/data.csv
-[2022-07-18 11:47:12,120    INFO], [model.py:144 - _index()], Creating embeddings and index
-[2022-07-18 11:47:12,121    INFO], [model.py:146 - _index()], Created embeddings
-[2022-07-18 11:47:12,121    INFO], [model.py:150 - _index()], Built the embeddings index
-[2022-07-18 11:47:12,123    INFO], [model.py:203 - index_documents()], Saved embedder to /Users/robertha/Documents/gamechanger-project/gamechanger-ml/gamechangerml/src/search/sent_transformer/tests/test_index
+[2022-08-02 10:28:16,226    INFO], [build_qe_model.py:137 - main()], gamechangerml.src.search.query_expansion.build_ann_cli.build_qe_model version 0.7.3
+[2022-08-02 10:28:16,228    INFO], [ltr.py:108 - read_mappings()], LTR - Not production environment, defaulting to local mappings
+[2022-08-02 10:28:16,345 WARNING], [ltr.py:112 - read_mappings()], LTR - Could not request or read mappings
+[2022-08-02 10:28:16,345 WARNING], [ltr.py:113 - read_mappings()], The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+[2022-08-02 10:29:09,221    INFO], [ltr.py:304 - process_ltr_log()], LTR - processing logs

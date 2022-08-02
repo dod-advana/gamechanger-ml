@@ -7,12 +7,15 @@ from pandas import DataFrame
 from threading import current_thread
 import numpy as np
 import torch
+import logging
+import threading
 
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.text_handling.corpus import LocalCorpus
-from gamechangerml.api.utils import processmanager
+from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
+logger = logging.getLogger(__name__)
 
 class DocCompareSentenceEncoder:
     """
@@ -35,6 +38,7 @@ class DocCompareSentenceEncoder:
         model=None,
         use_gpu=False,
         bert_tokenize=False,
+        processmanager = None
     ):
 
         if model:
@@ -48,7 +52,7 @@ class DocCompareSentenceEncoder:
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
-
+        self.processmanager = processmanager
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = use_gpu
         else:
@@ -177,23 +181,22 @@ class DocCompareSentenceEncoder:
             )
             data = MSMarcoData()
             corpus = data.corpus
-
-        processmanager.update_status(
-            processmanager.training,
-            0,
-            1,
-            "building sent index",
-            thread_id=current_thread().ident,
-        )
-
+            if  self.processmanager:
+                self.processmanager.update_status(
+                    self.processmanager.training,
+                    0,
+                    1,
+                    "building sent index",
+                    thread_id=threading.current_thread().ident,
+                )
         self._index(corpus, index_path)
-        processmanager.update_status(
-            processmanager.training,
-            1,
-            1,
-            "finished building sent index",
-            thread_id=current_thread().ident,
-        )
-
+        if  self.processmanager:
+            self.processmanager.update_status(
+                self.processmanager.training,
+                1,
+                1,
+                "finished building sent index",
+                thread_id=threading.current_thread().ident,
+            )
         self.embedder.save(index_path)
         logger.info(f"Saved embedder to {index_path}")

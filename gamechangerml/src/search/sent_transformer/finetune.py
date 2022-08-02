@@ -1,12 +1,11 @@
 from gamechangerml import DATA_PATH
-from gamechangerml.api.utils import processmanager
 from datetime import datetime
-from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities.test_utils import open_json, save_json, timestamp_filename
 from gamechangerml.src.services import S3Service
 from gamechangerml.configs import S3Config
 from gamechangerml.scripts.run_evaluation import eval_sent
+
 from time import sleep
 import tqdm
 import threading
@@ -27,9 +26,7 @@ torch.cuda.empty_cache()
 
 S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
-logging.root.addHandler(logging.StreamHandler(sys.stdout))
-logging.basicConfig(force=True)
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def fix_model_config(model_load_path):
@@ -51,7 +48,7 @@ def fix_model_config(model_load_path):
         logger.info("Could not update model config file")
 
 
-def format_inputs(train, test, data_dir):
+def format_inputs(train, test, data_dir, processmanager):
     """Create input data for dataloader and df with train/test split data"""
 
     train_samples = []
@@ -71,7 +68,8 @@ def format_inputs(train, test, data_dir):
         score = float(test[x]["label"])
         all_data.append([test[x]["query"], test[x]["doc"], score, "test"])
         count += 1
-        processmanager.update_status(processmanager.loading_data, count, total)
+        if processmanager:
+            processmanager.update_status(processmanager.loading_data, count, total)
 
     df = pd.DataFrame(all_data, columns=["key", "doc", "score", "label"])
     df.drop_duplicates(subset=['doc', 'score', 'label'], inplace=True)
@@ -85,7 +83,7 @@ def format_inputs(train, test, data_dir):
 
 class STFinetuner():
 
-    def __init__(self, model_load_path, model_save_path, shuffle, batch_size, epochs, warmup_steps):
+    def __init__(self, model_load_path, model_save_path, shuffle, batch_size, epochs, warmup_steps, processmanager = None):
 
         fix_model_config(model_load_path)
         self.model_load_path = model_load_path
@@ -97,6 +95,7 @@ class STFinetuner():
         self.warmup_steps = warmup_steps
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
+        self.processmanager = processmanager
 
     def retrain(self, data_dir, testing_only, version):
 
@@ -127,12 +126,12 @@ class STFinetuner():
 
             del data
             gc.collect()
-
-            processmanager.update_status(
-                processmanager.training, 0, 1, thread_id=threading.current_thread().ident)
+            if self.processmanager:
+                self.processmanager.update_status(
+                    self.processmanager.training, 0, 1, thread_id=threading.current_thread().ident)
             sleep(0.1)
             # make formatted training data
-            train_samples, df_path = format_inputs(train, test, data_dir)
+            train_samples, df_path = format_inputs(train, test, data_dir, self.processmanager)
             len_samples = len(train_samples)
             # finetune on samples
             logger.info("Starting dataloader...")
@@ -145,8 +144,9 @@ class STFinetuner():
             logger.info("Finetuning the encoder model...")
             self.model.fit(train_objectives=[
                            (train_dataloader, train_loss)], epochs=self.epochs, warmup_steps=self.warmup_steps)
-            processmanager.update_status(
-                processmanager.training, 1, 0, thread_id=threading.current_thread().ident)
+            if self.processmanager:
+                self.processmanager.update_status(
+                    self.processmanager.training, 1, 0, thread_id=threading.current_thread().ident)
             logger.info("Finished finetuning the encoder model")
             # save model
             self.model.save(self.model_save_path)

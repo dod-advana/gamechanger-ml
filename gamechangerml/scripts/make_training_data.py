@@ -4,6 +4,8 @@ import os
 import json
 from datetime import date
 from typing import List, Union, Dict, Tuple
+import logging
+
 from gamechangerml.configs import (
     SimilarityConfig,
     TrainingConfig,
@@ -13,12 +15,13 @@ from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.model_testing.query_es import *
 from gamechangerml.src.utilities.text_utils import normalize_query
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 from gensim.utils import simple_preprocess
 from gamechangerml import DATA_PATH, CORPUS_PATH
 from gamechangerml.src.utilities import gc_web_api, es_utils
+
+logger = logging.getLogger(__name__)
 
 model_path_dict = get_model_paths()
 random.seed(42)
