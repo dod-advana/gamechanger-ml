@@ -1,10 +1,12 @@
 from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
-from gamechangerml.configs.config import EmbedderConfig
+from gamechangerml.configs import EmbedderConfig
 from gamechangerml.api.utils.pathselect import get_model_paths
-from gamechangerml.api.utils.logger import logger
 import argparse
 import os
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 model_path_dict = get_model_paths()
 

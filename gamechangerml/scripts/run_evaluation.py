@@ -6,18 +6,19 @@ from gamechangerml.src.model_testing.evaluation import (
     NLIEvaluator,
     QexpEvaluator,
 )
-from gamechangerml.configs.config import (
+from gamechangerml.configs import (
     QAConfig,
     EmbedderConfig,
     SimilarityConfig,
     QexpConfig,
 )
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.api.utils.logger import logger
 import argparse
 import os
+import logging
 from gamechangerml import DATA_PATH, MODEL_PATH
 
+logger = logging.getLogger(__name__)
 
 def eval_qa(model_name, sample_limit, eval_type="original"):
     if eval_type == "original":
@@ -109,8 +110,8 @@ def eval_sim(model_name, sample_limit, eval_type="original"):
 def eval_qe(model_name):
     domainEval = QexpEvaluator(
         qe_model_dir=os.path.join(MODEL_PATH, model_name),
-        **QexpConfig.MODEL_ARGS["init"],
-        **QexpConfig.MODEL_ARGS["expansion"],
+        **QexpConfig.INIT_ARGS,
+        **QexpConfig.EXPANSION_ARGS,
     )
     results = domainEval.results
     logger.info(f"Evals: {str(results)}")
@@ -178,8 +179,8 @@ def _qexp(limit):
     logger.info("\nEvaluating Query Expansion with GC data...")
     QEEval = QexpEvaluator(
         qe_model_dir=os.path.join(MODEL_PATH, "qexp_20201217"),
-        **QexpConfig.MODEL_ARGS["init"],
-        **QexpConfig.MODEL_ARGS["expansion"],
+        **QexpConfig.INIT_ARGS,
+        **QexpConfig.EXPANSION_ARGS,
     )
     logger.info(QEEval.results)
 

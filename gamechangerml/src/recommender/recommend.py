@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 import os
 import csv
+import logging
 import random
 from collections import Counter
 import networkx as nx
 from typing import List, Dict, Union
-from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.user_utils import process_keywords
 from gamechangerml import DATA_PATH, REPO_PATH
 
@@ -19,6 +19,7 @@ corpus_list = [
     "DI-MGMT-82160 Base Document 2017-10-02",
     "OPNAVNOTE 5450.4102",
 ]
+logger = logging.getLogger(__name__)
 
 
 def in_corpus(filename: str, corpus_list: List[str]) -> bool:

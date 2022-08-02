@@ -9,7 +9,7 @@ from operator import itemgetter
 import en_core_web_sm
 from spacy.matcher import Matcher
 
-from gamechangerml.configs.config import DefaultConfig as Config
+from gamechangerml.configs import PathConfig
 import gamechangerml.src.modelzoo.semantic.term_extract.version_ as v
 
 logger = logging.getLogger("gamechanger")
@@ -132,7 +132,7 @@ class TermExtractor(object):
         return ent_counter
 
     @staticmethod
-    def gen_json(data_dir=Config.DATA_DIR):
+    def gen_json(data_dir=PathConfig.DATA_DIR):
         """
         Generator to read and extract the `text` from a JSON file in the
         `data_dir`.
@@ -166,7 +166,7 @@ class TermExtractor(object):
             logger.exception("{}: {}".format(type(e), str(e)), exc_info=True)
             raise
 
-    def generate_counts(self, data_dir=Config.DATA_DIR):
+    def generate_counts(self, data_dir=PathConfig.DATA_DIR):
         """
         Generator to read and process successive JSON files.
 
@@ -192,7 +192,7 @@ class TermExtractor(object):
         ]
         return suggests
 
-    def count_from_dir(self, max_files=None, data_dir=Config.DATA_DIR):
+    def count_from_dir(self, max_files=None, data_dir=PathConfig.DATA_DIR):
         """
         Counts patterns from JSON files in `data_dir`. For each 1-gram
         prefix, a list of suffix, frequency tuples is created.

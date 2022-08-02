@@ -1,22 +1,22 @@
 import os
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
-from gamechangerml.configs.config import (
+from gamechangerml.configs import (
     QAConfig,
     EmbedderConfig,
+    DocCompareEmbedderConfig,
     SimilarityConfig,
+    DocCompareSimilarityConfig,
     QexpConfig,
     TopicsConfig,
-    DocCompareEmbedderConfig,
-    DocCompareSimilarityConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
 from gamechangerml.src.search.sent_transformer.model import (
     SentenceSearcher,
     SentenceEncoder,
 )
-from gamechangerml.src.search.doc_compare.model import (
-    DocCompareSentenceSearcher,
+from gamechangerml.src.search.doc_compare import (
     DocCompareSentenceEncoder,
+    DocCompareSentenceSearcher,
 )
 from gamechangerml.src.recommender.recommend import Recommender
 from gamechangerml.src.search.embed_reader import sparse
@@ -39,6 +39,7 @@ from gamechangerml.api.fastapi.settings import (
 )
 from gamechangerml.src.featurization.word_sim import WordSim
 from gamechangerml.src.featurization.topic_modeling import Topics
+from gamechangerml.api.utils import processmanager
 
 # A singleton class that loads all of the models.
 # All variables and methods are static so you
@@ -190,7 +191,7 @@ class ModelLoader:
         logger.info(f"Loading Pretrained Vector from {qexp_model_path}")
         try:
             ModelLoader.__query_expander = qe.QE(
-                qexp_model_path, **QexpConfig.MODEL_ARGS["init"]
+                qexp_model_path, **QexpConfig.INIT_ARGS
             )
             logger.info("** Loaded Query Expansion Model")
         except Exception as e:
@@ -206,7 +207,7 @@ class ModelLoader:
         logger.info(f"Loading Pretrained Vector from {qexp_jbook_model_path}")
         try:
             ModelLoader.__query_expander_jbook = qe.QE(
-                qexp_jbook_model_path, **QexpConfig.MODEL_ARGS["init"]
+                qexp_jbook_model_path, **QexpConfig.INIT_ARGS
             )
             logger.info("** Loaded JBOOK Query Expansion Model")
         except Exception as e:
@@ -269,6 +270,7 @@ class ModelLoader:
             ModelLoader.__sentence_encoder = SentenceEncoder(
                 encoder_model_name=EmbedderConfig.BASE_MODEL,
                 transformer_path=transformer_path,
+                processmanager=processmanager,
                 **EmbedderConfig.MODEL_ARGS,
             )
             encoder_model = ModelLoader.__sentence_encoder.encoder_model
@@ -298,7 +300,6 @@ class ModelLoader:
                 index_path=index_path,
                 transformer_path=transformer_path,
             )
-
             sim_model = ModelLoader.__document_compare_searcher.similarity
             # set cache variable defined in settings.py
             latest_doc_compare_sim.value = sim_model.sim_model
@@ -322,6 +323,7 @@ class ModelLoader:
             ModelLoader.__document_compare_encoder = DocCompareSentenceEncoder(
                 encoder_model_name=DocCompareEmbedderConfig.BASE_MODEL,
                 transformer_path=transformer_path,
+                processmanager=processmanager,
                 **DocCompareEmbedderConfig.MODEL_ARGS,
             )
             encoder_model = ModelLoader.__document_compare_encoder.encoder_model

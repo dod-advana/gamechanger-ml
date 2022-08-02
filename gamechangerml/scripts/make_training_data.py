@@ -4,22 +4,24 @@ import os
 import json
 from datetime import date
 from typing import List, Union, Dict, Tuple
+import logging
 
-from gamechangerml.configs.config import (
+from gamechangerml.configs import (
+    SimilarityConfig,
     TrainingConfig,
     ValidationConfig,
-    SimilarityConfig,
 )
 from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.model_testing.query_es import *
 from gamechangerml.src.utilities.text_utils import normalize_query
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 from gensim.utils import simple_preprocess
 from gamechangerml import DATA_PATH, CORPUS_PATH
 from gamechangerml.src.utilities import gc_web_api, es_utils
+
+logger = logging.getLogger(__name__)
 
 model_path_dict = get_model_paths()
 random.seed(42)
@@ -27,7 +29,7 @@ random.seed(42)
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SIM_MODEL = SimilarityConfig.BASE_MODEL
 training_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
-tts_ratio = TrainingConfig.DATA_ARGS["train_test_split_ratio"]
+tts_ratio = TrainingConfig.TRAIN_TEST_SPLIT_RATIO
 gold_standard_path = os.path.join(
     "gamechangerml/data/user_data",
     ValidationConfig.DATA_ARGS["retriever_gc"]["gold_standard"],

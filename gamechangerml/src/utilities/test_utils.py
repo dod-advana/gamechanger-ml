@@ -9,15 +9,16 @@ from datetime import date, datetime
 import signal
 import torch
 import random
-import shutil
-from gamechangerml.api.utils.logger import logger
-from gamechangerml.configs.config import ValidationConfig
+import logging
+
+from gamechangerml.configs import ValidationConfig
 
 MATAMO_DIR = ValidationConfig.DATA_ARGS['matamo_dir']
 SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']
 
 MATAMO_TEST_FILE = "gamechangerml/data/test_data/MatamoFeedback_TEST.csv"
 SEARCH_TEST_FILE = "gamechangerml/data/test_data/SearchPDFMapping_TEST.csv"
+logger = logging.getLogger(__name__)
 
 
 # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182

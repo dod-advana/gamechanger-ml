@@ -9,16 +9,16 @@ import pickle
 import torch
 import time
 import threading
+import logging
 
 from gamechangerml.src.text_handling.corpus import LocalCorpus
-from gamechangerml.api.utils import processmanager
-from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
-from gamechangerml.configs.config import EmbedderConfig
+from gamechangerml.configs import EmbedderConfig
 
+logger = logging.getLogger(__name__)
 
 class SentenceEncoder(object):
     """
@@ -41,6 +41,7 @@ class SentenceEncoder(object):
         model=None,
         use_gpu=False,
         bert_tokenize=False,
+        processmanager=None,
     ):
 
         if model:
@@ -53,7 +54,7 @@ class SentenceEncoder(object):
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
-
+        self.processmanager = processmanager
         if use_gpu and torch.cuda.is_available():
             self.use_gpu = use_gpu
         else:
@@ -182,23 +183,23 @@ class SentenceEncoder(object):
             data = MSMarcoData()
             corpus = data.corpus
 
-        processmanager.update_status(
-            processmanager.training,
-            0,
-            1,
-            "building sent index",
-            thread_id=threading.current_thread().ident,
-        )
-
+        if self.processmanager:
+            self.processmanager.update_status(
+                self.processmanager.training,
+                0,
+                1,
+                "building sent index",
+                thread_id=threading.current_thread().ident,
+            )
         self._index(corpus, index_path)
-        processmanager.update_status(
-            processmanager.training,
-            1,
-            1,
-            "finished building sent index",
-            thread_id=threading.current_thread().ident,
-        )
-
+        if self.processmanager:
+            self.processmanager.update_status(
+                self.processmanager.training,
+                1,
+                1,
+                "finished building sent index",
+                thread_id=threading.current_thread().ident,
+            )
         self.embedder.save(index_path)
         logger.info(f"Saved embedder to {index_path}")
 

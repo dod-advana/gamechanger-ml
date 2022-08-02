@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import csv
 import math
+import logging
 from datetime import datetime
 from sentence_transformers import util
 from gamechangerml import REPO_PATH, CORPUS_PATH
@@ -14,9 +15,6 @@ from gamechangerml.src.search.sent_transformer.model import (
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
-from gamechangerml.configs.config import (
-    ValidationConfig,
-)
 from gamechangerml.src.utilities.text_utils import normalize_answer
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.model_testing.validation_data import (
@@ -29,7 +27,6 @@ from gamechangerml.src.model_testing.validation_data import (
 )
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.metrics import *
-from gamechangerml.api.utils.logger import logger
 import signal
 import torch
 
@@ -42,6 +39,7 @@ try:
 except:
     LOCAL_TRANSFORMERS_DIR = "gamechangerml/models/transformers"
 SENT_INDEX_PATH = model_path_dict["sentence"]
+logger = logging.getLogger(__name__)
 
 
 class TransformerEvaluator:
