@@ -15,6 +15,7 @@ from gamechangerml.api.fastapi.settings import (
     latest_intel_model_sent,
     latest_doc_compare_sim,
     latest_doc_compare_encoder,
+    MEMORY_LOAD_LIMIT,
 )
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 import psutil
@@ -91,11 +92,12 @@ async def check_health():
     logger.info(f"RAM % used: {ram_used}")
 
 
-def get_hw_usage(threshold: int = 80) -> (float, bool, float):
+def get_hw_usage(threshold: int = MEMORY_LOAD_LIMIT) -> (float, bool, float):
     surpassed = False
     ram_used = psutil.virtual_memory()[2]
-    if ram_used > threshold:
-        surpassed = True
+    if threshold:
+        if ram_used > threshold:
+            surpassed = True
     cpu_usage = psutil.cpu_percent(4)
     return ram_used, surpassed, cpu_usage
 
