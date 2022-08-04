@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 here = os.path.dirname(os.path.realpath(__file__))
 p = Path(here)
 
-test_data_dir = os.path.join(p.parents[0], "tests", "test_data")
+test_data_dir = os.path.join(p, "test_data")
 model_a_pred_path = os.path.join(test_data_dir, "model_a_predictions.json")
 model_b_pred_path = os.path.join(test_data_dir, "model_b_predictions.json")
 ground_truth_path = os.path.join(test_data_dir, "ground_truth.json")
