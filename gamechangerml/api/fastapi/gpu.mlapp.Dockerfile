@@ -68,7 +68,7 @@ ARG APP_REQUIREMENTS_FILE="./requirements.txt"
 ARG VENV_INSTALL_NO_DEPS="yes"
 COPY "${APP_REQUIREMENTS_FILE}" "/tmp/requirements.txt"
 RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
-    && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
+    && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel pytest \
     && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
 
