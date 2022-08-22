@@ -19,7 +19,7 @@ from gamechangerml.api.fastapi.settings import CACHE_EXPIRE_DAYS
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
-from gamechangerml.configs import QexpConfig
+from gamechangerml.src.configs import QexpConfig
 
 router = APIRouter()
 MODELS = ModelLoader()

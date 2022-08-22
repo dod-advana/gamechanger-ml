@@ -10,7 +10,7 @@ import pandas as pd
 
 from datetime import datetime
 from gamechangerml import DATA_PATH
-from gamechangerml.configs.s3_config import S3Config
+from gamechangerml.src.configs.s3_config import S3Config
 from gamechangerml.src.utilities import utils
 from gamechangerml.src.utilities.es_utils import ESUtils
 from gamechangerml.src.services import S3Service

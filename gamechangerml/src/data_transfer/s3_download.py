@@ -9,7 +9,7 @@ from os.path import join, exists, basename
 
 from gamechangerml.src.services.s3_service import S3Service
 from gamechangerml.src.utilities import configure_logger
-from gamechangerml.configs import S3Config
+from gamechangerml.src.configs import S3Config
 from gamechangerml.api.utils import processmanager
 from gamechangerml.src.data_transfer import delete_local_corpus
 

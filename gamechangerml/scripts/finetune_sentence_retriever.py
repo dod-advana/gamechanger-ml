@@ -1,5 +1,5 @@
 from gamechangerml.src.search.sent_transformer.finetune import STFinetuner
-from gamechangerml.configs import EmbedderConfig
+from gamechangerml.src.configs import EmbedderConfig
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
 import argparse

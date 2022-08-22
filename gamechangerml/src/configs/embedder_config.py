@@ -33,3 +33,5 @@ class EmbedderConfig:
     THRESHOLD_MULTIPLIER = 0.8
 
     SENT_INDEX = "sent_index_20210715"
+
+

@@ -11,7 +11,7 @@ from gamechangerml.src.search.query_expansion.build_ann_cli.build_qe_model impor
     main,
 )
 from gamechangerml.src.search.query_expansion.qe import QE
-from gamechangerml.configs import QexpConfig
+from gamechangerml.src.configs import QexpConfig
 from gamechangerml.api.fastapi.settings import QEXP_MODEL_NAME
 log_fmt = (
     "[%(asctime)s %(levelname)-8s], [%(filename)s:%(lineno)s - "
