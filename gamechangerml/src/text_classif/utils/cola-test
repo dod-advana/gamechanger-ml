@@ -1,17 +1,17 @@
-[2022-08-04 12:52:44,250   ERROR], [ltr.py:93 - read_xg_data()], LTR - Could not read in data for training
-[2022-08-04 12:52:46,174    INFO], [qe.py:80 - __init__()], loading bert-base-uncased
-[2022-08-04 12:52:48,656    INFO], [qe.py:92 - __init__()], QeMLM 0.3.4
-[2022-08-04 12:52:48,656 WARNING], [qe.py:130 - _expand()], number of tokens 1 < min_tokens 3
-[2022-08-04 12:52:52,056    INFO], [test_ebr_query_json.py:17 - test_query_in()], query : blahblahblah
-[2022-08-04 12:52:52,056    INFO], [sparse.py:67 - __init__()], SparseReader 0.5.1
-[2022-08-04 12:52:52,056    INFO], [sparse.py:68 - __init__()], instantiating base reader
-[2022-08-04 12:52:52,056    INFO], [sparse.py:69 - __init__()],          model_name : distilbert-base-uncased-distilled-squad
-[2022-08-04 12:52:52,057    INFO], [sparse.py:70 - __init__()], context_window_size : 150
-[2022-08-04 12:52:52,057    INFO], [sparse.py:71 - __init__()],            use__gpu : False
-[2022-08-04 12:52:53,365    INFO], [sparse.py:118 - predict()], n questions: 10
-[2022-08-04 12:52:53,365    INFO], [sparse.py:119 - predict()], n docs     : 10
-[2022-08-04 12:52:54,097    INFO], [sparse.py:136 - predict()], Length of answers from transformer nlp: 10
-[2022-08-04 12:52:54,100    INFO], [test_ebr_query_json.py:22 - test_query_in()], {'answers': [{'answer': 'Do S guidelines',
+[2022-08-24 16:51:27,660   ERROR], [ltr.py:93 - read_xg_data()], LTR - Could not read in data for training
+[2022-08-24 16:51:28,918    INFO], [qe.py:80 - __init__()], loading bert-base-uncased
+[2022-08-24 16:51:32,333    INFO], [qe.py:92 - __init__()], QeMLM 0.3.4
+[2022-08-24 16:51:32,334 WARNING], [qe.py:130 - _expand()], number of tokens 1 < min_tokens 3
+[2022-08-24 16:51:37,095    INFO], [test_ebr_query_json.py:17 - test_query_in()], query : blahblahblah
+[2022-08-24 16:51:37,095    INFO], [sparse.py:67 - __init__()], SparseReader 0.5.1
+[2022-08-24 16:51:37,095    INFO], [sparse.py:68 - __init__()], instantiating base reader
+[2022-08-24 16:51:37,095    INFO], [sparse.py:69 - __init__()],          model_name : distilbert-base-uncased-distilled-squad
+[2022-08-24 16:51:37,096    INFO], [sparse.py:70 - __init__()], context_window_size : 150
+[2022-08-24 16:51:37,096    INFO], [sparse.py:71 - __init__()],            use__gpu : False
+[2022-08-24 16:51:39,030    INFO], [sparse.py:118 - predict()], n questions: 10
+[2022-08-24 16:51:39,030    INFO], [sparse.py:119 - predict()], n docs     : 10
+[2022-08-24 16:51:40,244    INFO], [sparse.py:136 - predict()], Length of answers from transformer nlp: 10
+[2022-08-24 16:51:40,247    INFO], [test_ebr_query_json.py:22 - test_query_in()], {'answers': [{'answer': 'Do S guidelines',
               'context': 'f . Administer Do D passport and passport agent '
                          'services and ensure that Do D passport and passport '
                          'agent services are instituted according to Do S '
@@ -141,16 +141,16 @@
                       'time Do D employees or members of the Military Services '
                       '.'}],
  'query': 'blahblahblah'}
-[2022-08-04 12:52:54,117    INFO], [test_ebr_query_json.py:29 - test_bad_query()], query : blahblahblah
-[2022-08-04 12:52:54,117    INFO], [sparse.py:67 - __init__()], SparseReader 0.5.1
-[2022-08-04 12:52:54,117    INFO], [sparse.py:68 - __init__()], instantiating base reader
-[2022-08-04 12:52:54,117    INFO], [sparse.py:69 - __init__()],          model_name : distilbert-base-uncased-distilled-squad
-[2022-08-04 12:52:54,117    INFO], [sparse.py:70 - __init__()], context_window_size : 150
-[2022-08-04 12:52:54,118    INFO], [sparse.py:71 - __init__()],            use__gpu : False
-[2022-08-04 12:52:56,317    INFO], [sparse.py:118 - predict()], n questions: 10
-[2022-08-04 12:52:56,317    INFO], [sparse.py:119 - predict()], n docs     : 10
-[2022-08-04 12:52:56,854    INFO], [sparse.py:136 - predict()], Length of answers from transformer nlp: 10
-[2022-08-04 12:52:56,857    INFO], [test_ebr_query_json.py:34 - test_bad_query()], {'answers': [{'answer': 'Do S guidelines',
+[2022-08-24 16:51:40,275    INFO], [test_ebr_query_json.py:29 - test_bad_query()], query : blahblahblah
+[2022-08-24 16:51:40,276    INFO], [sparse.py:67 - __init__()], SparseReader 0.5.1
+[2022-08-24 16:51:40,277    INFO], [sparse.py:68 - __init__()], instantiating base reader
+[2022-08-24 16:51:40,277    INFO], [sparse.py:69 - __init__()],          model_name : distilbert-base-uncased-distilled-squad
+[2022-08-24 16:51:40,277    INFO], [sparse.py:70 - __init__()], context_window_size : 150
+[2022-08-24 16:51:40,277    INFO], [sparse.py:71 - __init__()],            use__gpu : False
+[2022-08-24 16:51:41,492    INFO], [sparse.py:118 - predict()], n questions: 10
+[2022-08-24 16:51:41,492    INFO], [sparse.py:119 - predict()], n docs     : 10
+[2022-08-24 16:51:42,455    INFO], [sparse.py:136 - predict()], Length of answers from transformer nlp: 10
+[2022-08-24 16:51:42,457    INFO], [test_ebr_query_json.py:34 - test_bad_query()], {'answers': [{'answer': 'Do S guidelines',
               'context': 'f . Administer Do D passport and passport agent '
                          'services and ensure that Do D passport and passport '
                          'agent services are instituted according to Do S '
@@ -280,8 +280,8 @@
                       'time Do D employees or members of the Military Services '
                       '.'}],
  'query': 'blahblahblah'}
-[2022-08-04 12:52:56,879    INFO], [build_qe_model.py:137 - main()], gamechangerml.src.search.query_expansion.build_ann_cli.build_qe_model version 0.7.3
-[2022-08-04 12:52:56,881    INFO], [ltr.py:108 - read_mappings()], LTR - Not production environment, defaulting to local mappings
-[2022-08-04 12:52:57,010 WARNING], [ltr.py:112 - read_mappings()], LTR - Could not request or read mappings
-[2022-08-04 12:52:57,010 WARNING], [ltr.py:113 - read_mappings()], The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
-[2022-08-04 12:53:58,753    INFO], [ltr.py:304 - process_ltr_log()], LTR - processing logs
+[2022-08-24 16:51:42,494    INFO], [build_qe_model.py:137 - main()], gamechangerml.src.search.query_expansion.build_ann_cli.build_qe_model version 0.7.3
+[2022-08-24 16:51:42,497    INFO], [ltr.py:108 - read_mappings()], LTR - Not production environment, defaulting to local mappings
+[2022-08-24 16:51:42,666 WARNING], [ltr.py:112 - read_mappings()], LTR - Could not request or read mappings
+[2022-08-24 16:51:42,667 WARNING], [ltr.py:113 - read_mappings()], The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+[2022-08-24 16:52:50,077    INFO], [ltr.py:304 - process_ltr_log()], LTR - processing logs

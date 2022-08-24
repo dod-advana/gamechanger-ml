@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 try:
     here = os.path.dirname(os.path.realpath(__file__))
     p = Path(here)
-    aux_path = os.path.join(p.parents[3], "data", "features")
+    aux_path = os.path.join(p.parents[2], "data", "features")
     word_wt = os.path.join(aux_path, "enwiki_vocab_min200.txt")
     assert os.path.isfile(word_wt)
 except (AttributeError, FileExistsError) as e:
