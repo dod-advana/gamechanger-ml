@@ -13,6 +13,8 @@ from gamechangerml.configs import S3Config
 from gamechangerml.api.utils import processmanager
 from gamechangerml.src.data_transfer import delete_local_corpus
 
+import os
+
 
 def download_corpus_s3(
     s3_corpus_dir,
@@ -87,13 +89,14 @@ def download_corpus_s3(
 
     return corpus
 
+
 def download_eval_data(
     bucket,
     dataset_name,
     save_dir,
     logger,
     version=None,
-    ):
+):
     """Download evaluation data from S3.
 
     Args:
@@ -101,7 +104,7 @@ def download_eval_data(
         dataset_name (str): Name of the dataset to download.
         save_dir (str): Path to local directory to save data.
         logger (logging.Logger)
-        version (int or None, optional): Version number of the dataset to 
+        version (int or None, optional): Version number of the dataset to
             download. If None, downloads the latest version. Default is None.
 
     Returns:
@@ -109,7 +112,7 @@ def download_eval_data(
     """
     save_dir = join(save_dir, dataset_name)
     makedirs(save_dir, exist_ok=True)
-    
+
     # Ensure the dataset name exists
     prefix = S3Config.EVAL_DATA_DIR
     all_datasets = S3Service.get_object_names(bucket, prefix, "dir")
@@ -118,7 +121,7 @@ def download_eval_data(
             f"{dataset_name} does not exist. Available datasets are: {all_datasets}."
         )
         return None
-    
+
     # Get version numbers available for the given dataset name
     prefix = f"{prefix}{dataset_name}/"
     try:
@@ -146,4 +149,3 @@ def download_eval_data(
 
     logger.info(f"Downloading {dataset_name} version {version}...")
     S3Service.download(bucket, prefix + f"v{version}", save_dir, logger)
-
