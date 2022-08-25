@@ -13,5 +13,5 @@ COPY ./ /opt/app-root/src
 WORKDIR /opt/app-root/src
 ENV PYTHONPATH=/opt/app-root/src
 RUN pytest ./gamechangerml/api/tests/api_tests.py
-ENTRYPOINT ["pytest", "./gamechangerml/src/tests/model"]
+ENTRYPOINT ["pytest", "./gamechangerml/src/model_testing"]
 
