@@ -27,7 +27,7 @@ from gamechangerml.api.fastapi.settings import (
 )
 
 
-def check_corpus_diff(
+async def check_corpus_diff(
     s3_corpus_dir: str,
     corpus_dir: str = "gamechangerml/corpus",
     bucket=None,
@@ -54,32 +54,35 @@ def check_corpus_diff(
         logger.info(ratio)
         if ratio < 0.95:
             logger.info("Corpus is out of date - downloading data")
-            try:
-                logger.info("Attempting to download corpus from S3")
-                # grabs the s3 path to the corpus from the post in "corpus"
-                # then passes in where to dowload the corpus locally.
+            await download_corpus(
+                {"corpus": s3_corpus_dir, "output_dir": corpus_dir}, Response
+            )
+            # try:
+            #     logger.info("Attempting to download corpus from S3")
+            #     # grabs the s3 path to the corpus from the post in "corpus"
+            #     # then passes in where to dowload the corpus locally.
 
-                args = {
-                    "s3_corpus_dir": s3_corpus_dir,
-                    "output_dir": CORPUS_DIR,
-                    "logger": logger,
-                }
+            #     args = {
+            #         "s3_corpus_dir": s3_corpus_dir,
+            #         "output_dir": CORPUS_DIR,
+            #         "logger": logger,
+            #     }
 
-                logger.info(args)
-                corpus_thread = MlThread(download_corpus_s3, args)
-                corpus_thread.start()
-                processmanager.running_threads[corpus_thread.ident] = corpus_thread
-                processmanager.update_status(
-                    processmanager.corpus_download, 0, 1, thread_id=corpus_thread.ident
-                )
-            except Exception as e:
-                logger.exception("Could not get corpus from S3")
-                processmanager.update_status(
-                    processmanager.corpus_download,
-                    failed=True,
-                    message=e,
-                    thread_id=corpus_thread.ident,
-                )
+            #     logger.info(args)
+            #     corpus_thread = MlThread(download_corpus_s3, args)
+            #     corpus_thread.start()
+            #     processmanager.running_threads[corpus_thread.ident] = corpus_thread
+            #     processmanager.update_status(
+            #         processmanager.corpus_download, 0, 1, thread_id=corpus_thread.ident
+            #     )
+            # except Exception as e:
+            #     logger.exception("Could not get corpus from S3")
+            #     processmanager.update_status(
+            #         processmanager.corpus_download,
+            #         failed=True,
+            #         message=e,
+            #         thread_id=corpus_thread.ident,
+            #     )
     except Exception:
         logger.exception("Failed to read corpus in S3")
         processmanager.update_status(

@@ -106,9 +106,10 @@ async def check_corpus_health():
         "s3_corpus_dir": "bronze/gamechanger/json",
         "logger": logger,
     }
-    corpus_thread = MlThread(check_corpus_diff, args)
-    corpus_thread.start()
-    processmanager.running_threads[corpus_thread.ident] = corpus_thread
+    await check_corpus_diff(**args)
+    # corpus_thread = MlThread(check_corpus_diff, args)
+    # corpus_thread.start()
+    # processmanager.running_threads[corpus_thread.ident] = corpus_thread
 
 
 def get_hw_usage(threshold: int = MEMORY_LOAD_LIMIT) -> Tuple[float, bool, float]:
