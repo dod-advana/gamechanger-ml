@@ -11,6 +11,7 @@ from gamechangerml.src.services import S3Service
 
 logger = logging.getLogger("gamechanger")
 
+
 def get_local_model_prefix(prefix: str, folder: str = MODEL_PATH):
     """get_local_model_prefix: gets all folders or models with the prefix, i.e. sent_index
     folder: PATH folder of models
@@ -23,19 +24,23 @@ def get_local_model_prefix(prefix: str, folder: str = MODEL_PATH):
         if filename.startswith(prefix) and "tar" not in filename
     ]
 
+
 def create_model_schema(model_dir, file_prefix):
     num = 0
     while isdir(join(model_dir, file_prefix)):
         file_prefix = f"{file_prefix.split('_')[0]}_{num}"
         num += 1
-    
+
     dirpath = join(model_dir, file_prefix)
     makedirs(dirpath)
 
     logger.info(f"Created directory: {dirpath}.")
+    return dirpath
 
 
-def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=False, bucket=None):
+def get_transformers(
+    model_path="transformers_v4/transformers.tar", overwrite=False, bucket=None
+):
     if bucket is None:
         bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
 
@@ -49,9 +54,7 @@ def get_transformers(model_path="transformers_v4/transformers.tar", overwrite=Fa
                 return
         for obj in bucket.objects.filter(Prefix=model_path):
             print(obj)
-            bucket.download_file(
-                obj.key, join(models_path, obj.key.split("/")[-1])
-            )
+            bucket.download_file(obj.key, join(models_path, obj.key.split("/")[-1]))
             compressed = obj.key.split("/")[-1]
         cache_path = join(models_path, compressed)
         print("uncompressing: " + cache_path)
@@ -83,9 +86,7 @@ def get_sentence_index(model_path="sent_index/", overwrite=False, bucket=None):
                 return
         for obj in bucket.objects.filter(Prefix=model_path):
             print(obj)
-            bucket.download_file(
-                obj.key, join(models_path, obj.key.split("/")[-1])
-            )
+            bucket.download_file(obj.key, join(models_path, obj.key.split("/")[-1]))
             compressed = obj.key.split("/")[-1]
         cache_path = join(models_path, compressed)
         print("uncompressing: " + cache_path)

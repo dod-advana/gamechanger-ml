@@ -24,7 +24,7 @@ ignore_files = ["._.DS_Store", ".DS_Store", "index"]
 
 CORPUS_DIR = CORPUS_PATH
 S3_CORPUS_PATH = os.environ.get("S3_CORPUS_PATH")
-
+CORPUS_EVENT_TRIGGER = 0.95
 # Redis Cache Variables
 latest_intel_model_sent = CacheVariable("latest_intel_model_sent", True)
 latest_intel_model_sim = CacheVariable(
@@ -32,8 +32,7 @@ latest_intel_model_sim = CacheVariable(
 )
 latest_intel_model_encoder = CacheVariable("latest encoder model", True)
 latest_intel_model_trans = CacheVariable("latest_intel_model_trans")
-latest_doc_compare_encoder = CacheVariable(
-    "latest doc compare encoder model", True)
+latest_doc_compare_encoder = CacheVariable("latest doc compare encoder model", True)
 latest_doc_compare_sim = CacheVariable(
     "latest doc compare searcher (similarity model + sent index)", True
 )
@@ -72,7 +71,6 @@ logger.info(f"API AVAILABLE TRANSFORMERS are: {t_list}")
 # validate correct configurations
 logger.info(f"API TRANSFORMERS DIRECTORY is: {LOCAL_TRANSFORMERS_DIR.value}")
 logger.info(f"API INDEX PATH is: {SENT_INDEX_PATH.value}")
-logger.info(
-    f"API DOC COMPARE INDEX PATH is: {DOC_COMPARE_SENT_INDEX_PATH.value}")
+logger.info(f"API DOC COMPARE INDEX PATH is: {DOC_COMPARE_SENT_INDEX_PATH.value}")
 logger.info(f"API REDIS HOST is: {REDIS_HOST}")
 logger.info(f"API REDIS PORT is: {REDIS_PORT}")
