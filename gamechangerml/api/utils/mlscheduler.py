@@ -78,7 +78,7 @@ async def corpus_update_event(
             corpus_thread.start()
             processmanager.running_threads[corpus_thread.ident] = corpus_thread
             processmanager.update_status(
-                processmanager.corpus_download, 0, 1, thread_id=corpus_thread.ident
+                processmanager.ml_change_event, 0, 1, thread_id=corpus_thread.ident
             )
 
     except Exception:
