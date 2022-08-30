@@ -18,6 +18,7 @@ from gamechangerml.api.fastapi.settings import (
     latest_doc_compare_sim,
     latest_doc_compare_encoder,
     MEMORY_LOAD_LIMIT,
+    CORPUS_EVENT_TRIGGER,
 )
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.api.utils.mlscheduler import corpus_update_event
@@ -101,12 +102,13 @@ async def check_health():
 @router.on_event("startup")
 @repeat_every(seconds=60 * 60, wait_first=False)
 async def corpus_event_trigger():
-    logger.info("Checking corpus diff")
-    args = {
-        "s3_corpus_dir": "bronze/gamechanger/json",
-        "logger": logger,
-    }
-    await corpus_update_event(**args)
+    if CORPUS_EVENT_TRIGGER:
+        logger.info("Checking Corpus Staleness")
+        args = {
+            "s3_corpus_dir": "bronze/gamechanger/json",
+            "logger": logger,
+        }
+        await corpus_update_event(**args)
 
 
 def get_hw_usage(threshold: int = MEMORY_LOAD_LIMIT) -> Tuple[float, bool, float]:

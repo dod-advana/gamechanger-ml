@@ -26,7 +26,7 @@ from fastapi import APIRouter, Response
 from gamechangerml.api.fastapi.settings import (
     CORPUS_DIR,
     S3_CORPUS_PATH,
-    CORPUS_EVENT_TRIGGER,
+    CORPUS_EVENT_TRIGGER_VAL,
 )
 
 
@@ -52,12 +52,10 @@ async def corpus_update_event(
         local_corpus_size = len(os.listdir(corpus_dir))
 
         ratio = local_corpus_size / total
-        if ratio < CORPUS_EVENT_TRIGGER:
+        if ratio < CORPUS_EVENT_TRIGGER_VAL:
             logger.info("ML EVENT - Corpus is stale - downloading data")
-            # trigger download corpus
+            # trigger a thread to update corpus and build selected models
             logger.info("Attempting to download corpus from S3")
-            # grabs the s3 path to the corpus from the post in "corpus"
-            # then passes in where to dowload the corpus locally.
 
             thread_args = {
                 "args": {

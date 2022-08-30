@@ -24,7 +24,9 @@ ignore_files = ["._.DS_Store", ".DS_Store", "index"]
 
 CORPUS_DIR = CORPUS_PATH
 S3_CORPUS_PATH = os.environ.get("S3_CORPUS_PATH")
-CORPUS_EVENT_TRIGGER = 0.95
+CORPUS_EVENT_TRIGGER_VAL = 0.95
+CORPUS_EVENT_TRIGGER = bool(os.environ.get("CORPUS_EVENT_TRIGGER", default=True))
+
 # Redis Cache Variables
 latest_intel_model_sent = CacheVariable("latest_intel_model_sent", True)
 latest_intel_model_sim = CacheVariable(
