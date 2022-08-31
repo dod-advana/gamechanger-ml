@@ -42,7 +42,7 @@ async def corpus_update_event(
     if bucket is None:
         bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
 
-    process = processmanager.corpus_download
+    process = processmanager.ml_change_event
 
     try:
         logger.info("ML EVENT - Checking corpus staleness")
@@ -74,11 +74,11 @@ async def corpus_update_event(
             }
 
             logger.info(thread_args)
-            corpus_thread = MlThread(run_update, thread_args)
-            corpus_thread.start()
-            processmanager.running_threads[corpus_thread.ident] = corpus_thread
+            ml_event_thread = MlThread(run_update, thread_args)
+            ml_event_thread.start()
+            processmanager.running_threads[ml_event_thread.ident] = ml_event_thread
             processmanager.update_status(
-                processmanager.ml_change_event, 0, 1, thread_id=corpus_thread.ident
+                processmanager.ml_change_event, 0, 1, thread_id=ml_event_thread.ident
             )
 
     except Exception:
@@ -95,3 +95,9 @@ def run_update(args):
     logger.info("Attempting to build Qexp")
     model_dict = args["qexp_model_dict"]
     train_qexp(model_dict)
+    processmanager.update_status(
+        processmanager.ml_change_event,
+        1,
+        1,
+        thread_id=current_thread().ident,
+    )

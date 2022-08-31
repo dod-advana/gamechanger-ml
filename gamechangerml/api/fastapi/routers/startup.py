@@ -24,7 +24,7 @@ from gamechangerml.api.fastapi.model_loader import ModelLoader
 from gamechangerml.api.utils.mlscheduler import corpus_update_event
 from gamechangerml.api.utils.threaddriver import MlThread
 from gamechangerml.api.utils import processmanager
-
+from gamechangerml.api.fastapi.routers.controls import get_process_status
 import psutil
 
 router = APIRouter()
@@ -109,6 +109,7 @@ async def corpus_event_trigger():
             "logger": logger,
         }
         await corpus_update_event(**args)
+        await get_process_status()
 
 
 def get_hw_usage(threshold: int = MEMORY_LOAD_LIMIT) -> Tuple[float, bool, float]:
