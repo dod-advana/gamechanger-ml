@@ -15,6 +15,7 @@ from gamechangerml.api.fastapi.routers.controls import (
     download_corpus,
     train_model,
     train_qexp,
+    train_sentence,
 )
 from gamechangerml.api.utils.threaddriver import MlThread
 import os
@@ -70,6 +71,11 @@ async def corpus_update_event(
                         "upload": True,
                         "version": datetime.datetime.today().strftime("%Y%m%d"),
                     },
+                    "sent_model_dict": {
+                        "build_type": "sentence",
+                        "upload": True,
+                        "version": datetime.datetime.today().strftime("%Y%m%d"),
+                    },
                 }
             }
 
@@ -78,7 +84,7 @@ async def corpus_update_event(
             ml_event_thread.start()
             processmanager.running_threads[ml_event_thread.ident] = ml_event_thread
             processmanager.update_status(
-                processmanager.ml_change_event, 0, 1, thread_id=ml_event_thread.ident
+                processmanager.ml_change_event, 0, 3, thread_id=ml_event_thread.ident
             )
 
     except Exception:
@@ -92,12 +98,28 @@ def run_update(args):
     logger = args["logger"]
     logger.info("Attempting to download corpus from S3")
     download_corpus_s3(**args["s3_args"])
+    processmanager.update_status(
+        processmanager.ml_change_event,
+        1,
+        3,
+        thread_id=current_thread().ident,
+    )
     logger.info("Attempting to build Qexp")
     model_dict = args["qexp_model_dict"]
     train_qexp(model_dict)
     processmanager.update_status(
         processmanager.ml_change_event,
-        1,
-        1,
+        2,
+        3,
+        thread_id=current_thread().ident,
+    )
+    logger.info("Attempting to build Sentence Index")
+    model_dict = args["sent_model_dict"]
+
+    train_sentence(model_dict)
+    processmanager.update_status(
+        processmanager.ml_change_event,
+        3,
+        3,
         thread_id=current_thread().ident,
     )
