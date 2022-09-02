@@ -90,7 +90,9 @@ async def corpus_update_event(
                         "build_type": "sentence",
                         "upload": True,
                         "version": datetime.today().strftime("%Y%m%d"),
-                        "encoder_model": str(latest_intel_model_encoder.value),
+                        "encoder_model": str(latest_intel_model_encoder.value).split(
+                            "/"
+                        )[-1],
                         "gpu": True,
                     },
                 }
