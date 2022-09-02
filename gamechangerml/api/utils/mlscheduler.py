@@ -7,6 +7,7 @@ from threading import current_thread
 from os import makedirs
 from os.path import join, exists, basename
 from datetime import datetime, timezone
+from tkinter import TRUE
 from gamechangerml.src.services.s3_service import S3Service
 from gamechangerml.src.utilities import configure_logger
 from gamechangerml.configs import S3Config
@@ -28,6 +29,7 @@ from gamechangerml.api.fastapi.settings import (
     CORPUS_DIR,
     S3_CORPUS_PATH,
     CORPUS_EVENT_TRIGGER_VAL,
+    latest_intel_model_encoder,
 )
 
 
@@ -91,6 +93,8 @@ async def corpus_update_event(
                         "build_type": "sentence",
                         "upload": True,
                         "version": datetime.today().strftime("%Y%m%d"),
+                        "encoder_model": latest_intel_model_encoder,
+                        "gpu": True,
                     },
                 }
             }
