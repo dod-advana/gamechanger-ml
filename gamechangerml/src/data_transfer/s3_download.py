@@ -51,6 +51,8 @@ def download_corpus_s3(
         success = delete_local_corpus(output_dir, logger)
         if not success:
             return []
+    if not os.path.isdir(output_dir):
+        os.mkdir(output_dir)
 
     corpus = []
     process = processmanager.corpus_download

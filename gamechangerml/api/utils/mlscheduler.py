@@ -6,7 +6,7 @@ Also see gamechangerml.src.services.s3_service.py
 from threading import current_thread
 from os import makedirs
 from os.path import join, exists, basename
-import datetime
+from datetime import datetime, timezone
 from gamechangerml.src.services.s3_service import S3Service
 from gamechangerml.src.utilities import configure_logger
 from gamechangerml.configs import S3Config
@@ -49,11 +49,27 @@ async def corpus_update_event(
         logger.info("ML EVENT - Checking corpus staleness")
 
         s3_filter = bucket.objects.filter(Prefix=f"{s3_corpus_dir}/")
-        total = len(list(s3_filter))
-        local_corpus_size = len(os.listdir(corpus_dir))
+        last_mod_list = []
+        if os.path.isdir(corpus_dir):
+            local_corpus_size = len(os.listdir(corpus_dir))
+            if local_corpus_size > 0:
+                local_corpus_last_updated = datetime.fromtimestamp(
+                    os.stat(corpus_dir).st_mtime
+                ).astimezone(timezone.utc)
+                for obj in s3_filter:
+                    last_mod_list.append(obj.last_modified)
 
-        ratio = local_corpus_size / total
-        if ratio < CORPUS_EVENT_TRIGGER_VAL:
+                last_mod_list = [
+                    dates
+                    for dates in last_mod_list
+                    if dates > local_corpus_last_updated
+                ]
+                ratio = len(last_mod_list) / local_corpus_size
+            else:
+                ratio = 1
+        else:
+            ratio = 1
+        if ratio > CORPUS_EVENT_TRIGGER_VAL:
             logger.info("ML EVENT - Corpus is stale - downloading data")
             # trigger a thread to update corpus and build selected models
             logger.info("Attempting to download corpus from S3")
@@ -69,12 +85,12 @@ async def corpus_update_event(
                     "qexp_model_dict": {
                         "build_type": "qexp",
                         "upload": True,
-                        "version": datetime.datetime.today().strftime("%Y%m%d"),
+                        "version": datetime.today().strftime("%Y%m%d"),
                     },
                     "sent_model_dict": {
                         "build_type": "sentence",
                         "upload": True,
-                        "version": datetime.datetime.today().strftime("%Y%m%d"),
+                        "version": datetime.today().strftime("%Y%m%d"),
                     },
                 }
             }
