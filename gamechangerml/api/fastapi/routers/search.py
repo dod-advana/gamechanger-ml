@@ -106,7 +106,7 @@ async def trans_sentence_infer(
     results = {}
     try:
         query_text = body["text"]
-        cache = CacheVariable(query_text, True)
+        cache = CacheVariable(f'search: {query_text}', True)
         cached_value = cache.get_value()
         if cached_value:
             logger.info("Searched was found in cache")
