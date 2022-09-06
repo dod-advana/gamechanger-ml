@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from fastapi_utils.tasks import repeat_every
 import os
+from typing import Tuple
+
 from gamechangerml.api.fastapi.settings import (
     DOC_COMPARE_SENT_INDEX_PATH,
     logger,
@@ -16,8 +18,13 @@ from gamechangerml.api.fastapi.settings import (
     latest_doc_compare_sim,
     latest_doc_compare_encoder,
     MEMORY_LOAD_LIMIT,
+    CORPUS_EVENT_TRIGGER,
 )
 from gamechangerml.api.fastapi.model_loader import ModelLoader
+from gamechangerml.api.utils.mlscheduler import corpus_update_event
+from gamechangerml.api.utils.threaddriver import MlThread
+from gamechangerml.api.utils import processmanager
+from gamechangerml.api.fastapi.routers.controls import get_process_status
 import psutil
 
 router = APIRouter()
@@ -92,7 +99,20 @@ async def check_health():
     logger.info(f"RAM % used: {ram_used}")
 
 
-def get_hw_usage(threshold: int = MEMORY_LOAD_LIMIT) -> (float, bool, float):
+@router.on_event("startup")
+@repeat_every(seconds=60 * 60, wait_first=False)
+async def corpus_event_trigger():
+    if CORPUS_EVENT_TRIGGER:
+        logger.info("Checking Corpus Staleness")
+        args = {
+            "s3_corpus_dir": "bronze/gamechanger/json",
+            "logger": logger,
+        }
+        await corpus_update_event(**args)
+        await get_process_status()
+
+
+def get_hw_usage(threshold: int = MEMORY_LOAD_LIMIT) -> Tuple[float, bool, float]:
     surpassed = False
     ram_used = psutil.virtual_memory()[2]
     if threshold:

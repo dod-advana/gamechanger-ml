@@ -772,10 +772,9 @@ async def reload_models(model_dict: dict, response: Response):
 
 @router.post("/downloadCorpus", status_code=200)
 async def download_corpus(corpus_dict: dict, response: Response):
-    """load_latest_models - endpoint for updating the transformer model
+    """download_corpus - endpoint for downloading corpus
     Args:
-        model_dict: dict; {"sentence": "bert...",
-            "qexp": "bert...", "transformer": "bert..."}
+        corpus_dict: dict; {"corpus": "bronze/gamechanger/json"}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
