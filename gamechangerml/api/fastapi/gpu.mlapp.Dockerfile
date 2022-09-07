@@ -35,6 +35,9 @@ RUN dnf install -y \
         cryptsetup-libs \
         cyrus-sasl-lib \
         gzip \
+        systemd \
+        zlib-devel \
+        kernel-headers \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
