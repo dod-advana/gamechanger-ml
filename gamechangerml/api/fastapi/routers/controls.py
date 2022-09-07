@@ -7,6 +7,7 @@ import tarfile
 import shutil
 import threading
 import pandas as pd
+import redis
 
 from datetime import datetime
 from gamechangerml import DATA_PATH
@@ -37,6 +38,8 @@ from gamechangerml.api.fastapi.settings import (
 )
 from gamechangerml.src.data_transfer import download_corpus_s3
 from gamechangerml.api.utils.threaddriver import MlThread
+from gamechangerml.api.utils.redisdriver import RedisPool
+
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
 from gamechangerml.api.fastapi.model_loader import ModelLoader
@@ -85,6 +88,22 @@ async def get_process_status():
         "completed_process": processmanager.COMPLETED_PROCESS.value,
     }
 
+@router.post("/clearCache")
+async def get_process_status(body: dict, response: Response):
+    _connection = redis.Redis(connection_pool=RedisPool().getPool())
+    
+    if body['clear']:
+        for key in body['clear']:
+            _connection.delete(f'search: {key}')
+    else:
+        for key in _connection.scan_iter("search:*"):
+            # delete the key
+            _connection.delete(key)
+
+@router.get("/getCache")
+async def get_process_status():
+    _connection = redis.Redis(connection_pool=RedisPool().getPool())    
+    return [key.split('search: ')[1] for key in list(_connection.scan_iter("search:*"))]
 
 @router.get("/getDataList")
 def get_downloaded_data_list():
@@ -753,10 +772,9 @@ async def reload_models(model_dict: dict, response: Response):
 
 @router.post("/downloadCorpus", status_code=200)
 async def download_corpus(corpus_dict: dict, response: Response):
-    """load_latest_models - endpoint for updating the transformer model
+    """download_corpus - endpoint for downloading corpus
     Args:
-        model_dict: dict; {"sentence": "bert...",
-            "qexp": "bert...", "transformer": "bert..."}
+        corpus_dict: dict; {"corpus": "bronze/gamechanger/json"}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
     """
