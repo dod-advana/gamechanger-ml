@@ -75,7 +75,6 @@ RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
 
-RUN "${APP_VENV}/bin/python" -m pip uninstall -y docker
 # thou shall not root
 USER $APP_UID:$APP_GID
 
