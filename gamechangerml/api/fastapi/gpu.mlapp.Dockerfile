@@ -37,7 +37,7 @@ RUN dnf install -y \
         gzip \
         systemd \
         zlib-devel \
-        kernel-headers \
+        docker \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
