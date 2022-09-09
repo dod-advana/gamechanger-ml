@@ -1,6 +1,6 @@
 annoy~=1.17.0
 bert-extractive-summarizer~=0.5.2
-boto3~=1.15.18
+boto3==1.24.67
 click==7.1.2
 elasticsearch==7.13.4
 #en-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.0.0/en_core_web_lg-3.0.0.tar.gz
@@ -35,7 +35,7 @@ torch~=1.7.1
 tqdm~=4.62.3
 transformers~=4.11.3
 txtai~=2.0.0
-urllib3~=1.22
+urllib3~=1.26.0
 uvicorn~=0.13.4
 uvloop~=0.14.0
 wikipedia~=1.4.0
