@@ -89,7 +89,7 @@ async def get_process_status():
     }
 
 @router.post("/clearCache")
-async def get_process_status(body: dict, response: Response):
+async def clear_cache(body: dict, response: Response):
     _connection = redis.Redis(connection_pool=RedisPool().getPool())
     
     if body['clear']:
@@ -101,7 +101,7 @@ async def get_process_status(body: dict, response: Response):
             _connection.delete(key)
 
 @router.get("/getCache")
-async def get_process_status():
+async def get_cache():
     _connection = redis.Redis(connection_pool=RedisPool().getPool())    
     return [key.split('search: ')[1] for key in list(_connection.scan_iter("search:*"))]
 
