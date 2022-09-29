@@ -108,8 +108,7 @@ async def corpus_event_trigger():
             "s3_corpus_dir": "bronze/gamechanger/json",
             "logger": logger,
         }
-        await corpus_update_event(**args)
-        await get_process_status()
+        # await corpus_update_event(**args)
 
 
 def get_hw_usage(threshold: int = MEMORY_LOAD_LIMIT) -> Tuple[float, bool, float]:
