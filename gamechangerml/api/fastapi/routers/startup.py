@@ -99,16 +99,16 @@ async def check_health():
     logger.info(f"RAM % used: {ram_used}")
 
 
-@router.on_event("startup")
-@repeat_every(seconds=60 * 60, wait_first=False)
-async def corpus_event_trigger():
-    if CORPUS_EVENT_TRIGGER:
-        logger.info("Checking Corpus Staleness")
-        args = {
-            "s3_corpus_dir": "bronze/gamechanger/json",
-            "logger": logger,
-        }
-        # await corpus_update_event(**args)
+# @router.on_event("startup")
+# @repeat_every(seconds=60 * 60, wait_first=False)
+# async def corpus_event_trigger():
+#     if CORPUS_EVENT_TRIGGER:
+#         logger.info("Checking Corpus Staleness")
+#         args = {
+#             "s3_corpus_dir": "bronze/gamechanger/json",
+#             "logger": logger,
+#         }
+#         # await corpus_update_event(**args)
 
 
 def get_hw_usage(threshold: int = MEMORY_LOAD_LIMIT) -> Tuple[float, bool, float]:
