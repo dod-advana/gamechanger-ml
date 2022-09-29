@@ -89,7 +89,7 @@ function start_env_prod() {
   download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
     --bind 0.0.0.0:5000 \
-    --workers 1 \
+    --workers 2 \
     --graceful-timeout 900 \
     --timeout 1200 \
     -k uvicorn.workers.UvicornWorker \
@@ -104,14 +104,14 @@ function start_env_dev() {
     start_uvicorn gamechangerml.api.fastapi.mlapp:app \
       --host 0.0.0.0 \
       --port 5000 \
-      --workers 1 \
+      --workers 2 \
       --log-level debug \
       --timeout-keep-alive 240 \
       --reload
   else
     start_gunicorn gamechangerml.api.fastapi.mlapp:app \
         --bind 0.0.0.0:5000 \
-        --workers 1 \
+        --workers 2 \
         --graceful-timeout 1000 \
         --timeout 1200 \
         --keep-alive 30 \
