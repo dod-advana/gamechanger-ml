@@ -66,6 +66,7 @@ async def api_information():
         "Version": __version__,
         "Elasticsearch_Host": es.root_url,
         "Elasticsearch_Status": get_es_status(),
+        "Container_Type": os.environ.get("CONTAINER_TYPE"),
     }
 
 

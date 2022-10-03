@@ -37,7 +37,7 @@ model_functions = [
     MODELS.initWordSim,
     MODELS.initTopics,
     MODELS.initRecommender,
-    MODELS.initDocumentCompareSearcher,
+    # MODELS.initDocumentCompareSearcher,
 ]
 
 

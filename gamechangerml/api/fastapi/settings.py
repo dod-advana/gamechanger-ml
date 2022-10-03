@@ -13,7 +13,7 @@ MEMORY_LOAD_LIMIT = os.environ.get("MEMORY_LOAD_LIMIT", default=None)
 if MEMORY_LOAD_LIMIT:
     MEMORY_LOAD_LIMIT = int(MEMORY_LOAD_LIMIT)
 MODEL_LOAD_FLAG = os.environ.get("MODEL_LOAD", default=True)
-if MODEL_LOAD_FLAG in ["False", "false", "0"]:
+if MODEL_LOAD_FLAG in ["False", "false", "0"] or os.environ.get("CONTAINER_TYPE")=="training":
     MODEL_LOAD_FLAG = False
 else:
     MODEL_LOAD_FLAG = True
