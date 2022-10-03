@@ -73,7 +73,7 @@ async def check_health():
     try:
         new_sim_model_name = str(latest_intel_model_sim.value)
         new_encoder_model_name = str(latest_intel_model_encoder.value)
-        ram_used, surpassed, cpu_usage = get_hw_usage()
+        # ram_used, surpassed, cpu_usage = get_hw_usage()
     except Exception as e:
         logger.info("Could not get one of the model names from redis")
         logger.info(e)
@@ -95,8 +95,8 @@ async def check_health():
     logger.info(
         f"-- Doc Compare Sentence index name: {DOC_COMPARE_SENT_INDEX_PATH.value}"
     )
-    logger.info(f"CPU usage: {cpu_usage}")
-    logger.info(f"RAM % used: {ram_used}")
+    # logger.info(f"CPU usage: {cpu_usage}")
+    # logger.info(f"RAM % used: {ram_used}")
 
 
 # @router.on_event("startup")
