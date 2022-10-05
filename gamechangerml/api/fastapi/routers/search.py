@@ -179,7 +179,7 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
     """
 
     terms_string = " ".join(body["termsList"])
-    terms = preprocess(terms_string, remove_stopwords=True)
+    # terms = preprocess(terms_string, remove_stopwords=True)
     expansion_dict = {}
     # logger.info("[{}] expanded: {}".format(user, termsList))
 
@@ -198,9 +198,9 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
         # Pass entire query from frontend to query expansion model and return topn.
         # Removes original word from the return terms unless it is combined with another word
         logger.info(f"original expanded terms: {expansion_list}")
-        finalTerms = remove_original_kw(expansion_list, terms_string)
-        expansion_dict[terms_string] = ['"{}"'.format(exp) for exp in finalTerms]
-        logger.info(f"-- Expanded {terms_string} to \n {finalTerms}")
+        final_terms = remove_original_kw(expansion_list, terms_string)
+        expansion_dict[terms_string] = ['"{}"'.format(exp) for exp in final_terms]
+        logger.info(f"-- Expanded {terms_string} to \n {final_terms}")
         # Perform word similarity
         logger.info(f"Finding similiar words for: {terms_string}")
         sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms_string)
@@ -232,8 +232,10 @@ async def post_word_sim(body: dict, response: Response) -> dict:
         sim_words_dict = MODELS.word_sim.most_similiar_tokens(terms)
         logger.info(f"-- Expanded {terms} to \n {sim_words_dict}")
         return sim_words_dict
-    except:
+    except Exception as e:
         logger.error(f"Error with query expansion on {terms}")
+        logger.error(f"{e}")
+
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
 

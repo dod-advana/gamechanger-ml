@@ -88,22 +88,25 @@ async def get_process_status():
         "completed_process": processmanager.COMPLETED_PROCESS.value,
     }
 
+
 @router.post("/clearCache")
 async def get_process_status(body: dict, response: Response):
     _connection = redis.Redis(connection_pool=RedisPool().getPool())
-    
-    if body['clear']:
-        for key in body['clear']:
-            _connection.delete(f'search: {key}')
+
+    if body["clear"]:
+        for key in body["clear"]:
+            _connection.delete(f"search: {key}")
     else:
         for key in _connection.scan_iter("search:*"):
             # delete the key
             _connection.delete(key)
 
+
 @router.get("/getCache")
 async def get_process_status():
-    _connection = redis.Redis(connection_pool=RedisPool().getPool())    
-    return [key.split('search: ')[1] for key in list(_connection.scan_iter("search:*"))]
+    _connection = redis.Redis(connection_pool=RedisPool().getPool())
+    return [key.split("search: ")[1] for key in list(_connection.scan_iter("search:*"))]
+
 
 @router.get("/getDataList")
 def get_downloaded_data_list():
@@ -187,7 +190,7 @@ def get_downloaded_models_list():
                     meta_file.close()
     except Exception as e:
         logger.error(e)
-        logger.info("Cannot get QEXP model path")
+        logger.info("Cannot get Jbook QEXP model path")
 
     # TRANSFORMER MODEL PATH
     try:
@@ -207,7 +210,7 @@ def get_downloaded_models_list():
                     config_file.close()
     except Exception as e:
         logger.error(e)
-        logger.info("Cannot get JBook model path")
+        logger.info("Cannot get transformer model path")
     # SENTENCE INDEX
     # get largest file name with sent_index prefix (by date)
     try:
@@ -237,9 +240,7 @@ def get_downloaded_models_list():
         topic_dirs = [
             name
             for name in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if os.path.isdir(
-                os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name)
-            )
+            if os.path.isdir(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
             and "topic_model_" in name
         ]
         for topic_model_name in topic_dirs:
@@ -278,7 +279,7 @@ def get_downloaded_models_list():
                     meta_file.close()
     except Exception as e:
         logger.error(e)
-        logger.info("Cannot get Sentence Index model path")
+        logger.info("Cannot get LTR model path")
 
     model_list = {
         "transformers": transformer_list,
@@ -301,9 +302,7 @@ async def delete_local_model(model: dict, response: Response):
 
     def removeDirectory(dir):
         try:
-            logger.info(
-                f'Removing directory {os.path.join(dir,model["model"])}'
-            )
+            logger.info(f'Removing directory {os.path.join(dir,model["model"])}')
             shutil.rmtree(os.path.join(dir, model["model"]))
         except OSError as e:
             logger.error(e)
@@ -437,9 +436,7 @@ async def download(response: Response):
     def download_s3_thread():
         try:
             logger.info("Attempting to download dependencies from S3")
-            output = subprocess.call(
-                ["gamechangerml/scripts/download_dependencies.sh"]
-            )
+            output = subprocess.call(["gamechangerml/scripts/download_dependencies.sh"])
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)
             processmanager.update_status(
@@ -486,10 +483,12 @@ async def download_s3_file(file_dict: dict, response: Response):
             )
             bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
             downloaded_files = S3Service.download(
-                bucket, 
-                os.path.join("bronze/gamechanger", file_dict["type"], file_dict["file"]),
+                bucket,
+                os.path.join(
+                    "bronze/gamechanger", file_dict["type"], file_dict["file"]
+                ),
                 path,
-                logger
+                logger,
             )
             logger.info(downloaded_files)
 
@@ -561,9 +560,7 @@ async def download_s3_file(file_dict: dict, response: Response):
                 except Exception as e:
                     failedExtracts.append(member.name)
 
-            logger.warning(
-                f"Could not extract {failedExtracts} with permission errors"
-            )
+            logger.warning(f"Could not extract {failedExtracts} with permission errors")
             processmanager.update_status(
                 f's3: {file_dict["file"]}',
                 failed=True,
@@ -606,7 +603,7 @@ async def s3_func(function, response: Response):
             s3_path = "bronze/gamechanger/models/"
         elif function == "data":
             s3_path = "bronze/gamechanger/ml-data/"
-        
+
         bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
         start_char = len(s3_path)
         models = [
@@ -665,15 +662,9 @@ async def reload_models(model_dict: dict, response: Response):
                         model_dict["doc_compare_sentence"],
                     )
                     # uses DOC_COMPARE_SENT_INDEX_PATH by default
-                    logger.info(
-                        "Attempting to load Doc Compare Sentence Transformer"
-                    )
-                    MODELS.initDocumentCompareSearcher(
-                        doc_compare_sentence_path
-                    )
-                    DOC_COMPARE_SENT_INDEX_PATH.value = (
-                        doc_compare_sentence_path
-                    )
+                    logger.info("Attempting to load Doc Compare Sentence Transformer")
+                    MODELS.initDocumentCompareSearcher(doc_compare_sentence_path)
+                    DOC_COMPARE_SENT_INDEX_PATH.value = doc_compare_sentence_path
                     progress += 1
                     processmanager.update_status(
                         thread_name,
@@ -758,12 +749,8 @@ async def reload_models(model_dict: dict, response: Response):
         thread = MlThread(reload_thread, args)
         thread.start()
         processmanager.running_threads[thread.ident] = thread
-        thread_name = processmanager.reloading + " ".join(
-            [key for key in model_dict]
-        )
-        processmanager.update_status(
-            thread_name, 0, total, thread_id=thread.ident
-        )
+        thread_name = processmanager.reloading + " ".join([key for key in model_dict])
+        processmanager.update_status(thread_name, 0, total, thread_id=thread.ident)
     except Exception as e:
         logger.warning(e)
 
@@ -1003,15 +990,10 @@ async def train_model(model_dict: dict, response: Response):
         }
 
         # Set the training method to be loaded onto the thread
-        if (
-            "build_type" in model_dict
-            and model_dict["build_type"] in training_switch
-        ):
+        if "build_type" in model_dict and model_dict["build_type"] in training_switch:
             training_method = training_switch[model_dict["build_type"]]
         else:  # PLACEHOLDER
-            logger.warn(
-                "No build type specified in model_dict, defaulting to sentence"
-            )
+            logger.warn("No build type specified in model_dict, defaulting to sentence")
             model_dict["build_type"] = "sentence"
             training_method = training_switch[model_dict["build_type"]]
 
@@ -1019,14 +1001,10 @@ async def train_model(model_dict: dict, response: Response):
         training_method = training_switch.get(build_type)
 
         if not training_method:
-            raise Exception(
-                f"No training method mapped for build type {build_type}"
-            )
+            raise Exception(f"No training method mapped for build type {build_type}")
 
         # Set the training method to be loaded onto the thread
-        training_thread = MlThread(
-            training_method, args={"model_dict": model_dict}
-        )
+        training_thread = MlThread(training_method, args={"model_dict": model_dict})
         training_thread.start()
         processmanager.running_threads[training_thread.ident] = training_thread
         processmanager.update_status(
