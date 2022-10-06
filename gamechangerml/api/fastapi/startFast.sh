@@ -12,6 +12,7 @@ readonly DS_SETUP_PATH="${REPO_DIR}/gamechangerml/setup_env.sh"
 ENV_TYPE="${ENV_TYPE:+${ENV_TYPE^^}}"
 DOWNLOAD_DEP="${DOWNLOAD_DEP:+${DOWNLOAD_DEP,,}}"
 CONTAINER_RELOAD="${CONTAINER_RELOAD:+${CONTAINER_RELOAD,,}}"
+UVICORN_WORKERS="${UVICORN_WORKERS:+${UVICORN_WORKERS,,}}"
 
 [[ -z "${DOWNLOAD_DEP:-}" ]] && {
   >&2 echo "[WARNING] No DOWNLOAD_DEP specified, setting to 'false' ..."
@@ -39,6 +40,7 @@ export ENV_TYPE
   CONTAINER_RELOAD="false"
 }
 export CONTAINER_RELOAD
+export UVICORN_WORKERS
 
 function download_dependencies() {
     [[ "${DOWNLOAD_DEP}" == "true" ]] && {
@@ -89,7 +91,7 @@ function start_env_prod() {
   download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
     --bind 0.0.0.0:5000 \
-    --workers 1 \
+    --workers $UVICORN_WORKERS \
     --graceful-timeout 900 \
     --timeout 1200 \
     -k uvicorn.workers.UvicornWorker \
@@ -104,14 +106,14 @@ function start_env_dev() {
     start_uvicorn gamechangerml.api.fastapi.mlapp:app \
       --host 0.0.0.0 \
       --port 5000 \
-      --workers 1 \
+      --workers $UVICORN_WORKERS \
       --log-level debug \
       --timeout-keep-alive 240 \
       --reload
   else
     start_gunicorn gamechangerml.api.fastapi.mlapp:app \
         --bind 0.0.0.0:5000 \
-        --workers 1 \
+        --workers $UVICORN_WORKERS \
         --graceful-timeout 1000 \
         --timeout 1200 \
         --keep-alive 30 \

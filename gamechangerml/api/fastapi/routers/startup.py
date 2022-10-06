@@ -70,13 +70,6 @@ async def check_health():
     Returns:
     """
     logger.info("API Health Check")
-    try:
-        new_sim_model_name = str(latest_intel_model_sim.value)
-        new_encoder_model_name = str(latest_intel_model_encoder.value)
-        ram_used, surpassed, cpu_usage = get_hw_usage()
-    except Exception as e:
-        logger.info("Could not get one of the model names from redis")
-        logger.info(e)
     if check_dep_exist:
         good_health = True
     else:
@@ -86,30 +79,20 @@ async def check_health():
     else:
         logger.info("Model Health: POOR")
 
-    logger.info(f"-- Sentence Similarity model name: {new_sim_model_name}")
-    logger.info(f"-- Sentence Encoder model name: {new_encoder_model_name}")
-    logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
-    logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
-    logger.info(f"-- QE JBOOK model name: {QEXP_JBOOK_MODEL_NAME.value}")
-    logger.info(f"-- Topics model name: {TOPICS_MODEL.value}")
-    logger.info(
-        f"-- Doc Compare Sentence index name: {DOC_COMPARE_SENT_INDEX_PATH.value}"
-    )
-    logger.info(f"CPU usage: {cpu_usage}")
-    logger.info(f"RAM % used: {ram_used}")
+    # logger.info(f"CPU usage: {cpu_usage}")
+    # logger.info(f"RAM % used: {ram_used}")
 
 
-@router.on_event("startup")
-@repeat_every(seconds=60 * 60, wait_first=False)
-async def corpus_event_trigger():
-    if CORPUS_EVENT_TRIGGER:
-        logger.info("Checking Corpus Staleness")
-        args = {
-            "s3_corpus_dir": "bronze/gamechanger/json",
-            "logger": logger,
-        }
-        await corpus_update_event(**args)
-        await get_process_status()
+# @router.on_event("startup")
+# @repeat_every(seconds=60 * 60, wait_first=False)
+# async def corpus_event_trigger():
+#     if CORPUS_EVENT_TRIGGER:
+#         logger.info("Checking Corpus Staleness")
+#         args = {
+#             "s3_corpus_dir": "bronze/gamechanger/json",
+#             "logger": logger,
+#         }
+#         # await corpus_update_event(**args)
 
 
 def get_hw_usage(threshold: int = MEMORY_LOAD_LIMIT) -> Tuple[float, bool, float]:
