@@ -1,18 +1,65 @@
 from fastapi import APIRouter
 from fastapi_utils.tasks import repeat_every
 import os
-from gamechangerml.api.fastapi.settings import *
+from typing import Tuple
+
+from gamechangerml.api.fastapi.settings import (
+    DOC_COMPARE_SENT_INDEX_PATH,
+    logger,
+    TOPICS_MODEL,
+    MODEL_LOAD_FLAG,
+    QEXP_JBOOK_MODEL_NAME,
+    QEXP_MODEL_NAME,
+    LOCAL_TRANSFORMERS_DIR,
+    SENT_INDEX_PATH,
+    latest_intel_model_encoder,
+    latest_intel_model_sim,
+    latest_intel_model_sent,
+    latest_doc_compare_sim,
+    latest_doc_compare_encoder,
+    MEMORY_LOAD_LIMIT,
+    CORPUS_EVENT_TRIGGER,
+)
 from gamechangerml.api.fastapi.model_loader import ModelLoader
+from gamechangerml.api.utils.mlscheduler import corpus_update_event
+from gamechangerml.api.utils.threaddriver import MlThread
+from gamechangerml.api.utils import processmanager
+from gamechangerml.api.fastapi.routers.controls import get_process_status
+import psutil
 
 router = APIRouter()
 MODELS = ModelLoader()
+model_functions = [
+    MODELS.initQA,
+    MODELS.initQE,
+    MODELS.initQEJBook,
+    MODELS.initSentenceSearcher,
+    MODELS.initWordSim,
+    MODELS.initTopics,
+    MODELS.initRecommender,
+    MODELS.initDocumentCompareSearcher,
+]
+
 
 @router.on_event("startup")
 async def load_models():
-    MODELS.initQA()
-    MODELS.initQE()
-    MODELS.initSentence()
-    MODELS.initTrans()
+
+    if MODEL_LOAD_FLAG:
+        count = 0
+        for f in model_functions:
+            f()
+            ram_used, surpassed, cpu_usage = get_hw_usage()
+            count += 1
+            if surpassed:
+                logger.warning(
+                    f" ---- WARNING: RAM used is {ram_used}%, which is passed the threshold, will not load any other models"
+                )
+                models_not_loaded = model_functions[:count]
+                logger.warning(f"---- Did not load: {models_not_loaded}")
+                break
+        logger.info("LOADED MODELS")
+    else:
+        logger.info("MODEL_LOAD_FLAG set to False, no models loaded")
 
 
 @router.on_event("startup")
@@ -23,29 +70,6 @@ async def check_health():
     Returns:
     """
     logger.info("API Health Check")
-    try:
-        new_trans_model_name = str(
-            latest_intel_model_trans.value
-        )
-        new_sent_model_name = str(latest_intel_model_sent.value)
-        new_qa_model_name = str(latest_qa_model.value)
-    except Exception as e:
-        logger.info("Could not get one of the model names from redis")
-        logger.info(e)
-    try:
-        good_health = True
-
-        # this never triggers because the sparse_reader is never set.
-        if (MODELS.sparse_reader != None) and (
-            MODELS.sparse_reader.model_name != new_trans_model_name
-        ):
-            MODELS.initSparse(new_trans_model_name)   
-            good_health = False
-    except Exception as e:
-        logger.info("Model Health: POOR")
-        logger.warn(
-            f"Model Health: BAD - Error with reloading model {new_trans_model_name}"
-        )
     if check_dep_exist:
         good_health = True
     else:
@@ -55,11 +79,31 @@ async def check_health():
     else:
         logger.info("Model Health: POOR")
 
-    # logger.info(f"-- Transformer model name: {new_trans_model_name}")
-    logger.info(f"-- Sentence Transformer model name: {new_sent_model_name}")
-    logger.info(f"-- Sentence index name: {SENT_INDEX_PATH.value}")
-    logger.info(f"-- QE model name: {QEXP_MODEL_NAME.value}")
-    logger.info(f"-- QA model name: {new_qa_model_name}")
+    # logger.info(f"CPU usage: {cpu_usage}")
+    # logger.info(f"RAM % used: {ram_used}")
+
+
+# @router.on_event("startup")
+# @repeat_every(seconds=60 * 60, wait_first=False)
+# async def corpus_event_trigger():
+#     if CORPUS_EVENT_TRIGGER:
+#         logger.info("Checking Corpus Staleness")
+#         args = {
+#             "s3_corpus_dir": "bronze/gamechanger/json",
+#             "logger": logger,
+#         }
+#         # await corpus_update_event(**args)
+
+
+def get_hw_usage(threshold: int = MEMORY_LOAD_LIMIT) -> Tuple[float, bool, float]:
+    surpassed = False
+    ram_used = psutil.virtual_memory()[2]
+    if threshold:
+        if ram_used > threshold:
+            surpassed = True
+    cpu_usage = psutil.cpu_percent(4)
+    return ram_used, surpassed, cpu_usage
+
 
 def check_dep_exist():
     healthy = True
@@ -71,12 +115,20 @@ def check_dep_exist():
         logger.warning(f"{SENT_INDEX_PATH.value} does NOT exist")
         healthy = False
 
+    if not os.path.isdir(DOC_COMPARE_SENT_INDEX_PATH.value):
+        logger.warning(f"{DOC_COMPARE_SENT_INDEX_PATH.value} does NOT exist")
+        healthy = False
+
     if not os.path.isdir(QEXP_MODEL_NAME.value):
         logger.warning(f"{QEXP_MODEL_NAME.value} does NOT exist")
         healthy = False
-    # topics_dir = os.path.join(QEXP_MODEL_NAME, "topic_models/models")
-    # if not os.path.isdir(topics_dir):
-    #    logger.warning(f"{topics_dir} does NOT exist")
-    #    healthy = False
+
+    if not os.path.isdir(TOPICS_MODEL.value):
+        logger.warning(f"{TOPICS_MODEL.value} does NOT exist")
+        healthy = False
+
+    if not os.path.isdir(QEXP_JBOOK_MODEL_NAME.value):
+        logger.warning(f"{QEXP_JBOOK_MODEL_NAME.value} does NOT exist")
+        healthy = False
 
     return healthy
