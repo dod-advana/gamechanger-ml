@@ -2,12 +2,15 @@
 ../.git
 ../out
 .git/
-gamechangerml/data/
 src/DrQA/data/
 experimental/
 gamechangerml/models/*.gz
 gamechangerml/models/sent*
 gamechangerml/models/transformer*
 gamechangerml/models/qexp*
+gamechangerml/models/jbook*
+gamechangerml/models/topic*
+gamechangerml/models/*.zip
+gamechangerml/models/*.vec
 gamechangerml/corpus
 corpus_index

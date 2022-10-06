@@ -3,15 +3,15 @@ import re
 from collections import defaultdict
 import os
 import typing as t
-from gamechangerml import REPO_PATH
+from gamechangerml import DATA_PATH
 
 def expand_abbreviations(
     text,
     dic: t.Union[
         t.Dict[str, t.Any], str
     ] = os.path.join(
-        REPO_PATH,
-        "gamechangerml/src/featurization/data/abbreviations.json"
+        DATA_PATH,
+        "features", "abbreviations.json"
     ),
 ):
     """
@@ -116,8 +116,8 @@ def expand_abbreviations_no_context(
     dic: t.Union[
         t.Dict[str, t.Any], str
     ] = os.path.join(
-        REPO_PATH,
-        "gamechangerml/src/featurization/data/abbcounts.json"
+        DATA_PATH,
+        "features", "abbcounts.json"
     ),
 ):
     """
@@ -132,8 +132,8 @@ def expand_abbreviations_no_context(
     if not isinstance(dic, dict):
         with open(dic, "r") as file:
             dic = json.load(file)
-
     words = list(dic.keys())
+
     words = [
         # characters between ^ and ] are the ones allowed by this regex
         re.sub(pattern=r"""[^0-9a-zA-Z_ '"-]""", repl="", string=x)
@@ -201,8 +201,8 @@ def find_abbreviations(
     dic: t.Union[
         t.Dict[str, t.Any], str
     ] = os.path.join(
-        REPO_PATH,
-        "gamechangerml/src/featurization/data/abbreviations.json"
+        DATA_PATH,
+        "features", "abbreviations.json"
     ),
 ):
     """

@@ -1,15 +1,17 @@
 import logging
 import os
-from gamechangerml.src.search.query_expansion import AUX_DATA_PATH
+from gamechangerml import DATA_PATH
 
 logger = logging.getLogger(__name__)
 
+AUX_DATA_PATH = os.path.join(DATA_PATH, "features")
 
-def get_word_weight(weight_file_path, a=1e-3):
+def get_word_weight(weight_file="enwiki_vocab_min200.txt", a=1e-3):
     if a <= 0.0:
         a = 1.0
 
-    #weight_file_path = os.path.join(AUX_DATA_PATH, weight_file)
+    weight_file_path = os.path.join(AUX_DATA_PATH, weight_file)
+    print("weightfilepath: ", weight_file_path)
     
     word2weight = dict()
     try:

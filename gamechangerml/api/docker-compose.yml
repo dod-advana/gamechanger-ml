@@ -6,31 +6,31 @@ services:
     image: redis
     ports:
       - "6380:6380"
-    command: --port 6380
+    command: ["redis-server", "--appendonly", "yes","--port 6380"]
     expose:
       - "6380"
     networks:
       - app-net
+    volumes:
+      - ../redis-data:/data
   gamechanger-ml-gpu:
     container_name: gc-ml-gpu
     image: gamechanger-ml-gpu
     build:
       context: ../../.
-      dockerfile: gamechangerml/api/fastapi/rhel8.mlapp.Dockerfile
+      dockerfile: gamechangerml/api/fastapi/gpu.mlapp.Dockerfile
     deploy:
       resources:
         reservations:
           devices:
           - capabilities: [gpu]
-            #runtime: nvidia
-            #command: nvidia-smi
     ports:
       - "5000:5000"
+      - "5678:5678"
     env_file:
       - .env
     volumes:
-      - "../../gamechangerml/models:/opt/app-root/src/gamechangerml/models"
-      - "../../gamechangerml/corpus:/opt/app-root/src/gamechangerml/corpus"
+      - "../../gamechangerml/:/opt/app-root/src/gamechangerml/"
       - ~/.aws/:/.aws
     depends_on:
       - gc-redis

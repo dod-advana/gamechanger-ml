@@ -21,14 +21,14 @@ def test_expansion_text():
 
 
 def test_expansion_no_context_1():
-    check_str = "DoD"
+    check_str = "DD"
     expansion = ["Department of Defense"]
     result = abbreviation.expand_abbreviations_no_context(check_str)
     assert expansion == result
 
 
 def test_expansion_no_context_2():
-    check_str = "DOD"
+    check_str = "Dd"
     expansion = ["Department of Defense"]
     result = abbreviation.expand_abbreviations_no_context(check_str)
     assert expansion == result
@@ -36,6 +36,6 @@ def test_expansion_no_context_2():
 
 def test_expansion_no_context_3():
     check_str = "CI"
-    expansion = ["counterintelligence"]
+    expansion = ["configuration item"]
     result = abbreviation.expand_abbreviations_no_context(check_str)
     assert expansion == result
