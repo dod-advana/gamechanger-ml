@@ -41,6 +41,7 @@ function setup_prod() {
     export ML_WEB_TOKEN="${ML_WEB_TOKEN:-}"
     export MEMORY_LOAD_LIMIT="${MEMORY_LOAD_LIMIT:-99}"
     export CORPUS_EVENT_TRIGGER="${CORPUS_EVENT_TRIGGER:-true}"
+    export UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 
     export DEV_ENV="PROD"
 }
@@ -81,6 +82,7 @@ function setup_dev() {
     export ENABLE_DEBUGGER="${ENABLE_DEBUGGER:-true}"
     export MEMORY_LOAD_LIMIT="${MEMORY_LOAD_LIMIT:-99}"
     export CORPUS_EVENT_TRIGGER="${CORPUS_EVENT_TRIGGER:-true}"
+    export UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 
 }
 
@@ -105,6 +107,8 @@ function setup_devlocal() {
   export ENABLE_DEBUGGER="${ENABLE_DEBUGGER:-true}"
   export MEMORY_LOAD_LIMIT="${MEMORY_LOAD_LIMIT:-99}"
   export CORPUS_EVENT_TRIGGER="${CORPUS_EVENT_TRIGGER:-true}"
+  export UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
+
 }
 
 function setup_k8s_dev() {
@@ -167,4 +171,8 @@ cat <<EOF
   * GC_WEB_USER: ${GC_WEB_USER:-<unset>}"
   * ML_WEB_TOKEN: ${ML_WEB_TOKEN:-<unset>}"
   * LOCAL_CORPUS_PATH: ${LOCAL_CORPUS_PATH:-<unset>}"
+  * MEMORY_LOAD_LIMIT: ${MEMORY_LOAD_LIMIT:-<unset>}"
+  * CORPUS_EVENT_TRIGGER: ${CORPUS_EVENT_TRIGGER:-<unset>}"
+  * UVICORN_WORKERS: ${UVICORN_WORKERS:-<unset>}"
+
 EOF

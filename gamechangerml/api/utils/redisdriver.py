@@ -18,9 +18,40 @@ if REDIS_PORT == "":
 # Eg: latest_intel_model_sent.value = "foo"
 
 
+
+
+# A singleton class that creates a connection pool with redis.
+# All cache variables use this one connection pool.
+class RedisPool:
+    __pool = None
+
+    @staticmethod
+    def getPool():
+        """Static access method."""
+        if RedisPool.__pool == None:
+            RedisPool()
+        return RedisPool.__pool
+
+    def __init__(self):
+        """Virtually private constructor."""
+        if RedisPool.__pool != None:
+            logger.info("Using redis pool singleton")
+        else:
+            try:
+                RedisPool.__pool = redis.ConnectionPool(
+                    host=REDIS_HOST, port=int(REDIS_PORT), db=0, decode_responses=True
+                )
+            except Exception as e:
+                logger.error(
+                    " *** Unable to connect to redis {REDIS_HOST} {REDIS_PORT}***"
+                )
+                logger.error(e)
+
+redisConnection = redis.Redis(connection_pool=RedisPool().getPool())
+
 class CacheVariable:
     def __init__(self, key, encode=False):
-        self._connection = redis.Redis(connection_pool=RedisPool().getPool())
+        self._connection = redisConnection
         self._key = key
         self._encode = encode
         self.test_value = None
@@ -59,31 +90,3 @@ class CacheVariable:
         return self._connection.delete(self._key)
 
     value = property(get_value, set_value, del_value)
-
-
-# A singleton class that creates a connection pool with redis.
-# All cache variables use this one connection pool.
-class RedisPool:
-    __pool = None
-
-    @staticmethod
-    def getPool():
-        """Static access method."""
-        if RedisPool.__pool == None:
-            RedisPool()
-        return RedisPool.__pool
-
-    def __init__(self):
-        """Virtually private constructor."""
-        if RedisPool.__pool != None:
-            logger.info("Using redis pool singleton")
-        else:
-            try:
-                RedisPool.__pool = redis.ConnectionPool(
-                    host=REDIS_HOST, port=int(REDIS_PORT), db=0, decode_responses=True
-                )
-            except Exception as e:
-                logger.error(
-                    " *** Unable to connect to redis {REDIS_HOST} {REDIS_PORT}***"
-                )
-                logger.error(e)
