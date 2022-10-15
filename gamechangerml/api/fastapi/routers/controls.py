@@ -316,10 +316,9 @@ async def delete_local_model(model: dict, response: Response):
                 except OSError as e:
                     logger.error(e)
 
-    logger.info(model)
     if model["type"] == "transformers":
         removeDirectory(LOCAL_TRANSFORMERS_DIR.value)
-    elif model["type"] in ("sentence", "qexp", "doc_compare_sentence"):
+    elif model["type"] in ("sentence", "qexp", "doc_compare_sentence", "jbook_qexp", "topic_models", "ltr"):
         removeDirectory(Config.LOCAL_PACKAGED_MODELS_DIR)
         removeFiles(Config.LOCAL_PACKAGED_MODELS_DIR)
 
