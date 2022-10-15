@@ -1,1 +1,0 @@
-{"date_created": "2022-06-17", "n_queries": "534 train queries / 133 test queries", "total_train_samples_size": 7146, "total_test_samples_size": 1746, "split_ratio": 0.8, "sent_index_used": "gamechangerml/models/sent_index_20220323", "validation_data_used": "/opt/app-root/src/gamechangerml/data/validation/domain/sent_transformer/2022-06-17_154046", "not_found_search_pairs": "0"}
