@@ -20,8 +20,8 @@ RUN dnf install -y \
         gcc-c++ \
         glibc-langpack-en \
         openssl-devel \
-        # python38 \
-        # python38-devel \
+        python38 \
+        python38-devel \
         git \
         zip \
         zlib-devel \
@@ -29,7 +29,7 @@ RUN dnf install -y \
         bzip2-devel \
         glibc \
         unzip \
-        # python3-cffi \
+        python3-cffi \
         libffi-devel \
         libpq \
         libpq-devel \
@@ -45,26 +45,23 @@ RUN dnf install -y \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
-RUN curl -LfSo /tmp/python38.tgz "https://www.python.org/ftp/python/3.8.16/Python-3.8.16.tgz" \
-    && tar -xf /tmp/python38.tgz --directory /opt \
-    && /opt/Python-3.8.16/configure --with-ssl --enable-loadable-sqlite-extensions --enable-ipv6 \
-    && make  \
-    && make install \ 
-    && rm -f /tmp/python38.tgz \
-    && rm Makefile
+# RUN curl -LfSo /tmp/python38.tgz "https://www.python.org/ftp/python/3.8.16/Python-3.8.16.tgz" \
+#     && tar -xf /tmp/python38.tgz --directory /opt \
+#     && /opt/Python-3.8.16/configure --with-ssl --enable-loadable-sqlite-extensions --enable-ipv6 \
+#     && make  \
+#     && make install \ 
+#     && rm -f /tmp/python38.tgz \
+#     && rm Makefile
     
-RUN dnf install -y \
-    python38-devel \
-    python3-cffi
+# RUN dnf install -y \
+#     python38-devel \
+#     python3-cffi
 
 # AWS CLI
 RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
     && unzip -q /tmp/awscliv2.zip -d /opt \
     && /opt/aws/install \
     && rm -f /tmp/awscliv2.zip
-
-RUN systemctl disable bluetooth.service
-RUN systemctl mask bluetooth.service
 
 # non-root app USER/GROUP
 ARG APP_UID=1001
@@ -95,7 +92,7 @@ RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
 
 # thou shall not root
-# USER $APP_UID:$APP_GID
+USER $APP_UID:$APP_GID
 
 COPY --chown="${APP_UID}:${APP_GID}" ./ "${APP_DIR}"
 
