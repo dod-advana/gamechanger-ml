@@ -1,4 +1,3 @@
-import argparse
 from gamechangerml import MODEL_PATH, DATA_PATH, REPO_PATH
 
 # from gamechangerml.src.search.doc_compare.model import DocCompareSentenceEncoder
@@ -17,7 +16,20 @@ from pathlib import Path
 import typing as t
 import logging
 
-from gamechangerml.src.utilities import get_current_datetime
+from gamechangerml.src.utilities import (
+    get_current_datetime,
+    configure_logger,
+    SEARCH_HISTORY_FILE,
+    POPULAR_DOCUMENTS_FILE,
+    TOPICS_FILE,
+    ORGS_FILE,
+    S3_DATA_PATH,
+    S3_MODELS_PATH,
+    COMBINED_ENTITIES_FILE,
+    PROD_DATA_FILE,
+    CORPUS_DIR,
+    DEFAULT_SENT_INDEX,
+)
 from gamechangerml.configs import S3Config
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.services import S3Service
@@ -67,75 +79,42 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 os.environ["CURL_CA_BUNDLE"] = ""
 os.environ["PYTHONWARNINGS"] = "ignore:Unverified HTTPS request"
 
-
-logger = logging.getLogger(__name__)
-handler = logging.StreamHandler()
-formatter = logging.Formatter(
-    "%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s"
+logger = configure_logger(
+    name=__name__,
+    msg_fmt="%(asctime)s [%(name)-12s] %(levelname)-8s %(message)s",
 )
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
-
-modelname = get_current_datetime()
 model_path_dict = get_model_paths()
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
-FEATURES_DATA_PATH = os.path.join(DATA_PATH, "features")
-USER_DATA_PATH = os.path.join(DATA_PATH, "user_data")
-PROD_DATA_FILE = os.path.join(
-    DATA_PATH, "features", "generated_files", "prod_test_data.csv"
-)
-CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 SENT_INDEX = model_path_dict["sentence"]
-S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
 try:
     import mlflow
-
     from mlflow.tracking import MlflowClient
 except Exception as e:
-    logger.warning(e)
-    logger.warning("MLFLOW may not be installed")
+    logger.warning(f"MLFLOW may not be installed. {e}")
 
 
 class Pipeline:
     def __init__(self):
-
-        self.model_suffix = get_current_datetime()
         self.ltr = LTR()
         # read in input data files
-        try:
-            self.search_history = pd.read_csv(
-                os.path.join(
-                    USER_DATA_PATH, "search_history", "SearchPdfMapping.csv"
-                )
-            )
-            self.topics = pd.read_csv(
-                os.path.join(FEATURES_DATA_PATH, "topics_wiki.csv")
-            )
-            self.orgs = pd.read_csv(
-                os.path.join(FEATURES_DATA_PATH, "agencies.csv")
-            )
-        except Exception as e:
-            logger.info(e)
+        self._load_meta_files()
 
-        # set paths for output data files
-        self.pop_docs_path = Path(
-            os.path.join(FEATURES_DATA_PATH, "popular_documents.csv")
-        )
-        self.combined_ents_path = Path(
-            os.path.join(FEATURES_DATA_PATH, "combined_entities.csv")
-        )
+    def _load_meta_files(self):
+        try:
+            self.search_history = pd.read_csv(SEARCH_HISTORY_FILE)
+            self.topics = pd.read_csv(TOPICS_FILE)
+            self.orgs = pd.read_csv(ORGS_FILE)
+        except Exception as e:
+            logger.exception(f"Failed to load meta file(s). {e}")
 
     def create_metadata(
         self,
         meta_steps,
         testing_only: bool,
         corpus_dir: t.Union[str, os.PathLike] = CORPUS_DIR,
-        index_path: t.Union[str, os.PathLike] = os.path.join(
-            MODEL_PATH, "sent_index_20210715"
-        ),
+        index_path: t.Union[str, os.PathLike] = DEFAULT_SENT_INDEX,
         days: int = 80,
         prod_data_file=PROD_DATA_FILE,
         level: str = "silver",
@@ -159,14 +138,18 @@ class Pipeline:
             None (saves files for each step)
         """
         logger.info(f"Meta steps: {str(meta_steps)}")
+
         if "pop_docs" in meta_steps:
-            make_pop_docs(self.search_history, self.pop_docs_path)
+            make_pop_docs(self.search_history, POPULAR_DOCUMENTS_FILE)
+
         if "combined_ents" in meta_steps:
             make_combined_entities(
-                self.topics, self.orgs, self.combined_ents_path
+                self.topics, self.orgs, COMBINED_ENTITIES_FILE
             )
+
         if "rank_features" in meta_steps:
             make_corpus_meta(corpus_dir, days, prod_data_file, upload)
+
         if "update_sent_data" in meta_steps:
             try:
                 make_training_data(
@@ -177,24 +160,15 @@ class Pipeline:
                 )
             except Exception as e:
                 logger.warning(e, exc_info=True)
-        if upload:
-            bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
 
-            try:
-                s3_path = os.path.join(S3_DATA_PATH, f"{version}")
-                logger.info(f"****    Saving new data files to S3: {s3_path}")
-                model_name = get_current_datetime()
-                model_prefix = "data"
-                dst_path = DATA_PATH + model_name + ".tar.gz"
-                utils.create_tgz_from_dir(
-                    src_dir=DATA_PATH, dst_archive=dst_path
-                )
-                s3_path = os.path.join(
-                    s3_path, f"{model_prefix}_{model_name}.tar.gz"
-                )
-                S3Service.upload_file(bucket, dst_path, s3_path, logger)
-            except Exception as e:
-                logger.warning(e, exc_info=True)
+        if upload:
+            s3_path = os.path.join(S3_DATA_PATH, version)
+            model_name = get_current_datetime()
+            local_path = DATA_PATH + model_name + ".tar.gz"
+            utils.create_tgz_from_dir(
+                src_dir=DATA_PATH, dst_archive=local_path
+            )
+            self.upload(s3_path, local_path, "data", model_name)
 
     def finetune_sent(
         self,
@@ -385,10 +359,8 @@ class Pipeline:
         upload=False,
         corpus=CORPUS_DIR,
         model_dest=PathConfig.LOCAL_MODEL_DIR,
-        exp_name=modelname,
         validate=True,
         version="v4",
-        gpu=False,
     ):
         """
         create_qexp: creates a query expansion model
@@ -422,7 +394,6 @@ class Pipeline:
             logger.info(f"Created tgz file and saved to {dst_path}")
 
             if upload:
-                S3_MODELS_PATH = "bronze/gamechanger/models"
                 s3_path = os.path.join(S3_MODELS_PATH, f"qexp_model/{version}")
                 self.upload(s3_path, dst_path, "qexp", model_id)
 
@@ -602,7 +573,6 @@ class Pipeline:
             logger.error(e)
         # Upload to S3
         if upload:
-            S3_MODELS_PATH = "bronze/gamechanger/models"
             s3_path = os.path.join(
                 S3_MODELS_PATH,
                 f"sentence_index/{version}",
@@ -726,14 +696,11 @@ class Pipeline:
             logger.info(f"create_topics complete, should upload? {upload}")
             # Upload to S3
             if upload:
-                S3_MODELS_PATH = "bronze/gamechanger/models"
                 s3_path = os.path.join(
                     S3_MODELS_PATH, f"topic_model/{version}"
                 )
                 logger.info(f"Topics uploading to {s3_path}")
-                self.upload(
-                    s3_path, tar_path, "topic_model", model_id
-                )
+                self.upload(s3_path, tar_path, "topic_model", model_id)
 
             evals = None  # TODO: figure out how to evaluate this
             return metadata, evals
@@ -743,9 +710,7 @@ class Pipeline:
 
     def upload(self, s3_path, local_path, model_prefix, model_name):
         # Loop through each file and upload to S3
-        logger.info(f"Uploading files to {s3_path}")
-        logger.info(f"\tUploading: {local_path}")
-        # local_path = os.path.join(dst_path)
+        logger.info(f"Uploading files to {s3_path}\n\tUploading: {local_path}")
         s3_path = os.path.join(
             s3_path, f"{model_prefix}_" + model_name + ".tar.gz"
         )
