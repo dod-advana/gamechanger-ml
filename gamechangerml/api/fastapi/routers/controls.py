@@ -38,7 +38,7 @@ from gamechangerml.api.fastapi.settings import (
 )
 from gamechangerml.src.data_transfer import download_corpus_s3
 from gamechangerml.api.utils.threaddriver import MlThread
-from gamechangerml.api.utils.redisdriver import RedisPool
+from gamechangerml.api.utils.redis_driver import RedisPool
 
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager

@@ -11,7 +11,7 @@ from gamechangerml.src.featurization.keywords.extract_keywords import get_keywor
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.src.utilities import gc_web_api
-from gamechangerml.api.utils.redisdriver import CacheVariable
+from gamechangerml.api.utils.redis_driver import CacheVariable
 
 # from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
 # from gamechangerml.src.featurization.summary import GensimSumm
