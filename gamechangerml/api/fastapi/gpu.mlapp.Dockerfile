@@ -45,24 +45,13 @@ RUN dnf install -y \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
-# RUN curl -LfSo /tmp/python38.tgz "https://www.python.org/ftp/python/3.8.16/Python-3.8.16.tgz" \
-#     && tar -xf /tmp/python38.tgz --directory /opt \
-#     && /opt/Python-3.8.16/configure --with-ssl --enable-loadable-sqlite-extensions --enable-ipv6 \
-#     && make  \
-#     && make install \ 
-#     && rm -f /tmp/python38.tgz \
-#     && rm Makefile
-    
-# RUN dnf install -y \
-#     python38-devel \
-#     python3-cffi
-
 # AWS CLI
-RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
-    && unzip -q /tmp/awscliv2.zip -d /opt \
-    && /opt/aws/install \
-    && rm -f /tmp/awscliv2.zip
+# RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
+#     && unzip -q /tmp/awscliv2.zip -d /opt \
+#     && /opt/aws/install \
+#     && rm -f /tmp/awscliv2.zip
 
+RUN pip3 install awscli==1.27.32
 # non-root app USER/GROUP
 ARG APP_UID=1001
 ARG APP_GID=1001
