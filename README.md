@@ -81,7 +81,6 @@
 │   │   │   ├── abbreviation.py
 │   │   │   ├── abbreviations_utils.py
 │   │   │   ├── extract_improvement
-│   │   │   ├── generated_fts.py
 │   │   │   ├── keywords
 │   │   │   ├── make_meta.py
 │   │   │   ├── rank_features
