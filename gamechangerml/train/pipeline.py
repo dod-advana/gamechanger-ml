@@ -12,22 +12,23 @@ from typing import Union, Dict
 from gamechangerml import MODEL_PATH, DATA_PATH
 from gamechangerml.src.search.ranking.ltr import LTR
 from gamechangerml.src.featurization.topic_modeling import Topics
-from gamechangerml.src.utilities import (
-    create_tgz_from_dir,
-    create_model_schema,
-    get_current_datetime,
-    configure_logger,
+from gamechangerml.src.paths import (
     SEARCH_HISTORY_FILE,
     POPULAR_DOCUMENTS_FILE,
     TOPICS_FILE,
     ORGS_FILE,
-    S3_DATA_PATH,
-    S3_MODELS_PATH,
     COMBINED_ENTITIES_FILE,
     PROD_DATA_FILE,
     CORPUS_DIR,
     DEFAULT_SENT_INDEX,
 )
+from gamechangerml.src.utilities import (
+    create_tgz_from_dir,
+    create_model_schema,
+    get_current_datetime,
+    configure_logger,
+)
+from gamechangerml.src.paths import S3_DATA_PATH, S3_MODELS_PATH
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.services import S3Service
 from gamechangerml.src.model_testing.evaluation import (

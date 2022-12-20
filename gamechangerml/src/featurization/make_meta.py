@@ -6,7 +6,6 @@ from typing import Union
 from gamechangerml.src.featurization.rank_features.generate_ft import generate_ft_doc
 
 logger = logging.getLogger(__name__)
-S3_DATA_PATH = "bronze/gamechanger/ml-data"
 
 try:
     import wikipedia

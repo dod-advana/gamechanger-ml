@@ -1,5 +1,6 @@
 from gamechangerml import DATA_PATH
 from datetime import datetime
+from gamechangerml.src.paths import S3_MODELS_PATH
 from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities.test_utils import open_json, save_json, timestamp_filename
 from gamechangerml.src.services import S3Service
@@ -24,7 +25,7 @@ import torch.nn.functional as F
 from torch import nn
 torch.cuda.empty_cache()
 
-S3_DATA_PATH = "bronze/gamechanger/ml-data"
+from gamechangerml.src.paths import S3_DATA_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +195,6 @@ class STFinetuner():
                 model_id = self.model_save_path.split('_')[1]
                 logger.info(f"*** Created tgz file and saved to {dst_path}")
 
-                S3_MODELS_PATH = "bronze/gamechanger/models"
                 s3_path = os.path.join(
                     S3_MODELS_PATH,
                     str(version),
