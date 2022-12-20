@@ -1,22 +1,20 @@
-from gamechangerml import MODEL_PATH, DATA_PATH, REPO_PATH
+import torch
+import urllib3
+from datetime import date
+from distutils.dir_util import copy_tree
+from json import dump, load
+from os import environ, makedirs, PathLike, listdir, mkdir
+from os.path import join, isdir
+from pandas import read_csv
+from threading import current_thread
+from typing import Union, Dict
 
-# from gamechangerml.src.search.doc_compare.model import DocCompareSentenceEncoder
+from gamechangerml import MODEL_PATH, DATA_PATH
 from gamechangerml.src.search.ranking.ltr import LTR
 from gamechangerml.src.featurization.topic_modeling import Topics
-import logging
-import os
-import torch
-import json
-import urllib3
-import threading
-import pandas as pd
-from distutils.dir_util import copy_tree
-from datetime import date
-from pathlib import Path
-import typing as t
-import logging
-
 from gamechangerml.src.utilities import (
+    create_tgz_from_dir,
+    create_model_schema,
     get_current_datetime,
     configure_logger,
     SEARCH_HISTORY_FILE,
@@ -30,7 +28,6 @@ from gamechangerml.src.utilities import (
     CORPUS_DIR,
     DEFAULT_SENT_INDEX,
 )
-from gamechangerml.configs import S3Config
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.services import S3Service
 from gamechangerml.src.model_testing.evaluation import (
@@ -49,8 +46,6 @@ from gamechangerml.src.featurization.make_meta import (
     make_corpus_meta,
 )
 from gamechangerml.scripts.make_training_data import make_training_data
-
-from gamechangerml.src.utilities import utils as utils
 from gamechangerml.src.utilities.test_utils import (
     get_user,
     get_most_recent_dir,
@@ -59,25 +54,22 @@ from gamechangerml.src.utilities.test_utils import (
 )
 from gamechangerml.api.utils import processmanager, status_updater
 from gamechangerml.api.utils.pathselect import get_model_paths
-
 from gamechangerml.src.search.query_expansion.build_ann_cli import (
     build_qe_model as bqe,
 )
-from gamechangerml.src.utilities import utils
 from gamechangerml.configs import (
     EmbedderConfig,
     SimilarityConfig,
     QexpConfig,
     D2VConfig,
     PathConfig,
+    S3Config,
 )
 
-import pandas as pd
-import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-os.environ["CURL_CA_BUNDLE"] = ""
-os.environ["PYTHONWARNINGS"] = "ignore:Unverified HTTPS request"
+environ["CURL_CA_BUNDLE"] = ""
+environ["PYTHONWARNINGS"] = "ignore:Unverified HTTPS request"
 
 logger = configure_logger(
     name=__name__,
@@ -103,9 +95,9 @@ class Pipeline:
 
     def _load_meta_files(self):
         try:
-            self.search_history = pd.read_csv(SEARCH_HISTORY_FILE)
-            self.topics = pd.read_csv(TOPICS_FILE)
-            self.orgs = pd.read_csv(ORGS_FILE)
+            self.search_history = read_csv(SEARCH_HISTORY_FILE)
+            self.topics = read_csv(TOPICS_FILE)
+            self.orgs = read_csv(ORGS_FILE)
         except Exception as e:
             logger.exception(f"Failed to load meta file(s). {e}")
 
@@ -113,8 +105,8 @@ class Pipeline:
         self,
         meta_steps,
         testing_only: bool,
-        corpus_dir: t.Union[str, os.PathLike] = CORPUS_DIR,
-        index_path: t.Union[str, os.PathLike] = DEFAULT_SENT_INDEX,
+        corpus_dir: Union[str, PathLike] = CORPUS_DIR,
+        index_path: Union[str, PathLike] = DEFAULT_SENT_INDEX,
         days: int = 80,
         prod_data_file=PROD_DATA_FILE,
         level: str = "silver",
@@ -125,12 +117,12 @@ class Pipeline:
         """
         create_metadata: combines datasets to create readable sets for ingest
         Args:
-            corpus_dir [Union[str,os.PathLike]]: path to corpus JSONs
+            corpus_dir [Union[str,PathLike]]: path to corpus JSONs
             meta_steps [List[str]]: list of metadata steps to execute (
                 options: ["pop_docs", "combined_ents", "rank_features", "update_sent_data"])
             days [int]: days back to go for creating rank features (** rank_features)
-            prod_data_file [Union[str,os.PathLike]]: path to prod data file (** rank_features)
-            index_path [Union[str,os.PathLike]]: sent index path (** update_sent_data)
+            prod_data_file [Union[str,PathLike]]: path to prod data file (** rank_features)
+            index_path [Union[str,PathLike]]: sent index path (** update_sent_data)
             n_matching [int]: number of matching paragraphs to retrieve (** update_sent_data)
             level [str]: level of tiered eval data to use (any, silver, gold) (** update_sent_data)
             update_eval_data [bool]: whether or not to update the eval data (** update_sent_data)
@@ -162,12 +154,10 @@ class Pipeline:
                 logger.warning(e, exc_info=True)
 
         if upload:
-            s3_path = os.path.join(S3_DATA_PATH, version)
+            s3_path = join(S3_DATA_PATH, version)
             model_name = get_current_datetime()
             local_path = DATA_PATH + model_name + ".tar.gz"
-            utils.create_tgz_from_dir(
-                src_dir=DATA_PATH, dst_archive=local_path
-            )
+            create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=local_path)
             self.upload(s3_path, local_path, "data", model_name)
 
     def finetune_sent(
@@ -179,7 +169,7 @@ class Pipeline:
         remake_train_data: bool = True,
         model=None,
         version: str = "v1",
-    ) -> t.Dict[str, str]:
+    ) -> Dict[str, str]:
         """finetune_sent: finetunes the sentence transformer - saves new model,
            a csv file of old/new cos sim scores, and a metadata file.
         Args:
@@ -193,30 +183,30 @@ class Pipeline:
 
         try:
             if not model:
-                model_load_path = os.path.join(
+                model_load_path = join(
                     LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
                 )
             else:
-                model_load_path = os.path.join(LOCAL_TRANSFORMERS_DIR, model)
+                model_load_path = join(LOCAL_TRANSFORMERS_DIR, model)
 
             logger.info(f"Model load path set to: {str(model_load_path)}")
             no_data = False
-            base_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
+            base_dir = join(DATA_PATH, "training", "sent_transformer")
 
             # check if training data exists
             if remake_train_data:
                 no_data = True
             # if no training data directory exists
-            elif not os.path.isdir(base_dir):
+            elif not isdir(base_dir):
                 no_data = True
-                os.makedirs(base_dir)
+                makedirs(base_dir)
             elif (
-                len(os.listdir(base_dir)) == 0
+                len(listdir(base_dir)) == 0
             ):  # if base dir exists but there are no files
                 no_data = True
             elif get_most_recent_dir(base_dir) == None:
                 no_data = True
-            elif len(os.listdir(get_most_recent_dir(base_dir))) == 0:
+            elif len(listdir(get_most_recent_dir(base_dir))) == 0:
                 no_data = True
             logger.info(f"No data flag is set to: {str(no_data)}")
 
@@ -288,7 +278,7 @@ class Pipeline:
         retriever=None,
         upload: bool = True,
         version: str = "v1",
-    ) -> t.Dict[str, str]:
+    ) -> Dict[str, str]:
         """Evaluates models/sent index
         Args:
             model_name [str]: name of the model or sent index to evaluate
@@ -341,16 +331,7 @@ class Pipeline:
         except Exception as e:
             logger.warning(f"Could not evaluate {model_name}")
             logger.warning(e)
-        """
-        if upload:
-            s3_path = os.path.join(S3_DATA_PATH, f"{version}")
-            logger.info(f"****    Saving new data files to S3: {s3_path}")
-            model_name = datetime.now().strftime("%Y%m%d")
-            model_prefix = "data"
-            dst_path = DATA_PATH + model_name + ".tar.gz"
-            utils.create_tgz_from_dir(src_dir=DATA_PATH, dst_archive=dst_path)
-            utils.upload(s3_path, dst_path, model_prefix, model_name)
-        """
+
         return results
 
     def create_qexp(
@@ -377,24 +358,24 @@ class Pipeline:
 
         # get model name schema
         model_name = "qexp_" + model_id
-        model_path = utils.create_model_schema(model_dir, model_name)
+        model_path = create_model_schema(model_dir, model_name)
         evals = {"results": ""}
         params = D2VConfig.MODEL_ARGS
         try:
             # build ANN indices
-            index_dir = os.path.join(model_dest, model_path)
+            index_dir = join(model_dest, model_path)
             bqe.main(corpus, index_dir, **QexpConfig.BUILD_ARGS)
             logger.info(
                 "-------------- Model Training Complete --------------"
             )
             # Create .tgz file
             dst_path = index_dir + ".tar.gz"
-            utils.create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
+            create_tgz_from_dir(src_dir=index_dir, dst_archive=dst_path)
 
             logger.info(f"Created tgz file and saved to {dst_path}")
 
             if upload:
-                s3_path = os.path.join(S3_MODELS_PATH, f"qexp_model/{version}")
+                s3_path = join(S3_MODELS_PATH, f"qexp_model/{version}")
                 self.upload(s3_path, dst_path, "qexp", model_id)
 
             if validate:
@@ -452,7 +433,7 @@ class Pipeline:
         # Error fix for saving index and model to tgz
         # https://github.com/huggingface/transformers/issues/5486
         try:
-            os.environ["TOKENIZERS_PARALLELISM"] = "false"
+            environ["TOKENIZERS_PARALLELISM"] = "false"
         except Exception as e:
             logger.warning(e)
         logger.info("Entered create embedding")
@@ -466,14 +447,13 @@ class Pipeline:
             use_gpu = False
 
         # Define model saving directories
-        model_dir = MODEL_PATH
         model_id = get_current_datetime()
         model_name = "sent_index_" + model_id
-        local_sent_index_dir = os.path.join(model_dir, model_name)
+        local_sent_index_dir = join(MODEL_PATH, model_name)
 
         # Define new index directory
-        if not os.path.isdir(local_sent_index_dir):
-            os.mkdir(local_sent_index_dir)
+        if not isdir(local_sent_index_dir):
+            mkdir(local_sent_index_dir)
         logger.info(
             "-------------- Building Sentence Embeddings --------------"
         )
@@ -530,9 +510,9 @@ class Pipeline:
             }
 
             # Create metadata file
-            metadata_path = os.path.join(local_sent_index_dir, "metadata.json")
+            metadata_path = join(local_sent_index_dir, "metadata.json")
             with open(metadata_path, "w") as fp:
-                json.dump(metadata, fp)
+                dump(metadata, fp)
 
             logger.info(f"Saved metadata.json to {metadata_path}")
 
@@ -560,7 +540,7 @@ class Pipeline:
 
             # Create .tgz file
             dst_path = local_sent_index_dir + ".tar.gz"
-            utils.create_tgz_from_dir(
+            create_tgz_from_dir(
                 src_dir=local_sent_index_dir, dst_archive=dst_path
             )
 
@@ -573,7 +553,7 @@ class Pipeline:
             logger.error(e)
         # Upload to S3
         if upload:
-            s3_path = os.path.join(
+            s3_path = join(
                 S3_MODELS_PATH,
                 f"sentence_index/{version}",
                 f"sentence_index_{model_id}.tar.gz",
@@ -602,12 +582,12 @@ class Pipeline:
                 processmanager.ltr_creation,
                 0,
                 4,
-                thread_id=threading.current_thread().ident,
+                thread_id=current_thread().ident,
             )
             logger.info("Attempting to create judgement list")
             # NOTE: always set it false right now since there needs to be API changes in the WEB
             remote_mappings = False
-            # if os.environ.get("ENV_TYPE") == "PROD":
+            # if environ.get("ENV_TYPE") == "PROD":
             #    remote_mappings = True
             judgements = ltr.generate_judgement(
                 remote_mappings=remote_mappings, daysBack=daysBack
@@ -616,7 +596,7 @@ class Pipeline:
                 processmanager.ltr_creation,
                 1,
                 4,
-                thread_id=threading.current_thread().ident,
+                thread_id=current_thread().ident,
             )
             logger.info("Attempting to get features")
             fts = ltr.generate_ft_txt_file(judgements)
@@ -624,7 +604,7 @@ class Pipeline:
                 processmanager.ltr_creation,
                 2,
                 4,
-                thread_id=threading.current_thread().ident,
+                thread_id=current_thread().ident,
             )
             logger.info("Attempting to read in data")
             ltr.data = ltr.read_xg_data()
@@ -634,11 +614,11 @@ class Pipeline:
                 processmanager.ltr_creation,
                 3,
                 4,
-                thread_id=threading.current_thread().ident,
+                thread_id=current_thread().ident,
             )
             logger.info("Created LTR model")
-            with open(os.path.join(MODEL_PATH, "ltr/xgb-model.json")) as f:
-                model = json.load(f)
+            with open(join(MODEL_PATH, "ltr/xgb-model.json")) as f:
+                model = load(f)
             logger.info("removing old LTR")
             resp = ltr.delete_ltr("ltr_model")
             logger.info(resp)
@@ -648,7 +628,7 @@ class Pipeline:
                 processmanager.ltr_creation,
                 4,
                 4,
-                thread_id=threading.current_thread().ident,
+                thread_id=current_thread().ident,
             )
         except Exception as e:
             logger.error("Could not create LTR")
@@ -667,10 +647,10 @@ class Pipeline:
             # get model name schema
             model_name = "topic_model_" + model_id
 
-            local_dir = os.path.join(model_dir, model_name)
+            local_dir = join(model_dir, model_name)
             # Define new index directory
-            if not os.path.isdir(local_dir):
-                os.mkdir(local_dir)
+            if not isdir(local_dir):
+                mkdir(local_dir)
 
             # Train topics
             status = status_updater.StatusUpdater(
@@ -685,20 +665,18 @@ class Pipeline:
             )
 
             # Create metadata file
-            metadata_path = os.path.join(local_dir, "metadata.json")
+            metadata_path = join(local_dir, "metadata.json")
             with open(metadata_path, "w") as fp:
-                json.dump(metadata, fp)
+                dump(metadata, fp)
 
             # Create .tar.gz file from dir
             tar_path = local_dir + ".tar.gz"
-            utils.create_tgz_from_dir(src_dir=local_dir, dst_archive=tar_path)
+            create_tgz_from_dir(src_dir=local_dir, dst_archive=tar_path)
 
             logger.info(f"create_topics complete, should upload? {upload}")
             # Upload to S3
             if upload:
-                s3_path = os.path.join(
-                    S3_MODELS_PATH, f"topic_model/{version}"
-                )
+                s3_path = join(S3_MODELS_PATH, f"topic_model/{version}")
                 logger.info(f"Topics uploading to {s3_path}")
                 self.upload(s3_path, tar_path, "topic_model", model_id)
 
@@ -711,9 +689,7 @@ class Pipeline:
     def upload(self, s3_path, local_path, model_prefix, model_name):
         # Loop through each file and upload to S3
         logger.info(f"Uploading files to {s3_path}\n\tUploading: {local_path}")
-        s3_path = os.path.join(
-            s3_path, f"{model_prefix}_" + model_name + ".tar.gz"
-        )
+        s3_path = join(s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
         logger.info(f"s3_path {s3_path}")
         bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
         S3Service.upload_file(
@@ -759,7 +735,7 @@ class Pipeline:
                     0,
                     1,
                     f"training {build_type} model",
-                    thread_id=threading.current_thread().ident,
+                    thread_id=current_thread().ident,
                 )
 
             mlflow.end_run()
@@ -768,7 +744,7 @@ class Pipeline:
                 1,
                 1,
                 f"trained {build_type} model",
-                thread_id=threading.current_thread().ident,
+                thread_id=current_thread().ident,
             )
         except Exception as e:
             logger.warning(f"Error building {build_type} with MLFlow")
@@ -796,14 +772,14 @@ class Pipeline:
                     0,
                     1,
                     f"training {build_type} model",
-                    thread_id=threading.current_thread().ident,
+                    thread_id=current_thread().ident,
                 )
                 processmanager.update_status(
                     processmanager.training,
                     1,
                     1,
                     f"trained {build_type} model",
-                    thread_id=threading.current_thread().ident,
+                    thread_id=current_thread().ident,
                 )
             except Exception as err:
                 logger.error("Could not train %s" % build_type)
@@ -812,13 +788,13 @@ class Pipeline:
                     processmanager.loading_corpus,
                     message="failed to load corpus",
                     failed=True,
-                    thread_id=threading.current_thread().ident,
+                    thread_id=current_thread().ident,
                 )
                 processmanager.update_status(
                     processmanager.training,
                     message="failed to train " + build_type + " model",
                     failed=True,
-                    thread_id=threading.current_thread().ident,
+                    thread_id=current_thread().ident,
                 )
 
     def mlflow_record(self, metadata, evals):
