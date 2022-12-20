@@ -12,11 +12,12 @@ import urllib3
 import threading
 import pandas as pd
 from distutils.dir_util import copy_tree
-from datetime import datetime, date
+from datetime import date
 from pathlib import Path
 import typing as t
 import logging
 
+from gamechangerml.src.utilities import get_current_datetime
 from gamechangerml.configs import S3Config
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.services import S3Service
@@ -76,7 +77,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-modelname = datetime.now().strftime("%Y%m%d")
+modelname = get_current_datetime()
 model_path_dict = get_model_paths()
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
@@ -101,7 +102,7 @@ except Exception as e:
 class Pipeline:
     def __init__(self):
 
-        self.model_suffix = datetime.now().strftime("%Y%m%d")
+        self.model_suffix = get_current_datetime()
         self.ltr = LTR()
         # read in input data files
         try:
@@ -182,7 +183,7 @@ class Pipeline:
             try:
                 s3_path = os.path.join(S3_DATA_PATH, f"{version}")
                 logger.info(f"****    Saving new data files to S3: {s3_path}")
-                model_name = datetime.now().strftime("%Y%m%d")
+                model_name = get_current_datetime()
                 model_prefix = "data"
                 dst_path = DATA_PATH + model_name + ".tar.gz"
                 utils.create_tgz_from_dir(
@@ -202,7 +203,6 @@ class Pipeline:
         warmup_steps: int = 100,
         testing_only: bool = False,
         remake_train_data: bool = True,
-        retriever=None,
         model=None,
         version: str = "v1",
     ) -> t.Dict[str, str]:
@@ -262,7 +262,7 @@ class Pipeline:
             if testing_only:
                 model_save_path = model_load_path + "_TEST_" + timestamp
             else:
-                model_id = datetime.now().strftime("%Y%m%d")
+                model_id = get_current_datetime()
                 model_save_path = model_load_path + "_" + model_id
             logger.info(
                 f"Setting {str(model_save_path)} as save path for new model"
@@ -401,7 +401,7 @@ class Pipeline:
         model_dir = model_dest
 
         if not model_id:
-            model_id = datetime.now().strftime("%Y%m%d")
+            model_id = get_current_datetime()
 
         # get model name schema
         model_name = "qexp_" + model_id
@@ -496,7 +496,7 @@ class Pipeline:
 
         # Define model saving directories
         model_dir = MODEL_PATH
-        model_id = datetime.now().strftime("%Y%m%d")
+        model_id = get_current_datetime()
         model_name = "sent_index_" + model_id
         local_sent_index_dir = os.path.join(model_dir, model_name)
 
@@ -524,11 +524,11 @@ class Pipeline:
                 f"Creating Document Embeddings with {encoder_model} on {corpus}"
             )
             logger.info("-------------- Indexing Documents--------------")
-            start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            start_time = get_current_datetime("%Y-%m-%d %H:%M:%S")
             encoder.index_documents(
                 corpus_path=corpus, index_path=local_sent_index_dir
             )
-            end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            end_time = get_current_datetime("%Y-%m-%d %H:%M:%S")
             logger.info("-------------- Completed Indexing --------------")
             user = get_user(logger)
 
@@ -691,7 +691,7 @@ class Pipeline:
         version="v2",
     ):
         try:
-            model_id = datetime.now().strftime("%Y%m%d%H%M%S")
+            model_id = get_current_datetime("%Y%m%d%H%M%S")
             model_dir = PathConfig.LOCAL_MODEL_DIR
 
             # get model name schema
