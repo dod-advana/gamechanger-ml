@@ -6,8 +6,7 @@ import spacy
 
 from gamechangerml.src.search.query_expansion.sif_alg import sif_embedding
 from gamechangerml.src.search.query_expansion.word_wt import get_word_weight
-from gamechangerml.src.utilities.np_utils import is_zero_vector
-from gamechangerml.src.utilities.numpy_encoder import NumpyEncoder
+from gamechangerml.src.utilities.numpy_utils import is_zero_vector, NumpyEncoder
 from gamechangerml.src.utilities.text_generators import gen_json_mult_keys
 from gamechangerml.src.utilities.timer import Timer
 from gamechangerml import DATA_PATH

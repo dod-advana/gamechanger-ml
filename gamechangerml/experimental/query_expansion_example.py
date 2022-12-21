@@ -16,7 +16,7 @@ import sys
 
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.utilities.spacy_model import get_lg_vectors
-from gamechangerml.src.utilities.np_utils import is_zero_vector
+from gamechangerml.src.utilities.numpy_utils import is_zero_vector
 
 from gamechangerml.src.utilities.arg_parser import LocalParser
 from gamechangerml.src.utilities.text_utils import simple_clean

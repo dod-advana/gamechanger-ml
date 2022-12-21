@@ -3,10 +3,7 @@
 
 import logging
 
-from gamechangerml.src.utilities.numpy_encoder._numpy_encoder import (
-    NumpyEncoder,
-    ndarray_hook,
-)
+from ._numpy_encoder import NumpyEncoder, ndarray_hook
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())

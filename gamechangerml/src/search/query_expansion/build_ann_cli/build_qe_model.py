@@ -37,7 +37,7 @@ from gamechangerml.src.featurization.keywords.rake import Rake
 from gamechangerml.src.search.query_expansion.sif_alg import sif_embedding
 from gamechangerml.src.search.query_expansion.utils import QEConfig
 from gamechangerml.src.search.query_expansion.word_wt import get_word_weight
-from gamechangerml.src.utilities.np_utils import is_zero_vector
+from gamechangerml.src.utilities.numpy_utils import is_zero_vector
 from gamechangerml.src.utilities.spacy_model import (
     get_lg_vectors,
     spacy_vector_width,

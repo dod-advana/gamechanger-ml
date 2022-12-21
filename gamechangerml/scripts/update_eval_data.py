@@ -5,8 +5,9 @@ from typing import List, Union, Tuple, Dict
 from gamechangerml.src.model_testing.validation_data import IntelSearchData
 from gamechangerml.configs import ValidationConfig
 from gamechangerml.src.utilities.test_utils import (
-    make_timestamp_directory, check_directory, NumpyJSONEncoder
+    make_timestamp_directory, check_directory
 )
+from gamechangerml.src.utilities import NumpyJSONEncoder
 from gamechangerml import DATA_PATH
 from gamechangerml.api.utils.pathselect import get_model_paths
 import logging

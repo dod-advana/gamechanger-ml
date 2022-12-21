@@ -7,3 +7,12 @@ from .utils import (
     get_sentence_index,
     create_tgz_from_dir,
 )
+from .numpy_utils import (
+    NumpyJSONEncoder,
+    NumpyEncoder,
+    ndarray_hook,
+    is_zero_vector,
+    l2_norm_by_row,
+    l2_normed_matrix,
+    l2_norm_vector,
+)

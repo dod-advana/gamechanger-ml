@@ -4,7 +4,7 @@ import numpy as np
 import os
 import pytest
 
-from gamechangerml.src.utilities.numpy_encoder import NumpyEncoder, ndarray_hook
+from gamechangerml.src.utilities import NumpyEncoder, ndarray_hook
 
 test_vector = np.array([1.0, 2.0, 3.0])
 test_mat = np.eye(3)
