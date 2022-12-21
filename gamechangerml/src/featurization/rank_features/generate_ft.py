@@ -78,7 +78,7 @@ def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_
     # kw_doc_df = pd.DataFrame(kw_doc_pairs)
 
     # SEARCH LOGS
-    # resp = meta.get_searchLogs(str(from_date.date()))
+    # resp = PostgresService.get_search_logs(str(from_date.date()))
 
     # until we get connection to prod data
     logger.info(f"****    Reading in prod data from {prod_data}")

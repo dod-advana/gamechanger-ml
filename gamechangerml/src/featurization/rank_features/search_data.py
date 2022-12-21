@@ -1,46 +1,12 @@
-import psycopg2 as ps
 import pandas as pd
 import re
 from gamechangerml.src.text_handling.process import preprocess
 from collections import Counter
 import logging
 from tqdm import tqdm
-import os
 
 logger = logging.getLogger("gamechanger")
 
-PG_USER = "postgres"
-PG_PASS = "password"
-PG_HOST = os.environ.get('PG_HOST', 'localhost')
-PG_PORT = 5432
-PG_DB = "uot"
-
-
-def ps_connect():
-    """ postgres open connect
-    Args:
-    Returns:
-        postgres connection object
-    """
-    conn = ps.connect(
-        user=PG_USER, password=PG_PASS, host=PG_HOST, port=PG_PORT, database=PG_DB
-    )
-    return conn
-
-
-def get_searchLogs(from_date: str):
-    """ get searchlogs
-    Args:
-        from_date: get logs from certain date FORMAT '2020-08-20'
-    Returns:
-        json response from query
-    """
-    conn = ps_connect()
-    cursor = conn.cursor()
-    query = f"SELECT * FROM gc_history WHERE run_at >= '{from_date}'::date ORDER BY run_at DESC"
-    cursor.execute(query)
-    resp = cursor.fetchall()
-    return resp
 
 def _logs_toDf(searchLog: list):
     df = pd.DataFrame(
