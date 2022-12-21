@@ -60,16 +60,7 @@ def timestamp_filename(filename, extension):
     today = date.today()
     formatted = '_'.join([filename, today.strftime("%Y%m%d")])
     return formatted + extension
-
-
-def check_directory(directory):
-    '''Checks if a directory exists, if it does not makes the directory'''
-    if not os.path.exists(directory):
-        logger.info("Creating new directory {}".format(directory))
-        os.makedirs(directory)
-
-    return directory
-
+    
 
 def make_timestamp_directory(base_dir):
 

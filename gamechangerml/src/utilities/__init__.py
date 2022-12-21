@@ -14,6 +14,7 @@ from .file_utils import (
     save_json,
     delete_files,
     get_most_recently_changed_dir,
+    create_directory_if_not_exists,
 )
 from .numpy_utils import (
     NumpyJSONEncoder,

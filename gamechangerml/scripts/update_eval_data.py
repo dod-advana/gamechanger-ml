@@ -4,10 +4,11 @@ from datetime import date
 from typing import List, Union, Tuple, Dict
 from gamechangerml.src.model_testing.validation_data import IntelSearchData
 from gamechangerml.configs import ValidationConfig
-from gamechangerml.src.utilities.test_utils import (
-    make_timestamp_directory, check_directory
+from gamechangerml.src.utilities.test_utils import make_timestamp_directory
+from gamechangerml.src.utilities import (
+    NumpyJSONEncoder,
+    create_directory_if_not_exists,
 )
-from gamechangerml.src.utilities import NumpyJSONEncoder
 from gamechangerml import DATA_PATH
 from gamechangerml.api.utils.pathselect import get_model_paths
 import logging
@@ -93,7 +94,7 @@ def make_tiered_eval_data(index_path, testing_only):
         }
 
         save_intel = json.dumps(save_intel, cls=NumpyJSONEncoder)
-        intel_path = check_directory(os.path.join(save_dir, level))
+        intel_path = create_directory_if_not_exists(os.path.join(save_dir, level))
         intel_file = os.path.join(intel_path, 'intelligent_search_data.json')
         metafile = os.path.join(intel_path, 'intelligent_search_metadata.json')
         with open(intel_file, "w") as outfile:
