@@ -11,3 +11,5 @@ from .validation_config import ValidationConfig
 from .bert_summary_config import BertSummConfig
 from .topics_config import TopicsConfig
 from .redis_config import RedisConfig
+from .path_config import PathConfig
+from .spacy_config import SpacyConfig
