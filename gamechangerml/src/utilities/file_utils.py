@@ -21,7 +21,7 @@ def save_json(filename, path, data):
 
 def open_json(filename, path):
     """Opens a json file"""
-    with open(join(path, filename)) as f:
+    with open(join(path, filename), "r") as f:
         return load(f)
 
 
