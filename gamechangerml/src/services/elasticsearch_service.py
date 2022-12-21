@@ -9,20 +9,19 @@ from urllib.parse import urljoin
 logger = logging.getLogger("gamechanger")
 
 
-class ESUtils:
+class ElasticsearchService:
     def __init__(
         self,
         host: str = os.environ.get("ES_HOST", "localhost"),
         port: str = os.environ.get("ES_PORT", 443),
         user: str = os.environ.get("ES_USER", ""),
         password: str = os.environ.get("ES_PASSWORD", ""),
-        enable_ssl: bool = os.environ.get(
-            "ES_ENABLE_SSL", "True").lower() == "true",
-        enable_auth: bool = os.environ.get(
-            "ES_ENABLE_AUTH", "False").lower() == "true",
+        enable_ssl: bool = os.environ.get("ES_ENABLE_SSL", "True").lower()
+        == "true",
+        enable_auth: bool = os.environ.get("ES_ENABLE_AUTH", "False").lower()
+        == "true",
         es_index: str = os.environ.get("ES_INDEX", "gamechanger"),
     ):
-
         self.host = host
         self.port = port
         self.user = user
@@ -51,8 +50,9 @@ class ESUtils:
             ]
         )
         auth_args = (
-            dict(http_auth=(self.user, self.password)
-                 ) if self.enable_auth else {}
+            dict(http_auth=(self.user, self.password))
+            if self.enable_auth
+            else {}
         )
         ssl_args = dict(use_ssl=self.enable_ssl)
 
@@ -67,7 +67,11 @@ class ESUtils:
 
     @property
     def auth_headers(self) -> t.Dict[str, str]:
-        return {"Authorization": f"Basic {self.auth_token}"} if self.enable_auth else {}
+        return (
+            {"Authorization": f"Basic {self.auth_token}"}
+            if self.enable_auth
+            else {}
+        )
 
     @property
     def content_headers(self) -> t.Dict[str, str]:
@@ -82,9 +86,13 @@ class ESUtils:
 
     @property
     def root_url(self) -> str:
-        return ("https" if self.enable_ssl else "http") + f"://{self.host}:{self.port}/"
+        return (
+            "https" if self.enable_ssl else "http"
+        ) + f"://{self.host}:{self.port}/"
 
-    def request(self, method: str, url: str, **request_opts) -> requests.Response:
+    def request(
+        self, method: str, url: str, **request_opts
+    ) -> requests.Response:
         complete_url = urljoin(self.root_url, url.lstrip("/"))
         return requests.request(
             method=method,
