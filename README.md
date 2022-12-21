@@ -90,7 +90,6 @@
 │   │   │   ├── summary.py
 │   │   │   ├── table.py
 │   │   │   ├── term_extract
-│   │   │   ├── test_hf_ner.py
 │   │   │   ├── tests
 │   │   │   ├── topic_modeling.py
 │   │   │   └── word_sim.py

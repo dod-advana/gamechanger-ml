@@ -12,14 +12,6 @@ import torch
 # TODO: write tests to see how good both NERs are
 
 
-def load_text(corpus_dir):
-    if not os.path.isdir(corpus_dir):
-        raise FileNotFoundError(
-            "directory not found; got {}".format(corpus_dir)
-        )
-    return ner_dir(corpus_dir)
-
-
 # TODO: update
 def ner_dir(corpus_dir):
     doc_gen = gen_json(corpus_dir)
