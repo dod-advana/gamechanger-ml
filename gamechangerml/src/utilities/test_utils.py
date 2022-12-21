@@ -74,10 +74,6 @@ def make_timestamp_directory(base_dir):
 
     return new_dir
 
-# stackoverflow
-# https://stackoverflow.com/questions/50916422/python-typeerror-object-of-type-int64-is-not-json-serializable
-
-
 
 def clean_nans(value):
     '''Replaces null value with 0'''
