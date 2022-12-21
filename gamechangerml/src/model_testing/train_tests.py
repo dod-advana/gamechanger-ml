@@ -8,6 +8,7 @@ import time
 import shutil
 import pandas as pd
 import argparse
+from gamechangerml.src.utilities import open_json
 
 logger = logging.getLogger()
 training_dir= "gamechangerml/data/test"
@@ -16,10 +17,6 @@ http = requests.Session()
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
 API_URL = f"{GC_ML_HOST}:5000" if "http" in GC_ML_HOST else f"http://{GC_ML_HOST}:5000"
 
-def open_json(filename, path):
-    '''Opens a json file'''
-    with open(os.path.join(path, filename)) as f:
-        return json.load(f)
 
 def get_most_recent_dir(parent_dir):
     
