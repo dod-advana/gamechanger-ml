@@ -13,7 +13,7 @@ from gamechangerml.configs import (
     QexpConfig,
 )
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.src.utilities import open_json
+from gamechangerml.src.utilities import open_json, get_most_recently_changed_dir
 import argparse
 import os
 import logging
@@ -63,7 +63,7 @@ def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
                 data_path = None
         else:
             try:
-                data_path = get_most_recent_dir(base_data_dir)
+                data_path = get_most_recently_changed_dir(base_data_dir)
             except:
                 data_path = None
         results = {}

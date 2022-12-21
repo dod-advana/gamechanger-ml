@@ -1,5 +1,8 @@
-from os.path import join
+from os.path import join, getctime, isdir
+from os import listdir, rmdir, remove
+from shutil import rmtree
 from json import load, loads, dump
+from logging import Logger
 from .numpy_utils import NumpyJSONEncoder
 
 
@@ -33,3 +36,44 @@ def open_jsonl(filename, path):
         data.append(result)
 
     return data
+
+
+def delete_files(path, logger=None):
+    """Deletes all files in a directory"""
+    use_logger = isinstance(logger, Logger)
+    
+    info_msg = f"Cleaning up: removing test files from {str(path)}"
+    if use_logger:
+        logger.info(info_msg)
+    else:
+        print(info_msg)
+
+    for file in listdir(path):
+        fpath = join(path, file)
+        print(fpath)
+        try:
+            rmtree(fpath)
+        except OSError:
+            remove(fpath)
+    try:
+        rmdir(path)
+    except OSError as e:
+        error_msg = "Error: %s : %s" % (path, e.strerror)
+        if use_logger:
+            logger.error(error_msg)
+        else:
+            print(error_msg)
+
+def get_most_recently_changed_dir(parent_dir, logger=None):
+    use_logger = isinstance(logger, Logger)
+    
+    subdirs = [join(parent_dir, d) for d in listdir(parent_dir) if isdir(join(parent_dir, d))]
+    if len(subdirs) > 0:
+        return max(subdirs, key=getctime)
+    else:
+        error_msg = f"There are no subdirectories to retrieve most recent data from within {parent_dir}."
+        if use_logger:
+            logger.error(error_msg)
+        else:
+            print(error_msg)
+        return None

@@ -359,18 +359,6 @@ def concat_search_hist(testing_only=False):
         return concat_csvs(SEARCH_HIST)
 
 
-def get_most_recent_dir(parent_dir):
-
-    subdirs = [os.path.join(parent_dir, d) for d in os.listdir(
-        parent_dir) if os.path.isdir(os.path.join(parent_dir, d))]
-    if len(subdirs) > 0:
-        return max(subdirs, key=os.path.getctime)
-    else:
-        logger.error(
-            "There are no subdirectories to retrieve most recent data from")
-        return None
-
-
 def make_test_corpus(
     corpus_dir,  # main corpus dir
     save_dir,  # where to save the test corpus

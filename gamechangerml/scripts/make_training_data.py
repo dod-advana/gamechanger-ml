@@ -16,7 +16,11 @@ from gamechangerml.src.model_testing.query_es import *
 from gamechangerml.src.services import ElasticsearchService
 from gamechangerml.src.utilities.text_utils import normalize_query
 from gamechangerml.src.utilities.test_utils import *
-from gamechangerml.src.utilities import open_json, save_json
+from gamechangerml.src.utilities import (
+    open_json,
+    save_json,
+    get_most_recently_changed_dir,
+)
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 from gensim.utils import simple_preprocess
@@ -524,7 +528,7 @@ def make_training_data(
         logger.info("****    Updating the evaluation data")
         make_tiered_eval_data(index_path, testing_only)
 
-    validation_dir = get_most_recent_dir(
+    validation_dir = get_most_recently_changed_dir(
         os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
     )
     directory = os.path.join(validation_dir, level)

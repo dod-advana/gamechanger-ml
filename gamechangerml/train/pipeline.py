@@ -49,10 +49,12 @@ from gamechangerml.src.featurization.make_meta import (
 from gamechangerml.scripts.make_training_data import make_training_data
 from gamechangerml.src.utilities.test_utils import (
     get_user,
-    get_most_recent_dir,
     get_index_size,
 )
-from gamechangerml.src.utilities import open_json
+from gamechangerml.src.utilities import (
+    open_json,
+    get_most_recently_changed_dir,
+)
 from gamechangerml.api.utils import processmanager, status_updater
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.search.query_expansion.build_ann_cli import (
@@ -205,9 +207,9 @@ class Pipeline:
                 len(listdir(base_dir)) == 0
             ):  # if base dir exists but there are no files
                 no_data = True
-            elif get_most_recent_dir(base_dir) == None:
+            elif get_most_recently_changed_dir(base_dir) == None:
                 no_data = True
-            elif len(listdir(get_most_recent_dir(base_dir))) == 0:
+            elif len(listdir(get_most_recently_changed_dir(base_dir))) == 0:
                 no_data = True
             logger.info(f"No data flag is set to: {str(no_data)}")
 
@@ -220,7 +222,7 @@ class Pipeline:
                     testing_only=testing_only,
                 )
 
-            data_path = get_most_recent_dir(base_dir)
+            data_path = get_most_recently_changed_dir(base_dir)
             timestamp = str(data_path).split("/")[-1]
 
             # set model save path

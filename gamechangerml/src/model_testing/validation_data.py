@@ -7,7 +7,12 @@ from gamechangerml.src.utilities.text_utils import normalize_answer, normalize_q
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.configs import ValidationConfig
 from gamechangerml.src.utilities.test_utils import filter_date_range
-from gamechangerml.src.utilities import open_txt, open_json, open_jsonl
+from gamechangerml.src.utilities import (
+    open_txt,
+    open_json,
+    open_jsonl,
+    get_most_recently_changed_dir,
+)
 from gamechangerml import REPO_PATH
 
 CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
@@ -221,7 +226,7 @@ class UpdatedGCRetrieverData(RetrieverGSData):
             if data_path:  # if there is a path for data, use that
                 self.data_path = os.path.join(data_path, level)
             else:
-                new_data = get_most_recent_dir(
+                new_data = get_most_recently_changed_dir(
                     os.path.join(
                         ValidationConfig.DATA_ARGS["validation_dir"], "domain", "sent_transformer"
                     )
