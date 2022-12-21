@@ -5,8 +5,7 @@ import csv
 import math
 import logging
 from datetime import datetime
-from sentence_transformers import util
-from gamechangerml import REPO_PATH, CORPUS_PATH
+from gamechangerml import CORPUS_PATH
 from gamechangerml.src.search.sent_transformer.model import (
     SentenceEncoder,
     SentenceSearcher,
@@ -15,8 +14,9 @@ from gamechangerml.src.search.sent_transformer.model import (
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
-from gamechangerml.src.utilities.text_utils import normalize_answer
 from gamechangerml.src.utilities.test_utils import *
+from gamechangerml.src.utilities.text_utils import normalize_answer
+from gamechangerml.src.utilities.file_utils import save_json, open_json, open_txt
 from gamechangerml.src.model_testing.validation_data import (
     SQuADData,
     NLIData,

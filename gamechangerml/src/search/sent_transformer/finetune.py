@@ -1,8 +1,8 @@
 from gamechangerml import DATA_PATH
 from datetime import datetime
 from gamechangerml.src.paths import S3_MODELS_PATH
-from gamechangerml.src.utilities import utils as utils
-from gamechangerml.src.utilities.test_utils import open_json, save_json, timestamp_filename
+from gamechangerml.src.utilities import utils, save_json, open_json
+from gamechangerml.src.utilities.test_utils import timestamp_filename
 from gamechangerml.src.services import S3Service
 from gamechangerml.configs import S3Config
 from gamechangerml.scripts.run_evaluation import eval_sent

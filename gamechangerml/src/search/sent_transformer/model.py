@@ -17,6 +17,7 @@ from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 from gamechangerml.configs import EmbedderConfig
+from gamechangerml.src.utilities import open_json
 
 logger = logging.getLogger(__name__)
 

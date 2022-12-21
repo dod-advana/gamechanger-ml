@@ -1,6 +1,5 @@
 import os
 import re
-import json
 import pandas as pd
 import math
 from dateutil import parser
@@ -11,6 +10,7 @@ import random
 import logging
 
 from gamechangerml.configs import ValidationConfig
+from gamechangerml.src.utilities import open_json, open_txt
 
 MATAMO_DIR = ValidationConfig.DATA_ARGS['matamo_dir']
 SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']
@@ -51,38 +51,6 @@ def get_user(logger):
         user = "unknown"
         logger.info("Could not get system user")
         logger.info(e)
-
-
-def save_json(filename, path, data):
-    '''Saved a json file'''
-    filepath = os.path.join(path, filename)
-    with open(filepath, "w") as outfile:
-        return json.dump(data, outfile, cls=NumpyJSONEncoder)
-
-
-def open_json(filename, path):
-    '''Opens a json file'''
-    with open(os.path.join(path, filename)) as f:
-        return json.load(f)
-
-
-def open_jsonl(filename, path):
-    '''Opens a jsonl file'''
-    with open(os.path.join(path, filename), 'r') as json_file:
-        json_list = list(json_file)
-
-    data = []
-    for json_str in json_list:
-        result = json.loads(json_str)
-        data.append(result)
-
-    return data
-
-
-def open_txt(filepath):
-    '''Opens a txt file'''
-    with open(filepath, "r") as fp:
-        return fp.readlines()
 
 
 def get_index_size(sent_index_path):

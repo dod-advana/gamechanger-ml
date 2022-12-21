@@ -7,6 +7,12 @@ from .utils import (
     get_sentence_index,
     create_tgz_from_dir,
 )
+from .file_utils import (
+    open_txt,
+    open_json,
+    open_jsonl,
+    save_json,
+)
 from .numpy_utils import (
     NumpyJSONEncoder,
     NumpyEncoder,

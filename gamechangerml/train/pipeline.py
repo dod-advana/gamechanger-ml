@@ -51,8 +51,8 @@ from gamechangerml.src.utilities.test_utils import (
     get_user,
     get_most_recent_dir,
     get_index_size,
-    open_json,
 )
+from gamechangerml.src.utilities import open_json
 from gamechangerml.api.utils import processmanager, status_updater
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.search.query_expansion.build_ann_cli import (
