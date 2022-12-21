@@ -1,4 +1,5 @@
 import os
+from os.path import join, getsize
 import re
 import pandas as pd
 import math
@@ -34,11 +35,6 @@ def init_timer():
     logger.info("Created timer.")
 
     return
-
-
-def check_file_size(filename, path):
-    '''Returns the filesize (in bytes) of a file'''
-    return os.path.getsize(os.path.join(path, filename))
 
 
 def get_user(logger):
@@ -400,7 +396,7 @@ def make_test_corpus(
             random_index = random.randint(0, len(other)-1)
             file = other[random_index]  # pick a random file
             # if filesize is smaller than max, break loop
-            filesize = check_file_size(file, corpus_dir)
+            filesize = getsize(join(corpus_dir, file))
         subset.append(file)
         subset = list(set(subset))  # remove duplicates
 
