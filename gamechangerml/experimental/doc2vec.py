@@ -1,27 +1,10 @@
 import os
 import logging
 from gensim.models.doc2vec import Doc2Vec
-from datetime import datetime
 from collections import defaultdict
 from gamechangerml.src.utilities.utils import save_all_s3
-import multiprocessing
 
 logger = logging.getLogger("gamechanger")
-
-default_model_args = {
-    "dm": 0,
-    "dbow_words": 1,
-    "vector_size": 100,
-    "window": 5,
-    "min_count": 5,
-    "sample": 1e-5,
-    "epochs": 25,
-    "alpha": 0.025,
-    "min_alpha": 0.005,
-    "workers": 3
-    * multiprocessing.cpu_count()
-    // 4,  # to allow some portion of the cores to perform generator tasks
-}
 
 
 class D2V(object):
