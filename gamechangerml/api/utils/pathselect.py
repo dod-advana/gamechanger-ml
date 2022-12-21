@@ -1,8 +1,9 @@
-import os
-import logging
+from os import listdir
+from os.path import join, isdir, isfile
+from logging import getLogger
 from gamechangerml.api.fastapi.model_config import Config
 
-logger = logging.getLogger()
+logger = getLogger()
 
 
 def get_model_paths():
@@ -11,17 +12,17 @@ def get_model_paths():
     try:
         qexp_names = [
             f
-            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            for f in listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
             if ("qexp_" in f) and (all(substr not in f for substr in ["tar", "jbook"]))
         ]
         qexp_names.sort(reverse=True)
         if len(qexp_names) > 0:
-            QEXP_MODEL_PATH = os.path.join(
+            QEXP_MODEL_PATH = join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, qexp_names[0]
             )
         else:
             print("defaulting INDEX_PATH to qexp")
-            QEXP_MODEL_PATH = os.path.join(
+            QEXP_MODEL_PATH = join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, "qexp_20201217"
             )
     except Exception as e:
@@ -33,17 +34,17 @@ def get_model_paths():
     try:
         qexp_jbook_names = [
             f
-            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            for f in listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
             if (all(substr in f for substr in ["qexp_", "jbook"])) and ("tar" not in f)
         ]
         qexp_jbook_names.sort(reverse=True)
         if len(qexp_jbook_names) > 0:
-            QEXP_JBOOK_MODEL_PATH = os.path.join(
+            QEXP_JBOOK_MODEL_PATH = join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, qexp_jbook_names[0]
             )
         else:
             print("defaulting INDEX_PATH to qexp")
-            QEXP_JBOOK_MODEL_PATH = os.path.join(
+            QEXP_JBOOK_MODEL_PATH = join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, "jbook_qexp_20220131"
             )
     except Exception as e:
@@ -53,7 +54,7 @@ def get_model_paths():
 
     # TRANSFORMER MODEL PATH
     try:
-        LOCAL_TRANSFORMERS_DIR = os.path.join(
+        LOCAL_TRANSFORMERS_DIR = join(
             Config.LOCAL_PACKAGED_MODELS_DIR, "transformers"
         )
     except Exception as e:
@@ -62,7 +63,7 @@ def get_model_paths():
         logger.info("Cannot get TRANSFORMER model path")
     # WORK SIM MODEL PATH
     try:
-        WORD_SIM_MODEL_PATH = os.path.join(
+        WORD_SIM_MODEL_PATH = join(
             LOCAL_TRANSFORMERS_DIR, "wiki-news-300d-1M.bin"
         )
     except Exception as e:
@@ -75,29 +76,29 @@ def get_model_paths():
     try:
         sent_index_name = [
             f
-            for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            for f in listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
             if ("sent_index" in f) and ("tar" not in f)
         ]
         sent_index_name = [
             f
             for f in sent_index_name
-            if os.path.isfile(
-                os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f, "config")
+            if isfile(
+                join(Config.LOCAL_PACKAGED_MODELS_DIR, f, "config")
             )
         ]
         sent_index_name.sort(reverse=True)
         if len(sent_index_name) > 0:
-            INDEX_PATH = os.path.join(
+            INDEX_PATH = join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, sent_index_name[0]
             )
-            DOC_COMPARE_INDEX_PATH = os.path.join(
+            DOC_COMPARE_INDEX_PATH = join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, sent_index_name[0]
             )
         else:
             print("defaulting INDEX_PATH to sent_index")
-            INDEX_PATH = os.path.join(
+            INDEX_PATH = join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
-            DOC_COMPARE_INDEX_PATH = os.path.join(
+            DOC_COMPARE_INDEX_PATH = join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, "sent_index")
     except Exception as e:
         logger.error(e)
@@ -110,14 +111,14 @@ def get_model_paths():
 
         topic_model_dirs = [
             name
-            for name in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            for name in listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
             if "topic_model_" in name
-            and os.path.isdir(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
+            and isdir(join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
         ]
         topic_model_dirs.sort(reverse=True)
 
         if len(topic_model_dirs) > 0:
-            TOPICS_PATH = os.path.join(
+            TOPICS_PATH = join(
                 Config.LOCAL_PACKAGED_MODELS_DIR, topic_model_dirs[0]
             )
         else:

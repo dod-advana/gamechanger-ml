@@ -1,4 +1,3 @@
-from concurrent.futures import thread
 from fastapi import APIRouter, Response, status
 import subprocess
 import os
@@ -11,8 +10,7 @@ import redis
 
 from datetime import datetime
 from gamechangerml import DATA_PATH
-from gamechangerml.configs.s3_config import S3Config
-from gamechangerml.src.utilities import utils
+from gamechangerml.configs import S3Config
 from gamechangerml.src.utilities.es_utils import ESUtils
 from gamechangerml.src.services import S3Service
 from gamechangerml.api.fastapi.model_config import Config
@@ -47,12 +45,11 @@ from gamechangerml.src.utilities.test_utils import (
     collect_evals,
     handle_sent_evals,
 )
-from gamechangerml import MODEL_PATH
 from gamechangerml.src.utilities import gc_web_api
 
 router = APIRouter()
 MODELS = ModelLoader()
-gcClient = gc_web_api.GCWebClient()
+
 ## Get Methods ##
 
 pipeline = Pipeline()

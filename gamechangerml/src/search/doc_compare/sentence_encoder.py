@@ -4,7 +4,6 @@ from os import remove
 from os.path import join
 from pickle import load
 from pandas import DataFrame
-from threading import current_thread
 import numpy as np
 import torch
 import logging
@@ -12,7 +11,6 @@ import threading
 
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.src.text_handling.corpus import LocalCorpus
-from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
 logger = logging.getLogger(__name__)
