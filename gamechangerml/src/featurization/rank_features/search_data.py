@@ -42,26 +42,6 @@ def get_searchLogs(from_date: str):
     resp = cursor.fetchall()
     return resp
 
-def get_entities():
-    conn = ps_connect()
-    cursor = conn.cursor()
-    query = f"SELECT * FROM gc_entities"
-    cursor.execute(query)
-    resp = cursor.fetchall()
-    return resp
-
-
-
-def get_annotationLogs(from_date: str):
-    # doesn't exist yet
-    conn = ps_connect()
-    cursor = conn.cursor()
-    query = f"SELECT * FROM gc_annotations WHERE run_at >= '{from_date}'::date ORDER BY run_at DESC"
-    cursor.execute(query)
-    resp = cursor.fetchall()
-    return resp
-
-
 def _logs_toDf(searchLog: list):
     df = pd.DataFrame(
         searchLog,
