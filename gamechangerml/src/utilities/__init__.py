@@ -26,3 +26,4 @@ from .numpy_utils import (
     l2_norm_vector,
 )
 from .timeout import TimeoutException, init_timer
+from .timer import Timer
