@@ -32,7 +32,7 @@ import time
 import pandas as pd
 
 import gamechangerml.src.text_classif.utils.classifier_utils as cu
-from gamechangerml.src.featurization.abbreviations_utils import (
+from gamechangerml.src.featurization.abbreviation import (
     get_references,
     get_agencies_dict,
     get_agencies,
