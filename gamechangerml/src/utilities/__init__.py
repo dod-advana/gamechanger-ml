@@ -25,3 +25,4 @@ from .numpy_utils import (
     l2_normed_matrix,
     l2_norm_vector,
 )
+from .timeout import TimeoutException, init_timer

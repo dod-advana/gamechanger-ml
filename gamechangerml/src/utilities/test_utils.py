@@ -1,13 +1,9 @@
 import os
-from os.path import join, getsize
 import re
 import pandas as pd
 import math
 from dateutil import parser
 from datetime import date, datetime
-import signal
-import torch
-import random
 import logging
 
 from gamechangerml.configs import ValidationConfig
@@ -19,22 +15,6 @@ SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']
 MATAMO_TEST_FILE = "gamechangerml/data/test_data/MatamoFeedback_TEST.csv"
 SEARCH_TEST_FILE = "gamechangerml/data/test_data/SearchPDFMapping_TEST.csv"
 logger = logging.getLogger(__name__)
-
-
-# https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
-class TimeoutException(Exception):   # Custom exception class
-    pass
-
-
-def init_timer():
-    '''Creates a timer using signal'''
-    # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
-    def timeout_handler(signum, frame):   # Custom signal handler
-        raise TimeoutException
-    signal.signal(signal.SIGALRM, timeout_handler)
-    logger.info("Created timer.")
-
-    return
 
 
 def get_user(logger):
