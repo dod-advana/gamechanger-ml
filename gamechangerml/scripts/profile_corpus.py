@@ -11,6 +11,7 @@ import functools
 from gensim.parsing.preprocessing import STOPWORDS
 from gensim.utils import simple_preprocess
 from gamechangerml.src.text_handling.bert_tokenizer import BertTokenizerCustom
+from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml import REPO_PATH
 
 columns = [
@@ -27,38 +28,6 @@ columns = [
 
 column_names = ",".join(columns)
 
-
-## copied from gamechangerml.src.text_handling.process
-def preprocess(
-    text,
-    min_len=2,
-    phrase_detector=None,
-    remove_stopwords=False,
-    additional_stopwords=None,
-):
-    """
-        preprocess - standard text processing (possibly break out more if complex preprocessing needed
-        Args:
-            text (str)
-            min_len (int): optional Minimum length of token (inclusive). Shorter tokens are discarded.
-            remove_stopwords (bool)
-            additional_stopwords (list of strings)
-        Returns:
-            tokens (list of strings)
-    """
-    tokens = simple_preprocess(text, min_len=min_len, max_len=20)
-
-    if phrase_detector != None:
-        tokens = phrase_detector.apply(tokens)
-
-    if remove_stopwords:
-        if additional_stopwords != None:
-            stopwords_list = STOPWORDS.union(set(additional_stopwords))
-        else:
-            stopwords_list = STOPWORDS
-        tokens = [word for word in tokens if word not in stopwords_list]
-
-    return tokens
 
 def name_outputs(corpus_files):
 
@@ -254,7 +223,6 @@ if __name__ == "__main__":
     save_dir = args.save_dir
     bert_vocab = os.path.join(REPO_PATH, "gamechangerml/src/text_handling/assets/bert_vocab.txt")
     sources_path = os.path.join(REPO_PATH, "gamechangerml/scripts/corpus_doctypes.csv")
-    #save_dir = os.path.join(REPO_PATH, "gamechangerml/scripts/stats_output/")
 
     if not os.path.exists(save_dir):  # make dir to save files
         os.makedirs(save_dir)
