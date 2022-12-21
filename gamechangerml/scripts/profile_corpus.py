@@ -10,8 +10,7 @@ import numpy as np
 import functools
 from gensim.parsing.preprocessing import STOPWORDS
 from gensim.utils import simple_preprocess
-from transformers import BertTokenizer
-#from gamechangerml.src.text_handling.process import preprocess, bert_tokenizer
+from gamechangerml.src.text_handling.bert_tokenizer import BertTokenizerCustom
 from gamechangerml import REPO_PATH
 
 columns = [
@@ -28,18 +27,6 @@ columns = [
 
 column_names = ",".join(columns)
 
-## copied from gamechangerml.src.text_handling.process
-class bert_tokenizer(object):
-    def __init__(self,
-                 vocab_file):
-        
-        self.vocab_file = vocab_file
-        self.tokenizer = BertTokenizer(vocab_file = self.vocab_file, do_lower_case = True)
-
-    def tokenize(self, text):
-        tokens = self.tokenizer.tokenize(text)
-
-        return tokens, len(tokens)
 
 ## copied from gamechangerml.src.text_handling.process
 def preprocess(
@@ -272,7 +259,7 @@ if __name__ == "__main__":
     if not os.path.exists(save_dir):  # make dir to save files
         os.makedirs(save_dir)
 
-    bert_token = bert_tokenizer(bert_vocab)
+    bert_token = BertTokenizerCustom(bert_vocab)
     corpus_files = [f for f in listdir(corpus_dir) if isfile(join(corpus_dir, f))]
 
     print("\n|--------------Generating stats csv---------------|\n")
