@@ -11,6 +11,8 @@ from .data_paths import (
     PROD_DATA_FILE,
     CORPUS_DIR,
     DEFAULT_SENT_INDEX,
+    FEATURES_GENERATED_FILES_DIR,
+    CORPUS_META_FILE,
 )
 from .s3_paths import S3_DATA_PATH, S3_MODELS_PATH
 
