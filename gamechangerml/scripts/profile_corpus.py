@@ -1,4 +1,3 @@
-import json
 import argparse
 import os
 from os import listdir
@@ -12,6 +11,7 @@ from gensim.parsing.preprocessing import STOPWORDS
 from gensim.utils import simple_preprocess
 from gamechangerml.src.text_handling.bert_tokenizer import BertTokenizerCustom
 from gamechangerml.src.text_handling.process import preprocess
+from gamechangerml.src.utilities import open_json
 from gamechangerml import REPO_PATH
 
 columns = [
@@ -37,14 +37,8 @@ def name_outputs(corpus_files):
     return name + ".csv", name + ".txt"
 
 
-def open_file(filename, path):
-    with open(join(path, filename)) as f:
-        return json.load(f)
-
-
 def get_doc_stats(file):
-
-    doc = open_file(file, corpus_dir)
+    doc = open_json(join(corpus_dir, file))
     text = doc["text"]
 
     p_gensim_tokens = []
@@ -111,8 +105,7 @@ def get_vocab(df):
         sub = df[df["source"] == i]
         subtext = ""
         for j in sub["filename"]:
-
-            text = open_file(j, corpus_dir)["text"]
+            text = open_json(join(corpus_dir, j))["text"]
 
             subtext += " " + text
             fulltext += " " + text
