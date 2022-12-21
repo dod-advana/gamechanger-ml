@@ -58,42 +58,6 @@ def simple_clean(text: str) -> str:
         raise
 
 
-def split_sentences(text: str) -> List[str]:
-    """
-    Splitting sentences with spacy.
-    """
-
-    nlp = English()
-    nlp.add_pipe(nlp.create_pipe("sentencizer"))  # updated
-    doc = nlp(text)
-
-    return [sent.string.strip() for sent in doc.sents]
-
-
-def ratio_caps(text: str, ratio: float) -> bool:
-    """
-    Checks the ratio of capital letters to words in a sentence
-    ##TO DO: better way to clean. placeholder for removing DISTRIBUTION
-    STATEMENTS/jargon fragments
-    """
-    if len(re.findall(r"[A-Z]", text)) / len(text.split()) < ratio:
-        return True
-    else:
-        return False
-
-
-def filter_sentences(text: str, token_len: int = 5, ratio: float = 1.5) -> str:
-    """
-    Filters out sentences shorter than 6 words long with high caps-to-words i
-    ratio (if greater than 1.5)
-    """
-    sentences = split_sentences(text)
-    filter_short = [i for i in sentences if len(i.split()) > token_len]
-    filter_caps = [i for i in filter_short if ratio_caps(i, ratio)]
-
-    return " ".join(filter_caps)
-
-
 def summary_clean(text: str, min_par_len=15) -> str:
     """
     Based on original function in summary.py for cleaning paragraphs before
@@ -203,17 +167,6 @@ def normalize_query(s: str) -> str:
         return "".join(ch for ch in text if ch not in exclude)
 
     return white_space_fix(remove_quotes(lower(s)))
-
-
-def clean_query(query: str) -> str:
-    """Removes all non alphanumeric characters and 'and' / 'or' from query string"""
-
-    stop = ["and", "or"]
-    query = [i for i in query.lower().split() if i not in stop]
-    query = re.sub(r"[^ a-zA-Z]", "", " ".join(query))
-    query = " ".join(query.strip().lstrip().split())
-
-    return query
 
 
 def get_tokens(s: str) -> List[str]:
