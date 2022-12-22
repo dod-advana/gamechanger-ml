@@ -2,7 +2,6 @@ import os
 import json
 import threading
 
-# import pandas as pd
 from gensim.models.doc2vec import TaggedDocument
 from gamechangerml.src.text_handling.process import preprocess, get_tokenizer
 from gamechangerml.src.utilities.text_utils import check_quality_paragraph
@@ -88,44 +87,6 @@ class LocalCorpus(object):
                 print(e)
                 print(f"Error with {file_name} in creating local corpus")
                 
-    def _get_doc(self, file_name):
-        with open(file_name, "r") as f:
-            line = f.readline()
-            line = json.loads(line)
-        return line
-
-
-class LocalTaggedCorpus(object):
-    def __init__(self, directory, phrase_detector):
-        self.directory = directory
-        self.file_list = [
-            os.path.join(directory, file)
-            for file in os.listdir(directory)
-            if file[-5:] == ".json"
-        ]
-
-        self.phrase_detector = phrase_detector
-
-    def __iter__(self):
-        for file_name in self.file_list:
-            # get the docs and ingest the json
-            doc = self._get_doc(file_name)
-
-            for p in doc["paragraphs"]:
-                # paragraph tokens for training
-                tokens = preprocess(
-                    p["par_raw_text_t"],
-                    phrase_detector=self.phrase_detector,
-                    remove_stopwords=True,
-                )
-                # creating paragraph tag for model
-                filename = p["filename"]
-                para_num = str(p["par_inc_count"])
-                para_id = "_".join((filename, para_num))
-                # if paragraph is long enough yield for training
-                if len(tokens) > 10:  # to account for the windowsize with d2v
-                    yield TaggedDocument(tokens, [para_id])
-
     def _get_doc(self, file_name):
         with open(file_name, "r") as f:
             line = f.readline()
