@@ -6,25 +6,19 @@ import logging
 import os
 import xgboost as xgb
 import json
-from gamechangerml import MODEL_PATH, DATA_PATH
-import typing as t
-from urllib.parse import urljoin
+from gamechangerml import MODEL_PATH
 from datetime import datetime, timedelta
 from gamechangerml.src.utilities import (
     gc_web_api,
     user_utils as user,
 )
-
+from gamechangerml.src.paths import SEARCH_PDF_MAPPING_FILE, LTR_DATA_DIR
 
 logger = logging.getLogger("gamechanger")
 
-GC_USER_DATA = os.path.join(
-    DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
-)
 LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
-LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
 os.makedirs(LTR_MODEL_PATH, exist_ok=True)
-os.makedirs(LTR_DATA_PATH, exist_ok=True)
+os.makedirs(LTR_DATA_DIR, exist_ok=True)
 gcClient = gc_web_api.GCWebClient()
 
 esu = ElasticsearchService()
@@ -70,7 +64,7 @@ class LTR:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
-    def read_xg_data(self, path=os.path.join(LTR_DATA_PATH, "xgboost.csv")):
+    def read_xg_data(self, path=os.path.join(LTR_DATA_DIR, "xgboost.csv")):
         """read xg data: reads LTR formatted data
         params: path to file
         returns:
@@ -88,7 +82,7 @@ class LTR:
 
     def read_mappings(
         self,
-        path=GC_USER_DATA,
+        path=SEARCH_PDF_MAPPING_FILE,
         remote_mappings: bool = False,
         daysBack: int = 180,
     ):
@@ -141,7 +135,7 @@ class LTR:
         bst = xgb.train(params, data)
         cv = xgb.cv(params, dtrain=data, nfold=3, metrics=self.eval_metrics)
         model = bst.get_dump(
-            fmap=os.path.join(LTR_DATA_PATH, "featmap.txt"), dump_format="json"
+            fmap=os.path.join(LTR_DATA_DIR, "featmap.txt"), dump_format="json"
         )
         if write:
             self.write_model(model)
@@ -348,7 +342,7 @@ class LTR:
             df = pd.concat([df, ft_df], axis=1)
 
             logger.info("LTR - Generating csv file")
-            df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
+            df.to_csv(os.path.join(LTR_DATA_DIR, "xgboost.csv"), index=False)
         except Exception as e:
             logger.error(e)
             logger.info("LTR - Failed in generating feature text file")

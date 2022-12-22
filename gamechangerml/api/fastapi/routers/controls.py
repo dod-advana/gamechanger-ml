@@ -15,6 +15,10 @@ from gamechangerml.src.services import (
     ElasticsearchService,
     S3Service,
 )
+from gamechangerml.src.paths import (
+    SEARCH_PDF_MAPPING_FILE,
+    USER_AGGREGATIONS_FILE,
+)
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
 
@@ -1094,17 +1098,11 @@ async def get_user_data(data_dict: dict, response: Response):
     """
 
     userData = data_dict["params"]["userData"]
-    GC_USER_DATA = os.path.join(
-        DATA_PATH, "user_data", "search_history", "UserAggregations.json"
-    )
-    with open(GC_USER_DATA, "w") as f:
+    with open(USER_AGGREGATIONS_FILE, "w") as f:
         json.dump(userData, f)
 
     searchData = data_dict["params"]["searchData"]
     df = pd.DataFrame(searchData)
-    GC_SEARCH_DATA = os.path.join(
-        DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
-    )
-    df.to_csv(GC_SEARCH_DATA)
+    df.to_csv(SEARCH_PDF_MAPPING_FILE)
 
     return f"wrote {len(userData)} user data and searches to file"

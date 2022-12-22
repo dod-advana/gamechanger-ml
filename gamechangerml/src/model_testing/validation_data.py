@@ -13,9 +13,7 @@ from gamechangerml.src.utilities import (
     open_jsonl,
     get_most_recently_changed_dir,
 )
-from gamechangerml import REPO_PATH
 
-CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 logger = logging.getLogger(__name__)
 
 

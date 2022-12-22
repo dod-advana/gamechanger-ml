@@ -45,9 +45,9 @@ from gamechangerml.src.utilities.spacy_model import (
 from gamechangerml.src.utilities.text_generators import gen_json, child_doc_gen
 from gamechangerml.src.utilities.text_utils import simple_clean
 from gamechangerml.src.utilities.timer import Timer
+from gamechangerml.src.paths import FEATURES_DATA_DIR
+from gamechangerml import MODEL_PATH
 
-from gamechangerml import DATA_PATH, MODEL_PATH
-FEATURES_DATA_PATH = os.path.join(DATA_PATH, "features")
 logger = logging.getLogger(__name__)
 
 empty_dict = dict()
@@ -145,7 +145,7 @@ def main(
         )
 
     if weight_file is None:
-        weight_file = os.path.join(FEATURES_DATA_PATH, "enwiki_vocab_min200.txt")
+        weight_file = os.path.join(FEATURES_DATA_DIR, "enwiki_vocab_min200.txt")
     word_wt = get_word_weight(weight_file=weight_file, a=1e-03)
 
     if ngram[0] < 1:

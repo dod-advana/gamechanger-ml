@@ -11,6 +11,7 @@ from gamechangerml.src.utilities import (
 )
 from gamechangerml import DATA_PATH
 from gamechangerml.api.utils.pathselect import get_model_paths
+from gamechangerml.src.paths import SENT_TRANSFORMER_VALIDATION_DIR
 import logging
 logger = logging.getLogger()
 
@@ -23,14 +24,10 @@ def make_tiered_eval_data(index_path, testing_only):
     if not index_path:
         index_path = SENT_INDEX
 
-    if not os.path.exists(os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")):
-        os.mkdir(os.path.join(DATA_PATH, "validation",
-                 "domain", "sent_transformer"))
+    if not os.path.exists(SENT_TRANSFORMER_VALIDATION_DIR):
+        os.mkdir(SENT_TRANSFORMER_VALIDATION_DIR)
 
-    sub_dir = os.path.join(DATA_PATH, "validation",
-                           "domain", "sent_transformer")
-
-    save_dir = make_timestamp_directory(sub_dir)
+    save_dir = make_timestamp_directory(SENT_TRANSFORMER_VALIDATION_DIR)
 
     def save_data(
             level: str,

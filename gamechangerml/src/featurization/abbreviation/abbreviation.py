@@ -3,16 +3,13 @@ import re
 from collections import defaultdict
 import os
 import typing as t
-from gamechangerml import DATA_PATH
+from gamechangerml.src.paths import ABBREVIATIONS_FILE, ABBREVIATIONS_COUNTS_FILE
 
 def expand_abbreviations(
     text,
     dic: t.Union[
         t.Dict[str, t.Any], str
-    ] = os.path.join(
-        DATA_PATH,
-        "features", "abbreviations.json"
-    ),
+    ] = ABBREVIATIONS_FILE
 ):
     """
     Checks document text for abbreviations and returns with expansion found in document
@@ -115,10 +112,7 @@ def expand_abbreviations_no_context(
     text,
     dic: t.Union[
         t.Dict[str, t.Any], str
-    ] = os.path.join(
-        DATA_PATH,
-        "features", "abbcounts.json"
-    ),
+    ] = ABBREVIATIONS_COUNTS_FILE
 ):
     """
     Checks a text string for abbreviations and returns it with the most common expansion
@@ -200,10 +194,7 @@ def find_abbreviations(
     text,
     dic: t.Union[
         t.Dict[str, t.Any], str
-    ] = os.path.join(
-        DATA_PATH,
-        "features", "abbreviations.json"
-    ),
+    ] = ABBREVIATIONS_FILE
 ):
     """
     find abbreviations and their expansions in the text and create a dictionary of counts

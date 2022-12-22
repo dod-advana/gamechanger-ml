@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import json
 from datetime import date
-from typing import List, Union, Dict, Tuple
+from typing import Union, Dict, Tuple
 import logging
 
 from gamechangerml.configs import (
@@ -11,7 +11,6 @@ from gamechangerml.configs import (
     TrainingConfig,
     ValidationConfig,
 )
-from gamechangerml.src.search.sent_transformer.model import SentenceSearcher
 from gamechangerml.src.model_testing.query_es import *
 from gamechangerml.src.services import ElasticsearchService
 from gamechangerml.src.utilities.text_utils import normalize_query
@@ -24,8 +23,12 @@ from gamechangerml.src.utilities import (
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.scripts.update_eval_data import make_tiered_eval_data
 from gensim.utils import simple_preprocess
-from gamechangerml import DATA_PATH, CORPUS_PATH
+from gamechangerml import CORPUS_PATH
 from gamechangerml.src.utilities import gc_web_api
+from gamechangerml.src.paths import (
+    SENT_TRANSFORMER_TRAIN_DIR,
+    SENT_TRANSFORMER_VALIDATION_DIR,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +37,6 @@ random.seed(42)
 
 LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
 SIM_MODEL = SimilarityConfig.BASE_MODEL
-training_dir = os.path.join(DATA_PATH, "training", "sent_transformer")
 tts_ratio = TrainingConfig.TRAIN_TEST_SPLIT_RATIO
 gold_standard_path = os.path.join(
     "gamechangerml/data/user_data",
@@ -505,7 +507,7 @@ def make_training_data(
     testing_only: bool = False,
     gold_standard_path: Union[str, os.PathLike] = gold_standard_path,
     tts_ratio: float = tts_ratio,
-    training_dir: Union[str, os.PathLike] = training_dir,
+    training_dir: Union[str, os.PathLike] = SENT_TRANSFORMER_TRAIN_DIR,
 ) -> Tuple[Dict[str, str]]:
     """Makes training data based on new user search history data
     Args:
@@ -520,17 +522,13 @@ def make_training_data(
     """
     # open json files
     if (
-        not os.path.exists(
-            os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
-        )
+        not os.path.exists(SENT_TRANSFORMER_VALIDATION_DIR)
         or update_eval_data
     ):
         logger.info("****    Updating the evaluation data")
         make_tiered_eval_data(index_path, testing_only)
 
-    validation_dir = get_most_recently_changed_dir(
-        os.path.join(DATA_PATH, "validation", "domain", "sent_transformer")
-    )
+    validation_dir = get_most_recently_changed_dir(SENT_TRANSFORMER_VALIDATION_DIR)
     directory = os.path.join(validation_dir, level)
     logger.info(
         f"****    Loading in intelligent search data from {str(directory)}"

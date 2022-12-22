@@ -13,7 +13,7 @@ from gamechangerml import MODEL_PATH, DATA_PATH
 from gamechangerml.src.search.ranking.ltr import LTR
 from gamechangerml.src.featurization.topic_modeling import Topics
 from gamechangerml.src.paths import (
-    SEARCH_HISTORY_FILE,
+    SEARCH_PDF_MAPPING_FILE,
     POPULAR_DOCUMENTS_FILE,
     TOPICS_FILE,
     ORGS_FILE,
@@ -21,6 +21,7 @@ from gamechangerml.src.paths import (
     PROD_DATA_FILE,
     CORPUS_DIR,
     DEFAULT_SENT_INDEX,
+    SENT_TRANSFORMER_TRAIN_DIR,
 )
 from gamechangerml.src.utilities import (
     create_tgz_from_dir,
@@ -65,7 +66,6 @@ from gamechangerml.configs import (
     SimilarityConfig,
     QexpConfig,
     D2VConfig,
-    PathConfig,
     S3Config,
 )
 
@@ -98,7 +98,7 @@ class Pipeline:
 
     def _load_meta_files(self):
         try:
-            self.search_history = read_csv(SEARCH_HISTORY_FILE)
+            self.search_history = read_csv(SEARCH_PDF_MAPPING_FILE)
             self.topics = read_csv(TOPICS_FILE)
             self.orgs = read_csv(ORGS_FILE)
         except Exception as e:
@@ -194,22 +194,20 @@ class Pipeline:
 
             logger.info(f"Model load path set to: {str(model_load_path)}")
             no_data = False
-            base_dir = join(DATA_PATH, "training", "sent_transformer")
-
             # check if training data exists
             if remake_train_data:
                 no_data = True
             # if no training data directory exists
-            elif not isdir(base_dir):
+            elif not isdir(SENT_TRANSFORMER_TRAIN_DIR):
                 no_data = True
-                makedirs(base_dir)
+                makedirs(SENT_TRANSFORMER_TRAIN_DIR)
             elif (
-                len(listdir(base_dir)) == 0
+                len(listdir(SENT_TRANSFORMER_TRAIN_DIR)) == 0
             ):  # if base dir exists but there are no files
                 no_data = True
-            elif get_most_recently_changed_dir(base_dir) == None:
+            elif get_most_recently_changed_dir(SENT_TRANSFORMER_TRAIN_DIR) == None:
                 no_data = True
-            elif len(listdir(get_most_recently_changed_dir(base_dir))) == 0:
+            elif len(listdir(get_most_recently_changed_dir(SENT_TRANSFORMER_TRAIN_DIR))) == 0:
                 no_data = True
             logger.info(f"No data flag is set to: {str(no_data)}")
 
@@ -222,7 +220,7 @@ class Pipeline:
                     testing_only=testing_only,
                 )
 
-            data_path = get_most_recently_changed_dir(base_dir)
+            data_path = get_most_recently_changed_dir(SENT_TRANSFORMER_TRAIN_DIR)
             timestamp = str(data_path).split("/")[-1]
 
             # set model save path
@@ -342,7 +340,7 @@ class Pipeline:
         model_id=None,
         upload=False,
         corpus=CORPUS_DIR,
-        model_dest=PathConfig.LOCAL_MODEL_DIR,
+        model_dest=MODEL_PATH,
         validate=True,
         version="v4",
     ):
@@ -645,12 +643,11 @@ class Pipeline:
     ):
         try:
             model_id = get_current_datetime("%Y%m%d%H%M%S")
-            model_dir = PathConfig.LOCAL_MODEL_DIR
 
             # get model name schema
             model_name = "topic_model_" + model_id
 
-            local_dir = join(model_dir, model_name)
+            local_dir = join(MODEL_PATH, model_name)
             # Define new index directory
             if not isdir(local_dir):
                 mkdir(local_dir)
