@@ -10,7 +10,7 @@ import logging
 import threading
 
 from gamechangerml.api.utils.logger import logger
-from gamechangerml.src.text_handling.corpus import LocalCorpus
+from gamechangerml.src.text_handling.local_corpus_tokenizer import LocalCorpusTokenizer
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 
 logger = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ class DocCompareSentenceEncoder:
         logger.info(f"Indexing documents from {corpus_path}")
 
         if corpus_path:
-            corp = LocalCorpus(
+            corp = LocalCorpusTokenizer(
                 corpus_path,
                 return_id=self.return_id,
                 min_token_len=self.min_token_len,
