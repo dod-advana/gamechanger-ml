@@ -1,17 +1,13 @@
-import argparse
-import os
-from os import listdir
-from os.path import isfile, join
-import time
+from argparse import ArgumentParser
+from os import listdir, makedirs
+from os.path import isfile, join, exists
 from datetime import datetime
 import pandas as pd
 import numpy as np
 import functools
-from gensim.parsing.preprocessing import STOPWORDS
-from gensim.utils import simple_preprocess
 from gamechangerml.src.text_handling.bert_tokenizer import BertTokenizerCustom
 from gamechangerml.src.text_handling.process import preprocess
-from gamechangerml.src.utilities import open_json
+from gamechangerml.src.utilities import open_json, Timer
 from gamechangerml import REPO_PATH
 
 columns = [
@@ -205,7 +201,7 @@ def format_counts(sub, sources):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Profile Corpus")
+    parser = ArgumentParser(description="Profile Corpus")
 
     parser.add_argument("--corpus", "-c", dest="corpus", help="local corpus dir")
     parser.add_argument("--save_dir", "-d", dest="save_dir", help="directory to save outputs")
@@ -214,152 +210,146 @@ if __name__ == "__main__":
 
     corpus_dir = args.corpus
     save_dir = args.save_dir
-    bert_vocab = os.path.join(REPO_PATH, "gamechangerml/src/text_handling/assets/bert_vocab.txt")
-    sources_path = os.path.join(REPO_PATH, "gamechangerml/scripts/corpus_doctypes.csv")
+    bert_vocab = join(REPO_PATH, "gamechangerml/src/text_handling/assets/bert_vocab.txt")
+    sources_path = join(REPO_PATH, "gamechangerml/scripts/corpus_doctypes.csv")
 
-    if not os.path.exists(save_dir):  # make dir to save files
-        os.makedirs(save_dir)
+    if not exists(save_dir):  # make dir to save files
+        makedirs(save_dir)
 
     bert_token = BertTokenizerCustom(bert_vocab)
     corpus_files = [f for f in listdir(corpus_dir) if isfile(join(corpus_dir, f))]
 
     print("\n|--------------Generating stats csv---------------|\n")
+    timer = Timer()
+    with timer:
+        doc_count = 0
+        csv_path, txt_path = name_outputs(corpus_files)
+        stats_csv = open(join(save_dir, csv_path), "w")
+        stats_csv.write(column_names)
 
-    start = time.time()
-    doc_count = 0
-    csv_path, txt_path = name_outputs(corpus_files)
-    stats_csv = open(join(save_dir, csv_path), "w")
-    stats_csv.write(column_names)
+        for i in corpus_files:
 
-    for i in corpus_files:
+            doc_count += 1
+            print(doc_count, i)
+            row = get_doc_stats(i)
+            stats_csv.write(row)
 
-        doc_count += 1
-        print(doc_count, i)
-        row = get_doc_stats(i)
-        stats_csv.write(row)
-
-    stats_csv.close()
-
-    end = time.time()
-    print("Time to process csv: ", (end - start) / 60, " minutes")
+        stats_csv.close()
+    print("Time to process csv: ", (timer.elapsed) / 60, " minutes")
 
     print("\n|--------------Getting vocabularies---------------|\n")
+    timer = Timer()
+    with timer:
+        dtypes = pd.read_csv(sources_path)
+        profile = pd.read_csv(join(save_dir, csv_path))
+        profile = join_df(profile, dtypes)
 
-    start = time.time()
+        groups = list(profile["group"].unique())
+        sources = list(profile["source"].unique())
 
-    dtypes = pd.read_csv(sources_path)
-    profile = pd.read_csv(join(save_dir, csv_path))
-    profile = join_df(profile, dtypes)
-
-    groups = list(profile["group"].unique())
-    sources = list(profile["source"].unique())
-
-    vocab_dict, full_tokens, full_tokens_stop = get_vocab(profile)
-
-    end = time.time()
-    print("Time to get vocab by source: ", (end - start) / 60, " minutes")
+        vocab_dict, full_tokens, full_tokens_stop = get_vocab(profile)
+    print("Time to get vocab by source: ", (timer.elapsed) / 60, " minutes")
 
     print("\n|---------------Saving Corpus Stats---------------|\n")
 
-    start = time.time()
+    timer = Timer()
+    with timer:
 
-    gensim_pars, bert_pars = get_paragraph_stats(profile)
+        gensim_pars, bert_pars = get_paragraph_stats(profile)
 
-    gen_pars_max = gensim_pars[-1:]
-    gen_pars_min = gensim_pars[0]
-    gen_pars_5 = len([i for i in gensim_pars if i <= 5])
-    bert_pars_max = bert_pars[-1:]
-    bert_pars_min = bert_pars[0]
-    bert_pars_5 = len([i for i in bert_pars if i <= 5])
+        gen_pars_max = gensim_pars[-1:]
+        gen_pars_min = gensim_pars[0]
+        gen_pars_5 = len([i for i in gensim_pars if i <= 5])
+        bert_pars_max = bert_pars[-1:]
+        bert_pars_min = bert_pars[0]
+        bert_pars_5 = len([i for i in bert_pars if i <= 5])
 
-    stats_txt = open(join(save_dir, txt_path), "w")
+        stats_txt = open(join(save_dir, txt_path), "w")
 
-    stats_txt.write("\n\nNumber of documents in corpus: {}".format(profile.shape[0]))
-    stats_txt.write("\n\nMax tokens in a document: ")
-    stats_txt.write(
-        "\n\u2022 Gensim tokenization: {}".format(profile["doc_token_gensim"].max())
-    )
-    stats_txt.write(
-        "\n\u2022 Bert tokenization: {}".format(profile["doc_token_bert"].max())
-    )
-    stats_txt.write(
-        "\n\nMin tokens in a document: {}".format(profile["doc_token_gensim"].min())
-    )
-    stats_txt.write(
-        "\n\u2022 Number empty docs: {}".format(
-            profile[profile["doc_token_bert"] == 0].shape[0]
+        stats_txt.write("\n\nNumber of documents in corpus: {}".format(profile.shape[0]))
+        stats_txt.write("\n\nMax tokens in a document: ")
+        stats_txt.write(
+            "\n\u2022 Gensim tokenization: {}".format(profile["doc_token_gensim"].max())
         )
-    )
-    stats_txt.write("\n\nMean tokens in a document: ")
-    stats_txt.write(
-        "\n\u2022 Gensim tokenization: {}".format(
-            int(round(profile["doc_token_gensim"].mean()))
+        stats_txt.write(
+            "\n\u2022 Bert tokenization: {}".format(profile["doc_token_bert"].max())
         )
-    )
-    stats_txt.write(
-        "\n\u2022 Bert tokenization: {}".format(
-            int(round(profile["doc_token_bert"].mean()))
+        stats_txt.write(
+            "\n\nMin tokens in a document: {}".format(profile["doc_token_gensim"].min())
         )
-    )
-    stats_txt.write("\n\nMedian tokens in a document: ")
-    stats_txt.write(
-        "\n\u2022 Gensim tokenization: {}".format(
-            int(round(profile["doc_token_gensim"].median()))
+        stats_txt.write(
+            "\n\u2022 Number empty docs: {}".format(
+                profile[profile["doc_token_bert"] == 0].shape[0]
+            )
         )
-    )
-    stats_txt.write(
-        "\n\u2022 Bert tokenization: {}".format(
-            int(round(profile["doc_token_bert"].median()))
+        stats_txt.write("\n\nMean tokens in a document: ")
+        stats_txt.write(
+            "\n\u2022 Gensim tokenization: {}".format(
+                int(round(profile["doc_token_gensim"].mean()))
+            )
         )
-    )
-    stats_txt.write("\n\nSTD tokens in a document: ")
-    stats_txt.write(
-        "\n\u2022 Gensim tokenization: {}".format(
-            int(round(profile["doc_token_gensim"].std()))
+        stats_txt.write(
+            "\n\u2022 Bert tokenization: {}".format(
+                int(round(profile["doc_token_bert"].mean()))
+            )
         )
-    )
-    stats_txt.write(
-        "\n\u2022 Bert tokenization: {}".format(
-            int(round(profile["doc_token_bert"].std()))
+        stats_txt.write("\n\nMedian tokens in a document: ")
+        stats_txt.write(
+            "\n\u2022 Gensim tokenization: {}".format(
+                int(round(profile["doc_token_gensim"].median()))
+            )
         )
-    )
-    stats_txt.write("\n\nUntrimmed vocabulary size: {}".format(full_tokens))
-    stats_txt.write(
-        "\nTrimmed vocabulary size (stopwords removed): {}".format(full_tokens_stop)
-    )
-    stats_txt.write("\n\nNumber of paragraphs in corpus: {}".format(len(gensim_pars)))
-    stats_txt.write("\n\nMin tokens in a Paragraph: ")
-    stats_txt.write("\n\u2022 Gensim tokenization: {}".format(gen_pars_min))
-    stats_txt.write("\n\u2022 Bert tokenization: {}".format(bert_pars_min))
-    stats_txt.write("\n\nMax tokens in a Paragraph: ")
-    stats_txt.write("\n\u2022 Gensim tokenization: {}".format(*gen_pars_max))
-    stats_txt.write("\n\u2022 Bert tokenization: {}".format(*bert_pars_max))
-    stats_txt.write("\n\nParagraphs with <= 5 tokens: ")
-    stats_txt.write("\n\u2022 Gensim tokenization: {}".format(gen_pars_5))
-    stats_txt.write("\n\u2022 Bert tokenization: {}".format(bert_pars_5))
-    stats_txt.write("\n\nMean tokens per paragraph: ")
-    stats_txt.write(
-        "\n\u2022 Gensim tokenization: {}".format(int(round(np.mean(gensim_pars))))
-    )
-    stats_txt.write(
-        "\n\u2022 Bert tokenization: {}".format(int(round(np.mean(bert_pars))))
-    )
-    stats_txt.write("\n\nMedian tokens per paragraph: ")
-    stats_txt.write(
-        "\n\u2022 Gensim tokenization: {}".format(int(round(np.median(gensim_pars))))
-    )
-    stats_txt.write(
-        "\n\u2022 Bert tokenization: {}".format(int(round(np.median(bert_pars))))
-    )
-    stats_txt.write("\n\nSTD tokens in paragraphs: ")
-    stats_txt.write(
-        "\n\u2022 Gensim tokenization: {}".format(int(round(np.std(gensim_pars))))
-    )
-    stats_txt.write(
-        "\n\u2022 Bert tokenization: {}".format(int(round(np.std(bert_pars))))
-    )
+        stats_txt.write(
+            "\n\u2022 Bert tokenization: {}".format(
+                int(round(profile["doc_token_bert"].median()))
+            )
+        )
+        stats_txt.write("\n\nSTD tokens in a document: ")
+        stats_txt.write(
+            "\n\u2022 Gensim tokenization: {}".format(
+                int(round(profile["doc_token_gensim"].std()))
+            )
+        )
+        stats_txt.write(
+            "\n\u2022 Bert tokenization: {}".format(
+                int(round(profile["doc_token_bert"].std()))
+            )
+        )
+        stats_txt.write("\n\nUntrimmed vocabulary size: {}".format(full_tokens))
+        stats_txt.write(
+            "\nTrimmed vocabulary size (stopwords removed): {}".format(full_tokens_stop)
+        )
+        stats_txt.write("\n\nNumber of paragraphs in corpus: {}".format(len(gensim_pars)))
+        stats_txt.write("\n\nMin tokens in a Paragraph: ")
+        stats_txt.write("\n\u2022 Gensim tokenization: {}".format(gen_pars_min))
+        stats_txt.write("\n\u2022 Bert tokenization: {}".format(bert_pars_min))
+        stats_txt.write("\n\nMax tokens in a Paragraph: ")
+        stats_txt.write("\n\u2022 Gensim tokenization: {}".format(*gen_pars_max))
+        stats_txt.write("\n\u2022 Bert tokenization: {}".format(*bert_pars_max))
+        stats_txt.write("\n\nParagraphs with <= 5 tokens: ")
+        stats_txt.write("\n\u2022 Gensim tokenization: {}".format(gen_pars_5))
+        stats_txt.write("\n\u2022 Bert tokenization: {}".format(bert_pars_5))
+        stats_txt.write("\n\nMean tokens per paragraph: ")
+        stats_txt.write(
+            "\n\u2022 Gensim tokenization: {}".format(int(round(np.mean(gensim_pars))))
+        )
+        stats_txt.write(
+            "\n\u2022 Bert tokenization: {}".format(int(round(np.mean(bert_pars))))
+        )
+        stats_txt.write("\n\nMedian tokens per paragraph: ")
+        stats_txt.write(
+            "\n\u2022 Gensim tokenization: {}".format(int(round(np.median(gensim_pars))))
+        )
+        stats_txt.write(
+            "\n\u2022 Bert tokenization: {}".format(int(round(np.median(bert_pars))))
+        )
+        stats_txt.write("\n\nSTD tokens in paragraphs: ")
+        stats_txt.write(
+            "\n\u2022 Gensim tokenization: {}".format(int(round(np.std(gensim_pars))))
+        )
+        stats_txt.write(
+            "\n\u2022 Bert tokenization: {}".format(int(round(np.std(bert_pars))))
+        )
 
-    stats_txt.close()
-
-    end = time.time()
-    print("Time to save stats: ", (end - start) / 60, " minutes")
+        stats_txt.close()
+    print("Time to save stats: ", (timer.elapsed) / 60, " minutes")
