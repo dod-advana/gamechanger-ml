@@ -30,17 +30,7 @@ def make_pop_docs(user_data: pd.DataFrame, save_path: Union[os.PathLike, str]) -
         logger.info(e)
     return
 
-def make_combined_entities(topics: pd.DataFrame, orgs: pd.DataFrame, save_path: Union[os.PathLike, str]) -> None:
-    """Makes combined_entities.csv
-    Args:
-        topics [pd.DataFrame]: dataframe of topics
-        orgs [pd.DataFrame]: dataframe of agencies
-        save_path [str|os.PathLike]: path to save the combined entities csv
-    Returns:
-        None (saves CSV to save_path)
-    """
-        
-    def lookup_wiki_summary(query: str) -> str:
+def lookup_wiki_summary(query: str) -> str:
         """Queries the Wikipedia API for summaries
         Args:
             query [str]: query
@@ -54,6 +44,16 @@ def make_combined_entities(topics: pd.DataFrame, orgs: pd.DataFrame, save_path: 
             logger.info(f"Could not retrieve description for {query}")
             logger.info(e)
             return ""
+
+def make_combined_entities(topics: pd.DataFrame, orgs: pd.DataFrame, save_path: Union[os.PathLike, str]) -> None:
+    """Makes combined_entities.csv
+    Args:
+        topics [pd.DataFrame]: dataframe of topics
+        orgs [pd.DataFrame]: dataframe of agencies
+        save_path [str|os.PathLike]: path to save the combined entities csv
+    Returns:
+        None (saves CSV to save_path)
+    """
 
     logger.info("| --------- Making combined entities csv (orgs and topics) -------- |")
     try:

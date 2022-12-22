@@ -1,17 +1,8 @@
-## pip install wikipedia
-import wikipedia
 from datetime import date
 import pandas as pd
 import argparse
-import os
-from gamechangerml import DATA_PATH
-
-def lookup_wiki_summary(query):
-    try:
-        return wikipedia.summary(query).replace("\n", "")
-    except:
-        print(f"Could not retrieve description for {query}")
-        return ""
+from gamechangerml.src.paths import COMBINED_ENTITIES_FILE
+from gamechangerml.src.featurization.make_meta import lookup_wiki_summary
 
 if __name__ == '__main__':
 
@@ -24,7 +15,7 @@ if __name__ == '__main__':
     if args.filepath:
         entities_filepath = args.filepath
     else:
-        entities_filepath = os.path.join(DATA_PATH, "features", "combined_entities.csv")
+        entities_filepath = COMBINED_ENTITIES_FILE
     df = pd.read_csv(entities_filepath)
     df['information'] = df['entity_name'].apply(lambda x: lookup_wiki_summary(x))
     df['information_source'] = "Wikipedia"
