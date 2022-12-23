@@ -1,10 +1,23 @@
 #!/usr/bin/env bash
-echo "Be sure to set up environment variables for s3 by sourcing setup_env.sh if running this manually"
+
+"""Download the following dependencies from S3:
+  - Transformers Folder (env variable: S3_TRANS_MODEL_PATH)
+  - Sentence Index (env variable: S3_SENT_INDEX_PATH)
+  - QE Model (env variable: S3_QEXP_PATH)
+  - JBook QE Model (env variable: S3_QEXP_JBOOK_PATH)
+  - Topic Model (env variable: S3_TOPICS_PATH)
+  - Data Folder (env variable: S3_ML_DATA_PATH)
+
+Be sure to set up environment variables for s3 by sourcing 
+gamechangerml/setup_env.sh if running this manually.
+"""
+
+echo "Be sure to set up environment variables for s3 by sourcing gamechangerml/setup_env.sh if running this manually"
 
 function download_and_unpack_deps() {
-
-  local pkg_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../" >/dev/null 2>&1 && pwd )"
-  local models_dest_dir="$pkg_dir/models/"
+  
+  local pkg_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../" >/dev/null 2>&1 && pwd )"  # path to gamechangerml dir
+  local models_dest_dir="$pkg_dir/models/"  
   local data_dest_dir="$pkg_dir"
 
   mkdir -p "$models_dest_dir" "$data_dest_dir"

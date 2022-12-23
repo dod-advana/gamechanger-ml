@@ -47,7 +47,7 @@ function download_dependencies() {
       echo "[INFO] Attempting to download models from S3 ..."
       echo "[INFO] GC_ML_API_MODEL_NAME=${GC_ML_API_MODEL_NAME:-[DEFAULT]}"
       echo "[INFO] Attempting to download transformer cache and sentence index from S3 ..."
-      source "${REPO_DIR}/gamechangerml/scripts/download_dependencies.sh"
+      source "${REPO_DIR}/gamechangerml/scripts/data_transfer/download_dependencies_from_s3.sh"
     } || {
       echo "[INFO] Skipping model download"
     }

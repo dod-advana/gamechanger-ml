@@ -454,7 +454,7 @@ async def download(response: Response):
         try:
             logger.info("Attempting to download dependencies from S3")
             output = subprocess.call(
-                ["gamechangerml/scripts/download_dependencies.sh"]
+                ["gamechangerml/scripts/data_transfer/download_dependencies_from_s3.sh"]
             )
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)

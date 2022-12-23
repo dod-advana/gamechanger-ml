@@ -160,7 +160,7 @@
 - `source ./gamechangerml/setup_env.sh DEV`
 2. Ensure your AWS enviroment is setup (you have a default profile)
 3. Get dependencies
-- `source ./gamechangerml/scripts/download_dependencies.sh`
+- `source ./gamechangerml/scripts/data_transfer/download_dependencies_from_s3.sh`
 4. For query expansion:
 - `python -m gamechangerml.train.scripts.run_train_models --flag {MODEL_NAME_SUFFIX} --saveremote {True or False} --model_dest {FILE_PATH_MODEL_OUTPUT} --corpus {CORPUS_DIR}`
 5. For sentence embeddings:
