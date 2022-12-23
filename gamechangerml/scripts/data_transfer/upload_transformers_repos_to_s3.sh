@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
 
+"""
+Clones the following transformers repositories locally, then uploads them to S3:
+  - bert-base-cased-squad2
+  - distilbart-mnli-12-3
+  - distilbert-base-uncased-distilled-squad
+  - distilroberta-base
+  - msmarco-distilbert-base-v2
+
+Args:
+  -v: Version number to upload to the S3 bucket. The S3 path will be:
+    s3://advana-data-zone/bronze/gamechanger/models/transformers/v<version number>/transformers.tar.gz
+  -p: Local path to clone the transformers repositories to. The repositories 
+    will be cloned locally and then uploaded to S3.
+"""
+
 helpFunction()
 {
    echo ""
