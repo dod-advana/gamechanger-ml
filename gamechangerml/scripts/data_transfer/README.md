@@ -12,6 +12,9 @@ This directory contains scripts to upload/ download data to/ from S3.
 │   ├── download_dependencies_from_s3.sh     Download model/ data dependencies from S3
 │   ├── read_write_transformers_cache.sh     Read or write the transformers cache in S3
 │   ├── upload_transformers_repo_to_s3.sh    Clone transformers repos and upload them to S3
+│   ├── topic_model
+│   │   ├── topic_model_loadsave_s3.sh       Load/ save topic model in S3 (using Python)
+│   │   └── topic_model_loadsave_s3.py       Load/ save topic model in S3 (using Bash)
 ```
 
 ## Prerequisites for Python Scripts:

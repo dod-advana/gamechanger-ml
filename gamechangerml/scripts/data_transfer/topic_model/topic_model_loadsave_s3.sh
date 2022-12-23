@@ -12,13 +12,13 @@ export PYTHONPATH=$PYTHONPATH:$REPO_DIR
 #
 #
 # To load models from s3, execute:
-# bash topic_model.sh load DEV
+# bash topic_model_loadsave_s3.sh load DEV
 # or
-# bash topic_model.sh load PROD
+# bash topic_model_loadsave_s3.sh load PROD
 #
 # To save models into s3 that are in the models directory, execute:
-# bash topic_model.sh save DEV
+# bash topic_model_loadsave_s3.sh save DEV
 # or
-# bash topic_model.sh save PROD
+# bash topic_model_loadsave_s3.sh save PROD
 
-python3 topic_model_loadsave.py $1
+python3 topic_model_loadsave_s3.py $1
