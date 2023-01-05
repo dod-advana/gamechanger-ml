@@ -2,7 +2,6 @@ from threading import current_thread
 from numpy import median
 from re import search
 from tqdm import tqdm
-
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.src.utilities import get_json_paths_for_directory, open_json
 from gamechangerml.api.utils import processmanager
@@ -33,7 +32,6 @@ class LocalCorpusTokenizer:
         long_token_ratio_threshold (float, optional): Defaults to 0.05. After
             preprocessing, discard a paragraph if its ratio of extra long tokens
             is greater than this threshold.
-
     """
 
     def __init__(
@@ -55,7 +53,9 @@ class LocalCorpusTokenizer:
         self._long_token_len_threshold = long_token_len_threshold
         self._long_token_ratio_threshold = long_token_ratio_threshold
 
+        # The number of documents that have been loaded and tokenized.
         self._corpus_load_progress = 0
+        # Total number of documents to load and tokenize.
         self._corpus_load_total = len(self._file_paths)
 
     def __iter__(self):
@@ -83,7 +83,8 @@ class LocalCorpusTokenizer:
             except Exception as e:
                 print(f"{e}\nError with {file_name} in creating local corpus")
 
-    def _is_quality_after_preprocess(self, processed_tokens, raw_text):
+    def _is_quality_after_preprocess(self, processed_tokens, raw_text) -> bool:
+        """Returns whether or not the paragraph should be yielded in __iter__."""
         raw_tokens = raw_text.split(" ")
 
         # Check if most of the tokens were filtered out during preprocessing.
