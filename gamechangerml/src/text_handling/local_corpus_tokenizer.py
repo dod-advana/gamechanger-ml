@@ -1,111 +1,137 @@
-from json import loads
 from threading import current_thread
-from os.path import join
-from os import listdir
+from numpy import median
+from re import search
 from tqdm import tqdm
 
-from gamechangerml.src.text_handling.process import preprocess, get_tokenizer
-from gamechangerml.src.utilities.text_utils import check_quality_paragraph
+from gamechangerml.src.text_handling.process import preprocess
+from gamechangerml.src.utilities import get_json_paths_for_directory, open_json
 from gamechangerml.api.utils import processmanager
 
 
-class LocalCorpusTokenizer(object):
-    """Tokenize a local JSON corpus.
+class LocalCorpusTokenizer:
+    """Tokenize paragraphs of a (JSON) corpus that was created by the
+    gamechanger-data document parser pipeline.
+
+    This will only process the first level of the given directory. Nested
+    files will not be processed.
 
     Args:
-        directory (str): Path to directory of JSON corpus files.
-        return_id (bool, optional): True to return (tokens, paragraph id) items
-            in iteration. False to return only tokens. Defaults to False.
+        directory_path (str): Path to directory of JSON corpus files.
         min_token_len (int, optional): Defaults to 3.
-        verbose (bool, optional): True to print progress during iteration, False
-            otherwise. Defaults to False.
-        bert_based_tokenizer (str or None, optional): Path to a bert tokenizer
-            to use. If None, uses preprocess() instead of a bert based
-            tokenizer. Defaults to None.
-        files_to_use (list of str): List of JSON file names to process. If empty,
-            will process all JSON files in the directory.
+        files_to_use (list of str or None, optional): List of JSON file names
+            to process. If empty, will process all JSON files in the directory.
+            Defaults to None.
+        median_token_len_threshold (int|float, optional): After preprocessing,
+            discard paragraphs with median token length less than this
+            threshold. Defaults to 2.5.
+        repeat_tokens_threshold (float, optional): Defaults to 0.2. After
+            preprocessing, discard paragraphs with ratio of unique tokens less
+            than this threshold.
+        long_token_len_threshold (int, optional): Defaults to 25. After
+            preprocessing, a token with length greater than this threshold is
+            considered an extra long token.
+        long_token_ratio_threshold (float, optional): Defaults to 0.05. After
+            preprocessing, discard a paragraph if its ratio of extra long tokens
+            is greater than this threshold.
+
     """
 
     def __init__(
         self,
-        directory,
-        return_id=False,
-        min_token_len=3,
-        verbose=False,
-        bert_based_tokenizer=None,
+        directory_path,
         files_to_use=None,
+        min_num_tokens_per_paragraph=3,
+        median_token_len_threshold=2.5,
+        repeat_tokens_threshold=0.2,
+        long_token_len_threshold=25,
+        long_token_ratio_threshold=0.05,
     ):
-        self.directory = directory
+        self._directory_path = directory_path
+        self._file_paths = get_json_paths_for_directory(files_to_use)
 
-        if files_to_use:  ## if we only want to do this on a subset
-            self.file_list = list(
-                set([join(directory, i) for i in files_to_use]).intersection(
-                    [
-                        join(directory, file)
-                        for file in listdir(directory)
-                        if file[-5:] == ".json"
-                    ]
-                )
-            )
-        else:
-            self.file_list = [
-                join(directory, file)
-                for file in listdir(directory)
-                if file[-5:] == ".json"
-            ]
+        self._min_num_tokens = min_num_tokens_per_paragraph
+        self._median_token_len_threshold = median_token_len_threshold
+        self._repeat_tokens_threshold = repeat_tokens_threshold
+        self._long_token_len_threshold = long_token_len_threshold
+        self._long_token_ratio_threshold = long_token_ratio_threshold
 
-        self.return_id = return_id
-        self.min_token_len = min_token_len
-        self.verbose = verbose
-        self.bert_based_tokenizer = bert_based_tokenizer
-        if self.bert_based_tokenizer:
-            self.auto_token = get_tokenizer(self.bert_based_tokenizer)
+        self._corpus_load_progress = 0
+        self._corpus_load_total = len(self._file_paths)
 
     def __iter__(self):
-        if self.verbose:
-            iterator = tqdm(self.file_list)
-        else:
-            iterator = self.file_list
+        self._corpus_load_progress = 0
+        self._update_process_manager()
 
-        total = len(self.file_list)
-        progress = 0
-        processmanager.update_status(
-            processmanager.loading_corpus,
-            progress,
-            total,
-            thread_id=current_thread().ident,
-        )
-        for file_name in iterator:
+        for file_name in tqdm(self._file_paths):
             try:
-                doc = self._get_doc(file_name)
-                paragraphs = [p["par_raw_text_t"] for p in doc["paragraphs"]]
-                paragraph_ids = [p["id"] for p in doc["paragraphs"]]
+                paragraphs = open_json(file_name)["paragraphs"]
 
-                for para_text, para_id in zip(paragraphs, paragraph_ids):
-                    if self.bert_based_tokenizer:
-                        tokens = self.auto_token.tokenize(para_text)
-                    else:
-                        tokens = preprocess(para_text, min_len=1)
-                    if tokens:
-                        if check_quality_paragraph(tokens, para_text):
-                            if len(tokens) > self.min_token_len:
-                                if self.return_id:
-                                    yield tokens, para_id
-                                else:
-                                    yield tokens
+                for paragraph in paragraphs:
+                    text = paragraph["par_raw_text_t"]
+                    id_ = paragraph["id"]
+                    tokens = preprocess(text, min_len=1)
 
-                progress += 1
-                processmanager.update_status(
-                    processmanager.loading_corpus,
-                    progress,
-                    total,
-                    thread_id=current_thread().ident,
-                )
+                    if len(
+                        tokens
+                    ) > self._min_num_tokens and self._is_quality_after_preprocess(
+                        tokens, text
+                    ):
+                        yield tokens, id_
+
+                self._corpus_load_progress += 1
+                self._update_process_manager()
             except Exception as e:
                 print(f"{e}\nError with {file_name} in creating local corpus")
 
-    def _get_doc(self, file_name):
-        with open(file_name, "r") as f:
-            line = f.readline()
-            line = loads(line)
-        return line
+    def _is_quality_after_preprocess(self, processed_tokens, raw_text):
+        raw_tokens = raw_text.split(" ")
+
+        # Check if most of the tokens were filtered out during preprocessing.
+        if len(processed_tokens) / len(raw_tokens) <= 0.5:
+            return False
+
+        # Check if the median length of processed tokens is less than the
+        # expected threshold.
+        median_token_len = median([len(token) for token in processed_tokens])
+        if median_token_len <= self._median_token_len_threshold:
+            return False
+
+        # Check if the ratio of unique tokens is less than an expected threshold.
+        unique_tokens_ratio = len(set(processed_tokens)) / len(raw_tokens)
+        if unique_tokens_ratio < self._repeat_tokens_threshold:
+            return False
+
+        # Check for a high percentage of long tokens, excluding certain
+        # website-related tokens.
+        website_tokens = ["http", "www."]
+        non_website_raw_tokens = [
+            token
+            for token in processed_tokens
+            if not any(
+                [token.startswith(web_token) for web_token in website_tokens]
+            )
+        ]
+        long_tokens = [
+            token
+            for token in non_website_raw_tokens
+            if len(token) > self._long_token_len_threshold
+        ]
+        if (
+            len(long_tokens) / len(processed_tokens)
+            > self._long_token_ratio_threshold
+        ):
+            return False
+
+        # Check if the text appears to be a table of contents.
+        if search(r"\.{6,}", raw_text):
+            return False
+
+        return True
+
+    def _update_process_manager(self):
+        processmanager.update_status(
+            processmanager.loading_corpus,
+            self._corpus_load_progress,
+            self._corpus_load_total,
+            thread_id=current_thread().ident,
+        )
