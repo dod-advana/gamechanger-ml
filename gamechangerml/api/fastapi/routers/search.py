@@ -4,7 +4,9 @@ import datetime
 
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
-from gamechangerml.src.featurization.keywords.extract_keywords import get_keywords
+from gamechangerml.src.featurization.keywords.extract_keywords import (
+    get_keywords,
+)
 from gamechangerml.api.fastapi.version import __version__
 from gamechangerml.api.utils.redis_driver import CacheVariable
 
@@ -12,7 +14,11 @@ from gamechangerml.api.fastapi.settings import CACHE_EXPIRE_DAYS
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.fastapi.model_loader import ModelLoader
 
-from gamechangerml.configs import QexpConfig
+from gamechangerml.configs import (
+    QexpConfig,
+    DocumentComparisonConfig,
+    SemanticSearchConfig,
+)
 
 router = APIRouter()
 MODELS = ModelLoader()
@@ -41,7 +47,9 @@ async def transformer_infer(body: dict, response: Response) -> dict:
 
 
 @router.post("/textExtractions", status_code=200)
-async def text_extract_infer(body: dict, extractType: str, response: Response) -> dict:
+async def text_extract_infer(
+    body: dict, extractType: str, response: Response
+) -> dict:
     """textExtract_infer - endpoint for sentence transformer inference
     Args:
         body: dict; json format of query
@@ -84,8 +92,6 @@ async def trans_sentence_infer(
     response: Response,
     num_results: int = 10,
     process: bool = True,
-    externalSim: bool = False,
-    threshold="auto",
 ) -> dict:
     """trans_sentence_infer - endpoint for sentence transformer inference
     Args:
@@ -105,12 +111,8 @@ async def trans_sentence_infer(
             logger.info("Searched was found in cache")
             results = cached_value
         else:
-            results = MODELS.sentence_searcher.search(
-                query_text,
-                num_results,
-                process=process,
-                externalSim=False,
-                threshold=threshold,
+            results = MODELS.semantic_search.search(
+                query_text, num_results, process
             )
             cache.set_value(
                 results,
@@ -123,7 +125,9 @@ async def trans_sentence_infer(
             )
         logger.info(results)
     except Exception:
-        logger.error(f"Unable to get results from sentence transformer for {body}")
+        logger.error(
+            f"Unable to get results from sentence transformer for {body}"
+        )
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise
     return results
@@ -192,7 +196,9 @@ async def post_expand_query_terms(body: dict, response: Response) -> dict:
         # Removes original word from the return terms unless it is combined with another word
         logger.info(f"original expanded terms: {expansion_list}")
         final_terms = remove_original_kw(expansion_list, terms_string)
-        expansion_dict[terms_string] = ['"{}"'.format(exp) for exp in final_terms]
+        expansion_dict[terms_string] = [
+            '"{}"'.format(exp) for exp in final_terms
+        ]
         logger.info(f"-- Expanded {terms_string} to \n {final_terms}")
         # Perform word similarity
         logger.info(f"Finding similiar words for: {terms_string}")
@@ -241,7 +247,9 @@ async def post_recommender(body: dict, response: Response) -> dict:
             if body["sample"]:
                 sample = body["sample"]
         logger.info(f"Recommending similar documents to {filenames}")
-        results = MODELS.recommender.get_recs(filenames=filenames, sample=sample)
+        results = MODELS.recommender.get_recs(
+            filenames=filenames, sample=sample
+        )
         if results["results"] != []:
             logger.info(f"Found similar docs: \n {str(results)}")
         else:
@@ -266,8 +274,6 @@ async def document_compare_infer(
         body: dict; json format of query
             {
                 <str> "text": "i am text",
-                <?array[[threshold, display]] "confidences": optional array of 2 tuples (threshold, display) where score > threshold -> display :: default [[0.8, "High"], [0.5, "Medium"], [0.4, "Low"]]
-                <?float> "cutoff": optional cutoff to filter result scores by
             }
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
@@ -278,7 +284,7 @@ async def document_compare_infer(
     try:
         query_text = body["text"]
         results = MODELS.document_compare_searcher.search(
-            query_text, num_results, body, process=process, externalSim=False
+            query_text, num_results, process
         )
         logger.info(results)
     except Exception:
