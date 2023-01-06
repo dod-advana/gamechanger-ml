@@ -23,7 +23,7 @@ class SemanticSearchConfig:
 
     INCLUDE_RESULTS_BELOW_THRESHOLD = True
 
-    """Arguments for STFinetuner."""
+    """Arguments for SemanticSearchFinetuner."""
     FINETUNE = {
         "shuffle": True,
         "batch_size": 32,

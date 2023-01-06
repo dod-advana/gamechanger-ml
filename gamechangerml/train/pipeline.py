@@ -11,6 +11,7 @@ from typing import Union, Dict
 
 from gamechangerml import MODEL_PATH, DATA_PATH
 from gamechangerml.src.search.ranking.ltr import LTR
+from gamechangerml.src.search.semantic_search import SemanticSearch
 from gamechangerml.src.featurization.topic_modeling import Topics
 from gamechangerml.src.paths import (
     SEARCH_PDF_MAPPING_FILE,
@@ -30,12 +31,13 @@ from gamechangerml.src.utilities import (
     configure_logger,
 )
 from gamechangerml.src.paths import S3_DATA_PATH, S3_MODELS_PATH
-from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.services import S3Service
 from gamechangerml.src.model_testing.evaluation import (
     IndomainRetrieverEvaluator,
 )
-from gamechangerml.scripts.finetune_sentence_retriever import STFinetuner
+from gamechangerml.src.search.semantic_search.train import (
+    SemanticSearchFinetuner,
+)
 from gamechangerml.scripts.run_evaluation import (
     eval_qa,
     eval_sent,
@@ -62,7 +64,7 @@ from gamechangerml.src.search.query_expansion.build_ann_cli import (
     build_qe_model as bqe,
 )
 from gamechangerml.configs import (
-    EmbedderConfig,
+    SemanticSearchConfig,
     SimilarityConfig,
     QexpConfig,
     D2VConfig,
@@ -187,7 +189,7 @@ class Pipeline:
         try:
             if not model:
                 model_load_path = join(
-                    LOCAL_TRANSFORMERS_DIR, EmbedderConfig.BASE_MODEL
+                    LOCAL_TRANSFORMERS_DIR, SemanticSearchConfig.BASE_MODEL
                 )
             else:
                 model_load_path = join(LOCAL_TRANSFORMERS_DIR, model)
@@ -205,9 +207,21 @@ class Pipeline:
                 len(listdir(SENT_TRANSFORMER_TRAIN_DIR)) == 0
             ):  # if base dir exists but there are no files
                 no_data = True
-            elif get_most_recently_changed_dir(SENT_TRANSFORMER_TRAIN_DIR) == None:
+            elif (
+                get_most_recently_changed_dir(SENT_TRANSFORMER_TRAIN_DIR)
+                == None
+            ):
                 no_data = True
-            elif len(listdir(get_most_recently_changed_dir(SENT_TRANSFORMER_TRAIN_DIR))) == 0:
+            elif (
+                len(
+                    listdir(
+                        get_most_recently_changed_dir(
+                            SENT_TRANSFORMER_TRAIN_DIR
+                        )
+                    )
+                )
+                == 0
+            ):
                 no_data = True
             logger.info(f"No data flag is set to: {str(no_data)}")
 
@@ -220,7 +234,9 @@ class Pipeline:
                     testing_only=testing_only,
                 )
 
-            data_path = get_most_recently_changed_dir(SENT_TRANSFORMER_TRAIN_DIR)
+            data_path = get_most_recently_changed_dir(
+                SENT_TRANSFORMER_TRAIN_DIR
+            )
             timestamp = str(data_path).split("/")[-1]
 
             # set model save path
@@ -233,20 +249,19 @@ class Pipeline:
                 f"Setting {str(model_save_path)} as save path for new model"
             )
             logger.info(f"Loading in domain data to finetune from {data_path}")
-            finetuner = STFinetuner(
+            finetuner = SemanticSearchFinetuner(
                 model_load_path=model_load_path,
                 model_save_path=model_save_path,
-                shuffle=True,
-                batch_size=batch_size,
-                epochs=epochs,
-                warmup_steps=warmup_steps,
-                processmanager=processmanager,
+                data_directory=data_path,
+                logger=logger,
+                testing_only=testing_only,
+                **SemanticSearchConfig.FINETUNE
             )
-            logger.info("Loaded finetuner class...")
+            logger.info("Loaded SemanticSearchFinetuner class...")
             logger.info(f"Testing only is set to: {testing_only}")
 
             # finetune
-            finetuner.retrain(data_path, testing_only, version)
+            finetuner.train(version)
 
             # eval finetuned model
             logger.info("Done making finetuned model, runnin evals")
@@ -466,20 +481,23 @@ class Pipeline:
 
         # Building the Index
         try:
-            encoder = SentenceEncoder(
-                encoder_model_name=encoder_model,
-                use_gpu=use_gpu,
-                transformer_path=LOCAL_TRANSFORMERS_DIR,
-                **EmbedderConfig.MODEL_ARGS,
+
+            encoder = SemanticSearch(
+                join(LOCAL_TRANSFORMERS_DIR, encoder_model),
+                local_sent_index_dir,
+                False,
+                logger,
+                use_gpu,
+                None
             )
             logger.info(
                 f"Creating Document Embeddings with {encoder_model} on {corpus}"
             )
             logger.info("-------------- Indexing Documents--------------")
             start_time = get_current_datetime("%Y-%m-%d %H:%M:%S")
-            encoder.index_documents(
-                corpus_path=corpus, index_path=local_sent_index_dir
-            )
+            encoder_corpus = encoder.prepare_corpus_for_embedding(corpus)
+            encoder.create_embeddings_index(encoder_corpus)
+
             end_time = get_current_datetime("%Y-%m-%d %H:%M:%S")
             logger.info("-------------- Completed Indexing --------------")
             user = get_user(logger)
