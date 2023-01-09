@@ -1,8 +1,6 @@
 import os
-from gamechangerml.src.search.sent_transformer.model import (
-    SentenceEncoder,
-    SentenceSearcher,
-)
+from gamechangerml.configs import SemanticSearchConfig
+from gamechangerml.src.search.semantic_search import SemanticSearch
 from gamechangerml.src.utilities import create_directory_if_not_exists
 from .retriever_evaluator import RetrieverEvaluator
 from .utils import LOCAL_TRANSFORMERS_DIR, logger
@@ -41,26 +39,29 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
             if encoder:
                 self.encoder = encoder
             else:
-                self.encoder = SentenceEncoder(
-                    encoder_model_name=encoder_model_name,
-                    min_token_len=min_token_len,
-                    return_id=return_id,
-                    verbose=verbose,
-                    use_gpu=use_gpu,
+                self.encoder = SemanticSearch(
+                    self.model_path,
+                    self.index_path,
+                    False,
+                    logger,
+                    use_gpu,
+                    SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
                 )
             self.make_index(
                 encoder=self.encoder,
                 corpus_path=None,
-                index_path=self.index_path,
             )
         self.data = MSMarcoData()
         if retriever:
             self.retriever = retriever
         else:
-            self.retriever = SentenceSearcher(
-                sim_model_name=sim_model_name,
-                index_path=self.index_path,
-                transformer_path=transformer_path,
+            self.retriever = SemanticSearch(
+                self.model_path,
+                self.index_path,
+                True,
+                logger,
+                use_gpu,
+                SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
             )
         self.eval_path = create_directory_if_not_exists(
             os.path.join(self.index_path, "evals_msmarco")

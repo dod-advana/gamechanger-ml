@@ -3,10 +3,9 @@ import os
 import pandas as pd
 from datetime import datetime
 from gamechangerml import CORPUS_PATH
-from gamechangerml.src.search.sent_transformer.model import (
-    SentenceEncoder,
-    SentenceSearcher,
-)
+from gamechangerml.configs import SemanticSearchConfig
+
+from gamechangerml.src.search.semantic_search import SemanticSearch
 from gamechangerml.src.utilities import (
     create_directory_if_not_exists,
     open_txt,
@@ -33,7 +32,6 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
         encoder=None,
         retriever=None,
         transformer_path=LOCAL_TRANSFORMERS_DIR,
-        overwrite_test_corpus=True,
         use_gpu=False,
     ):
 
@@ -83,13 +81,13 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                         logger.info(
                             f"Loading {encoder_model_name} to make the index"
                         )
-                        self.encoder = SentenceEncoder(
-                            encoder_model_name=encoder_model_name,
-                            min_token_len=min_token_len,
-                            return_id=return_id,
-                            verbose=verbose,
-                            use_gpu=use_gpu,
-                            transformer_path=LOCAL_TRANSFORMERS_DIR,
+                        self.encoder = SemanticSearch(
+                            self.model_path,
+                            self.index_path,
+                            False,
+                            logger,
+                            self.use_gpu,
+                            SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
                         )
 
                     # create the test corpus
@@ -110,7 +108,6 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     self.make_index(
                         encoder=self.encoder,
                         corpus_path=CORPUS_PATH,
-                        index_path=self.index_path,
                         files_to_use=include_ids,
                     )
 
@@ -147,10 +144,13 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             if retriever:
                 self.retriever = retriever
             else:
-                self.retriever = SentenceSearcher(
-                    sim_model_name=sim_model_name,
-                    index_path=self.index_path,
-                    transformer_path=transformer_path,
+                self.retriever = SemanticSearch(
+                    self.model_path,
+                    self.index_path,
+                    True,
+                    logger,
+                    self.use_gpu,
+                    SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
                 )
 
             # make the validation data

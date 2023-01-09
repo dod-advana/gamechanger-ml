@@ -29,11 +29,11 @@ class RetrieverEvaluator(TransformerEvaluator):
         super().__init__(transformer_path, use_gpu)
 
         self.encoder_model_name = encoder_model_name
-        self.model_path = os.path.join(encoder_model_name, transformer_path)
+        self.model_path = os.path.join(transformer_path, encoder_model_name)
 
-    def make_index(self, encoder, corpus_path, index_path, files_to_use=None):
-
-        return encoder.index_documents(corpus_path, index_path, files_to_use)
+    def make_index(self, encoder, corpus_path, files_to_use=None):
+        corpus = encoder.prepare_corpus_for_embedding(corpus_path, files_to_use)
+        encoder.create_embeddings_index(corpus)
 
     def predict(self, data, index, retriever, eval_path, k):
 
@@ -71,8 +71,8 @@ class RetrieverEvaluator(TransformerEvaluator):
             query_count = tp = tn = fp = fn = total_expected = 0
             for idx, query in data.queries.items():
                 logger.info("\n\nQ-{}: {}".format(query_count, query))
-                doc_results = retriever.retrieve_topn(
-                    query, num_results=k
+                doc_results = retriever.search(
+                    query, num_results=k, preprocess_query=False
                 )  # returns results ordered highest - lowest score
                 doc_texts = [x["text"] for x in doc_results]
                 doc_ids = [x["id"] for x in doc_results]
