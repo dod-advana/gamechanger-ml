@@ -1,7 +1,6 @@
 from .s3_config import S3Config
 from .qa_config import QAConfig
 from .similarity_config import SimilarityConfig
-from .doc_compare_similarity_config import DocCompareSimilarityConfig
 from .qexp_config import QexpConfig
 from .training_config import TrainingConfig
 from .d2v_config import D2VConfig
