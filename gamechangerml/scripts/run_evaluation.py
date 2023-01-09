@@ -8,7 +8,7 @@ from gamechangerml.src.model_testing.evaluation import (
 )
 from gamechangerml.configs import (
     QAConfig,
-    EmbedderConfig,
+    SemanticSearchConfig,
     SimilarityConfig,
     QexpConfig,
 )
@@ -79,7 +79,7 @@ def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
     elif eval_type == "original":
         originalEval = MSMarcoRetrieverEvaluator(
             **EmbedderConfig.MODEL_ARGS,
-            encoder_model_name=EmbedderConfig.BASE_MODEL,
+            encoder_model_name=SemanticSearchConfig.BASE_MODEL,
             sim_model_name=SimilarityConfig.BASE_MODEL,
         )
         results = originalEval.results
@@ -145,7 +145,7 @@ def _gc_retriever(limit):
         retriever=None,
         index="sent_index_20211020",
         **EmbedderConfig.MODEL_ARGS,
-        encoder_model_name=EmbedderConfig.BASE_MODEL,
+        encoder_model_name=SemanticSearchConfig.BASE_MODEL,
         sim_model_name=SimilarityConfig.BASE_MODEL,
     )
     logger.info(GoldStandardRetrieverEval.results)
@@ -158,7 +158,7 @@ def _msmarco(limit):
         encoder=None,
         retriever=None,
         **EmbedderConfig.MODEL_ARGS,
-        encoder_model_name=EmbedderConfig.BASE_MODEL,
+        encoder_model_name=SemanticSearchConfig.BASE_MODEL,
         sim_model_name=SimilarityConfig.BASE_MODEL,
     )
     logger.info(MSMarcoEval.results)
