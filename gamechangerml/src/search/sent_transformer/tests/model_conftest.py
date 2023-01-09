@@ -3,13 +3,14 @@
 
 import logging
 import os
+from os.path import join
 from pathlib import Path
 
 import pytest
 
-from gamechangerml.src.search.sent_transformer.model import *
+from gamechangerml.src.search.semantic_search import SemanticSearch
 from gamechangerml import REPO_PATH
-from gamechangerml.configs import EmbedderConfig
+from gamechangerml.configs import SemanticSearchConfig
 from gamechangerml.api.fastapi.settings import LOCAL_TRANSFORMERS_DIR
 
 log_fmt = (
@@ -43,16 +44,25 @@ def sent_dirs():
 
 @pytest.fixture(scope="session")
 def sent_encoder():
-    return SentenceEncoder(
-        encoder_model_name=EmbedderConfig.BASE_MODEL,
-        transformer_path=LOCAL_TRANSFORMERS_DIR.value,
-        **EmbedderConfig.MODEL_ARGS
+    return SemanticSearch(
+        join(LOCAL_TRANSFORMERS_DIR.value, SemanticSearchConfig.BASE_MODEL),
+        test_index_dir,
+        False,
+        logger,
+        False,
+        SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
     )
-
 
 @pytest.fixture(scope="session")
 def sent_searcher():
-    return SentenceSearcher(test_index_dir)
+    return SemanticSearch(
+        join(LOCAL_TRANSFORMERS_DIR.value, SemanticSearchConfig.BASE_MODEL),
+        test_index_dir,
+        True,
+        logger,
+        False,
+        SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
+    )
 
 
 @pytest.fixture(scope="session")

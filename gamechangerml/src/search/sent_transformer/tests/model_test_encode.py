@@ -10,7 +10,8 @@ def test_sent_encode(sent_encoder, sent_dirs, index_files):
     Test for encoding a corpus folder
     """
     data_dir, data_dir_2, index_dir = sent_dirs
-    sent_encoder.index_documents(data_dir, index_dir)
+    corpus = sent_encoder.prepare_corpus_for_embedding(data_dir)
+    sent_encoder.create_embeddings_index(corpus, False)
 
     for file in index_files:
         fpath = os.path.join(index_dir, file)
@@ -26,7 +27,8 @@ def test_sent_merge(sent_encoder, sent_dirs, index_files):
     Test for encoding new documents
     """
     data_dir, data_dir_2, index_dir = sent_dirs
-    sent_encoder.index_documents(data_dir_2, index_dir)
+    corpus = sent_encoder.prepare_corpus_for_embedding(data_dir)
+    sent_encoder.create_embeddings_index(corpus, False)
 
     for file in index_files:
         fpath = os.path.join(index_dir, file)
