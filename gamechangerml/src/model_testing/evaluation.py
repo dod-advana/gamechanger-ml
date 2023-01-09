@@ -40,7 +40,6 @@ import torch
 
 retriever_k = 5
 
-init_timer()
 model_path_dict = get_model_paths()
 try:
     LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
@@ -48,6 +47,7 @@ except:
     LOCAL_TRANSFORMERS_DIR = "gamechangerml/models/transformers"
 SENT_INDEX_PATH = model_path_dict["sentence"]
 logger = logging.getLogger(__name__)
+init_timer(logger)
 
 
 class TransformerEvaluator:
