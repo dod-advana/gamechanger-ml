@@ -38,7 +38,7 @@ class LocalCorpusTokenizer:
         self,
         directory_path,
         files_to_use=None,
-        min_num_tokens_per_paragraph=3,
+        min_num_tokens_per_paragraph=25,
         median_token_len_threshold=2.5,
         repeat_tokens_threshold=0.2,
         long_token_len_threshold=25,

@@ -111,18 +111,21 @@ class SemanticSearch:
     def get_eval_threshold_multiplier(self) -> float:
         return SemanticSearchConfig.EVAL_THRESHOLD_MULTIPLIER
 
-    def prepare_corpus_for_embedding(self, directory_path):
+    def prepare_corpus_for_embedding(self, directory_path, files_to_use=None):
         """Load and prepare the corpus before creating embeddings.
 
         Args:
             directory_path (str or None): Path to directory containing JSON
                 corpus files. If None, creates a test corpus with MSMarcoData.
+            files_to_use (list of str or None, optional): List of JSON file
+                names to process. If empty, will process all JSON files in the
+                directory. Defaults to None.
         """
         if directory_path is None:
             self.logger.info("Creating test corpus with MSMarcoData.")
             return MSMarcoData().corpus
         else:
-            corpus = LocalCorpusTokenizer(directory_path)
+            corpus = LocalCorpusTokenizer(directory_path, files_to_use)
             return [(id_, " ".join(tokens), None) for tokens, id_ in corpus]
 
     def create_embeddings_index(
