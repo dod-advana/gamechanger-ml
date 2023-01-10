@@ -5,6 +5,4 @@ from .indomain_qa_evaluator import IndomainQAEvaluator
 from .retriever_evaluator import RetrieverEvaluator
 from .msmarco_retriever_evaluator import MSMarcoRetrieverEvaluator
 from .indomain_retriever_evaluator import IndomainRetrieverEvaluator
-from .similarity_evaluator import SimilarityEvaluator
-from .nli_evaluator import NLIEvaluator
 from .qexp_evaluator import QexpEvaluator

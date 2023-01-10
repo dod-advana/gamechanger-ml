@@ -3,7 +3,6 @@ from gamechangerml.src.model_testing.evaluation import (
     IndomainQAEvaluator,
     IndomainRetrieverEvaluator,
     MSMarcoRetrieverEvaluator,
-    NLIEvaluator,
     QexpEvaluator,
 )
 from gamechangerml.configs import (
@@ -86,24 +85,6 @@ def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
 
     return results
 
-
-def eval_sim(model_name, sample_limit, eval_type="original"):
-    if eval_type == "original":
-        logger.info(
-            f"Evaluating sim model on NLI dataset with sample limit of {str(sample_limit)}."
-        )
-        originalEval = NLIEvaluator(
-            sample_limit=sample_limit, sim_model_name=model_name
-        )
-        results = originalEval.results
-        logger.info(f"Evals: {str(results)}")
-        return results
-    elif eval_type == "domain":
-        logger.info("No in-domain evaluation available for the sim model.")
-    else:
-        logger.info("No eval_type selected. Options: ['original', 'domain'].")
-
-
 def eval_qe(model_name):
     domainEval = QexpEvaluator(
         qe_model_dir=os.path.join(MODEL_PATH, model_name),
@@ -159,16 +140,6 @@ def _msmarco(limit):
     logger.info(MSMarcoEval.results)
     return
 
-
-def _nli(limit):
-    logger.info("\nEvaluating Similarity Model with NLI Data...")
-    SimilarityEval = NLIEvaluator(
-        model=None, sample_limit=limit, sim_model_name=SimilarityConfig.BASE_MODEL
-    )
-    logger.info(SimilarityEval.results)
-    return
-
-
 def _qexp(limit):
     logger.info("\nEvaluating Query Expansion with GC data...")
     QEEval = QexpEvaluator(
@@ -182,7 +153,6 @@ def _qexp(limit):
 FUNCTION_MAP = {
     "squad": _squad,
     "msmarco": _msmarco,
-    "nli": _nli,
     "gc_qa": _gc_qa,
     "gc_retriever": _gc_retriever,
     "qexp": _qexp,
@@ -201,7 +171,6 @@ def main(limit, evals):
     elif all_og:
         run(limit, _squad)
         run(limit, _msmarco)
-        run(limit, _nli)
     elif evals:
         for eval_func in evals:
             run(limit, FUNCTION_MAP[eval_func])
@@ -220,7 +189,7 @@ if __name__ == "__main__":
         dest="evals",
         nargs="+",
         required=False,
-        help="list of evals to run. Options: 'msmarco', 'squad', 'nli', 'gc_retriever', 'gc_qa'",
+        help="list of evals to run. Options: 'msmarco', 'squad', 'gc_retriever', 'gc_qa'",
     )
 
     parser.add_argument(
@@ -238,7 +207,7 @@ if __name__ == "__main__":
         dest="all_og",
         type=bool,
         required=False,
-        help="If this flag is used, will run all transformer model evaluations on their original datasets (msmarco, squad, nli)",
+        help="If this flag is used, will run all transformer model evaluations on their original datasets (msmarco, squad)",
     )
 
     parser.add_argument(

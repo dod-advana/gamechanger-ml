@@ -41,7 +41,6 @@ from gamechangerml.src.search.semantic_search.train import (
 from gamechangerml.scripts.run_evaluation import (
     eval_qa,
     eval_sent,
-    eval_sim,
     eval_qe,
 )
 from gamechangerml.src.featurization.make_meta import (
@@ -331,10 +330,6 @@ class Pipeline:
                     validation_data,
                     eval_type="domain",
                     retriever=retriever,
-                )
-            elif "distilbart-mnli-12-3" in model_name:
-                results[eval_type] = eval_sim(
-                    model_name, sample_limit, eval_type
                 )
             elif "qexp" in model_name:
                 results["domain"] = eval_qe(model_name)
