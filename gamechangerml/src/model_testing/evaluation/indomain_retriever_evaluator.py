@@ -21,10 +21,6 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
     def __init__(
         self,
         encoder_model_name,
-        sim_model_name,
-        min_token_len,
-        return_id,
-        verbose,
         data_level,
         index,
         create_index=True,

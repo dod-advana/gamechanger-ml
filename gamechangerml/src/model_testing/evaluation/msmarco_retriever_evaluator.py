@@ -11,10 +11,6 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
     def __init__(
         self,
         encoder_model_name,
-        sim_model_name,
-        min_token_len,
-        return_id,
-        verbose,
         encoder=None,
         retriever=None,
         transformer_path=LOCAL_TRANSFORMERS_DIR,

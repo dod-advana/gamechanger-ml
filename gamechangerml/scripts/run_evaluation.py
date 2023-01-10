@@ -72,15 +72,13 @@ def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
                 data_level=level,
                 encoder_model_name=encoder,
                 retriever=retriever,
-                sim_model_name=SimilarityConfig.BASE_MODEL,
-                **EmbedderConfig.MODEL_ARGS,
             )
             results[level] = domainEval.results
     elif eval_type == "original":
         originalEval = MSMarcoRetrieverEvaluator(
-            **EmbedderConfig.MODEL_ARGS,
             encoder_model_name=SemanticSearchConfig.BASE_MODEL,
             sim_model_name=SimilarityConfig.BASE_MODEL,
+            retriever=retriever
         )
         results = originalEval.results
     else:
@@ -144,9 +142,7 @@ def _gc_retriever(limit):
         encoder=None,
         retriever=None,
         index="sent_index_20211020",
-        **EmbedderConfig.MODEL_ARGS,
         encoder_model_name=SemanticSearchConfig.BASE_MODEL,
-        sim_model_name=SimilarityConfig.BASE_MODEL,
     )
     logger.info(GoldStandardRetrieverEval.results)
     return
@@ -157,7 +153,6 @@ def _msmarco(limit):
     MSMarcoEval = MSMarcoRetrieverEvaluator(
         encoder=None,
         retriever=None,
-        **EmbedderConfig.MODEL_ARGS,
         encoder_model_name=SemanticSearchConfig.BASE_MODEL,
         sim_model_name=SimilarityConfig.BASE_MODEL,
     )

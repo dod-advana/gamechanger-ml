@@ -541,11 +541,10 @@ class Pipeline:
                 for level in ["gold", "silver"]:
                     sentev = IndomainRetrieverEvaluator(
                         encoder=encoder,
+                        retriever=encoder,
                         index=model_name,
                         data_level=level,
-                        encoder_model_name=EmbedderConfig.BASE_MODEL,
-                        sim_model_name=SimilarityConfig.BASE_MODEL,
-                        **EmbedderConfig.MODEL_ARGS,
+                        encoder_model_name=SemanticSearchConfig.BASE_MODEL,
                     )
                     evals[level] = sentev.results
                     logger.info(
