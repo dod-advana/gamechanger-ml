@@ -3,8 +3,6 @@ import os
 
 from gamechangerml.src.search.semantic_search import SemanticSearch
 from gamechangerml.configs import SemanticSearchConfig
-from gamechangerml.src.utilities.utils import get_local_model_prefix
-from gamechangerml import MODEL_PATH
 from gamechangerml.src.paths import TRANSFORMERS_DIR
 
 logger = logging.getLogger(__name__)
@@ -21,7 +19,7 @@ def test_sent_search(sent_dirs, topn):
         test_index_dir,
         True,
         logger,
-        SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
+        False
     )
     queries = ["regulation", "Major Automated Information System"]
     for query in queries:

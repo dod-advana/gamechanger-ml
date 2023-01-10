@@ -1,5 +1,4 @@
 import os
-from gamechangerml.configs import SemanticSearchConfig
 from gamechangerml.src.search.semantic_search import SemanticSearch
 from gamechangerml.src.utilities import create_directory_if_not_exists
 from .retriever_evaluator import RetrieverEvaluator
@@ -41,7 +40,6 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
                     False,
                     logger,
                     use_gpu,
-                    SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
                 )
             self.make_index(
                 encoder=self.encoder,
@@ -57,7 +55,6 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
                 True,
                 logger,
                 use_gpu,
-                SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
             )
         self.eval_path = create_directory_if_not_exists(
             os.path.join(self.index_path, "evals_msmarco")

@@ -3,7 +3,6 @@ import os
 import pandas as pd
 from datetime import datetime
 from gamechangerml import CORPUS_PATH
-from gamechangerml.configs import SemanticSearchConfig
 
 from gamechangerml.src.search.semantic_search import SemanticSearch
 from gamechangerml.src.utilities import (
@@ -83,7 +82,6 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                             False,
                             logger,
                             self.use_gpu,
-                            SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
                         )
 
                     # create the test corpus
@@ -146,7 +144,6 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                     True,
                     logger,
                     self.use_gpu,
-                    SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
                 )
 
             # make the validation data

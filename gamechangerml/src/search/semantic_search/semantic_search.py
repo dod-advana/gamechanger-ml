@@ -9,7 +9,7 @@ from pandas import DataFrame, read_csv
 from pickle import load as load_pickle
 from os import remove as delete_file
 from os.path import join
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Literal
 
 from gamechangerml.api.utils import processmanager
 from gamechangerml.configs import SemanticSearchConfig
@@ -43,9 +43,6 @@ class SemanticSearch:
         load_index_from_file (bool): True to load the index from files in
             `index_directory_path`. If False, you must create the index with
             `create_embeddings_index()` before calling `search()`.
-        threshold (float or "auto"): Minimum score for a search result to be
-            considered a passing result. If auto, will calculate the threshold
-            using the most recent evaluation data.
         logger (logging.Logger)
 
     Attributes:
@@ -62,8 +59,6 @@ class SemanticSearch:
             `paragraphs_and_ids_path`. Note: If you search (`search()`) before
             building the index (`create_embeddings_index()`), it will attempt to
             populate this DataFrame with data from a previously existing file.
-        threshold (float): Minimum score for a search result to be considered
-            a passing result.
         logger (logging.Logger)
         use_gpu (bool): True to use GPU, False otherwise.
         score_display_map (dict or None): If not None, adds "score_display"
@@ -77,7 +72,6 @@ class SemanticSearch:
         load_index_from_file,
         logger,
         use_gpu,
-        threshold,
     ):
         self.embedder = Embeddings(
             {"method": "transformers", "path": model_path, "use_gpu": use_gpu}
@@ -91,7 +85,7 @@ class SemanticSearch:
         self.paragraphs_and_ids_path = join(self.index_path, "data.csv")
         self.ids_path = join(self.index_path, "doc_ids.txt")
 
-        self.threshold = self._transform_threshold(threshold)
+        self._auto_threshold = None
 
         if load_index_from_file:
             self.embedder.load(self.index_path)
@@ -204,6 +198,9 @@ class SemanticSearch:
         query,
         num_results: int,
         preprocess_query: bool,
+        threshold: Union[
+            Literal["auto"], float
+        ] = SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
     ):
         """Run a semantic search for the given query.
 
@@ -212,6 +209,9 @@ class SemanticSearch:
                 with this query.
             num_results (int): Number of results to return.
             preprocess_query (bool): True to preprocess the query, False otherwise.
+            threshold (float or "auto"): Minimum score for a search result to be
+            considered a passing result. If auto, will calculate the threshold
+            using the most recent evaluation data.
 
         Returns:
             list of dict: List of dictionaries of the format:
@@ -226,6 +226,8 @@ class SemanticSearch:
                         DocumentComparison)
                 }
         """
+        threshold = self._transform_threshold(threshold)
+
         if preprocess_query:
             query = " ".join(preprocess(query))
 
@@ -251,7 +253,7 @@ class SemanticSearch:
                 "text": texts[i],
                 "text_length": norm_lengths[i],
                 "score": ids_and_scores[i][1],
-                "passing_result": int(ids_and_scores[i][1] >= self.threshold),
+                "passing_result": int(ids_and_scores[i][1] >= threshold),
             }
             for i in range(len(ids_and_scores))
         ]
@@ -264,9 +266,7 @@ class SemanticSearch:
         results = sorted(results, key=lambda x: x["score"], reverse=True)
 
         if not self.should_include_results_below_threshold():
-            results = [
-                res for res in results if res["score"] >= self.threshold
-            ]
+            results = [res for res in results if res["score"] >= threshold]
 
         return results
 
@@ -274,6 +274,10 @@ class SemanticSearch:
         """Calculate the threshold to use when `auto` is passed. Looks for the
         best threshold value from the most recent evaluation file and scales it
         by a multiplier."""
+
+        if self._auto_threshold is not None:
+            return self._auto_threshold
+
         try:
             directory = join(self.index_path, "evals_gc", "silver")
             filename = get_most_recent_eval(directory)
@@ -287,6 +291,8 @@ class SemanticSearch:
             self.logger.exception(
                 "Failed to determine auto threshold based on eval file."
             )
+
+        self._auto_threshold = threshold
 
         return threshold
 

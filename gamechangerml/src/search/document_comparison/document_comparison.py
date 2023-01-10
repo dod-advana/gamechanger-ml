@@ -13,7 +13,6 @@ class DocumentComparison(SemanticSearch):
         load_index_from_file,
         logger,
         use_gpu,
-        threshold,
     ):
         super().__init__(
             model_path,
@@ -21,7 +20,6 @@ class DocumentComparison(SemanticSearch):
             load_index_from_file,
             logger,
             use_gpu,
-            threshold,
         )
 
     def get_default_threshold(self) -> float:

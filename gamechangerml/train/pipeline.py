@@ -483,7 +483,6 @@ class Pipeline:
                 False,
                 logger,
                 use_gpu,
-                None
             )
             logger.info(
                 f"Creating Document Embeddings with {encoder_model} on {corpus}"

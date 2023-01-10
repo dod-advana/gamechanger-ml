@@ -19,6 +19,7 @@ from gamechangerml.configs import (
     DocumentComparisonConfig,
     SemanticSearchConfig,
 )
+from typing import Union, Literal
 
 router = APIRouter()
 MODELS = ModelLoader()
@@ -92,6 +93,9 @@ async def trans_sentence_infer(
     response: Response,
     num_results: int = 10,
     process: bool = True,
+    threshold: Union[
+        Literal["auto"], float
+    ] = SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
 ) -> dict:
     """trans_sentence_infer - endpoint for sentence transformer inference
     Args:
@@ -112,7 +116,7 @@ async def trans_sentence_infer(
             results = cached_value
         else:
             results = MODELS.semantic_search.search(
-                query_text, num_results, process
+                query_text, num_results, process, threshold
             )
             cache.set_value(
                 results,
@@ -268,6 +272,7 @@ async def document_compare_infer(
     response: Response,
     num_results: int = 10,
     process: bool = True,
+    threshold: float = DocumentComparisonConfig.DEFAULT_THRESHOLD_FLOAT,
 ) -> dict:
     """document_compare_infer - endpoint for document compare inference
     Args:
@@ -284,7 +289,7 @@ async def document_compare_infer(
     try:
         query_text = body["text"]
         results = MODELS.document_compare_searcher.search(
-            query_text, num_results, process
+            query_text, num_results, process, threshold
         )
         logger.info(results)
     except Exception:

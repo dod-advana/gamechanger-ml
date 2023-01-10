@@ -210,7 +210,6 @@ class ModelLoader:
                 load_index_from_file=SemanticSearchConfig.LOAD_INDEX_FROM_FILE,
                 logger=logger,
                 use_gpu=SemanticSearchConfig.USE_GPU,
-                threshold=SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
             )
         except:
             logger.exception("Failed to init Semantic Search model.")
@@ -242,7 +241,6 @@ class ModelLoader:
                 load_index_from_file=True,
                 logger=logger,
                 use_gpu=DocumentComparisonConfig.USE_GPU,
-                threshold=DocumentComparisonConfig.DEFAULT_THRESHOLD_FLOAT,
             )
             latest_doc_compare_encoder.value = (
                 DocumentComparisonConfig.BASE_MODEL

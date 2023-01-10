@@ -50,7 +50,6 @@ def sent_encoder():
         False,
         logger,
         False,
-        SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
     )
 
 @pytest.fixture(scope="session")
@@ -61,7 +60,6 @@ def sent_searcher():
         True,
         logger,
         False,
-        SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
     )
 
 
