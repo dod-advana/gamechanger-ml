@@ -1,3 +1,4 @@
+from os.path import join
 from .utils import LOCAL_TRANSFORMERS_DIR
 from .qa_evaluator import QAEvaluator
 from ..validation_data import SQuADData
@@ -29,5 +30,5 @@ class SQuADQAEvaluator(QAEvaluator):
         )
 
         self.data = SQuADData(sample_limit)
-        self.eval_path = create_directory_if_not_exists(os.path.join(self.model_path, "evals_squad"))
+        self.eval_path = create_directory_if_not_exists(join(self.model_path, "evals_squad"))
         self.results = self.eval(data=self.data, eval_path=self.eval_path)
