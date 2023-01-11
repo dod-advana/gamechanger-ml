@@ -358,7 +358,7 @@ class SemanticSearch:
             self.paragraphs_and_ids_df["paragraph_id"] == str(paragraph_id)
         ].iloc[0]["text"]
 
-    def _update_process_manager_training_status(finished: bool) -> None:
+    def _update_process_manager_training_status(self, finished: bool) -> None:
         """Pass True if the training process is finished or False if it is starting."""
         processmanager.update_status(
             processmanager.training,
