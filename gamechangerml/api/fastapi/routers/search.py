@@ -97,13 +97,33 @@ async def trans_sentence_infer(
         Literal["auto"], float
     ] = SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
 ) -> dict:
-    """trans_sentence_infer - endpoint for sentence transformer inference
+    """Search for paragraphs with semantic similarity to the query.
+
     Args:
-        body: dict; json format of query
-            {"text": "i am text"}
-        Response: Response class; for status codes(apart of fastapi do not need to pass param)
+        body (dict): Contains the query to match against the corpus.
+            {
+                <str> "text": "i am text, compare me to the corpus",
+            }
+
+        response (fastapi.Response): For status codes. This is part of fastapi
+            and you do not need to pass this param)
+        num_results (int, optional): The number of results (i.e., paragraphs
+            that closely match the query) to return. Defaults to 10.
+        process (bool, optional): True to preprocess the query, False otherwise.
+            Defaults to False.
+        threshold (float, optional): Minimum score to consider a result as
+            passing. Defaults to SemanticSearchConfig.DEFAULT_THRESHOLD_ARG.
+
     Returns:
-        results: dict; results of inference
+        list of dict: List of dictionaries of the format:
+            {
+                "id": str,
+                "text": str,
+                "text_length": float,
+                "score": float,
+                "passing_result": int (0 or 1),
+                "score_display": str
+            }
     """
     logger.info("SENTENCE TRANSFORMER - predicting query: " + str(body))
     results = {}
@@ -274,15 +294,35 @@ async def document_compare_infer(
     process: bool = True,
     threshold: float = DocumentComparisonConfig.DEFAULT_THRESHOLD_FLOAT,
 ) -> dict:
-    """document_compare_infer - endpoint for document compare inference
+    """Utilizes a sentence transformer model to determine which paragraphs in
+    the corpus most closely match paragraph(s) entered by a user.
+
+    This endpoint drives the Document Comparison tool in the GAMECHANGER web
+    application.
+
     Args:
-        body: dict; json format of query
+        body (dict): Contains the query to match against the corpus.
             {
-                <str> "text": "i am text",
+                <str> "text": "i am text, compare me to the corpus",
             }
-        Response: Response class; for status codes(apart of fastapi do not need to pass param)
+        response (fastapi.Response): For status codes. This is part of fastapi
+            and you do not need to pass this param)
+        num_results (int, optional): The maximum number of results (i.e.,
+            paragraphs that closely match the query) to return. Defaults to 10.
+        process (bool, optional): True to preprocess the query, False otherwise.
+            Defaults to False.
+        threshold (float, optional): Minimum score to consider a result as
+            passing. Defaults to DocumentComparisonConfig.DEFAULT_THRESHOLD_FLOAT.
     Returns:
-        results: dict; results of inference
+        list of dict: List of dictionaries of the format:
+            {
+                "id": str,
+                "text": str,
+                "text_length": float,
+                "score": float,
+                "passing_result": int (0 or 1),
+                "score_display": str
+            }
     """
     logger.debug("DOCUMENT COMPARE INFER - predicting query: " + str(body))
     results = {}

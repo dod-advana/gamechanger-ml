@@ -223,10 +223,11 @@ class ModelLoader:
     def initDocumentCompareSearcher(
         index_path=DOC_COMPARE_SENT_INDEX_PATH.value,
     ):
-        """
-        initDocumentCompareSearcher - loads SentenceSearcher class on start
+        """Creates a DocumentCompare instance for the /documentCompare endpoint.
+
         Args:
-        Returns:
+            index_path (str, optional): Path to the directory of index files.
+            Defaults to DOC_COMPARE_SENT_INDEX_PATH.value.
         """
         logger.info(
             f"Loading Document Compare Searcher with index path: {index_path}"
@@ -245,7 +246,6 @@ class ModelLoader:
             latest_doc_compare_encoder.value = (
                 DocumentComparisonConfig.BASE_MODEL
             )
-
         except Exception as e:
             logger.warning("** Could not load Document Comparison model")
             logger.warning(e)
