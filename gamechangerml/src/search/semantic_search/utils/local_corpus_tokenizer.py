@@ -45,7 +45,9 @@ class LocalCorpusTokenizer:
         long_token_ratio_threshold=0.05,
     ):
         self._directory_path = directory_path
-        self._file_paths = get_json_paths_for_directory(files_to_use)
+        self._file_paths = get_json_paths_for_directory(
+            self._directory_path, files_to_use
+        )
 
         self._min_num_tokens = min_num_tokens_per_paragraph
         self._median_token_len_threshold = median_token_len_threshold

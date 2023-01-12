@@ -11,9 +11,9 @@ def search_with_loaded_index(semantic_model_path, index_dir, logger, use_gpu):
         searcher = SemanticSearch(
             semantic_model_path, index_dir, True, logger, use_gpu
         )
-    except Exception:
+    except Exception as e:
         pytest.exit(
-            f"Failed to init SemanticSearch in `search_with_loaded_index` fixture.",
+            f"Failed to init SemanticSearch in `search_with_loaded_index` fixture. Exception: {e}",
             1,
         )
     return searcher

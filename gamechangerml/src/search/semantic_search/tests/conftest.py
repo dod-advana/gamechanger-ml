@@ -78,9 +78,9 @@ def search_with_new_index(semantic_model_path, new_index_dir, logger, use_gpu):
         searcher = SemanticSearch(
             semantic_model_path, new_index_dir, False, logger, use_gpu
         )
-    except Exception:
+    except Exception as e:
         pytest.exit(
-            f"Failed to init SemanticSearch for fixture `search_with_new_index`",
+            f"Failed to init SemanticSearch for fixture `search_with_new_index`. Exception: {e}",
             1,
         )
     return searcher
