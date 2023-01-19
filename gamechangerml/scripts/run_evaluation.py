@@ -13,10 +13,12 @@ from gamechangerml.configs import (
     QexpConfig,
 )
 from gamechangerml.src.utilities.test_utils import *
+from gamechangerml.src.utilities import open_json, get_most_recently_changed_dir
 import argparse
 import os
 import logging
-from gamechangerml import DATA_PATH, MODEL_PATH
+from gamechangerml import MODEL_PATH
+from gamechangerml.src.paths import SENT_TRANSFORMER_VALIDATION_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -51,18 +53,15 @@ def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
         index = None
         logger.info(f"Evaluating encoder: {encoder}")
     if eval_type == "domain":
-        base_data_dir = os.path.join(
-            DATA_PATH, "validation", "domain", "sent_transformer"
-        )
         if validation_data != "latest":
-            if os.path.exists(os.path.join(base_data_dir, validation_data)):
-                data_path = os.path.join(base_data_dir, validation_data)
+            if os.path.exists(os.path.join(SENT_TRANSFORMER_VALIDATION_DIR, validation_data)):
+                data_path = os.path.join(SENT_TRANSFORMER_VALIDATION_DIR, validation_data)
             else:
                 logger.warning("Could not load validation data, path doesn't exist")
                 data_path = None
         else:
             try:
-                data_path = get_most_recent_dir(base_data_dir)
+                data_path = get_most_recently_changed_dir(SENT_TRANSFORMER_VALIDATION_DIR)
             except:
                 data_path = None
         results = {}

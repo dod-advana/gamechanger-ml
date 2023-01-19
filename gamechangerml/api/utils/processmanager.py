@@ -1,7 +1,7 @@
 import threading
 import os
 from datetime import datetime
-from gamechangerml.api.utils.redisdriver import CacheVariable
+from gamechangerml.api.utils.redis_driver import CacheVariable
 
 # from gamechangerml.api.fastapi.settings import logger   # commenting out because of API calls failing for gamechanger-data
 # Process Keys

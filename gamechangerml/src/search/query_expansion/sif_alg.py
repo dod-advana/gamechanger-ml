@@ -3,7 +3,7 @@ import logging
 import spacy
 
 
-from gamechangerml.src.utilities.np_utils import l2_norm_vector, is_zero_vector
+from gamechangerml.src.utilities.numpy_utils import l2_norm_vector, is_zero_vector
 
 logger = logging.getLogger(__name__)
 

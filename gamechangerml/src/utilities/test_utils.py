@@ -1,17 +1,13 @@
 import os
 import re
-import json
 import pandas as pd
 import math
-import numpy as np
 from dateutil import parser
 from datetime import date, datetime
-import signal
-import torch
-import random
 import logging
 
 from gamechangerml.configs import ValidationConfig
+from gamechangerml.src.utilities import open_json, open_txt
 
 MATAMO_DIR = ValidationConfig.DATA_ARGS['matamo_dir']
 SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']
@@ -19,29 +15,6 @@ SEARCH_HIST = ValidationConfig.DATA_ARGS['search_hist_dir']
 MATAMO_TEST_FILE = "gamechangerml/data/test_data/MatamoFeedback_TEST.csv"
 SEARCH_TEST_FILE = "gamechangerml/data/test_data/SearchPDFMapping_TEST.csv"
 logger = logging.getLogger(__name__)
-
-
-# https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
-class TimeoutException(Exception):   # Custom exception class
-    pass
-
-
-def init_timer():
-    '''Creates a timer using signal'''
-    # https://stackoverflow.com/questions/25027122/break-the-function-after-certain-time/25027182
-    def timeout_handler(signum, frame):   # Custom signal handler
-        raise TimeoutException
-    signal.signal(signal.SIGALRM, timeout_handler)
-    logger.info("Created timer.")
-
-    return
-
-
-def check_file_size(filename, path):
-    '''Returns the filesize (in bytes) of a file'''
-    return os.path.getsize(os.path.join(path, filename))
-
-# from create_embeddings.py
 
 
 def get_user(logger):
@@ -56,38 +29,6 @@ def get_user(logger):
         logger.info(e)
 
 
-def save_json(filename, path, data):
-    '''Saved a json file'''
-    filepath = os.path.join(path, filename)
-    with open(filepath, "w") as outfile:
-        return json.dump(data, outfile, cls=NumpyJSONEncoder)
-
-
-def open_json(filename, path):
-    '''Opens a json file'''
-    with open(os.path.join(path, filename)) as f:
-        return json.load(f)
-
-
-def open_jsonl(filename, path):
-    '''Opens a jsonl file'''
-    with open(os.path.join(path, filename), 'r') as json_file:
-        json_list = list(json_file)
-
-    data = []
-    for json_str in json_list:
-        result = json.loads(json_str)
-        data.append(result)
-
-    return data
-
-
-def open_txt(filepath):
-    '''Opens a txt file'''
-    with open(filepath, "r") as fp:
-        return fp.readlines()
-
-
 def get_index_size(sent_index_path):
     '''Checks the size of a sentence index by # of doc ids.'''
     doc_ids = open_txt(os.path.join(sent_index_path, 'doc_ids.txt'))
@@ -99,16 +40,7 @@ def timestamp_filename(filename, extension):
     today = date.today()
     formatted = '_'.join([filename, today.strftime("%Y%m%d")])
     return formatted + extension
-
-
-def check_directory(directory):
-    '''Checks if a directory exists, if it does not makes the directory'''
-    if not os.path.exists(directory):
-        logger.info("Creating new directory {}".format(directory))
-        os.makedirs(directory)
-
-    return directory
-
+    
 
 def make_timestamp_directory(base_dir):
 
@@ -121,37 +53,6 @@ def make_timestamp_directory(base_dir):
         logger.info("Directory {} already exists.".format(new_dir))
 
     return new_dir
-
-# stackoverflow
-# https://stackoverflow.com/questions/50916422/python-typeerror-object-of-type-int64-is-not-json-serializable
-
-
-class NumpyJSONEncoder(json.JSONEncoder):
-    """ Custom encoder for numpy data types """
-
-    def default(self, obj):
-        if isinstance(obj, (np.int_, np.intc, np.intp, np.int8,
-                            np.int16, np.int32, np.int64, np.uint8,
-                            np.uint16, np.uint32, np.uint64)):
-
-            return int(obj)
-
-        elif isinstance(obj, (np.float_, np.float16, np.float32, np.float64)):
-            return float(obj)
-
-        elif isinstance(obj, (np.complex_, np.complex64, np.complex128)):
-            return {'real': obj.real, 'imag': obj.imag}
-
-        elif isinstance(obj, (np.ndarray,)):
-            return obj.tolist()
-
-        elif isinstance(obj, (np.bool_)):
-            return bool(obj)
-
-        elif isinstance(obj, (np.void)):
-            return None
-
-        return json.JSONEncoder.default(self, obj)
 
 
 def clean_nans(value):
@@ -222,31 +123,6 @@ def handle_sent_evals(index_path):
     except Exception as e:
         logger.warning(e)
         return collect_evals(index_path)
-
-# from sentence_transformers==2.0.0
-# https://github.com/UKPLab/sentence-transformers/blob/master/sentence_transformers/util.py
-
-
-def cos_sim(a, b):
-    """
-    Computes the cosine similarity cos_sim(a[i], b[j]) for all i and j.
-    :return: Matrix with res[i][j]  = cos_sim(a[i], b[j])
-    """
-    if not isinstance(a, torch.Tensor):
-        a = torch.tensor(a)
-
-    if not isinstance(b, torch.Tensor):
-        b = torch.tensor(b)
-
-    if len(a.shape) == 1:
-        a = a.unsqueeze(0)
-
-    if len(b.shape) == 1:
-        b = b.unsqueeze(0)
-
-    a_norm = torch.nn.functional.normalize(a, p=2, dim=1)
-    b_norm = torch.nn.functional.normalize(b, p=2, dim=1)
-    return torch.mm(a_norm, b_norm.transpose(0, 1))
 
 
 def update_dictionary(old_dict, new_additions, prefix):
@@ -420,63 +296,3 @@ def concat_search_hist(testing_only=False):
     else:
         return concat_csvs(SEARCH_HIST)
 
-
-def get_most_recent_dir(parent_dir):
-
-    subdirs = [os.path.join(parent_dir, d) for d in os.listdir(
-        parent_dir) if os.path.isdir(os.path.join(parent_dir, d))]
-    if len(subdirs) > 0:
-        return max(subdirs, key=os.path.getctime)
-    else:
-        logger.error(
-            "There are no subdirectories to retrieve most recent data from")
-        return None
-
-
-def make_test_corpus(
-    corpus_dir,  # main corpus dir
-    save_dir,  # where to save the test corpus
-    percent_random,  # float from 0-1 percentage of index to make from random docs
-    max_size=1000,  # max size of the index (to save on time building)
-    include_ids=None,  # if any IDs need to be in the test, pass as list
-    max_file_size=100000  # max size of random files to add to the test corpus
-):
-    '''Makes a small test corpus for checking validation'''
-    all_files = [f.split('.json')[0] + '.json' for f in os.listdir(corpus_dir)
-                 if os.path.isfile(os.path.join(corpus_dir, f))]
-    if percent_random > 1:
-        percent_random = percent_random / 100
-    if include_ids:
-        logger.info(f"{str(len(include_ids))} ids required in test corpus")
-        # make sure json at end of filenames
-        include_ids = [f.split('.json')[0] + '.json' for f in include_ids]
-        # only get ids in the main corpus
-        subset = list(set(all_files).intersection(include_ids))
-        if len(subset) < len(include_ids):
-            logger.info(
-                f"Did not find all required ids in the main corpus dir.")
-            logger.info(
-                f"Found {str(len(subset))} / {str(len(include_ids))} ids")
-        other = [i for i in all_files if i not in include_ids]
-        if percent_random > 0:
-            num_add = round(len(subset)/percent_random - len(subset))
-        else:
-            num_add = 0
-    else:
-        subset = []
-        other = all_files
-        num_add = max_size
-
-    # add random docs
-    for i in range(num_add):
-        filesize = 1000000
-        while filesize > max_file_size:  # as we iterate, skip large files
-            random_index = random.randint(0, len(other)-1)
-            file = other[random_index]  # pick a random file
-            # if filesize is smaller than max, break loop
-            filesize = check_file_size(file, corpus_dir)
-        subset.append(file)
-        subset = list(set(subset))  # remove duplicates
-
-    logger.info(f"Collected {str(len(subset))} jsons")
-    return subset

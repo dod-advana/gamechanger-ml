@@ -1,39 +1,27 @@
-from gamechangerml.src.text_handling.process import preprocess
+from gamechangerml.src.services import ElasticsearchService
 import numpy as np
-import re
 import pandas as pd
 from tqdm import tqdm
 import logging
 import os
-from elasticsearch import Elasticsearch
 import xgboost as xgb
-import requests
 import json
-from sklearn.preprocessing import LabelEncoder
-from gamechangerml import MODEL_PATH, DATA_PATH
-import typing as t
-import base64
-from urllib.parse import urljoin
+from gamechangerml import MODEL_PATH
 from datetime import datetime, timedelta
 from gamechangerml.src.utilities import (
     gc_web_api,
-    es_utils,
     user_utils as user,
 )
-
+from gamechangerml.src.paths import SEARCH_PDF_MAPPING_FILE, LTR_DATA_DIR
 
 logger = logging.getLogger("gamechanger")
 
-GC_USER_DATA = os.path.join(
-    DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
-)
 LTR_MODEL_PATH = os.path.join(MODEL_PATH, "ltr")
-LTR_DATA_PATH = os.path.join(DATA_PATH, "ltr")
 os.makedirs(LTR_MODEL_PATH, exist_ok=True)
-os.makedirs(LTR_DATA_PATH, exist_ok=True)
+os.makedirs(LTR_DATA_DIR, exist_ok=True)
 gcClient = gc_web_api.GCWebClient()
 
-esu = es_utils.ESUtils()
+esu = ElasticsearchService()
 
 
 class LTR:
@@ -76,7 +64,7 @@ class LTR:
             output.write("[" + ",".join(list(model)) + "]")
             output.close()
 
-    def read_xg_data(self, path=os.path.join(LTR_DATA_PATH, "xgboost.csv")):
+    def read_xg_data(self, path=os.path.join(LTR_DATA_DIR, "xgboost.csv")):
         """read xg data: reads LTR formatted data
         params: path to file
         returns:
@@ -93,7 +81,10 @@ class LTR:
             logger.error("LTR - Could not read in data for training")
 
     def read_mappings(
-        self, path=GC_USER_DATA, remote_mappings: bool = False, daysBack: int = 180
+        self,
+        path=SEARCH_PDF_MAPPING_FILE,
+        remote_mappings: bool = False,
+        daysBack: int = 180,
     ):
         """read mappings: reads search pdf mappings
         params: path to file
@@ -144,7 +135,7 @@ class LTR:
         bst = xgb.train(params, data)
         cv = xgb.cv(params, dtrain=data, nfold=3, metrics=self.eval_metrics)
         model = bst.get_dump(
-            fmap=os.path.join(LTR_DATA_PATH, "featmap.txt"), dump_format="json"
+            fmap=os.path.join(LTR_DATA_DIR, "featmap.txt"), dump_format="json"
         )
         if write:
             self.write_model(model)
@@ -233,7 +224,11 @@ class LTR:
                 }
             },
             "highlight": {
-                "fields": {"display_title_s.search": {}, "keyw_5": {}, "id": {}},
+                "fields": {
+                    "display_title_s.search": {},
+                    "keyw_5": {},
+                    "id": {},
+                },
                 "fragmenter": "simple",
             },
             "sort": [{"_score": {"order": "desc"}}],
@@ -252,7 +247,9 @@ class LTR:
         r = esu.client.search(index=esu.es_index, body=dict(query))
         return r
 
-    def generate_judgement(self, remote_mappings: bool = False, daysBack: int = 180):
+    def generate_judgement(
+        self, remote_mappings: bool = False, daysBack: int = 180
+    ):
         """generate judgement - generates judgement list from user mapping data
         params:
             mappings: dataframe of user data extracted from pdf mapping table
@@ -345,7 +342,7 @@ class LTR:
             df = pd.concat([df, ft_df], axis=1)
 
             logger.info("LTR - Generating csv file")
-            df.to_csv(os.path.join(LTR_DATA_PATH, "xgboost.csv"), index=False)
+            df.to_csv(os.path.join(LTR_DATA_DIR, "xgboost.csv"), index=False)
         except Exception as e:
             logger.error(e)
             logger.info("LTR - Failed in generating feature text file")
@@ -420,7 +417,9 @@ class LTR:
                         "name": "entities",
                         "params": ["keywords"],
                         "template_language": "mustache",
-                        "template": {"match": {"top_entities_t": "{{keywords}}"}},
+                        "template": {
+                            "match": {"top_entities_t": "{{keywords}}"}
+                        },
                     },
                     {
                         "name": "textlength",

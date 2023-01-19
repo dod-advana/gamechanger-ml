@@ -1,10 +1,8 @@
 import pandas as pd
-import ast
-from gamechangerml import DATA_PATH
-import os
+from gamechangerml.src.paths import CORPUS_META_FILE, POPULAR_DOCUMENTS_FILE
 
-df = pd.read_csv(os.path.join(DATA_PATH, "features/generated_files/corpus_meta.csv"))
-pop_df = pd.read_csv(os.path.join(DATA_PATH, "features/popular_documents.csv"))
+df = pd.read_csv(CORPUS_META_FILE)
+pop_df = pd.read_csv(POPULAR_DOCUMENTS_FILE)
 
 
 """ retrieve pre-generated features from corpus

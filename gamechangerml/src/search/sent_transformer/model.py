@@ -11,12 +11,13 @@ import time
 import threading
 import logging
 
-from gamechangerml.src.text_handling.corpus import LocalCorpus
+from gamechangerml.src.text_handling.local_corpus_tokenizer import LocalCorpusTokenizer
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 from gamechangerml.configs import EmbedderConfig
+from gamechangerml.src.utilities import open_json
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +164,7 @@ class SentenceEncoder(object):
         logger.info(f"Indexing documents from {corpus_path}")
 
         if corpus_path:
-            corp = LocalCorpus(
+            corp = LocalCorpusTokenizer(
                 corpus_path,
                 return_id=self.return_id,
                 min_token_len=self.min_token_len,

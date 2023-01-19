@@ -10,4 +10,6 @@ from .d2v_config import D2VConfig
 from .validation_config import ValidationConfig
 from .bert_summary_config import BertSummConfig
 from .topics_config import TopicsConfig
-from .path_config import PathConfig
+from .redis_config import RedisConfig
+from .spacy_config import SpacyConfig
+from .postgres_config import PostgresConfig
