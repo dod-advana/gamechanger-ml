@@ -223,7 +223,7 @@ class ModelLoader:
     def initDocumentCompareSearcher(
         index_path=DOC_COMPARE_SENT_INDEX_PATH.value,
     ):
-        """Creates a DocumentCompare instance for the /documentCompare endpoint.
+        """Creates a DocumentComparison instance for the /documentCompare endpoint.
 
         Args:
             index_path (str, optional): Path to the directory of index files.

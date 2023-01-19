@@ -1,4 +1,4 @@
-"""Class definition for SemanticSearch, which is used in the ML API 
+"""Class definition for SemanticSearch, which is used in the ML API
 /transSentenceSearch endpoint. Also serves as a base class for DocumentComparison."""
 
 from txtai.embeddings import Embeddings
@@ -44,6 +44,7 @@ class SemanticSearch:
             `index_directory_path`. If False, you must create the index with
             `create_embeddings_index()` before calling `search()`.
         logger (logging.Logger)
+        use_gpu (bool)
 
     Attributes:
         index_path (str): Path to directory containing index files.
@@ -53,16 +54,12 @@ class SemanticSearch:
             `create_embeddings_index()`.
         paragraphs_and_ids_path (str): Path to the data.csv file that is created
             during `create_embeddings_index()`.
-        paragraphs_and_ids_df (pandas.DataFrame): DataFrame with
-            columns "text" and "paragraph_id". Is created during
-            `create_embeddings_index()` and saved to the path at
-            `paragraphs_and_ids_path`. Note: If you search (`search()`) before
-            building the index (`create_embeddings_index()`), it will attempt to
-            populate this DataFrame with data from a previously existing file.
-        logger (logging.Logger)
+        paragraphs_and_ids_df (pandas.DataFrame): DataFrame with columns "text"
+            and "paragraph_id". Used to look up texts of IDs returned by an
+            embeddings search.
         use_gpu (bool): True to use GPU, False otherwise.
         score_display_map (dict or None): If not None, adds "score_display"
-            field to search() results based on this map. Defaults to None.
+            field to results of search() based on this map. Defaults to None.
     """
 
     def __init__(
@@ -77,7 +74,11 @@ class SemanticSearch:
             {"method": "transformers", "path": model_path, "use_gpu": use_gpu}
         )
         self.logger = logger
+
+        # This DataFrame can either be created with create_embeddings_index() or
+        # loaded from a file with _load_paragraphs_and_ids_df().
         self.paragraphs_and_ids_df = None
+
         self.score_display_map = self.get_score_display_map()
 
         self.index_path = index_directory_path
@@ -85,6 +86,7 @@ class SemanticSearch:
         self.paragraphs_and_ids_path = join(self.index_path, "data.csv")
         self.ids_path = join(self.index_path, "doc_ids.txt")
 
+        # Populates when "auto" is passed as the `threshold` argument in search().
         self._auto_threshold = None
 
         if load_index_from_file:
@@ -203,6 +205,9 @@ class SemanticSearch:
         ] = SemanticSearchConfig.DEFAULT_THRESHOLD_ARG,
     ):
         """Run a semantic search for the given query.
+
+        The query is embedded into the same vector space as the corpus and the
+        closest embeddings from the corpus are found. 
 
         Args:
             query (str): Search the corpus for text with high semantic overlap

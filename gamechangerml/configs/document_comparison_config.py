@@ -13,8 +13,9 @@ class DocumentComparisonConfig(SemanticSearchConfig):
         0.0: "Very Low",
     }
 
+    """Default minimum score for a result to be considered a passing result."""
     DEFAULT_THRESHOLD_FLOAT = 0.25
 
-    DEFAULT_THRESHOLD_ARG = DEFAULT_THRESHOLD_FLOAT
-
+    """Flag for whether or not items with scores below the threshold should be
+    included in results."""
     INCLUDE_RESULTS_BELOW_THRESHOLD = False
