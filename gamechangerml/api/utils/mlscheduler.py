@@ -2,10 +2,9 @@
 
 Also see gamechangerml.src.services.s3_service.py
 """
-
+from os import stat, listdir
+from os.path import isdir
 from threading import current_thread
-from os import makedirs
-from os.path import join, exists, basename
 from datetime import datetime, timezone
 from gamechangerml.src.services.s3_service import S3Service
 from gamechangerml.src.utilities import configure_logger
@@ -16,15 +15,9 @@ from gamechangerml.api.fastapi.routers.controls import (
     train_sentence,
 )
 from gamechangerml.api.utils.threaddriver import MlThread
-import os
-from queue import Queue
 from gamechangerml.src.data_transfer import download_corpus_s3
-
-from fastapi import APIRouter, Response
-
 from gamechangerml.api.fastapi.settings import (
     CORPUS_DIR,
-    S3_CORPUS_PATH,
     CORPUS_EVENT_TRIGGER_VAL,
     latest_intel_model_encoder,
 )
@@ -49,11 +42,11 @@ async def corpus_update_event(
 
         s3_filter = bucket.objects.filter(Prefix=f"{s3_corpus_dir}/")
         last_mod_list = []
-        if os.path.isdir(corpus_dir):
-            local_corpus_size = len(os.listdir(corpus_dir))
+        if isdir(corpus_dir):
+            local_corpus_size = len(listdir(corpus_dir))
             if local_corpus_size > 0:
                 local_corpus_last_updated = datetime.fromtimestamp(
-                    os.stat(corpus_dir).st_mtime
+                    stat(corpus_dir).st_mtime
                 ).astimezone(timezone.utc)
                 for obj in s3_filter:
                     last_mod_list.append(obj.last_modified)

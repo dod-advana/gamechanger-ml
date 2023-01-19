@@ -7,8 +7,7 @@ import numpy as np
 from spacy.vocab import Vocab
 
 from gamechangerml.src.search.query_expansion.sif_alg import sif_embedding
-from gamechangerml.src.utilities.np_utils import is_zero_vector
-from gamechangerml.src.utilities.np_utils import l2_norm_vector
+from gamechangerml.src.utilities.numpy_utils import is_zero_vector, l2_norm_vector
 
 logger = logging.getLogger(__name__)
 

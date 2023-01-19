@@ -39,3 +39,9 @@ def test_expansion_no_context_3():
     expansion = ["configuration item"]
     result = abbreviation.expand_abbreviations_no_context(check_str)
     assert expansion == result
+
+if __name__ == "__main__":
+    test_expansion_dict()
+    test_expansion_no_context_1()
+    test_expansion_no_context_2()
+    test_expansion_no_context_3()

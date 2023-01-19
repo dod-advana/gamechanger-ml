@@ -30,9 +30,6 @@ WHERE IS IT USED?
 * _Abbreviations_utils.py_
     - Leverages agencies.csv to create a dictionary for use in the abbreviations pipeline
 
-* _Classifier_post_utils.py_
-    - Duplicates the get agencies_dict from abbreviations_utils… actually duplicates it seems like the whole file
-
 * _Update_orgs.py_
     - Updating the DoD Orgs reference table the updated_dod_orgs.txt
 		

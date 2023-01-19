@@ -227,6 +227,7 @@ worker-tracking.json
 out/
 gc_test/
 tmp/
+src/text_classif/utils/cola-test/
 
 # mlflow
 mlruns/

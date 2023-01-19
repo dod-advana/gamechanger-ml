@@ -2,9 +2,9 @@ import os
 
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
-from gamechangerml.api.utils.redisdriver import CacheVariable, REDIS_HOST, REDIS_PORT
+from gamechangerml.api.utils.redis_driver import CacheVariable
 from gamechangerml import CORPUS_PATH
-from gamechangerml.configs import QAConfig
+from gamechangerml.configs import QAConfig, RedisConfig
 
 # get environ vars
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
@@ -74,5 +74,5 @@ logger.info(f"API AVAILABLE TRANSFORMERS are: {t_list}")
 logger.info(f"API TRANSFORMERS DIRECTORY is: {LOCAL_TRANSFORMERS_DIR.value}")
 logger.info(f"API INDEX PATH is: {SENT_INDEX_PATH.value}")
 logger.info(f"API DOC COMPARE INDEX PATH is: {DOC_COMPARE_SENT_INDEX_PATH.value}")
-logger.info(f"API REDIS HOST is: {REDIS_HOST}")
-logger.info(f"API REDIS PORT is: {REDIS_PORT}")
+logger.info(f"API REDIS HOST is: {RedisConfig.HOST}")
+logger.info(f"API REDIS PORT is: {RedisConfig.PORT}")

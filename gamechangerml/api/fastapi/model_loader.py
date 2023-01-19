@@ -23,7 +23,6 @@ from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import (
     logger,
     TOPICS_MODEL,
-    MODEL_LOAD_FLAG,
     QEXP_JBOOK_MODEL_NAME,
     QEXP_MODEL_NAME,
     WORD_SIM_MODEL,

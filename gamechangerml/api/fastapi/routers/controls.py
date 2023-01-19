@@ -1,4 +1,3 @@
-from concurrent.futures import thread
 from fastapi import APIRouter, Response, status
 import subprocess
 import os
@@ -11,10 +10,15 @@ import redis
 
 from datetime import datetime
 from gamechangerml import DATA_PATH
-from gamechangerml.configs.s3_config import S3Config
-from gamechangerml.src.utilities import utils
-from gamechangerml.src.utilities.es_utils import ESUtils
-from gamechangerml.src.services import S3Service
+from gamechangerml.configs import S3Config
+from gamechangerml.src.services import (
+    ElasticsearchService,
+    S3Service,
+)
+from gamechangerml.src.paths import (
+    SEARCH_PDF_MAPPING_FILE,
+    USER_AGGREGATIONS_FILE,
+)
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
 
@@ -38,7 +42,7 @@ from gamechangerml.api.fastapi.settings import (
 )
 from gamechangerml.src.data_transfer import download_corpus_s3
 from gamechangerml.api.utils.threaddriver import MlThread
-from gamechangerml.api.utils.redisdriver import RedisPool
+from gamechangerml.api.utils.redis_driver import RedisPool
 
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
@@ -47,16 +51,15 @@ from gamechangerml.src.utilities.test_utils import (
     collect_evals,
     handle_sent_evals,
 )
-from gamechangerml import MODEL_PATH
 from gamechangerml.src.utilities import gc_web_api
 
 router = APIRouter()
 MODELS = ModelLoader()
-gcClient = gc_web_api.GCWebClient()
+
 ## Get Methods ##
 
 pipeline = Pipeline()
-es = ESUtils()
+es = ElasticsearchService()
 
 
 @router.get("/")
@@ -105,8 +108,12 @@ async def clear_cache(body: dict, response: Response):
 
 @router.get("/getCache")
 async def get_cache():
-    _connection = redis.Redis(connection_pool=RedisPool().getPool())    
-    return [key.split('search: ')[1] for key in list(_connection.scan_iter("search:*"))]
+    _connection = redis.Redis(connection_pool=RedisPool().getPool())
+    return [
+        key.split("search: ")[1]
+        for key in list(_connection.scan_iter("search:*"))
+    ]
+
 
 @router.get("/getDataList")
 def get_downloaded_data_list():
@@ -240,7 +247,9 @@ def get_downloaded_models_list():
         topic_dirs = [
             name
             for name in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if os.path.isdir(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
+            if os.path.isdir(
+                os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name)
+            )
             and "topic_model_" in name
         ]
         for topic_model_name in topic_dirs:
@@ -302,7 +311,9 @@ async def delete_local_model(model: dict, response: Response):
 
     def removeDirectory(dir):
         try:
-            logger.info(f'Removing directory {os.path.join(dir,model["model"])}')
+            logger.info(
+                f'Removing directory {os.path.join(dir,model["model"])}'
+            )
             shutil.rmtree(os.path.join(dir, model["model"]))
         except OSError as e:
             logger.error(e)
@@ -318,7 +329,14 @@ async def delete_local_model(model: dict, response: Response):
 
     if model["type"] == "transformers":
         removeDirectory(LOCAL_TRANSFORMERS_DIR.value)
-    elif model["type"] in ("sentence", "qexp", "doc_compare_sentence", "jbook_qexp", "topic_models", "ltr"):
+    elif model["type"] in (
+        "sentence",
+        "qexp",
+        "doc_compare_sentence",
+        "jbook_qexp",
+        "topic_models",
+        "ltr",
+    ):
         removeDirectory(Config.LOCAL_PACKAGED_MODELS_DIR)
         removeFiles(Config.LOCAL_PACKAGED_MODELS_DIR)
 
@@ -435,7 +453,9 @@ async def download(response: Response):
     def download_s3_thread():
         try:
             logger.info("Attempting to download dependencies from S3")
-            output = subprocess.call(["gamechangerml/scripts/download_dependencies.sh"])
+            output = subprocess.call(
+                ["gamechangerml/scripts/data_transfer/download_dependencies_from_s3.sh"]
+            )
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)
             processmanager.update_status(
@@ -559,7 +579,9 @@ async def download_s3_file(file_dict: dict, response: Response):
                 except Exception as e:
                     failedExtracts.append(member.name)
 
-            logger.warning(f"Could not extract {failedExtracts} with permission errors")
+            logger.warning(
+                f"Could not extract {failedExtracts} with permission errors"
+            )
             processmanager.update_status(
                 f's3: {file_dict["file"]}',
                 failed=True,
@@ -661,9 +683,15 @@ async def reload_models(model_dict: dict, response: Response):
                         model_dict["doc_compare_sentence"],
                     )
                     # uses DOC_COMPARE_SENT_INDEX_PATH by default
-                    logger.info("Attempting to load Doc Compare Sentence Transformer")
-                    MODELS.initDocumentCompareSearcher(doc_compare_sentence_path)
-                    DOC_COMPARE_SENT_INDEX_PATH.value = doc_compare_sentence_path
+                    logger.info(
+                        "Attempting to load Doc Compare Sentence Transformer"
+                    )
+                    MODELS.initDocumentCompareSearcher(
+                        doc_compare_sentence_path
+                    )
+                    DOC_COMPARE_SENT_INDEX_PATH.value = (
+                        doc_compare_sentence_path
+                    )
                     progress += 1
                     processmanager.update_status(
                         thread_name,
@@ -748,8 +776,12 @@ async def reload_models(model_dict: dict, response: Response):
         thread = MlThread(reload_thread, args)
         thread.start()
         processmanager.running_threads[thread.ident] = thread
-        thread_name = processmanager.reloading + " ".join([key for key in model_dict])
-        processmanager.update_status(thread_name, 0, total, thread_id=thread.ident)
+        thread_name = processmanager.reloading + " ".join(
+            [key for key in model_dict]
+        )
+        processmanager.update_status(
+            thread_name, 0, total, thread_id=thread.ident
+        )
     except Exception as e:
         logger.warning(e)
 
@@ -989,10 +1021,15 @@ async def train_model(model_dict: dict, response: Response):
         }
 
         # Set the training method to be loaded onto the thread
-        if "build_type" in model_dict and model_dict["build_type"] in training_switch:
+        if (
+            "build_type" in model_dict
+            and model_dict["build_type"] in training_switch
+        ):
             training_method = training_switch[model_dict["build_type"]]
         else:  # PLACEHOLDER
-            logger.warn("No build type specified in model_dict, defaulting to sentence")
+            logger.warn(
+                "No build type specified in model_dict, defaulting to sentence"
+            )
             model_dict["build_type"] = "sentence"
             training_method = training_switch[model_dict["build_type"]]
 
@@ -1000,10 +1037,14 @@ async def train_model(model_dict: dict, response: Response):
         training_method = training_switch.get(build_type)
 
         if not training_method:
-            raise Exception(f"No training method mapped for build type {build_type}")
+            raise Exception(
+                f"No training method mapped for build type {build_type}"
+            )
 
         # Set the training method to be loaded onto the thread
-        training_thread = MlThread(training_method, args={"model_dict": model_dict})
+        training_thread = MlThread(
+            training_method, args={"model_dict": model_dict}
+        )
         training_thread.start()
         processmanager.running_threads[training_thread.ident] = training_thread
         processmanager.update_status(
@@ -1057,17 +1098,11 @@ async def get_user_data(data_dict: dict, response: Response):
     """
 
     userData = data_dict["params"]["userData"]
-    GC_USER_DATA = os.path.join(
-        DATA_PATH, "user_data", "search_history", "UserAggregations.json"
-    )
-    with open(GC_USER_DATA, "w") as f:
+    with open(USER_AGGREGATIONS_FILE, "w") as f:
         json.dump(userData, f)
 
     searchData = data_dict["params"]["searchData"]
     df = pd.DataFrame(searchData)
-    GC_SEARCH_DATA = os.path.join(
-        DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
-    )
-    df.to_csv(GC_SEARCH_DATA)
+    df.to_csv(SEARCH_PDF_MAPPING_FILE)
 
     return f"wrote {len(userData)} user data and searches to file"

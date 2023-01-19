@@ -1,20 +1,13 @@
 from fastapi import APIRouter, Response, status
 import time
-import requests
-import base64
-import hashlib
 import datetime
 
 # must import sklearn first or you get an import error
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
 from gamechangerml.src.featurization.keywords.extract_keywords import get_keywords
-from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.fastapi.version import __version__
-from gamechangerml.src.utilities import gc_web_api
-from gamechangerml.api.utils.redisdriver import CacheVariable
+from gamechangerml.api.utils.redis_driver import CacheVariable
 
-# from gamechangerml.models.topic_models.tfidf import bigrams, tfidf_model
-# from gamechangerml.src.featurization.summary import GensimSumm
 from gamechangerml.api.fastapi.settings import CACHE_EXPIRE_DAYS
 from gamechangerml.api.utils.logger import logger
 from gamechangerml.api.fastapi.model_loader import ModelLoader
@@ -225,7 +218,6 @@ async def post_word_sim(body: dict, response: Response) -> dict:
     Returns:
         expansion_dict: dict; expanded dictionary of terms
     """
-    # logger.info("[{}] expanded: {}".format(user, termsList))
     terms = body["text"]
     logger.info(f"Finding similiar words for: {terms}")
     try:

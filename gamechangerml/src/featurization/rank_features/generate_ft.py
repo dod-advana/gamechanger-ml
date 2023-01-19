@@ -1,6 +1,3 @@
-from gamechangerml.src.text_handling.process import preprocess
-import numpy as np
-import re
 from gamechangerml.src.featurization.rank_features import search_data as meta
 from gamechangerml.src.featurization.rank_features import rank
 from gamechangerml import DATA_PATH
@@ -10,6 +7,7 @@ from tqdm import tqdm
 import argparse
 import logging
 import os
+from gamechangerml.src.paths import PROD_DATA_FILE, FEATURES_GENERATED_FILES_DIR
 
 """
 Usage:
@@ -25,9 +23,6 @@ optional arguements:
 logger = logging.getLogger("gamechanger")
 
 corpus_dir = "test/corpus_new"
-prod_data_file = os.path.join(
-    DATA_PATH, "features", "generated_files", "prod_test_data.csv"
-)
 
 
 def generate_pop_docs(pop_kw_df: pd.DataFrame, corpus_df: pd.DataFrame) -> pd.DataFrame:
@@ -55,7 +50,7 @@ def generate_pop_docs(pop_kw_df: pd.DataFrame, corpus_df: pd.DataFrame) -> pd.Da
     return docCounts
 
 
-def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_file):
+def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = PROD_DATA_FILE):
     """generate feature document
     Args:
         corpus_dir: corpus directory
@@ -64,9 +59,6 @@ def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_
 
     """
     today = datetime.datetime.now()
-    out_dir = os.path.join(
-        DATA_PATH, "features", "generated_files"
-    )
     r = rank.Rank()
     day_delta = 80
     d = datetime.timedelta(days=day_delta)
@@ -78,7 +70,7 @@ def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_
     # kw_doc_df = pd.DataFrame(kw_doc_pairs)
 
     # SEARCH LOGS
-    # resp = meta.get_searchLogs(str(from_date.date()))
+    # resp = PostgresService.get_search_logs(str(from_date.date()))
 
     # until we get connection to prod data
     logger.info(f"****    Reading in prod data from {prod_data}")
@@ -106,8 +98,8 @@ def generate_ft_doc(corpus_dir: str, days: int = 80, prod_data: str = prod_data_
         corp_df["kw_in_doc_score"] - corp_df["kw_in_doc_score"].min()
     ) / (corp_df["kw_in_doc_score"].max() - corp_df["kw_in_doc_score"].min())
     corp_df.kw_in_doc_score.loc[corp_df.kw_in_doc_score == 0] = 0.00001
-    logger.info(f"****    Saving corpus meta to {out_dir}")
-    corp_df.to_csv(os.path.join(out_dir, "corpus_meta.csv"))
+    logger.info(f"****    Saving corpus meta to {FEATURES_GENERATED_FILES_DIR}")
+    corp_df.to_csv(os.path.join(FEATURES_GENERATED_FILES_DIR, "corpus_meta.csv"))
 
 
 if __name__ == "__main__":
@@ -127,10 +119,7 @@ if __name__ == "__main__":
         "--prod",
         "-p",
         dest="prod_data",
-        default=os.path.join(
-            DATA_PATH,
-            "features", "generated_files", "prod_test_data.csv",
-        ),
+        default=PROD_DATA_FILE,
         help="production data historical search logs csv ",
     )
 

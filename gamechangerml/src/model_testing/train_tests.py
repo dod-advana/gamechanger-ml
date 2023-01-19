@@ -1,13 +1,15 @@
-from tkinter import NONE
-from path import Path
 import requests
 import logging
 import os
 import json
 import time
-import shutil
 import pandas as pd
 import argparse
+from gamechangerml.src.utilities import (
+    open_json,
+    delete_files,
+    get_most_recently_changed_dir,
+)
 
 logger = logging.getLogger()
 training_dir= "gamechangerml/data/test"
@@ -16,34 +18,6 @@ http = requests.Session()
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
 API_URL = f"{GC_ML_HOST}:5000" if "http" in GC_ML_HOST else f"http://{GC_ML_HOST}:5000"
 
-def open_json(filename, path):
-    '''Opens a json file'''
-    with open(os.path.join(path, filename)) as f:
-        return json.load(f)
-
-def get_most_recent_dir(parent_dir):
-    
-    subdirs = [os.path.join(parent_dir, d) for d in os.listdir(parent_dir) if os.path.isdir(os.path.join(parent_dir, d))]
-    if len(subdirs) > 0:
-        return max(subdirs, key=os.path.getctime)
-    else:
-        logger.error("There are no subdirectories to retrieve most recent data from")
-        return None
-
-def delete_files(path):
-    '''Deletes all files in a directory'''
-    print(f"Cleaning up: removing test files from {str(path)}")
-    for file in os.listdir(path):
-        fpath = os.path.join(path, file)
-        print(fpath)
-        try:
-            shutil.rmtree(fpath)
-        except OSError:
-            os.remove(fpath)
-    try:
-        os.rmdir(path)
-    except OSError as e:
-        logger.error("Error: %s : %s" % (path, e.strerror))
 
 def wait(filename, path, type, attempts=180):
 
@@ -75,7 +49,7 @@ def wait_matching_dir(base_dir, timestamp, attempts = 180):
     passed = False
     while i < attempts:
         print(f"Countdown: {str((attempts-i)*5)} seconds left...")
-        most_recent = get_most_recent_dir(base_dir)
+        most_recent = get_most_recently_changed_dir(base_dir)
         if str(most_recent).split('/')[-1] == str(timestamp):
             print("Directory available, breaking the wait loop")
             passed = True
@@ -211,7 +185,7 @@ if __name__ == '__main__':
         time.sleep(15) # wait for a new directory
 
         print("\n*** Checking validation data created...")
-        val_path = get_most_recent_dir("gamechangerml/data/validation/domain/sent_transformer")
+        val_path = get_most_recently_changed_dir("gamechangerml/data/validation/domain/sent_transformer")
         timestamp = str(val_path).split('/')[-1]
         gold_dir = os.path.join(val_path, "gold")
         print(f"Looking for gold validation data at: {gold_dir}")
@@ -228,7 +202,7 @@ if __name__ == '__main__':
         passed = wait_matching_dir(train_dir, timestamp)
 
         if passed:
-            training_path = get_most_recent_dir(train_dir)
+            training_path = get_most_recently_changed_dir(train_dir)
         else:
             print("Could not get updated training data dir")
             quit
@@ -249,7 +223,7 @@ if __name__ == '__main__':
         model_dir = "gamechangerml/models/transformers"
         passed = wait_matching_dir(model_dir, model_name)
         if passed:
-            model_path = get_most_recent_dir(model_dir)
+            model_path = get_most_recently_changed_dir(model_dir)
         else:
             print("Could not get updated model dir")
             quit
