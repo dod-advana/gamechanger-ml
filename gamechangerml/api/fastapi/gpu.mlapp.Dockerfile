@@ -19,10 +19,15 @@ RUN dnf install -y \
         gcc \
         gcc-c++ \
         glibc-langpack-en \
+        openssl-devel \
         python38 \
         python38-devel \
         git \
         zip \
+        zlib-devel \
+        sqlite-devel \
+        bzip2-devel \
+        glibc \
         unzip \
         python3-cffi \
         libffi-devel \
@@ -36,15 +41,17 @@ RUN dnf install -y \
         cyrus-sasl-lib \
         gzip \
         systemd \ 
+        make \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
 # AWS CLI
-RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
-    && unzip -q /tmp/awscliv2.zip -d /opt \
-    && /opt/aws/install \
-    && rm -f /tmp/awscliv2.zip
+# RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
+#     && unzip -q /tmp/awscliv2.zip -d /opt \
+#     && /opt/aws/install \
+#     && rm -f /tmp/awscliv2.zip
 
+RUN pip3 install awscli==1.27.32
 # non-root app USER/GROUP
 ARG APP_UID=1001
 ARG APP_GID=1001
