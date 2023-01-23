@@ -22,6 +22,9 @@ RUN dnf install -y \
         openssl-devel \
         python38 \
         python38-devel \
+        dbus \
+        libtasn1 \
+        libxml2 \
         git \
         zip \
         zlib-devel \
