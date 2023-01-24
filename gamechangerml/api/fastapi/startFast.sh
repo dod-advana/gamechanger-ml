@@ -53,6 +53,11 @@ function download_dependencies() {
     }
 }
 
+function upload_egg() {
+    echo "[INFO] Creating python egg"
+    source "${REPO_DIR}/gamechangerml/scripts/data_transfer/upload_python_egg.sh"
+}
+
 function activate_venv() {
   set +o xtrace
   
@@ -89,6 +94,7 @@ function start_env_prod() {
   source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
+  upload_egg
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
     --bind 0.0.0.0:5000 \
     --workers $UVICORN_WORKERS \
@@ -102,6 +108,7 @@ function start_env_dev() {
   source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
+  upload_egg
   if [[ "${CONTAINER_RELOAD}" == "true" ]]; then
     start_uvicorn gamechangerml.api.fastapi.mlapp:app \
       --host 0.0.0.0 \
@@ -127,6 +134,7 @@ function start_env_devlocal() {
   source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
+  upload_egg
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
       --bind 0.0.0.0:5000 \
       --workers 1 \
