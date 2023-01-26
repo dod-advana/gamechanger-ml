@@ -1,6 +1,7 @@
 annoy~=1.17.0
+awscli==1.27.53
 bert-extractive-summarizer~=0.5.2
-boto3~=1.15.18
+boto3~=1.26.50
 click==7.1.2
 elasticsearch==7.13.4
 #en-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.0.0/en_core_web_lg-3.0.0.tar.gz
@@ -27,7 +28,7 @@ pytest~=6.2.5
 PyYAML~=5.4.1
 redis~=3.5.3
 requests~=2.26.0
-scikit-learn~=0.24.2
+scikit-learn~=1.2.0
 sentence-transformers~=2.2.2
 spacy~=3.0.7
 tensorflow~=2.5.1
