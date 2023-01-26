@@ -22,6 +22,7 @@ RUN dnf install -y \
         openssl-devel \
         python38 \
         python38-devel \
+        expat-devel \
         dbus \
         libtasn1 \
         libxml2 \
@@ -47,7 +48,6 @@ RUN dnf install -y \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
-RUN dnf remove -y thunderbird 
 # AWS CLI
 # RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
 #     && unzip -q /tmp/awscliv2.zip -d /opt \
