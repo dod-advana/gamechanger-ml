@@ -48,7 +48,6 @@ RUN dnf install -y \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
-RUN dnf remove -y kernel-headers
 # AWS CLI
 # RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
 #     && unzip -q /tmp/awscliv2.zip -d /opt \
@@ -83,6 +82,8 @@ RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
     && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
+    
+RUN dnf remove -y kernel-headers
 
 # thou shall not root
 USER $APP_UID:$APP_GID
