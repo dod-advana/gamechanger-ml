@@ -134,7 +134,6 @@ function start_env_devlocal() {
   source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
-  upload_egg
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
       --bind 0.0.0.0:5000 \
       --workers 1 \
