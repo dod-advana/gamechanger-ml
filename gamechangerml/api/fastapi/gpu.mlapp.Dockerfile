@@ -22,7 +22,10 @@ RUN dnf install -y \
         openssl-devel \
         python38 \
         python38-devel \
-        git \
+        expat-devel \
+        dbus \
+        libtasn1 \
+        libxml2 \
         zip \
         zlib-devel \
         sqlite-devel \
@@ -79,6 +82,8 @@ RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
     && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
+    
+RUN dnf remove -y kernel-headers
 
 # thou shall not root
 USER $APP_UID:$APP_GID
