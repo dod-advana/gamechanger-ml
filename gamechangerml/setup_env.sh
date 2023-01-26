@@ -26,7 +26,7 @@ function setup_prod() {
     export S3_CORPUS_PATH="${S3_CORPUS_PATH:-s3://advana-data-zone/bronze/gamechanger/json}"
     export LOCAL_CORPUS_PATH="${LOCAL_CORPUS_PATH:-$PWD/gamechangerml/corpus}"
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-true}"
-    export GIT_BRANCH="${GIT_BRANCH:-prod}"
+    export GIT_BRANCH="${GIT_BRANCH:-release}"
 
     export ES_HOST="${ES_HOST:-}"
     export ES_PORT="${ES_PORT:-443}"

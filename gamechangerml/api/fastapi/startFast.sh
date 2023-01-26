@@ -54,8 +54,13 @@ function download_dependencies() {
 }
 
 function upload_egg() {
-    echo "[INFO] Creating python egg"
-    source "${REPO_DIR}/gamechangerml/scripts/data_transfer/upload_python_egg.sh"
+  [[ "${CONTAINER_TYPE}" != "training" ]] && {
+      echo "[INFO] Creating python egg"
+      source "${REPO_DIR}/gamechangerml/scripts/data_transfer/upload_python_egg.sh"
+    } || {
+      echo "[INFO] Skipping egg for training container"
+    }
+    
 }
 
 function activate_venv() {
