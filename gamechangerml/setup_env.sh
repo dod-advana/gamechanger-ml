@@ -26,6 +26,7 @@ function setup_prod() {
     export S3_CORPUS_PATH="${S3_CORPUS_PATH:-s3://advana-data-zone/bronze/gamechanger/json}"
     export LOCAL_CORPUS_PATH="${LOCAL_CORPUS_PATH:-$PWD/gamechangerml/corpus}"
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-true}"
+    export GIT_BRANCH="${GIT_BRANCH:-release}"
 
     export ES_HOST="${ES_HOST:-}"
     export ES_PORT="${ES_PORT:-443}"
@@ -65,6 +66,7 @@ function setup_dev() {
     export MLFLOW_TRACKING_URI="http://${MLFLOW_HOST}:5050/"
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-false}"
     export MODEL_LOAD="${MODEL_LOAD:-True}"
+    export GIT_BRANCH="${GIT_BRANCH:-dev}"
 
     export ES_HOST="${ES_HOST:-vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com}"
     export ES_PORT="${ES_PORT:-443}"
@@ -95,6 +97,7 @@ function setup_devlocal() {
   export S3_TRANS_MODEL_PATH="${S3_TRANS_MODEL_PATH:-s3://advana-data-zone/bronze/gamechanger/models/transformers/v5/transformers.tar.gz}"
   export S3_SENT_INDEX_PATH="${S3_SENT_INDEX_PATH:-s3://advana-data-zone/bronze/gamechanger/models/sentence_index/v4/sent_index_20210422.tar.gz}"
   export S3_ML_DATA_PATH="${S3_ML_DATA_PATH:-s3://advana-data-zone/bronze/gamechanger/ml-data/v1/data_20211202.tar.gz}"
+  export GIT_BRANCH="${GIT_BRANCH:-$(git symbolic-ref --short HEAD)}"
 
   export ES_HOST="${ES_HOST:-vpc-gamechanger-dev-es-ms4wkfqyvlyt3gmiyak2hleqyu.us-east-1.es.amazonaws.com}"
   export ES_PORT="${ES_PORT:-443}"
@@ -174,5 +177,5 @@ cat <<EOF
   * MEMORY_LOAD_LIMIT: ${MEMORY_LOAD_LIMIT:-<unset>}"
   * CORPUS_EVENT_TRIGGER: ${CORPUS_EVENT_TRIGGER:-<unset>}"
   * UVICORN_WORKERS: ${UVICORN_WORKERS:-<unset>}"
-
+  * GIT_BRANCH: ${GIT_BRANCH:-<unset>}"
 EOF
