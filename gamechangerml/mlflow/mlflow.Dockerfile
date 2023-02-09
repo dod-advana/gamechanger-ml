@@ -8,4 +8,6 @@ RUN pip install mlflow==1.3.0 && \
 
 COPY gamechangerml/mlflow/start_mlflow.sh start_mlflow.sh
 RUN chmod 755 start_mlflow.sh
+RUN mkdir /mnt/mlruns/
+RUN chmod 777 -R /mnt/mlruns/
 ENTRYPOINT ["/start_mlflow.sh"]

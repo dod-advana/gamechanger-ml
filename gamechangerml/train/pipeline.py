@@ -375,9 +375,19 @@ class Pipeline:
 
             logger.info(f"Created tgz file and saved to {dst_path}")
 
+            # Create metadata file
+            metadata_path = join(model_path, "metadata.json")
+            with open(metadata_path, "w") as fp:
+                dump(params, fp)
+
+            # Create evals file
+            evals_path = join(model_path, "evals.json")
+            with open(evals_path, "w") as fp:
+                dump(evals, fp)
+
             if upload:
                 s3_path = join(S3_MODELS_PATH, f"qexp_model/{version}")
-                self.upload(s3_path, dst_path, "qexp", model_id)
+                self.upload(s3_path, dst_path, "qexp", model_id, metadata_path, evals)
 
             if validate:
                 logger.info(
@@ -516,7 +526,7 @@ class Pipeline:
                 dump(metadata, fp)
 
             logger.info(f"Saved metadata.json to {metadata_path}")
-
+            evals_path = None
             logger.info("-------------- Running Evaluation --------------")
             try:
                 evals = {}
@@ -533,6 +543,13 @@ class Pipeline:
                     logger.info(
                         f"Evals for {level} standard validation: {(str(sentev.results))}"
                     )
+                    # Create metadata file
+                    evals_path = join(local_sent_index_dir, "evals.json")
+                    with open(evals_path, "w") as fp:
+                        dump(evals, fp)
+
+                    logger.info(f"Saved evals.json to {evals_path}")
+
             except Exception as e:
                 logger.warning(
                     "Could not create evaluations for the new sentence index"
@@ -549,18 +566,18 @@ class Pipeline:
             logger.info(
                 "-------------- Finished Sentence Embedding--------------"
             )
+            # Upload to S3
+            if upload:
+                s3_path = join(
+                    S3_MODELS_PATH,
+                    f"sentence_index/{version}",
+                )
+                self.upload(s3_path, dst_path, "sentence_index", model_id, metadata_path, evals_path)
+
         except Exception as e:
             logger.warning("Error with creating embedding")
             logger.error(e)
-        # Upload to S3
-        if upload:
-            s3_path = join(
-                S3_MODELS_PATH,
-                f"sentence_index/{version}",
-                f"sentence_index_{model_id}.tar.gz",
-            )
-            bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
-            S3Service.upload_file(bucket, dst_path, s3_path, logger)
+        
         return metadata, evals
 
     def init_ltr(self):
@@ -673,20 +690,21 @@ class Pipeline:
             tar_path = local_dir + ".tar.gz"
             create_tgz_from_dir(src_dir=local_dir, dst_archive=tar_path)
 
+            evals = None  # TODO: figure out how to evaluate this
+
             logger.info(f"create_topics complete, should upload? {upload}")
             # Upload to S3
             if upload:
                 s3_path = join(S3_MODELS_PATH, f"topic_model/{version}")
                 logger.info(f"Topics uploading to {s3_path}")
-                self.upload(s3_path, tar_path, "topic_model", model_id)
+                self.upload(s3_path, tar_path, "topic_model", model_id, metadata_path, evals)
 
-            evals = None  # TODO: figure out how to evaluate this
             return metadata, evals
 
         except Exception as e:
             logger.error(f"Could not create topics {e}")
 
-    def upload(self, s3_path, local_path, model_prefix, model_name):
+    def upload(self, s3_path, local_path, model_prefix, model_name, params_path=None, metrics_path=None):
         # Loop through each file and upload to S3
         logger.info(f"Uploading files to {s3_path}\n\tUploading: {local_path}")
         s3_path = join(s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
@@ -698,6 +716,22 @@ class Pipeline:
             s3_fullpath=s3_path,
             logger=logger,
         )
+        
+        if params_path:
+            S3Service.upload_file(
+                bucket=bucket,
+                filepath=params_path,
+                s3_fullpath=join(s3_path,"metadata.json"),
+                logger=logger,
+            )
+        
+        if metrics_path:
+            S3Service.upload_file(
+                bucket=bucket,
+                filepath=metrics_path,
+                s3_fullpath=join(s3_path,"evals.json"),
+                logger=logger,
+            )
         logger.info(f"Successfully uploaded files to {s3_path}")
         logger.info("-------------- Finished Uploading --------------")
 
