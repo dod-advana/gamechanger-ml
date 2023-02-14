@@ -39,7 +39,8 @@ class Recommender:
         try:
             user = pd.read_csv(SEARCH_PDF_MAPPING_FILE)
             user = process_keywords(user)
-            user.dropna(subset=["document"], inplace=True)
+            user.dropna(subset=["filename"], inplace=True)
+            user = user[~user["filename"].str.contains('.html')]
             user["clean_search"] = user["search"].apply(
                 lambda x: str(x).replace("&quot;", '"')
             )
