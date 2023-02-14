@@ -44,7 +44,7 @@ class Recommender:
             user["clean_search"] = user["search"].apply(
                 lambda x: str(x).replace("&quot;", '"')
             )
-            user["clean_doc"] = user["document"].apply(
+            user["clean_doc"] = user["filename"].apply(
                 lambda x: str(x).replace(",,", ",").strip(".pdf")
             )
             pairs = [(x, y)
