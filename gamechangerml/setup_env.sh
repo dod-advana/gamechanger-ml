@@ -62,7 +62,7 @@ function setup_dev() {
     export LOCAL_CORPUS_PATH="${LOCAL_CORPUS_PATH:-$PWD/gamechangerml/corpus}"
     export DEV_ENV="DEV"
     export PULL_MODELS="${PULL_MODELS:-latest}"
-    export MLFLOW_HOST="${MLFLOW_HOST:-host.docker.internal}"
+    export MLFLOW_HOST="${MLFLOW_HOST:-localhost}"
     export MLFLOW_TRACKING_URI="http://${MLFLOW_HOST}:5050/"
     export DOWNLOAD_DEP="${DOWNLOAD_DEP:-false}"
     export MODEL_LOAD="${MODEL_LOAD:-True}"

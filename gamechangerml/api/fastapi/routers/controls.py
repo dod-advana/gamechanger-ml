@@ -1041,7 +1041,6 @@ async def train_model(model_dict: dict, response: Response):
             raise Exception(
                 f"No training method mapped for build type {build_type}"
             )
-        print('HELOL', model_dict)
         # Set the training method to be loaded onto the thread
         training_thread = MlThread(
             training_method, args={"model_dict": model_dict}
