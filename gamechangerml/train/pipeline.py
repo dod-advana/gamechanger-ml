@@ -707,13 +707,13 @@ class Pipeline:
     def upload(self, s3_path, local_path, model_prefix, model_name, params_path=None, metrics_path=None):
         # Loop through each file and upload to S3
         logger.info(f"Uploading files to {s3_path}\n\tUploading: {local_path}")
-        s3_path = join(s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
-        logger.info(f"s3_path {s3_path}")
+        s3_path_model = join(s3_path, f"{model_prefix}_" + model_name + ".tar.gz")
+        logger.info(f"s3_path {s3_path_model}")
         bucket = S3Service.connect_to_bucket(S3Config.BUCKET_NAME, logger)
         S3Service.upload_file(
             bucket=bucket,
             filepath=local_path,
-            s3_fullpath=s3_path,
+            s3_fullpath=s3_path_model,
             logger=logger,
         )
         
