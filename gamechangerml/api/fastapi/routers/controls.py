@@ -6,8 +6,10 @@ import tarfile
 import shutil
 import threading
 import pandas as pd
+from pandas.tseries.offsets import DateOffset
 import redis
 
+from dateutil.relativedelta import relativedelta
 from datetime import datetime
 from gamechangerml import DATA_PATH
 from gamechangerml.configs import S3Config
@@ -1102,7 +1104,11 @@ async def get_user_data(data_dict: dict, response: Response):
         json.dump(userData, f)
 
     searchData = data_dict["params"]["searchData"]
-    df = pd.DataFrame(searchData)
-    df.to_csv(SEARCH_PDF_MAPPING_FILE)
+    df1 = pd.DataFrame(searchData)
+    df2 = pd.read_csv(SEARCH_PDF_MAPPING_FILE, index_col=False)
+    df = pd.concat([df1,df2]).drop_duplicates().reset_index(drop=True)
+    df['documenttime_formatted'] =  pd.to_datetime(df['documenttime_formatted'])
+    df = df[df['documenttime_formatted'] > (pd.to_datetime('today')- DateOffset(months=6))]
+    df.to_csv(SEARCH_PDF_MAPPING_FILE, index=False)
 
     return f"wrote {len(userData)} user data and searches to file"

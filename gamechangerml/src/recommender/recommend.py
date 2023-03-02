@@ -37,9 +37,10 @@ class Recommender:
 
         logger.info(" ****    BUILDING RECOMMENDER: Making user graph")
         try:
-            user = pd.read_csv(SEARCH_PDF_MAPPING_FILE)
+            user = pd.read_csv(SEARCH_PDF_MAPPING_FILE, index_col=False)
             user = process_keywords(user)
             user.dropna(subset=["document"], inplace=True)
+            user = user[~user["document"].str.contains('.html')]
             user["clean_search"] = user["search"].apply(
                 lambda x: str(x).replace("&quot;", '"')
             )
