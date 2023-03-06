@@ -113,7 +113,7 @@ function start_env_dev() {
   source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
-  upload_egg
+  # upload_egg
   if [[ "${CONTAINER_RELOAD}" == "true" ]]; then
     start_uvicorn gamechangerml.api.fastapi.mlapp:app \
       --host 0.0.0.0 \
