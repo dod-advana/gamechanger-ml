@@ -16,7 +16,7 @@ echo "Be sure to set up environment variables for s3 by sourcing gamechangerml/s
 
 function download_and_unpack_deps() {
   
-  local pkg_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../" >/dev/null 2>&1 && pwd )"  # path to gamechangerml dir
+  local pkg_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../" >/dev/null 2>&1 && pwd )"  # path to gamechangerml dir
   local models_dest_dir="$pkg_dir/models/"  
   local data_dest_dir="$pkg_dir"
 
