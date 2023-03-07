@@ -34,9 +34,7 @@ from gamechangerml.api.fastapi.settings import (
     LOCAL_TRANSFORMERS_DIR,
     SENT_INDEX_PATH,
     latest_intel_model_encoder,
-    latest_intel_model_sim,
     latest_doc_compare_encoder,
-    latest_doc_compare_sim,
     DOC_COMPARE_SENT_INDEX_PATH,
     S3_CORPUS_PATH,
     QA_MODEL,
@@ -431,7 +429,6 @@ async def get_current_models():
     """
     # sent_model = latest_intel_model_sent.value
     return {
-        "sim_model": latest_intel_model_sim.value,
         "encoder_model": latest_intel_model_encoder.value,
         "sentence_index": SENT_INDEX_PATH.value,
         "qexp_model": QEXP_MODEL_NAME.value,
@@ -439,7 +436,6 @@ async def get_current_models():
         "topic_model": TOPICS_MODEL.value,
         "wordsim_model": WORD_SIM_MODEL.value,
         "qa_model": QA_MODEL.value,
-        "doc_compare_sim_model": latest_doc_compare_sim.value,
         "doc_compare_encoder_model": latest_doc_compare_encoder.value,
         "doc_compare_sentence_index": DOC_COMPARE_SENT_INDEX_PATH.value,
     }
@@ -670,7 +666,7 @@ async def reload_models(model_dict: dict, response: Response):
                     )
                     # uses SENT_INDEX_PATH by default
                     logger.info("Attempting to load Sentence Transformer")
-                    MODELS.initSentenceSearcher(sentence_path)
+                    MODELS.initSemanticSearch(sentence_path)
                     SENT_INDEX_PATH.value = sentence_path
                     progress += 1
                     processmanager.update_status(
@@ -846,11 +842,11 @@ def update_metadata(model_dict):
     except:
         corpus_dir = CORPUS_DIR
     try:
-        retriever = MODELS.sentence_searcher
-        logger.info("Using pre-loaded SentenceSearcher")
+        retriever = MODELS.semantic_search
+        logger.info("Using pre-loaded SemanticSearch")
     except:
         retriever = None
-        logger.info("Setting SentenceSearcher to None")
+        logger.info("Setting SemanticSearch to None")
     try:
         meta_steps = model_dict["meta_steps"]
     except:
@@ -918,7 +914,7 @@ def finetune_sentence(model_dict):
         "warmup_steps": int(model_dict["warmup_steps"]),
         "testing_only": bool(testing_only),
         "remake_train_data": bool(remake_train_data),
-        "retriever": MODELS.sentence_searcher,
+        "retriever": MODELS.semantic_search,
         "model": model,
     }
     pipeline.run(
@@ -972,7 +968,7 @@ def run_evals(model_dict):
     except:
         sample_limit = 15000
     if "sent_index" in model_dict["model_name"]:
-        retriever = MODELS.sentence_searcher
+        retriever = MODELS.semantic_search
     else:
         retriever = None
     args = {

@@ -3,12 +3,11 @@ from gamechangerml.src.model_testing.evaluation import (
     IndomainQAEvaluator,
     IndomainRetrieverEvaluator,
     MSMarcoRetrieverEvaluator,
-    NLIEvaluator,
     QexpEvaluator,
 )
 from gamechangerml.configs import (
     QAConfig,
-    EmbedderConfig,
+    SemanticSearchConfig,
     SimilarityConfig,
     QexpConfig,
 )
@@ -72,39 +71,19 @@ def eval_sent(model_name, validation_data, eval_type="domain", retriever=None):
                 data_level=level,
                 encoder_model_name=encoder,
                 retriever=retriever,
-                sim_model_name=SimilarityConfig.BASE_MODEL,
-                **EmbedderConfig.MODEL_ARGS,
             )
             results[level] = domainEval.results
     elif eval_type == "original":
         originalEval = MSMarcoRetrieverEvaluator(
-            **EmbedderConfig.MODEL_ARGS,
-            encoder_model_name=EmbedderConfig.BASE_MODEL,
+            encoder_model_name=SemanticSearchConfig.BASE_MODEL,
             sim_model_name=SimilarityConfig.BASE_MODEL,
+            retriever=retriever
         )
         results = originalEval.results
     else:
         logger.info("No eval_type selected. Options: ['original', 'domain'].")
 
     return results
-
-
-def eval_sim(model_name, sample_limit, eval_type="original"):
-    if eval_type == "original":
-        logger.info(
-            f"Evaluating sim model on NLI dataset with sample limit of {str(sample_limit)}."
-        )
-        originalEval = NLIEvaluator(
-            sample_limit=sample_limit, sim_model_name=model_name
-        )
-        results = originalEval.results
-        logger.info(f"Evals: {str(results)}")
-        return results
-    elif eval_type == "domain":
-        logger.info("No in-domain evaluation available for the sim model.")
-    else:
-        logger.info("No eval_type selected. Options: ['original', 'domain'].")
-
 
 def eval_qe(model_name):
     domainEval = QexpEvaluator(
@@ -144,9 +123,7 @@ def _gc_retriever(limit):
         encoder=None,
         retriever=None,
         index="sent_index_20211020",
-        **EmbedderConfig.MODEL_ARGS,
-        encoder_model_name=EmbedderConfig.BASE_MODEL,
-        sim_model_name=SimilarityConfig.BASE_MODEL,
+        encoder_model_name=SemanticSearchConfig.BASE_MODEL,
     )
     logger.info(GoldStandardRetrieverEval.results)
     return
@@ -157,22 +134,11 @@ def _msmarco(limit):
     MSMarcoEval = MSMarcoRetrieverEvaluator(
         encoder=None,
         retriever=None,
-        **EmbedderConfig.MODEL_ARGS,
-        encoder_model_name=EmbedderConfig.BASE_MODEL,
+        encoder_model_name=SemanticSearchConfig.BASE_MODEL,
         sim_model_name=SimilarityConfig.BASE_MODEL,
     )
     logger.info(MSMarcoEval.results)
     return
-
-
-def _nli(limit):
-    logger.info("\nEvaluating Similarity Model with NLI Data...")
-    SimilarityEval = NLIEvaluator(
-        model=None, sample_limit=limit, sim_model_name=SimilarityConfig.BASE_MODEL
-    )
-    logger.info(SimilarityEval.results)
-    return
-
 
 def _qexp(limit):
     logger.info("\nEvaluating Query Expansion with GC data...")
@@ -187,7 +153,6 @@ def _qexp(limit):
 FUNCTION_MAP = {
     "squad": _squad,
     "msmarco": _msmarco,
-    "nli": _nli,
     "gc_qa": _gc_qa,
     "gc_retriever": _gc_retriever,
     "qexp": _qexp,
@@ -206,7 +171,6 @@ def main(limit, evals):
     elif all_og:
         run(limit, _squad)
         run(limit, _msmarco)
-        run(limit, _nli)
     elif evals:
         for eval_func in evals:
             run(limit, FUNCTION_MAP[eval_func])
@@ -225,7 +189,7 @@ if __name__ == "__main__":
         dest="evals",
         nargs="+",
         required=False,
-        help="list of evals to run. Options: 'msmarco', 'squad', 'nli', 'gc_retriever', 'gc_qa'",
+        help="list of evals to run. Options: 'msmarco', 'squad', 'gc_retriever', 'gc_qa'",
     )
 
     parser.add_argument(
@@ -243,7 +207,7 @@ if __name__ == "__main__":
         dest="all_og",
         type=bool,
         required=False,
-        help="If this flag is used, will run all transformer model evaluations on their original datasets (msmarco, squad, nli)",
+        help="If this flag is used, will run all transformer model evaluations on their original datasets (msmarco, squad)",
     )
 
     parser.add_argument(

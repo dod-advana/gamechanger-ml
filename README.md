@@ -95,11 +95,12 @@
 │   │   │   └── word_sim.py
 │   │   ├── model_testing
 │   │   ├── search
+│   │   │   ├── document_comparison
 │   │   │   ├── QA
 │   │   │   ├── embed_reader
 │   │   │   ├── query_expansion
 │   │   │   ├── ranking
-│   │   │   ├── semantic
+│   │   │   ├── semantic_search
 │   │   │   └── sent_transformer
 │   │   ├── text_classif
 │   │   ├── text_handling

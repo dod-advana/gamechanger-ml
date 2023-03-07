@@ -1,23 +1,15 @@
-import os
+from os.path import join
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.configs import (
     QAConfig,
-    EmbedderConfig,
-    DocCompareEmbedderConfig,
-    SimilarityConfig,
-    DocCompareSimilarityConfig,
     QexpConfig,
     TopicsConfig,
+    SemanticSearchConfig,
+    DocumentComparisonConfig,
 )
+from gamechangerml.src.search.semantic_search import SemanticSearch
+from gamechangerml.src.search.document_comparison import DocumentComparison
 from gamechangerml.src.search.query_expansion import qe
-from gamechangerml.src.search.sent_transformer.model import (
-    SentenceSearcher,
-    SentenceEncoder,
-)
-from gamechangerml.src.search.doc_compare import (
-    DocCompareSentenceEncoder,
-    DocCompareSentenceSearcher,
-)
 from gamechangerml.src.recommender.recommend import Recommender
 from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import (
@@ -30,9 +22,7 @@ from gamechangerml.api.fastapi.settings import (
     SENT_INDEX_PATH,
     DOC_COMPARE_SENT_INDEX_PATH,
     latest_intel_model_encoder,
-    latest_intel_model_sim,
     latest_intel_model_trans,
-    latest_doc_compare_sim,
     latest_doc_compare_encoder,
     QA_MODEL,
 )
@@ -49,8 +39,6 @@ class ModelLoader:
     # private model variables
     def __init__(self):
         __qa_model = None
-        __sentence_searcher = None
-        __sentence_encoder = None
         __query_expander = None
         __query_expander_jbook = None
         __word_sim = None
@@ -58,7 +46,7 @@ class ModelLoader:
         __topic_model = None
         __recommender = None
         __document_compare_searcher = None
-        __document_compare_encoder = None
+        __semantic_search = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -93,21 +81,13 @@ class ModelLoader:
             # ModelLoader.initWordSim()
         return ModelLoader.__word_sim
 
-    def getSentence_searcher(self):
-        if ModelLoader.__sentence_searcher == None:
+    def getSemanticSearch(self):
+        if ModelLoader.__semantic_search == None:
             logger.warning(
-                "sentence_searcher was not set and was attempted to be used. Running init"
+                "semantic_search was not set and was attempted to be used. Running init"
             )
-            ModelLoader.initSentenceSearcher()
-        return ModelLoader.__sentence_searcher
-
-    def getSentence_encoder(self):
-        if ModelLoader.__sentence_encoder == None:
-            logger.warning(
-                "sentence_encoder was not set and was attempted to be used. Running init"
-            )
-            ModelLoader.initSentenceEncoder()
-        return ModelLoader.__sentence_encoder
+            ModelLoader.initSemanticSearch()
+        return ModelLoader.__semantic_search
 
     def getDocumentCompareSearcher(self):
         if ModelLoader.__document_compare_searcher == None:
@@ -116,14 +96,6 @@ class ModelLoader:
             )
             ModelLoader.initDocumentCompareSearcher()
         return ModelLoader.__document_compare_searcher
-
-    def getDocumentCompareEncoder(self):
-        if ModelLoader.__document_compare_encoder == None:
-            logger.warning(
-                "document_compare_encoder was not set and was attempted to be used. Running init"
-            )
-            ModelLoader.initDocumentCompareEncoder()
-        return ModelLoader.__document_compare_encoder
 
     def getSparse(self):
         return ModelLoader.__sparse_reader
@@ -153,13 +125,11 @@ class ModelLoader:
     query_expander = property(getQE, set_error)
     query_expander_jbook = property(getQEJbook, set_error)
     sparse_reader = property(getSparse, set_error)
-    sentence_searcher = property(getSentence_searcher, set_error)
-    sentence_encoder = property(getSentence_encoder, set_error)
+    semantic_search = property(getSemanticSearch, set_error)
     word_sim = property(getWordSim, set_error)
     topic_model = property(getTopicModel, set_error)
     recommender = property(getRecommender, set_error)
     document_compare_searcher = property(getDocumentCompareSearcher, set_error)
-    document_compare_encoder = property(getDocumentCompareEncoder, set_error)
 
     @staticmethod
     def initQA(qa_model_name=QA_MODEL.value):
@@ -228,118 +198,64 @@ class ModelLoader:
             logger.warning(e)
 
     @staticmethod
-    def initSentenceSearcher(
-        index_path=SENT_INDEX_PATH.value, transformer_path=LOCAL_TRANSFORMERS_DIR.value
-    ):
-        """
-        initSentenceSearcher - loads SentenceSearcher class on start
-        Args:
-        Returns:
-        """
-        logger.info(
-            f"Loading Sentence Searcher with sent index path: {index_path}")
+    def initSemanticSearch(index_path=SENT_INDEX_PATH.value):
+        logger.info("Loading Semantic Search model.")
         try:
-
-            ModelLoader.__sentence_searcher = SentenceSearcher(
-                sim_model_name=SimilarityConfig.BASE_MODEL,
-                index_path=index_path,
-                transformer_path=transformer_path,
+            ModelLoader.__semantic_search = SemanticSearch(
+                model_path=join(
+                    LOCAL_TRANSFORMERS_DIR.value,
+                    SemanticSearchConfig.BASE_MODEL,
+                ),
+                index_directory_path=index_path,
+                load_index_from_file=SemanticSearchConfig.LOAD_INDEX_FROM_FILE,
+                logger=logger,
+                use_gpu=SemanticSearchConfig.USE_GPU,
             )
-
-            sim_model = ModelLoader.__sentence_searcher.similarity
-            # set cache variable defined in settings.py
-            latest_intel_model_sim.value = sim_model.sim_model
+        except:
+            logger.exception("Failed to init Semantic Search model.")
+        else:
+            latest_intel_model_encoder.value = SemanticSearchConfig.BASE_MODEL
             logger.info(
-                f"** Loaded Similarity Model from {sim_model.sim_model} and sent index from {index_path}"
+                f"Finished loading Semantic Search model: {SemanticSearchConfig.BASE_MODEL}."
             )
-
-        except Exception as e:
-            logger.warning("** Could not load Similarity model")
-            logger.warning(e)
-
-    @staticmethod
-    def initSentenceEncoder(transformer_path=LOCAL_TRANSFORMERS_DIR.value):
-        """
-        initSentenceEncoder - loads Sentence Encoder on start
-        Args:
-        Returns:
-        """
-        logger.info(f"Loading encoder model")
-        try:
-            ModelLoader.__sentence_encoder = SentenceEncoder(
-                encoder_model_name=EmbedderConfig.BASE_MODEL,
-                transformer_path=transformer_path,
-                processmanager=processmanager,
-                **EmbedderConfig.MODEL_ARGS,
-            )
-            encoder_model = ModelLoader.__sentence_encoder.encoder_model
-            # set cache variable defined in settings.py
-            latest_intel_model_encoder.value = encoder_model
-            logger.info(f"** Loaded Encoder Model from {encoder_model}")
-
-        except Exception as e:
-            logger.warning("** Could not load Encoder model")
-            logger.warning(e)
 
     @staticmethod
     def initDocumentCompareSearcher(
         index_path=DOC_COMPARE_SENT_INDEX_PATH.value,
-        transformer_path=LOCAL_TRANSFORMERS_DIR.value,
     ):
-        """
-        initDocumentCompareSearcher - loads SentenceSearcher class on start
+        """Creates a DocumentComparison instance for the /documentCompare endpoint.
+
         Args:
-        Returns:
+            index_path (str, optional): Path to the directory of index files.
+            Defaults to DOC_COMPARE_SENT_INDEX_PATH.value.
         """
         logger.info(
-            f"Loading Document Compare Searcher with index path: {index_path}")
+            f"Loading Document Compare Searcher with index path: {index_path}"
+        )
         try:
-            ModelLoader.__document_compare_searcher = DocCompareSentenceSearcher(
-                sim_model_name=DocCompareSimilarityConfig.BASE_MODEL,
-                index_path=index_path,
-                transformer_path=transformer_path,
+            ModelLoader.__document_compare_searcher = DocumentComparison(
+                model_path=join(
+                    LOCAL_TRANSFORMERS_DIR.value,
+                    DocumentComparisonConfig.BASE_MODEL,
+                ),
+                index_directory_path=index_path,
+                load_index_from_file=True,
+                logger=logger,
+                use_gpu=DocumentComparisonConfig.USE_GPU,
             )
-            sim_model = ModelLoader.__document_compare_searcher.similarity
-            # set cache variable defined in settings.py
-            latest_doc_compare_sim.value = sim_model.sim_model
-            logger.info(
-                f"** Loaded Doc Compare Similarity model from {sim_model.sim_model} and sent index from {index_path}"
+            latest_doc_compare_encoder.value = (
+                DocumentComparisonConfig.BASE_MODEL
             )
-
         except Exception as e:
-            logger.warning("** Could not load Doc Compare Similarity model")
-            logger.warning(e)
-
-    @staticmethod
-    def initDocumentCompareEncoder(transformer_path=LOCAL_TRANSFORMERS_DIR.value):
-        """
-        initDocumentCompareEncoder - loads Document Compare Encoder on start
-        Args:
-        Returns:
-        """
-        logger.info(f"Loading document compare encoder model")
-        try:
-            ModelLoader.__document_compare_encoder = DocCompareSentenceEncoder(
-                encoder_model_name=DocCompareEmbedderConfig.BASE_MODEL,
-                transformer_path=transformer_path,
-                processmanager=processmanager,
-                **DocCompareEmbedderConfig.MODEL_ARGS,
-            )
-            encoder_model = ModelLoader.__document_compare_encoder.encoder_model
-            # set cache variable defined in settings.py
-            latest_doc_compare_encoder.value = encoder_model
-            logger.info(
-                f"** Loaded Doc Compare Encoder Model from {encoder_model}")
-
-        except Exception as e:
-            logger.warning("** Could not load Doc Compare Encoder model")
+            logger.warning("** Could not load Document Comparison model")
             logger.warning(e)
 
     @staticmethod
     def initSparse(model_name=latest_intel_model_trans.value):
         try:
             ModelLoader.__sparse_reader = sparse.SparseReader(
-                model_name=model_name)
+                model_name=model_name
+            )
             logger.info(f"Sparse Reader: {model_name} loaded")
         except Exception as e:
             logger.warning("** Could not load Sparse Reader")

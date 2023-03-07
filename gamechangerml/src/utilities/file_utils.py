@@ -3,6 +3,7 @@ from os import listdir, rmdir, remove, makedirs
 from shutil import rmtree
 from json import load, loads, dump
 from logging import Logger
+from typing import Union, List
 from .numpy_utils import NumpyJSONEncoder
 
 
@@ -19,7 +20,7 @@ def save_json(filename, path, data):
         return dump(data, outfile, cls=NumpyJSONEncoder)
 
 
-def open_json(filename, path):
+def open_json(filename, path=""):
     """Opens a json file"""
     with open(join(path, filename), "r") as f:
         return load(f)
@@ -87,7 +88,7 @@ def get_most_recently_changed_dir(parent_dir, logger=None):
 def create_directory_if_not_exists(directory, logger=None):
     """Checks if a directory exists, if it does not makes the directory"""
     use_logger = isinstance(logger, Logger)
-    
+
     if not exists(directory):
         info_msg = "Creating new directory {}".format(directory)
         if use_logger:
@@ -97,3 +98,24 @@ def create_directory_if_not_exists(directory, logger=None):
         makedirs(directory)
 
     return directory
+
+
+def get_json_paths_for_directory(
+    directory_path, strict_file_names: Union[List[str], None] = None
+):
+    """Get paths to JSON files for the given directory.
+
+    Args:
+        directory_path (str): Directory path.
+        strict_file_names (Union[List[str], None], optional): If None, returns 
+            paths for all JSON files in the directory. Otherwise, only returns
+            paths for the file names in this list. Defaults to None.
+    Returns:
+        list of str: JSON file paths
+    """
+    file_names = [fn for fn in listdir(directory_path) if fn[-5:] == ".json"]
+
+    if strict_file_names:
+        file_names = [fn for fn in file_names if fn in strict_file_names]
+
+    return [join(directory_path, fn) for fn in file_names]

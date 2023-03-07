@@ -11,14 +11,6 @@ from requests.adapters import HTTPAdapter
 from http.client import HTTPConnection  # py3
 
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
-from gamechangerml.src.text_handling.process import preprocess
-from gamechangerml.src.utilities.text_utils import (
-    has_many_short_tokens,
-    has_many_repeating,
-    has_extralong_tokens,
-    is_a_toc,
-    check_quality_paragraph,
-)
 
 # from gamechangerml import DATA_PATH
 
@@ -26,7 +18,11 @@ from .test_examples import TestSet
 
 logger = logging.getLogger()
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
-API_URL = f"{GC_ML_HOST}:5000" if "http" in GC_ML_HOST else f"http://{GC_ML_HOST}:5000"
+API_URL = (
+    f"{GC_ML_HOST}:5000"
+    if "http" in GC_ML_HOST
+    else f"http://{GC_ML_HOST}:5000"
+)
 QA_TIMEOUT = 30
 
 
@@ -50,7 +46,10 @@ def test_expand_terms():
                 '"developing artificial intelligence"',
             ]
         },
-        "wordsim": {"artificial": ["artifical"], "intelligence": ["intellegence"]},
+        "wordsim": {
+            "artificial": ["artifical"],
+            "intelligence": ["intellegence"],
+        },
     }
     assert resp.json() == verified
 
@@ -121,62 +120,6 @@ def test_get_transformer_list():
 def get_current_trans():
     resp = http.get(API_URL + "/getCurrentTransformer")
     return resp.json()
-
-
-# Sent Index Processing Tests
-
-
-def test_has_many_short_tokens():
-    test_pars = TestSet.sent_index_processing_pars
-    results = []
-    for x in test_pars.keys():
-        text = test_pars[x]
-        tokens = preprocess(text)
-        check = has_many_short_tokens(tokens, threshold=4.0)
-        results.append(check)
-    assert results == TestSet.sent_index_processing_results["has_many_short_tokens"]
-
-
-def test_has_many_repeating():
-    test_pars = TestSet.sent_index_processing_pars
-    results = []
-    for x in test_pars.keys():
-        text = test_pars[x]
-        tokens = preprocess(text)
-        check = has_many_repeating(text, tokens, threshold=0.6)
-        results.append(check)
-    assert results == TestSet.sent_index_processing_results["has_many_repeating"]
-
-
-def test_has_extralong_tokens():
-    test_pars = TestSet.sent_index_processing_pars
-    results = []
-    for x in test_pars.keys():
-        text = test_pars[x]
-        check = has_extralong_tokens(text, threshold=25)
-        results.append(check)
-    assert results == TestSet.sent_index_processing_results["has_extralong_tokens"]
-
-
-def test_is_a_toc():
-    test_pars = TestSet.sent_index_processing_pars
-    results = []
-    for x in test_pars.keys():
-        text = test_pars[x]
-        check = is_a_toc(text)
-        results.append(check)
-    assert results == TestSet.sent_index_processing_results["is_a_toc"]
-
-
-def test_check_quality_paragraph():
-    test_pars = TestSet.sent_index_processing_pars
-    results = []
-    for x in test_pars.keys():
-        text = test_pars[x]
-        tokens = preprocess(text)
-        check = check_quality_paragraph(tokens, text)
-        results.append(check)
-    assert results == TestSet.sent_index_processing_results["check_quality"]
 
 
 # def test_changeModels():
@@ -265,7 +208,8 @@ def test_sent_search_threshold():
     test_data = TestSet.sentence_test_data
     # threshold = "0.6"
     resp = http.post(
-        API_URL + "/transSentenceSearch?threshold=0.5", json=test_data)
+        API_URL + "/transSentenceSearch?threshold=0.5", json=test_data
+    )
     resp_data = resp.json()
     for i in resp_data:
         if float(i["score"]) >= 0.5:
@@ -294,8 +238,9 @@ def send_qa(query, context):
     post = {"query": query, "search_context": context}
     data = json.dumps(post).encode("utf-8")
     headers = {"Content-Type": "application/json"}
-    response = http.post(API_URL + "/questionAnswer",
-                         data=data, headers=headers)
+    response = http.post(
+        API_URL + "/questionAnswer", data=data, headers=headers
+    )
 
     end = time.perf_counter()
     took = float(f"{end-start:0.4f}")
@@ -305,12 +250,18 @@ def send_qa(query, context):
 
 def test_qa_regular():
     query = "when is marijuana legalized"
-    expected = "it will be legal to grow up to four marijuana plants beginning July 1"
+    expected = (
+        "it will be legal to grow up to four marijuana plants beginning July 1"
+    )
     resp, took = send_qa(query, TestSet.qa_test_context_1)
     top_answer = resp["answers"][0]["text"]
     scores = [i["null_score_diff"] for i in resp["answers"]]
     print(
-        "\nQUESTION: ", query, "\nANSWER: ", top_answer, f"\n (took {took} seconds)\n"
+        "\nQUESTION: ",
+        query,
+        "\nANSWER: ",
+        top_answer,
+        f"\n (took {took} seconds)\n",
     )
     assert top_answer == expected  # assert response is right
     # assert took < QA_TIMEOUT # assert time
@@ -321,12 +272,18 @@ def test_qa_regular():
 
 def test_qa_one_question():
     query = "when is marijuana legalized?"
-    expected = "it will be legal to grow up to four marijuana plants beginning July 1"
+    expected = (
+        "it will be legal to grow up to four marijuana plants beginning July 1"
+    )
     resp, took = send_qa(query, TestSet.qa_test_context_1)
     top_answer = resp["answers"][0]["text"]
     scores = [i["null_score_diff"] for i in resp["answers"]]
     print(
-        "\nQUESTION: ", query, "\nANSWER: ", top_answer, f"\n (took {took} seconds)\n"
+        "\nQUESTION: ",
+        query,
+        "\nANSWER: ",
+        top_answer,
+        f"\n (took {took} seconds)\n",
     )
     assert top_answer == expected  # assert response is right
     # assert took < QA_TIMEOUT # assert time
@@ -337,12 +294,18 @@ def test_qa_one_question():
 
 def test_qa_multiple_question():
     query = "when is marijuana legalized???"
-    expected = "it will be legal to grow up to four marijuana plants beginning July 1"
+    expected = (
+        "it will be legal to grow up to four marijuana plants beginning July 1"
+    )
     resp, took = send_qa(query, TestSet.qa_test_context_1)
     top_answer = resp["answers"][0]["text"]
     scores = [i["null_score_diff"] for i in resp["answers"]]
     print(
-        "\nQUESTION: ", query, "\nANSWER: ", top_answer, f"\n (took {took} seconds)\n"
+        "\nQUESTION: ",
+        query,
+        "\nANSWER: ",
+        top_answer,
+        f"\n (took {took} seconds)\n",
     )
     assert top_answer == expected  # assert response is right
     # assert took < QA_TIMEOUT # assert time
@@ -353,12 +316,18 @@ def test_qa_multiple_question():
 
 def test_qa_allcaps():
     query = "WHEN IS MARIJUANA LEGALIZED"
-    expected = "it will be legal to grow up to four marijuana plants beginning July 1"
+    expected = (
+        "it will be legal to grow up to four marijuana plants beginning July 1"
+    )
     resp, took = send_qa(query, TestSet.qa_test_context_1)
     top_answer = resp["answers"][0]["text"]
     scores = [i["null_score_diff"] for i in resp["answers"]]
     print(
-        "\nQUESTION: ", query, "\nANSWER: ", top_answer, f"\n (took {took} seconds)\n"
+        "\nQUESTION: ",
+        query,
+        "\nANSWER: ",
+        top_answer,
+        f"\n (took {took} seconds)\n",
     )
     assert top_answer == expected  # assert response is right
     # assert took < QA_TIMEOUT # assert time
@@ -369,12 +338,18 @@ def test_qa_allcaps():
 
 def test_qa_apostrophe():
     query = "when's marijuana legalized"
-    expected = "it will be legal to grow up to four marijuana plants beginning July 1"
+    expected = (
+        "it will be legal to grow up to four marijuana plants beginning July 1"
+    )
     resp, took = send_qa(query, TestSet.qa_test_context_1)
     top_answer = resp["answers"][0]["text"]
     scores = [i["null_score_diff"] for i in resp["answers"]]
     print(
-        "\nQUESTION: ", query, "\nANSWER: ", top_answer, f"\n (took {took} seconds)\n"
+        "\nQUESTION: ",
+        query,
+        "\nANSWER: ",
+        top_answer,
+        f"\n (took {took} seconds)\n",
     )
     assert top_answer == expected  # assert response is right
     # assert took < QA_TIMEOUT # assert time
@@ -390,7 +365,11 @@ def test_qa_past_tense():
     top_answer = resp["answers"][0]["text"]
     scores = [i["null_score_diff"] for i in resp["answers"]]
     print(
-        "\nQUESTION: ", query, "\nANSWER: ", top_answer, f"\n (took {took} seconds)\n"
+        "\nQUESTION: ",
+        query,
+        "\nANSWER: ",
+        top_answer,
+        f"\n (took {took} seconds)\n",
     )
     assert top_answer == expected  # assert response is right
     # assert took < QA_TIMEOUT # assert time
@@ -401,12 +380,18 @@ def test_qa_past_tense():
 
 def test_qa_future_tense():
     query = "when will marijuana be legal?"
-    expected = "it will be legal to grow up to four marijuana plants beginning July 1"
+    expected = (
+        "it will be legal to grow up to four marijuana plants beginning July 1"
+    )
     resp, took = send_qa(query, TestSet.qa_test_context_1)
     top_answer = resp["answers"][0]["text"]
     scores = [i["null_score_diff"] for i in resp["answers"]]
     print(
-        "\nQUESTION: ", query, "\nANSWER: ", top_answer, f"\n (took {took} seconds)\n"
+        "\nQUESTION: ",
+        query,
+        "\nANSWER: ",
+        top_answer,
+        f"\n (took {took} seconds)\n",
     )
     assert top_answer == expected  # assert response is right
     # assert took < QA_TIMEOUT # assert time
@@ -417,12 +402,18 @@ def test_qa_future_tense():
 
 def test_qa_specific():
     query = "when will marijuana be legal in Virginia?"
-    expected = "it will be legal to grow up to four marijuana plants beginning July 1"
+    expected = (
+        "it will be legal to grow up to four marijuana plants beginning July 1"
+    )
     resp, took = send_qa(query, TestSet.qa_test_context_1)
     top_answer = resp["answers"][0]["text"]
     scores = [i["null_score_diff"] for i in resp["answers"]]
     print(
-        "\nQUESTION: ", query, "\nANSWER: ", top_answer, f"\n (took {took} seconds)\n"
+        "\nQUESTION: ",
+        query,
+        "\nANSWER: ",
+        top_answer,
+        f"\n (took {took} seconds)\n",
     )
     assert top_answer == expected  # assert response is right
     # assert took < QA_TIMEOUT # assert time
@@ -438,7 +429,11 @@ def test_qa_outside_scope():
     top_answer = resp["answers"][0]["text"]
     scores = [i["null_score_diff"] for i in resp["answers"]]
     print(
-        "\nQUESTION: ", query, "\nANSWER: ", top_answer, f"\n (took {took} seconds)\n"
+        "\nQUESTION: ",
+        query,
+        "\nANSWER: ",
+        top_answer,
+        f"\n (took {took} seconds)\n",
     )
     assert top_answer == expected  # assert response is right
     # assert took < QA_TIMEOUT # assert time

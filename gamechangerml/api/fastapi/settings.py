@@ -29,15 +29,9 @@ CORPUS_EVENT_TRIGGER = bool(os.environ.get("CORPUS_EVENT_TRIGGER", default=True)
 
 # Redis Cache Variables
 latest_intel_model_sent = CacheVariable("latest_intel_model_sent", True)
-latest_intel_model_sim = CacheVariable(
-    "latest sentence searcher (similarity model + sent index)", True
-)
 latest_intel_model_encoder = CacheVariable("latest encoder model", True)
 latest_intel_model_trans = CacheVariable("latest_intel_model_trans")
 latest_doc_compare_encoder = CacheVariable("latest doc compare encoder model", True)
-latest_doc_compare_sim = CacheVariable(
-    "latest doc compare searcher (similarity model + sent index)", True
-)
 
 LOCAL_TRANSFORMERS_DIR = CacheVariable("LOCAL_TRANSFORMERS_DIR")
 SENT_INDEX_PATH = CacheVariable("SENT_INDEX_PATH")

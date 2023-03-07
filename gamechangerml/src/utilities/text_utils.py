@@ -176,69 +176,6 @@ def get_tokens(s: str) -> List[str]:
     return s.split()
 
 
-def has_many_short_tokens(processed_tokens, threshold):
-    """Checks if the median length of tokens is less than the expected threshold"""
-    median_len = np.median([len(i) for i in processed_tokens])
-    if median_len <= threshold:
-        return True
-    else:
-        return False
-
-
-def has_many_repeating(text, tokens, threshold):
-    """Checks if the ratio of unique tokens is less than an expected threshold"""
-    ratio_unique = len(set(tokens)) / len(text.split(" "))
-    if ratio_unique < threshold:
-        return True
-    else:
-        return False
-
-
-def has_extralong_tokens(text, threshold):
-    """Checks if the paragraph has a high percentage of (nonwebsite) tokens exceeding threshold for normal token length"""
-    websites = ['http', 'www.']
-    tokens = [i for i in text.split(" ") if i[:4] not in websites]
-    long_tokens = [i for i in tokens if len(i) > threshold]
-    if len(long_tokens) / len(tokens) > 0.05:
-        return True
-    else:
-        return False
-
-
-def is_a_toc(text):
-    """Checks if a paragraph appears to be a table of contents"""
-    toc_separation = re.findall(r"(\.{6,})", text)
-    if len(toc_separation) > 0:
-        return True
-    else:
-        return False
-
-
-def majority_tokens_filtered(tokens, text):
-    """Checks if most of the tokens were filtered out after processing"""
-    if (len(tokens) / len(text.split(" "))) <= 0.5:
-        return True
-    else:
-        return False
-
-
-def check_quality_paragraph(tokens, text):
-    """Runs filter functions to check that a paragraph isn't a junk paragraph"""
-
-    if majority_tokens_filtered(tokens, text):
-        return False
-    if has_many_short_tokens(tokens, threshold=2.5):
-        return False
-    elif has_many_repeating(text, tokens, threshold=0.2):
-        return False
-    elif has_extralong_tokens(text, threshold=25):
-        return False
-    elif is_a_toc(text):
-        return False
-    else:
-        return True
-
-
 # Adapted from https://www.datacamp.com/community/tutorials/fuzzy-string-python
 def levenshtein_ratio_and_distance(
     s: str, t: str, ratio_calc: bool = False
@@ -328,7 +265,9 @@ def filter_title_queries(queries: List[str], doc_ids: List[str]) -> List[str]:
     doc_dict = sort_first(doc_ids)
     logger.info("*** Comparing queries to doc titles\n")
     for i in queries:
-        if not re.search("[a-zA-Z]", i):  ## if the query has no letters, remove
+        if not re.search(
+            "[a-zA-Z]", i
+        ):  ## if the query has no letters, remove
             logger.info(f"*** Removing query: {i} // (contains no characters)")
             remove.append(i)
         elif re.search(
