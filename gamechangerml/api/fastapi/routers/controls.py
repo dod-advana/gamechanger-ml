@@ -995,6 +995,7 @@ def train_topics(model_dict):
     args = {
         "sample_rate": model_dict["sample_rate"],
         "upload": model_dict["upload"],
+        "version": model_dict["version"]
     }
     pipeline.run(
         build_type=model_dict["build_type"],
@@ -1042,7 +1043,6 @@ async def train_model(model_dict: dict, response: Response):
             raise Exception(
                 f"No training method mapped for build type {build_type}"
             )
-
         # Set the training method to be loaded onto the thread
         training_thread = MlThread(
             training_method, args={"model_dict": model_dict}
