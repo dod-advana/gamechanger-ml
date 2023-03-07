@@ -1099,19 +1099,6 @@ async def get_user_data(data_dict: dict, response: Response):
     Returns:
         confirmation of data download
     """
-
-    # userData = data_dict["params"]["userData"]
-    # with open(USER_AGGREGATIONS_FILE, "w") as f:
-    #     json.dump(userData, f)
-
-    # searchData = data_dict["params"]["searchData"]
-    # df1 = pd.DataFrame(searchData)
-    # df2 = pd.read_csv(SEARCH_PDF_MAPPING_FILE, index_col=False)
-    # df = pd.concat([df1,df2]).drop_duplicates().reset_index(drop=True)
-    # df['documenttime_formatted'] =  pd.to_datetime(df['documenttime_formatted'])
-    # df = df[df['documenttime_formatted'] > (pd.to_datetime('today')- DateOffset(months=6))]
-    # df.to_csv(SEARCH_PDF_MAPPING_FILE, index=False)
-
     start_date = (datetime.now() - relativedelta(months=+6)).replace(
         hour=0, minute=0
     )
