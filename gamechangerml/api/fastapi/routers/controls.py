@@ -62,6 +62,7 @@ MODELS = ModelLoader()
 
 pipeline = Pipeline()
 es = ElasticsearchService()
+gcClient = gc_web_api.GCWebClient()
 
 
 @router.get("/")
@@ -1090,25 +1091,29 @@ async def stop_process(thread_dict: dict, response: Response):
 
 
 @router.post("/sendUserAggregations")
-async def get_user_data(data_dict: dict, response: Response):
+async def get_user_data( response: Response):
     """get_user_data - Get user aggregation data for selected date and write to data folder
     Args:
-        date_dict: dict; {data}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
         confirmation of data download
     """
-
-    userData = data_dict["params"]["userData"]
+    start_date = (datetime.now() - relativedelta(months=+6)).replace(
+        hour=0, minute=0
+    )
+    end_date = datetime.now()
+    user_aggs = gcClient.getUserAggregations(
+        start_date=start_date, end_date=end_date
+    )
+    user_json = user_aggs.decode('utf8')
+    user_data = json.loads(user_json)
     with open(USER_AGGREGATIONS_FILE, "w") as f:
-        json.dump(userData, f)
-
-    searchData = data_dict["params"]["searchData"]
-    df1 = pd.DataFrame(searchData)
-    df2 = pd.read_csv(SEARCH_PDF_MAPPING_FILE, index_col=False)
-    df = pd.concat([df1,df2]).drop_duplicates().reset_index(drop=True)
-    df['documenttime_formatted'] =  pd.to_datetime(df['documenttime_formatted'])
-    df = df[df['documenttime_formatted'] > (pd.to_datetime('today')- DateOffset(months=6))]
+        json.dump(user_data, f)
+    mappings = gcClient.getSearchMappings(
+        start_date=start_date, end_date=end_date
+    )
+    search_json = mappings.decode('utf8')
+    data = json.loads(search_json)
+    df = pd.DataFrame(data['data'])
     df.to_csv(SEARCH_PDF_MAPPING_FILE, index=False)
-
-    return f"wrote {len(userData)} user data and searches to file"
+    return f"wrote {len(data['data'])} user data and searches to file"
