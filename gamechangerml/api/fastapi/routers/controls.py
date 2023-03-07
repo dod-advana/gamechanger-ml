@@ -1091,10 +1091,9 @@ async def stop_process(thread_dict: dict, response: Response):
 
 
 @router.post("/sendUserAggregations")
-async def get_user_data(data_dict: dict, response: Response):
+async def get_user_data( response: Response):
     """get_user_data - Get user aggregation data for selected date and write to data folder
     Args:
-        date_dict: dict; {data}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
         confirmation of data download
