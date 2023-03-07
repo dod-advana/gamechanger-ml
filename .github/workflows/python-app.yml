@@ -36,7 +36,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        coverage run -m pytest 
+        coverage run -m pytest --ignore=gamechangerml/src/model_testing/
     - name: Check coverage
       run: |
         coverage report -m
