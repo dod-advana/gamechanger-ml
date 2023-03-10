@@ -22,10 +22,14 @@ RUN dnf install -y \
         openssl-devel \
         python38 \
         python38-devel \
+        python3-libs \
+        python3-setuptools-wheel \
+        platform-python  \
         expat-devel \
         dbus \
         libtasn1 \
         libxml2 \
+        libcurl \
         zip \
         zlib-devel \
         sqlite-devel \
@@ -40,6 +44,9 @@ RUN dnf install -y \
         libomp-devel \
         openblas \
         cairo \
+        tar \
+        nss \
+        curl \
         cryptsetup-libs \
         cyrus-sasl-lib \
         gzip \
