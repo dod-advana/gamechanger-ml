@@ -7,11 +7,14 @@ import math
 import logging
 from datetime import datetime
 from gamechangerml import CORPUS_PATH
-from gamechangerml.src.search.sent_transformer.model import (
-    SentenceEncoder,
-    SentenceSearcher,
-    SimilarityRanker,
-)
+try:
+    from gamechangerml.src.search.sent_transformer.model import (
+        SentenceEncoder,
+        SentenceSearcher,
+        SimilarityRanker,
+    )
+except ModuleNotFoundError:
+    print('could not load encoders due to hnswlib giving illegal instructions on host')
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw

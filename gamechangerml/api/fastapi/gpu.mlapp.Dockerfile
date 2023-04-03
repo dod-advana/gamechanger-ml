@@ -2,6 +2,7 @@
 #  -- https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/11.2.2/ubi8-x86_64/base/Dockerfile
 #  -- not yet found on ironbank, unfortunately
 ARG BASE_IMAGE="nvidia/cuda:11.2.2-cudnn8-runtime-ubi8"
+# ARG BASE_IMAGE="092912502985.dkr.ecr.us-east-1.amazonaws.com/registry1.dso.mil/ironbank/opensource/python/python38:latest"
 FROM $BASE_IMAGE
 
 # tmp switch to root for sys pkg setup
@@ -22,10 +23,15 @@ RUN dnf install -y \
         openssl-devel \
         python38 \
         python38-devel \
+        python3-libs \
+        python3-setuptools-wheel \
+        platform-python  \
+        platform-python-setuptools \
         expat-devel \
         dbus \
         libtasn1 \
         libxml2 \
+        libcurl \
         zip \
         zlib-devel \
         sqlite-devel \
@@ -39,7 +45,13 @@ RUN dnf install -y \
         libomp \
         libomp-devel \
         openblas \
+        openssl \
+        openssl-devel \
         cairo \
+        tar \
+        nss \
+        nss-util \
+        curl \
         cryptsetup-libs \
         cyrus-sasl-lib \
         gzip \

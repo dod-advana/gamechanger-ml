@@ -1,4 +1,4 @@
-s3_path="s3://advana-data-zone/bronze/ml/eggs/$GIT_BRANCH"
+s3_path="s3://advana-data-zone/bronze/gamechanger/ml/eggs/$GIT_BRANCH"
 python setup.py bdist_egg
 
 echo "[INFO] Uploading Python Egg to ${s3_path} ..."

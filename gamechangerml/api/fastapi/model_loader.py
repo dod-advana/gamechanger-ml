@@ -10,14 +10,19 @@ from gamechangerml.configs import (
     TopicsConfig,
 )
 from gamechangerml.src.search.query_expansion import qe
-from gamechangerml.src.search.sent_transformer.model import (
-    SentenceSearcher,
-    SentenceEncoder,
-)
-from gamechangerml.src.search.doc_compare import (
-    DocCompareSentenceEncoder,
-    DocCompareSentenceSearcher,
-)
+
+try:
+    from gamechangerml.src.search.sent_transformer.model import (
+        SentenceSearcher,
+        SentenceEncoder,
+    )
+    from gamechangerml.src.search.doc_compare import (
+        DocCompareSentenceEncoder,
+        DocCompareSentenceSearcher,
+    )
+except ModuleNotFoundError as e:
+    print(e, 'could not load encoders due to hnswlib giving illegal instructions on host')
+
 from gamechangerml.src.recommender.recommend import Recommender
 from gamechangerml.src.search.embed_reader import sparse
 from gamechangerml.api.fastapi.settings import (
