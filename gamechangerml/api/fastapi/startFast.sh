@@ -71,6 +71,8 @@ function activate_venv() {
   else
     echo "[INFO] Activating venv at ${MLAPP_VENV_DIR} ..."
     source ${MLAPP_VENV_DIR}/bin/activate
+    python -c 'from gamechangerml.src.search.query_expansion import qe 
+from gamechangerml.src.search.sent_transformer.model import (SentenceSearcher,SentenceEncoder)' && echo "worked" || pip uninstall -y hnswlib
   fi
 
   # if gamechangerml wasn't installed as module in the venv, just alter pythonpath

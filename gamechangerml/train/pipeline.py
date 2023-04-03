@@ -29,8 +29,12 @@ from gamechangerml.src.utilities import (
     get_current_datetime,
     configure_logger,
 )
+
 from gamechangerml.src.paths import S3_DATA_PATH, S3_MODELS_PATH
-from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
+try:
+    from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
+except ModuleNotFoundError:
+    print('could not load encoders due to hnswlib giving illegal instructions on host')
 from gamechangerml.src.services import S3Service
 from gamechangerml.src.model_testing.evaluation import (
     IndomainRetrieverEvaluator,
