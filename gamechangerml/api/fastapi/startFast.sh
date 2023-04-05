@@ -154,7 +154,21 @@ function start_env_devlocal() {
 }
 
 function start_env_k8s_dev() {
-  start_env_dev
+  source "${DS_SETUP_PATH}"
+  activate_venv
+  download_dependencies
+  upload_egg
+  start_gunicorn gamechangerml.api.fastapi.mlapp:app \
+        --bind 0.0.0.0:$PORT \
+        --workers $UVICORN_WORKERS \
+        --keyfile /etc/pki/tls/private/tls.key \
+        --certfile /etc/pki/tls/certs/tls.crt \
+        --graceful-timeout 1000 \
+        --timeout 1200 \
+        --keep-alive 30 \
+        --reload \
+        -k uvicorn.workers.UvicornWorker \
+        --log-level debug
 }
 
 function start_env_k8s_test() {
@@ -178,6 +192,8 @@ function start_env_k8s_prod() {
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
       --bind 0.0.0.0:$PORT \
       --workers 1 \
+      --keyfile /etc/pki/tls/private/tls.key \
+      --certfile /etc/pki/tls/certs/tls.crt \
       --graceful-timeout 900 \
       --timeout 1200 \
       -k uvicorn.workers.UvicornWorker \
