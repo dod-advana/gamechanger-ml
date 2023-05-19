@@ -22,7 +22,7 @@ function download_and_unpack_deps() {
 
   mkdir -p "$models_dest_dir" "$data_dest_dir"
 
-  echo "Downloading Transformers Folder"
+  # echo "Downloading Transformers Folder"
   echo "S3 MODEL PATH TRANSFORMERS: $S3_TRANS_MODEL_PATH"
   aws s3 cp "$S3_TRANS_MODEL_PATH" "$models_dest_dir" --no-progress
 
@@ -50,6 +50,8 @@ function download_and_unpack_deps() {
   find "$models_dest_dir" -maxdepth 1 -type f -name "*.tar.gz" | while IFS=$'\n' read -r f; do
     tar kxzf "$f" --exclude '*/.git/*' --exclude '*/.DS_Store/*' -C "$models_dest_dir"
   done
+  rm "$models_dest_dir"*.tar.gz
+  
   # no longer pulling data files right now
   #echo "Uncompressing all tar files in data"
   #find "$data_dest_dir" -maxdepth 1 -type f -name "*.tar.gz" | while IFS=$'\n' read -r f; do
