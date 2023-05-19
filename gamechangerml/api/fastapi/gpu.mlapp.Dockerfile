@@ -17,49 +17,50 @@ ENV LANG="C.utf8" \
 
 # App & Dep Preqrequisites
 RUN dnf install -y \
-        gcc \
-        gcc-c++ \
-        glibc-langpack-en \
-        openssl-devel \
-        python38 \
-        python38-devel \
-        python3-libs \
-        python3-setuptools-wheel \
-        platform-python  \
-        platform-python-setuptools \
-        expat-devel \
-        dbus \
-        libtasn1 \
-        libxml2 \
-        libcurl \
-        zip \
-        zlib-devel \
-        sqlite-devel \
-        bzip2-devel \
-        glibc \
-        unzip \
-        python3-cffi \
-        libffi-devel \
-        libpq \
-        libpq-devel \
-        libomp \
-        libomp-devel \
-        openblas \
-        openssl \
-        openssl-devel \
-        cairo \
-        tar \
-        nss \
-        nss-util \
-        curl \
-        cryptsetup-libs \
-        cyrus-sasl-lib \
-        gzip \
-        systemd \ 
-        make \
+    gcc \
+    gcc-c++ \
+    glibc-langpack-en \
+    openssl-devel \
+    python38 \
+    python38-devel \
+    python3-libs \
+    python3-setuptools-wheel \
+    platform-python  \
+    platform-python-setuptools \
+    expat-devel \
+    dbus \
+    libtasn1 \
+    libxml2 \
+    libcurl \
+    zip \
+    zlib-devel \
+    sqlite-devel \
+    bzip2-devel \
+    glibc \
+    unzip \
+    python3-cffi \
+    libffi-devel \
+    libpq \
+    libpq-devel \
+    libomp \
+    libomp-devel \
+    openblas \
+    openssl \
+    openssl-devel \
+    cairo \
+    tar \
+    nss \
+    nss-util \
+    curl \
+    cryptsetup-libs \
+    cyrus-sasl-lib \
+    gzip \
+    systemd \ 
+    make \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
+RUN dnf upgrade -y
 # AWS CLI
 # RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
 #     && unzip -q /tmp/awscliv2.zip -d /opt \
@@ -73,9 +74,9 @@ ARG APP_GID=1001
 
 # ensure user/group exists, formally
 RUN ( (getent group $APP_GID &> /dev/null) \
-        || groupadd --system --gid $APP_GID app_default \
+    || groupadd --system --gid $APP_GID app_default \
     ) && ((getent passwd $APP_UID &> /dev/null) \
-        || useradd --system --shell /sbin/nologin --gid $APP_GID --uid $APP_UID app_default \
+    || useradd --system --shell /sbin/nologin --gid $APP_GID --uid $APP_UID app_default \
     )
 
 # key directories
@@ -94,7 +95,7 @@ RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
     && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
-    
+
 RUN dnf remove -y kernel-headers
 
 # thou shall not root
