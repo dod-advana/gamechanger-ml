@@ -19,7 +19,7 @@ huggingface-hub==0.7.0
 matplotlib~=3.4.3
 networkx~=2.6.3
 nltk~=3.6.5
-numpy~=1.19.5
+numpy~=1.22
 packaging~=21.0
 pandas==1.3.4
 protobuf~=3.20.0
@@ -31,7 +31,7 @@ requests~=2.26.0
 scikit-learn~=1.2.0
 sentence-transformers~=2.2.2
 spacy~=3.0.7
-tensorflow~=2.5.1
+tensorflow~=2.12.0
 tokenizers~=0.10.3
 torch~=1.7.1
 tqdm~=4.62.3

@@ -47,7 +47,11 @@ async def load_models():
     if MODEL_LOAD_FLAG:
         count = 0
         for f in model_functions:
-            f()
+            try:
+                f()
+            except Exception as e:
+                logger.warning(f"---- WARNING: {f} failed to load model because of {e}")
+                break
             ram_used, surpassed, cpu_usage = get_hw_usage()
             count += 1
             if surpassed:
