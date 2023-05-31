@@ -23,10 +23,8 @@ RUN dnf install -y \
     openssl-devel \
     python38 \
     python38-devel \
-    python3-libs \
-    python3-setuptools-wheel \
-    platform-python  \
-    platform-python-setuptools \
+    python38-libs \
+    python38-setuptools-wheel \
     expat-devel \
     dbus \
     libtasn1 \
@@ -96,6 +94,7 @@ RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
 
+RUN rm "${APP_VENV}/lib/python3.8/site-packages/tensorflow/include/external/local_config_python/python_include/patchlevel.h"
 RUN dnf remove -y kernel-headers
 
 # thou shall not root
@@ -113,3 +112,4 @@ ENV ENV_TYPE="DEV" \
     PYTHONPATH="${APP_DIR}"
 
 ENTRYPOINT ["/bin/bash", "./gamechangerml/api/fastapi/startFast.sh"]
+# ENTRYPOINT ["tail", "-f", "/dev/null"]
