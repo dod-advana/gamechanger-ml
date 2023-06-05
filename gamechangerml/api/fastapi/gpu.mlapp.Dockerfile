@@ -112,4 +112,3 @@ ENV ENV_TYPE="DEV" \
     PYTHONPATH="${APP_DIR}"
 
 ENTRYPOINT ["/bin/bash", "./gamechangerml/api/fastapi/startFast.sh"]
-# ENTRYPOINT ["tail", "-f", "/dev/null"]
