@@ -47,9 +47,14 @@ async def load_models():
     if MODEL_LOAD_FLAG:
         count = 0
         for f in model_functions:
-            f()
-            ram_used, surpassed, cpu_usage = get_hw_usage()
             count += 1
+            try:
+                f()
+            except Exception as e:
+                logger.warning(f"---- WARNING: {f} failed to load model because of {e}")
+                models_not_loaded = model_functions[:count]
+                break
+            ram_used, surpassed, cpu_usage = get_hw_usage()
             if surpassed:
                 logger.warning(
                     f" ---- WARNING: RAM used is {ram_used}%, which is passed the threshold, will not load any other models"
