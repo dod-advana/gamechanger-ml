@@ -236,6 +236,7 @@ mlruns/
 models/transformers
 # Corpus files
 corpus/*
+gamechangerml/corpus/*
 
 # Don't ignore .gitkeep files
 !**/.gitkeep

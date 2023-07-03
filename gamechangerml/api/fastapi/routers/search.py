@@ -78,6 +78,66 @@ async def text_extract_infer(body: dict, extractType: str, response: Response) -
     return results
 
 
+@ router.post("/semanticSearch", status_code=200)
+async def semantic_search(
+    body: dict,
+    response: Response,
+    num_results: int = 30,
+) -> dict:
+    """semantic_title_search - endpoint for title transformer inference. Takes in a query, gets the embedding of the query, then finds the top (num_results) that match based on the embedding of the target (e.g. body["field"])
+
+    Args:
+        (dict) json format of the search query.\n 
+            query: (str, required) a string of any length to embed and use for semantic search.\n
+            field: (str, optional) the name of a the field that is searched against. Default="title".
+            Example: {"query": "Where is the science and technology reinvention laboratory?"}
+        Response: Response class; for status codes(apart of fastapi do not need to pass param)
+    Returns:
+        results: (dict) results of inference. 
+
+    """
+    logger.info("SEMANTIC SEARCH - embedding query " + str(body["query"]) + "and pulling top results based on field " + str(body.get("field","title")))
+    results = {}
+    
+    try:
+        query_text = body["query"]
+        target_field = body.get("field","title")
+        cache = CacheVariable(f"semantic: {query_text}", True)
+        cached_value = cache.get_value()
+        if cached_value:
+            logger.info("Search was found in cache")
+            search_results = cached_value
+        else:
+            start = time.perf_counter()
+            search_results = MODELS.semantic_searcher.search(
+                query_text=query_text,
+                target_field=target_field,
+                num_results=num_results
+            )
+            end = time.perf_counter()
+            logger.info(f"time: {end - start:0.4f} seconds")
+
+        results["results"] = search_results
+        results["query"] = query_text
+        results["field"] = target_field
+
+        if not cached_value:
+            cache.set_value(
+                search_results,
+                expire=int(
+                    (
+                        datetime.datetime.utcnow()
+                        + datetime.timedelta(days=CACHE_EXPIRE_DAYS)
+                    ).timestamp()
+                ),
+            )
+        logger.info(results)
+    except Exception:
+        logger.error(f"Unable to get results from semantic search for {body}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise
+    return results
+
 @router.post("/transSentenceSearch", status_code=200)
 async def trans_sentence_infer(
     body: dict,

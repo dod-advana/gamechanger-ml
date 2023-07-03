@@ -106,6 +106,35 @@ def get_model_paths():
         DOC_COMPARE_INDEX_PATH = INDEX_PATH
         logger.info(f"Cannot get Sentence Index model path {e}",)
 
+    # TITLE INDEX
+    # get largest file name with sent_index prefix (by date)
+    try:
+        title_index_name = [
+            f
+            for f in listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
+            if ("title_index" in f) and ("tar" not in f)
+        ]
+        title_index_name = [
+            f
+            for f in title_index_name
+            if isfile(
+                join(Config.LOCAL_PACKAGED_MODELS_DIR, f, "config")
+            )
+        ]
+        title_index_name.sort(reverse=True)
+        if len(title_index_name) > 0:
+            TITLE_PATH = join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, title_index_name[0]
+            )
+        else:
+            print("defaulting INDEX_PATH to title_index")
+            TITLE_PATH = join(
+                Config.LOCAL_PACKAGED_MODELS_DIR, "title_index")
+    except Exception as e:
+        logger.error(e)
+        TITLE_PATH = "gamechangerml/models/"
+        logger.info(f"Cannot get Title Index model path {e}",)
+
     # TOPICS
     try:
 
@@ -139,5 +168,6 @@ def get_model_paths():
         "word_sim": WORD_SIM_MODEL_PATH,
         "topics": TOPICS_PATH,
         "doc_compare": DOC_COMPARE_INDEX_PATH,
+        "title": TITLE_PATH
     }
     return model_dict

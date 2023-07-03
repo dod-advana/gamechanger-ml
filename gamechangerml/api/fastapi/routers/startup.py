@@ -12,6 +12,7 @@ from gamechangerml.api.fastapi.settings import (
     QEXP_MODEL_NAME,
     LOCAL_TRANSFORMERS_DIR,
     SENT_INDEX_PATH,
+    TITLE_INDEX_PATH,
     latest_intel_model_encoder,
     latest_intel_model_sim,
     latest_intel_model_sent,
@@ -38,6 +39,7 @@ model_functions = [
     MODELS.initTopics,
     MODELS.initRecommender,
     MODELS.initDocumentCompareSearcher,
+    MODELS.initSemanticSearcher
 ]
 
 
@@ -122,6 +124,10 @@ def check_dep_exist():
 
     if not os.path.isdir(DOC_COMPARE_SENT_INDEX_PATH.value):
         logger.warning(f"{DOC_COMPARE_SENT_INDEX_PATH.value} does NOT exist")
+        healthy = False
+    
+    if not os.path.isdir(TITLE_INDEX_PATH.value):
+        logger.warning(f"{TITLE_INDEX_PATH.value} does NOT exist")
         healthy = False
 
     if not os.path.isdir(QEXP_MODEL_NAME.value):
