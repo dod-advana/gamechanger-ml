@@ -71,6 +71,7 @@ from gamechangerml.configs import (
     QexpConfig,
     D2VConfig,
     S3Config,
+    SemanticConfig
 )
 
 
@@ -584,6 +585,134 @@ class Pipeline:
         
         return metadata, evals
 
+    def create_title_embedding(
+            self,
+            corpus,
+            existing_embeds=None,
+            encoder_model="msmarco-distilbert-base-v4",
+            gpu=True,
+            upload=False,
+            version="v4",
+        ):
+            """
+            create_title_embedding: creates a title embedding
+            Args:
+                params for title configuration
+            Returns:
+                metadata: params or meta information for qexp
+                evals: evaluation results dict
+            """
+            # Error fix for saving index and model to tgz
+            # https://github.com/huggingface/transformers/issues/5486
+            try:
+                environ["TOKENIZERS_PARALLELISM"] = "false"
+            except Exception as e:
+                logger.warning(e)
+            logger.info("Entered create embedding")
+
+            # GPU check
+            use_gpu = gpu
+            if use_gpu and not torch.cuda.is_available:
+                logger.info(
+                    "GPU is not available. Setting `gpu` argument to False"
+                )
+                use_gpu = False
+
+            # Define model saving directories
+            model_id = get_current_datetime()
+            model_name = "title_index_" + model_id
+            local_title_index_dir = join(MODEL_PATH, model_name)
+
+            # Define new index directory
+            if not isdir(local_title_index_dir):
+                mkdir(local_title_index_dir)
+            logger.info(
+                "-------------- Building Title Embeddings --------------"
+            )
+            logger.info("Loading Encoder Model...")
+
+            # If existing index exists, copy content from reference index
+            if existing_embeds is not None:
+                copy_tree(existing_embeds, local_title_index_dir)
+
+            # Building the Index
+            try:
+                encoder = SentenceEncoder(
+                    encoder_model_name=encoder_model,
+                    use_gpu=use_gpu,
+                    transformer_path=LOCAL_TRANSFORMERS_DIR,
+                    **SemanticConfig.MODEL_ARGS,
+                )
+                logger.info(
+                    f"Creating Title Embeddings with {encoder_model} on {corpus}"
+                )
+                logger.info("-------------- Indexing Titles --------------")
+                start_time = get_current_datetime("%Y-%m-%d %H:%M:%S")
+                encoder.index_titles(
+                    corpus_path=corpus, index_path=local_title_index_dir
+                )
+                end_time = get_current_datetime("%Y-%m-%d %H:%M:%S")
+                logger.info("-------------- Completed Indexing --------------")
+                user = get_user(logger)
+
+                # Checking length of IDs
+                try:
+                    TITLE_INDEX_PATH = model_path_dict["title"]
+                    old_index_len = get_index_size(TITLE_INDEX_PATH)
+                    new_index_len = len(encoder.embedder.config["ids"])
+                    if new_index_len < old_index_len:
+                        logger.warning(
+                            f"Length of index ({str(new_index_len)}) is shorter than previous index ({str(old_index_len)})"
+                        )
+                        logger.info(f"Old index location: {str(TITLE_INDEX_PATH)}")
+                except Exception as e:
+                    logger.warning(
+                        f"Could not compare length to old index: {str(TITLE_INDEX_PATH)}"
+                    )
+                    logger.error(e)
+
+                # Generating process metadata
+                metadata = {
+                    "user": user,
+                    "date_started": start_time,
+                    "date_finished": end_time,
+                    "doc_id_count": len(encoder.embedder.config["ids"]),
+                    "corpus_name": corpus,
+                    "encoder_model": encoder_model,
+                }
+
+                # Create metadata file
+                metadata_path = join(local_title_index_dir, "metadata.json")
+                with open(metadata_path, "w") as fp:
+                    dump(metadata, fp)
+
+                logger.info(f"Saved metadata.json to {metadata_path}")
+                evals_path = None
+
+                # Create .tgz file
+                dst_path = local_title_index_dir + ".tar.gz"
+                create_tgz_from_dir(
+                    src_dir=local_title_index_dir, dst_archive=dst_path
+                )
+
+                logger.info(f"Created tgz file and saved to {dst_path}")
+                logger.info(
+                    "-------------- Finished Title Embedding--------------"
+                )
+                # Upload to S3
+                if upload:
+                    s3_path = join(
+                        S3_MODELS_PATH,
+                        f"title_index/{version}",
+                    )
+                    self.upload(s3_path, dst_path, "title_index", model_id, metadata_path, evals_path)
+
+            except Exception as e:
+                logger.warning("Error with creating embedding")
+                logger.error(e)
+            
+            return metadata
+
     def init_ltr(self):
         try:
             ltr = self.ltr
@@ -756,6 +885,8 @@ class Pipeline:
             with mlflow.start_run(run_name=run_name) as run:
                 if build_type == "sent_finetune":
                     metadata = self.finetune_sent(**params)
+                elif build_type == "title":
+                    metadata = self.create_title_embedding(**params)
                 elif build_type == "sentence":
                     metadata, evals = self.create_embedding(**params)
                 elif build_type == "qexp":
@@ -791,6 +922,8 @@ class Pipeline:
             try:
                 if build_type == "sent_finetune":
                     metadata = self.finetune_sent(**params)
+                elif build_type == "title":
+                    metadata = self.create_title_embedding(**params)
                 elif build_type == "sentence":
                     metadata, evals = self.create_embedding(**params)
                 elif build_type == "qexp":

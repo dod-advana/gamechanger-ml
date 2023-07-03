@@ -33,6 +33,7 @@ from gamechangerml.api.fastapi.settings import (
     WORD_SIM_MODEL,
     LOCAL_TRANSFORMERS_DIR,
     SENT_INDEX_PATH,
+    TITLE_INDEX_PATH,
     latest_intel_model_encoder,
     latest_intel_model_sim,
     latest_doc_compare_encoder,
@@ -54,9 +55,12 @@ from gamechangerml.src.utilities.test_utils import (
     handle_sent_evals,
 )
 from gamechangerml.src.utilities import gc_web_api
+from gamechangerml.train.pipeline import Pipeline
+from gamechangerml import CORPUS_PATH
 
 router = APIRouter()
 MODELS = ModelLoader()
+pipeline = Pipeline()
 
 ## Get Methods ##
 
@@ -153,6 +157,7 @@ def get_downloaded_models_list():
     Returns:{
         "transformers": (list of transformers),
         "sentence": (list of sentence indexes),
+        "title": (list of title indexes),
         "qexp": (list of query expansion indexes),
         "ltr": (list of learn to rank),
     }
@@ -160,6 +165,7 @@ def get_downloaded_models_list():
     qexp_list = {}
     jbook_qexp_list = {}
     sent_index_list = {}
+    title_index_list = {}
     transformer_list = {}
     topic_models = {}
     ltr_list = {}
@@ -243,7 +249,28 @@ def get_downloaded_models_list():
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get Sentence Index model path")
+    # TITLE INDEX
+    # get largest file name with title_index prefix (by date)
+    try:
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("title_index" in f) and ("tar" not in f):
+                logger.info(f"title indices: {str(f)}")
+                title_index_list[f] = {}
+                meta_path = os.path.join(
+                    Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json"
+                )
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    title_index_list[f] = json.load(meta_file)
+                    title_index_list[f]["evaluation"] = {}
 
+                    title_index_list[f]["evaluation"] = handle_sent_evals(
+                        os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
+                    )
+                    meta_file.close()
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get Sentence Index model path")
     # TOPICS MODELS
     try:
 
@@ -335,6 +362,7 @@ async def delete_local_model(model: dict, response: Response):
     elif model["type"] in (
         "sentence",
         "qexp",
+        "title",
         "doc_compare_sentence",
         "jbook_qexp",
         "topic_models",
@@ -435,6 +463,7 @@ async def get_current_models():
         "sim_model": latest_intel_model_sim.value,
         "encoder_model": latest_intel_model_encoder.value,
         "sentence_index": SENT_INDEX_PATH.value,
+        "title_index": TITLE_INDEX_PATH.value,
         "qexp_model": QEXP_MODEL_NAME.value,
         "jbook_model": QEXP_JBOOK_MODEL_NAME.value,
         "topic_model": TOPICS_MODEL.value,
@@ -673,6 +702,22 @@ async def reload_models(model_dict: dict, response: Response):
                     logger.info("Attempting to load Sentence Transformer")
                     MODELS.initSentenceSearcher(sentence_path)
                     SENT_INDEX_PATH.value = sentence_path
+                    progress += 1
+                    processmanager.update_status(
+                        thread_name,
+                        progress,
+                        total,
+                        thread_id=threading.current_thread().ident,
+                    )
+                if "title" in model_dict:
+                    title_path = os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        model_dict["title"],
+                    )
+                    # uses TITLE_INDEX_PATH by default
+                    logger.info("Attempting to load Title Transformer")
+                    MODELS.initSemanticSearcher(title_path)
+                    TITLE_INDEX_PATH.value = title_path
                     progress += 1
                     processmanager.update_status(
                         thread_name,
@@ -928,6 +973,27 @@ def finetune_sentence(model_dict):
         params=args,
     )
 
+def train_title(model_dict):
+    build_type = model_dict["build_type"]
+    logger.info(f"Attempting to start {build_type} pipeline")
+
+    corpus_dir = model_dict.get("corpus_dir", CORPUS_DIR)
+    if not os.path.exists(corpus_dir):
+        logger.warning(f"Corpus is not in local directory {str(corpus_dir)}")
+        raise Exception("Corpus is not in local directory")
+    args = {
+        "corpus": corpus_dir,
+        "encoder_model": model_dict["encoder_model"],
+        "gpu": bool(model_dict["gpu"]),
+        "upload": bool(model_dict["upload"]),
+        "version": model_dict["version"],
+    }
+    logger.info(args)
+    pipeline.run(
+        build_type=model_dict["build_type"],
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
 
 def train_sentence(model_dict):
 
@@ -1022,6 +1088,7 @@ async def train_model(model_dict: dict, response: Response):
             "eval": run_evals,
             "meta": update_metadata,
             "topics": train_topics,
+            "title": train_title
         }
 
         # Set the training method to be loaded onto the thread
@@ -1117,3 +1184,4 @@ async def get_user_data( response: Response):
     df = pd.DataFrame(data['data'])
     df.to_csv(SEARCH_PDF_MAPPING_FILE, index=False)
     return f"wrote {len(data['data'])} user data and searches to file"
+

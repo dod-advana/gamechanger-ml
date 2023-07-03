@@ -3,7 +3,16 @@ from os import listdir, rmdir, remove, makedirs
 from shutil import rmtree
 from json import load, loads, dump
 from logging import Logger
+import pickle
 from .numpy_utils import NumpyJSONEncoder
+
+
+def save_pickle(object, path, name=None):
+    if name:
+        path = join(path, name)
+
+    with open(path, "wb") as f:
+        pickle.dump(object, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def open_txt(filepath):
@@ -87,7 +96,7 @@ def get_most_recently_changed_dir(parent_dir, logger=None):
 def create_directory_if_not_exists(directory, logger=None):
     """Checks if a directory exists, if it does not makes the directory"""
     use_logger = isinstance(logger, Logger)
-    
+
     if not exists(directory):
         info_msg = "Creating new directory {}".format(directory)
         if use_logger:

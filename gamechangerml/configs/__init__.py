@@ -13,3 +13,4 @@ from .topics_config import TopicsConfig
 from .redis_config import RedisConfig
 from .spacy_config import SpacyConfig
 from .postgres_config import PostgresConfig
+from .semantic_config import SemanticConfig

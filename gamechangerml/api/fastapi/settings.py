@@ -47,7 +47,7 @@ WORD_SIM_MODEL = CacheVariable("WORD_SIM_MODEL")
 TOPICS_MODEL = CacheVariable("TOPICS_MODEL")
 QA_MODEL = CacheVariable("QA_MODEL")
 DOC_COMPARE_SENT_INDEX_PATH = CacheVariable("DOC_COMPARE_SENT_INDEX_PATH")
-
+TITLE_INDEX_PATH = CacheVariable("TITLE_INDEX_PATH")
 
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]
@@ -58,6 +58,7 @@ WORD_SIM_MODEL.value = model_path_dict["word_sim"]
 TOPICS_MODEL.value = model_path_dict["topics"]
 QA_MODEL.value = QAConfig.BASE_MODEL
 DOC_COMPARE_SENT_INDEX_PATH.value = model_path_dict["doc_compare"]
+TITLE_INDEX_PATH.value = model_path_dict["title"]
 
 t_list = []
 try:
@@ -76,3 +77,4 @@ logger.info(f"API INDEX PATH is: {SENT_INDEX_PATH.value}")
 logger.info(f"API DOC COMPARE INDEX PATH is: {DOC_COMPARE_SENT_INDEX_PATH.value}")
 logger.info(f"API REDIS HOST is: {RedisConfig.HOST}")
 logger.info(f"API REDIS PORT is: {RedisConfig.PORT}")
+logger.info(f"API TITLE INDEX PATH is: {TITLE_INDEX_PATH.value}")
