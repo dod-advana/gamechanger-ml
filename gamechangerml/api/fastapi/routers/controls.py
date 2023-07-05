@@ -121,6 +121,26 @@ async def get_cache():
         for key in list(_connection.scan_iter("search:*"))
     ]
 
+@router.post("/clearSemanticCache")
+async def clear_cache(body: dict, response: Response):
+    _connection = redis.Redis(connection_pool=RedisPool().getPool())
+
+    if body["clear"]:
+        for key in body["clear"]:
+            _connection.delete(f"semantic: {key}")
+    else:
+        for key in _connection.scan_iter("semantic:*"):
+            # delete the key
+            _connection.delete(key)
+
+
+@router.get("/getSemanticCache")
+async def get_cache():
+    _connection = redis.Redis(connection_pool=RedisPool().getPool())
+    return [
+        key.split("semantic: ")[1]
+        for key in list(_connection.scan_iter("semantic:*"))
+    ]
 
 @router.get("/getDataList")
 def get_downloaded_data_list():
