@@ -55,7 +55,7 @@ services:
           - capabilities: [gpu]
     ports:
       - "5001:5001"
-      - "5679:5679"
+      - "5677:5679"
     env_file:
       - .env
     volumes:
