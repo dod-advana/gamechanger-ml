@@ -428,12 +428,14 @@ class SemanticSearcher(object):
         
         self.similarity = SimilarityRanker(sim_model_name, transformer_path)
 
-    def retrieve_topn(self, query, num_results, target_field):
+    def retrieve_topn(self, query, num_results, threshold, target_field):
         # We'll use the title field for retrieval
         retrieved = self.embedder.search(query, num_results)
         results = []
         for doc_id, score in retrieved:
             doc = {}
+            if score < threshold:
+                continue
             target_field_result = self.data[self.data['doc_id'] == str(doc_id)][target_field].values[0]
             if not isinstance(target_field_result, str):
                 target_field_result = str(target_field_result)
@@ -445,7 +447,7 @@ class SemanticSearcher(object):
         return results
     
     def search(
-        self, query_text, num_results, target_field="title"
+        self, query_text, num_results, threshold, target_field="title"
     ):
         """
         Search the index and perform a similarity scoring reranker at
@@ -458,7 +460,9 @@ class SemanticSearcher(object):
         """
         logger.info(f"Sentence searching for: {query_text}")
         if len(query_text) > 2:
-            top_results = self.retrieve_topn(query=query_text, num_results=num_results, target_field=target_field)
+            top_results = self.retrieve_topn(
+                query=query_text, num_results=num_results, target_field=target_field, threshold=threshold
+            )
 
             top_results = sorted(
                 top_results, key=lambda i: i["score"], reverse=True

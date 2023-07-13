@@ -83,9 +83,10 @@ async def semantic_search(
     body: dict,
     response: Response,
     num_results: int = 30,
+    threshold: float = .4
 ) -> dict:
     """semantic_title_search - endpoint for title transformer inference. Takes in a query, gets the embedding of the query, then finds the top (num_results) that match based on the embedding of the target (e.g. body["field"])
-
+                                the threhsold will handle filtering results to only include similarity scores higher than the given threshold. 
     Args:
         (dict) json format of the search query.\n 
             query: (str, required) a string of any length to embed and use for semantic search.\n
@@ -96,7 +97,7 @@ async def semantic_search(
         results: (dict) results of inference. 
 
     """
-    logger.info("SEMANTIC SEARCH - embedding query " + str(body["query"]) + "and pulling top results based on field " + str(body.get("field","title")))
+    logger.info("SEMANTIC SEARCH - embedding query " + str(body["query"]) + " and pulling top results based on field " + str(body.get("field","title")))
     results = {}
     
     try:
@@ -112,7 +113,8 @@ async def semantic_search(
             search_results = MODELS.semantic_searcher.search(
                 query_text=query_text,
                 target_field=target_field,
-                num_results=num_results
+                num_results=num_results,
+                threshold=threshold
             )
             end = time.perf_counter()
             logger.info(f"time: {end - start:0.4f} seconds")
