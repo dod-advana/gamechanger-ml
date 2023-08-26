@@ -155,6 +155,7 @@ function start_env_k8s_test() {
 }
 
 function start_env_k8s_prod() {
+  echo "Activating ${DS_SETUP_PATH}"
   source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies

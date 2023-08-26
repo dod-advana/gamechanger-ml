@@ -54,7 +54,7 @@ ENV LOCAL_CORPUS_PATH="${APP_DIR}/gamechangerml/corpus"
 RUN mkdir -p "${APP_DIR}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
 
 # install python venv w all the packages
-ARG APP_REQUIREMENTS_FILE="./requirements.txt"
+ARG APP_REQUIREMENTS_FILE="./lock.requirements.txt"
 ARG VENV_INSTALL_NO_DEPS="yes"
 COPY "${APP_REQUIREMENTS_FILE}" "/tmp/requirements.txt"
 RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
