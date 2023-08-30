@@ -6,8 +6,8 @@ attrs==21.2.0
 beautifulsoup4==4.10.0
 bert-extractive-summarizer==0.5.2
 blis==0.7.5
-boto3==1.15.18
-botocore==1.18.18
+boto3~=1.26.50
+botocore~=1.29.165
 cachetools==4.2.4
 catalogue==2.0.6
 certifi==2021.10.8
@@ -45,7 +45,7 @@ idna==3.3
 importlib-metadata==4.8.2
 iniconfig==1.1.1
 Jinja2==3.0.3
-jmespath==0.10.0
+jmespath~=1.0.1
 joblib==1.1.0
 keras-nightly==2.5.0.dev2021032900
 Keras-Preprocessing==1.1.2
@@ -81,7 +81,7 @@ python-dateutil==2.8.2
 pytz==2021.3
 PyYAML==5.4.1
 redis==3.5.3
-regex==2023.8.8
+regex~=2023.8.8
 requests==2.26.0
 requests-oauthlib==1.3.0
 rsa==4.7.2
