@@ -1,19 +1,21 @@
 annoy~=1.17.0
+awscli==1.27.53
 bert-extractive-summarizer~=0.5.2
-boto3~=1.15.18
+boto3~=1.26.50
 click==7.1.2
 elasticsearch==7.13.4
 #en-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.0.0/en_core_web_lg-3.0.0.tar.gz
 en-core-web-md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.0.0/en_core_web_md-3.0.0.tar.gz
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0.tar.gz
-#faiss-cpu~=1.7.1
-#faiss-gpu~=1.7.1
+faiss-cpu~=1.7.2
+faiss-gpu~=1.7.2
 fastapi_utils~=0.2.1
 fastapi~=0.69.0
 fuzzywuzzy~=0.18.0
 gensim==4.1.2
 gunicorn~=20.1.0
 httptools~=0.1.2
+huggingface-hub~=0.16.4
 matplotlib~=3.4.3
 networkx~=2.6.3
 nltk~=3.6.5
@@ -27,19 +29,19 @@ PyYAML~=5.4.1
 redis~=3.5.3
 requests~=2.26.0
 scikit-learn~=0.24.2
-sentence-transformers~=2.0.0
+sentence-transformers~=2.2.2
 spacy~=3.0.7
 tensorflow~=2.5.1
-tokenizers~=0.10.3
-torch~=1.7.1
+tokenizers~=0.13.3
+torch~=2.0.1
 tqdm~=4.62.3
-transformers~=4.11.3
-txtai~=2.0.0
+transformers~=4.32.0
+txtai==6.0.0
 urllib3~=1.22
 uvicorn~=0.13.4
 uvloop~=0.14.0
 wikipedia~=1.4.0
 xgboost==1.1.0
 debugpy~=1.6.2
-mlflow~=1.27.0
+mlflow~=2.6.0
 psutil~=5.9.1
