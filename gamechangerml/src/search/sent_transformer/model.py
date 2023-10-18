@@ -471,3 +471,7 @@ class SemanticSearcher(object):
             return top_results
         else:
             return []
+    
+    def embed_query(self, query_text):
+        embeddings = self.embedder.transform(query_text)
+        return embeddings

@@ -77,8 +77,28 @@ async def text_extract_infer(body: dict, extractType: str, response: Response) -
         raise
     return results
 
+@router.post("/embedSemanticQuery", status_code=200)
+async def semantic_search(
+    body: dict,
+    response: Response,
+) -> dict:
+    """
+    embedSemanticQuery - takes in a query and returns the txtai embeddings as a list of floats to be used by ElasticSearch
 
-@ router.post("/semanticSearch", status_code=200)
+    Args:
+        (dict) json format of the search query.\n 
+            query: (str, required) a string of any length to embed and use for semantic search.\n
+            Example: {"query": "Where is the science and technology reinvention laboratory?"}
+        Response: Response class; for status codes(apart of fastapi do not need to pass param)
+    Returns:
+        results: list of floats
+    """
+    query_text = body["query"]
+    embeddings = MODELS.semantic_searcher.embed_query(query_text)
+    return  list(embeddings.astype(float))
+
+
+@router.post("/semanticSearch", status_code=200)
 async def semantic_search(
     body: dict,
     response: Response,
