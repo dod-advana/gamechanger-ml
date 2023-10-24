@@ -1,6 +1,7 @@
 from txtai.embeddings import Embeddings
 from txtai.pipeline import Similarity
 from txtai.ann import ANN
+from sentence_transformers import SentenceTransformer
 
 import os
 import numpy as np
@@ -474,4 +475,21 @@ class SemanticSearcher(object):
     
     def embed_query(self, query_text):
         embeddings = self.embedder.transform(query_text)
+        return embeddings
+
+class GcSentenceTransformer(object):
+    """
+    Instantiates Sentence Transformer model 
+
+    Args:
+        transformer_path (str): Path to transformer directory
+        encoder_model (str): Model name supported by sentence_transformers
+    """
+
+    def __init__(self, encoder_model_name, transformer_path):
+        self.encoder_model = SentenceTransformer(os.path.join(transformer_path, encoder_model_name))
+    
+    def embed_query(self, query_text):
+        query_text = " ".join(preprocess(query_text))
+        embeddings = self.encoder_model.encode(query_text)
         return embeddings

@@ -16,7 +16,8 @@ try:
     from gamechangerml.src.search.sent_transformer.model import (
         SentenceSearcher,
         SentenceEncoder,
-        SemanticSearcher
+        SemanticSearcher,
+        GcSentenceTransformer
     )
     from gamechangerml.src.search.doc_compare import (
         DocCompareSentenceEncoder,
@@ -68,6 +69,7 @@ class ModelLoader:
         __document_compare_searcher = None
         __document_compare_encoder = None
         __semantic_searcher = None
+        __gc_sentence_transformer = None
 
     # Get methods for the models. If they don't exist try initializing them.
     def getQA(self):
@@ -161,6 +163,14 @@ class ModelLoader:
             ModelLoader.initSemanticSearcher()
         return ModelLoader.__semantic_searcher
 
+    def getGcSentenceTransformer(self):
+        if ModelLoader.__gc_sentence_transformer == None:
+            logger.warning(
+                "semantic_searcher was not set and was attempted to be used. Running init"
+            )
+            ModelLoader.initGcSentenceTransformer()
+        return ModelLoader.__gc_sentence_transformer
+
     def set_error(self):
         logger.error("Models cannot be directly set. Must use init methods.")
 
@@ -178,6 +188,7 @@ class ModelLoader:
     document_compare_searcher = property(getDocumentCompareSearcher, set_error)
     document_compare_encoder = property(getDocumentCompareEncoder, set_error)
     semantic_searcher = property(getSemanticSearcher, set_error)
+    gc_sentence_transformer = property(getGcSentenceTransformer, set_error)
 
     @staticmethod
     def initQA(qa_model_name=QA_MODEL.value):
@@ -384,6 +395,28 @@ class ModelLoader:
 
         except Exception as e:
             logger.warning("** Could not load Similarity model for Semantic Searcher")
+            logger.warning(e)
+    
+    @staticmethod
+    def initGcSentenceTransformer(transformer_path=LOCAL_TRANSFORMERS_DIR.value):
+        """
+        initGcSentenceTransformer - loads Sentence Transformer on start
+        Args:
+        Returns:
+        """
+        logger.info(f"Loading GC sentence transformer model")
+        try:
+            ModelLoader.__gc_sentence_transformer = GcSentenceTransformer(
+                encoder_model_name=EmbedderConfig.BASE_MODEL,
+                transformer_path=transformer_path
+            )
+            encoder_model = ModelLoader.__gc_sentence_transformer.encoder_model
+            # set cache variable defined in settings.py
+            latest_intel_model_encoder.value = encoder_model
+            logger.info(f"** Loaded GC Sentence Transformer Model from {encoder_model}")
+
+        except Exception as e:
+            logger.warning("** Could not load Encoder model")
             logger.warning(e)
 
     @staticmethod
