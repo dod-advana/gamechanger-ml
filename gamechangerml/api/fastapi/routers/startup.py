@@ -39,7 +39,8 @@ model_functions = [
     MODELS.initTopics,
     MODELS.initRecommender,
     MODELS.initDocumentCompareSearcher,
-    MODELS.initSemanticSearcher
+    MODELS.initSemanticSearcher,
+    MODELS.initGcSentenceTransformer
 ]
 
 

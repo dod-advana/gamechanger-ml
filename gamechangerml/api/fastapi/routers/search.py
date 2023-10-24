@@ -93,9 +93,10 @@ async def semantic_search(
     Returns:
         results: list of floats
     """
+    logger.info(f"Hit embedSemanticQuery with json: {body}")
     query_text = body["query"]
-    embeddings = MODELS.semantic_searcher.embed_query(query_text)
-    return  list(embeddings.astype(float))
+    embeddings = MODELS.gc_sentence_transformer.embed_query(query_text)
+    return list(embeddings.astype(float))
 
 
 @router.post("/semanticSearch", status_code=200)
