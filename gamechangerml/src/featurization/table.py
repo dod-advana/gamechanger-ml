@@ -9,7 +9,7 @@ import pandas as pd
 
 import gamechangerml.src.utilities.spacy_model as spacy_
 from gamechangerml.src.featurization.ref_list import collect_ref_list
-from gamechangerml.src.featurization.abbreviations_utils import (
+from gamechangerml.src.featurization.abbreviation import (
     get_agencies_dict,
     check_duplicates,
     get_agencies,

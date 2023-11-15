@@ -1,4 +1,3 @@
-from concurrent.futures import thread
 from fastapi import APIRouter, Response, status
 import subprocess
 import os
@@ -7,14 +6,21 @@ import tarfile
 import shutil
 import threading
 import pandas as pd
+from pandas.tseries.offsets import DateOffset
 import redis
 
+from dateutil.relativedelta import relativedelta
 from datetime import datetime
 from gamechangerml import DATA_PATH
-from gamechangerml.configs.s3_config import S3Config
-from gamechangerml.src.utilities import utils
-from gamechangerml.src.utilities.es_utils import ESUtils
-from gamechangerml.src.services import S3Service
+from gamechangerml.configs import S3Config
+from gamechangerml.src.services import (
+    ElasticsearchService,
+    S3Service,
+)
+from gamechangerml.src.paths import (
+    SEARCH_PDF_MAPPING_FILE,
+    USER_AGGREGATIONS_FILE,
+)
 from gamechangerml.api.fastapi.model_config import Config
 from gamechangerml.api.fastapi.version import __version__
 
@@ -27,6 +33,7 @@ from gamechangerml.api.fastapi.settings import (
     WORD_SIM_MODEL,
     LOCAL_TRANSFORMERS_DIR,
     SENT_INDEX_PATH,
+    TITLE_INDEX_PATH,
     latest_intel_model_encoder,
     latest_intel_model_sim,
     latest_doc_compare_encoder,
@@ -38,7 +45,7 @@ from gamechangerml.api.fastapi.settings import (
 )
 from gamechangerml.src.data_transfer import download_corpus_s3
 from gamechangerml.api.utils.threaddriver import MlThread
-from gamechangerml.api.utils.redisdriver import RedisPool
+from gamechangerml.api.utils.redis_driver import RedisPool
 
 from gamechangerml.train.pipeline import Pipeline
 from gamechangerml.api.utils import processmanager
@@ -47,16 +54,19 @@ from gamechangerml.src.utilities.test_utils import (
     collect_evals,
     handle_sent_evals,
 )
-from gamechangerml import MODEL_PATH
 from gamechangerml.src.utilities import gc_web_api
+from gamechangerml.train.pipeline import Pipeline
+from gamechangerml import CORPUS_PATH
 
 router = APIRouter()
 MODELS = ModelLoader()
-gcClient = gc_web_api.GCWebClient()
+pipeline = Pipeline()
+
 ## Get Methods ##
 
 pipeline = Pipeline()
-es = ESUtils()
+es = ElasticsearchService()
+gcClient = gc_web_api.GCWebClient()
 
 
 @router.get("/")
@@ -66,6 +76,7 @@ async def api_information():
         "Version": __version__,
         "Elasticsearch_Host": es.root_url,
         "Elasticsearch_Status": get_es_status(),
+        "Container_Type": os.environ.get("CONTAINER_TYPE"),
     }
 
 
@@ -104,8 +115,32 @@ async def clear_cache(body: dict, response: Response):
 
 @router.get("/getCache")
 async def get_cache():
-    _connection = redis.Redis(connection_pool=RedisPool().getPool())    
-    return [key.split('search: ')[1] for key in list(_connection.scan_iter("search:*"))]
+    _connection = redis.Redis(connection_pool=RedisPool().getPool())
+    return [
+        key.split("search: ")[1]
+        for key in list(_connection.scan_iter("search:*"))
+    ]
+
+@router.post("/clearSemanticCache")
+async def clear_cache(body: dict, response: Response):
+    _connection = redis.Redis(connection_pool=RedisPool().getPool())
+
+    if body["clear"]:
+        for key in body["clear"]:
+            _connection.delete(f"semantic: {key}")
+    else:
+        for key in _connection.scan_iter("semantic:*"):
+            # delete the key
+            _connection.delete(key)
+
+
+@router.get("/getSemanticCache")
+async def get_cache():
+    _connection = redis.Redis(connection_pool=RedisPool().getPool())
+    return [
+        key.split("semantic: ")[1]
+        for key in list(_connection.scan_iter("semantic:*"))
+    ]
 
 @router.get("/getDataList")
 def get_downloaded_data_list():
@@ -142,6 +177,7 @@ def get_downloaded_models_list():
     Returns:{
         "transformers": (list of transformers),
         "sentence": (list of sentence indexes),
+        "title": (list of title indexes),
         "qexp": (list of query expansion indexes),
         "ltr": (list of learn to rank),
     }
@@ -149,6 +185,7 @@ def get_downloaded_models_list():
     qexp_list = {}
     jbook_qexp_list = {}
     sent_index_list = {}
+    title_index_list = {}
     transformer_list = {}
     topic_models = {}
     ltr_list = {}
@@ -232,14 +269,37 @@ def get_downloaded_models_list():
     except Exception as e:
         logger.error(e)
         logger.info("Cannot get Sentence Index model path")
+    # TITLE INDEX
+    # get largest file name with title_index prefix (by date)
+    try:
+        for f in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR):
+            if ("title_index" in f) and ("tar" not in f):
+                logger.info(f"title indices: {str(f)}")
+                title_index_list[f] = {}
+                meta_path = os.path.join(
+                    Config.LOCAL_PACKAGED_MODELS_DIR, f, "metadata.json"
+                )
+                if os.path.isfile(meta_path):
+                    meta_file = open(meta_path)
+                    title_index_list[f] = json.load(meta_file)
+                    title_index_list[f]["evaluation"] = {}
 
+                    title_index_list[f]["evaluation"] = handle_sent_evals(
+                        os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, f)
+                    )
+                    meta_file.close()
+    except Exception as e:
+        logger.error(e)
+        logger.info("Cannot get Sentence Index model path")
     # TOPICS MODELS
     try:
 
         topic_dirs = [
             name
             for name in os.listdir(Config.LOCAL_PACKAGED_MODELS_DIR)
-            if os.path.isdir(os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name))
+            if os.path.isdir(
+                os.path.join(Config.LOCAL_PACKAGED_MODELS_DIR, name)
+            )
             and "topic_model_" in name
         ]
         for topic_model_name in topic_dirs:
@@ -301,7 +361,9 @@ async def delete_local_model(model: dict, response: Response):
 
     def removeDirectory(dir):
         try:
-            logger.info(f'Removing directory {os.path.join(dir,model["model"])}')
+            logger.info(
+                f'Removing directory {os.path.join(dir,model["model"])}'
+            )
             shutil.rmtree(os.path.join(dir, model["model"]))
         except OSError as e:
             logger.error(e)
@@ -315,10 +377,17 @@ async def delete_local_model(model: dict, response: Response):
                 except OSError as e:
                     logger.error(e)
 
-    logger.info(model)
     if model["type"] == "transformers":
         removeDirectory(LOCAL_TRANSFORMERS_DIR.value)
-    elif model["type"] in ("sentence", "qexp", "doc_compare_sentence"):
+    elif model["type"] in (
+        "sentence",
+        "qexp",
+        "title",
+        "doc_compare_sentence",
+        "jbook_qexp",
+        "topic_models",
+        "ltr",
+    ):
         removeDirectory(Config.LOCAL_PACKAGED_MODELS_DIR)
         removeFiles(Config.LOCAL_PACKAGED_MODELS_DIR)
 
@@ -414,6 +483,7 @@ async def get_current_models():
         "sim_model": latest_intel_model_sim.value,
         "encoder_model": latest_intel_model_encoder.value,
         "sentence_index": SENT_INDEX_PATH.value,
+        "title_index": TITLE_INDEX_PATH.value,
         "qexp_model": QEXP_MODEL_NAME.value,
         "jbook_model": QEXP_JBOOK_MODEL_NAME.value,
         "topic_model": TOPICS_MODEL.value,
@@ -435,7 +505,9 @@ async def download(response: Response):
     def download_s3_thread():
         try:
             logger.info("Attempting to download dependencies from S3")
-            output = subprocess.call(["gamechangerml/scripts/download_dependencies.sh"])
+            output = subprocess.call(
+                ["gamechangerml/scripts/data_transfer/download_dependencies_from_s3.sh"]
+            )
             # get_transformers(overwrite=False)
             # get_sentence_index(overwrite=False)
             processmanager.update_status(
@@ -559,7 +631,9 @@ async def download_s3_file(file_dict: dict, response: Response):
                 except Exception as e:
                     failedExtracts.append(member.name)
 
-            logger.warning(f"Could not extract {failedExtracts} with permission errors")
+            logger.warning(
+                f"Could not extract {failedExtracts} with permission errors"
+            )
             processmanager.update_status(
                 f's3: {file_dict["file"]}',
                 failed=True,
@@ -655,15 +729,37 @@ async def reload_models(model_dict: dict, response: Response):
                         total,
                         thread_id=threading.current_thread().ident,
                     )
+                if "title" in model_dict:
+                    title_path = os.path.join(
+                        Config.LOCAL_PACKAGED_MODELS_DIR,
+                        model_dict["title"],
+                    )
+                    # uses TITLE_INDEX_PATH by default
+                    logger.info("Attempting to load Title Transformer")
+                    MODELS.initSemanticSearcher(title_path)
+                    TITLE_INDEX_PATH.value = title_path
+                    progress += 1
+                    processmanager.update_status(
+                        thread_name,
+                        progress,
+                        total,
+                        thread_id=threading.current_thread().ident,
+                    )
                 if "doc_compare_sentence" in model_dict:
                     doc_compare_sentence_path = os.path.join(
                         Config.LOCAL_PACKAGED_MODELS_DIR,
                         model_dict["doc_compare_sentence"],
                     )
                     # uses DOC_COMPARE_SENT_INDEX_PATH by default
-                    logger.info("Attempting to load Doc Compare Sentence Transformer")
-                    MODELS.initDocumentCompareSearcher(doc_compare_sentence_path)
-                    DOC_COMPARE_SENT_INDEX_PATH.value = doc_compare_sentence_path
+                    logger.info(
+                        "Attempting to load Doc Compare Sentence Transformer"
+                    )
+                    MODELS.initDocumentCompareSearcher(
+                        doc_compare_sentence_path
+                    )
+                    DOC_COMPARE_SENT_INDEX_PATH.value = (
+                        doc_compare_sentence_path
+                    )
                     progress += 1
                     processmanager.update_status(
                         thread_name,
@@ -748,8 +844,12 @@ async def reload_models(model_dict: dict, response: Response):
         thread = MlThread(reload_thread, args)
         thread.start()
         processmanager.running_threads[thread.ident] = thread
-        thread_name = processmanager.reloading + " ".join([key for key in model_dict])
-        processmanager.update_status(thread_name, 0, total, thread_id=thread.ident)
+        thread_name = processmanager.reloading + " ".join(
+            [key for key in model_dict]
+        )
+        processmanager.update_status(
+            thread_name, 0, total, thread_id=thread.ident
+        )
     except Exception as e:
         logger.warning(e)
 
@@ -893,6 +993,27 @@ def finetune_sentence(model_dict):
         params=args,
     )
 
+def train_title(model_dict):
+    build_type = model_dict["build_type"]
+    logger.info(f"Attempting to start {build_type} pipeline")
+
+    corpus_dir = model_dict.get("corpus_dir", CORPUS_DIR)
+    if not os.path.exists(corpus_dir):
+        logger.warning(f"Corpus is not in local directory {str(corpus_dir)}")
+        raise Exception("Corpus is not in local directory")
+    args = {
+        "corpus": corpus_dir,
+        "encoder_model": model_dict["encoder_model"],
+        "gpu": bool(model_dict["gpu"]),
+        "upload": bool(model_dict["upload"]),
+        "version": model_dict["version"],
+    }
+    logger.info(args)
+    pipeline.run(
+        build_type=model_dict["build_type"],
+        run_name=datetime.now().strftime("%Y%m%d"),
+        params=args,
+    )
 
 def train_sentence(model_dict):
 
@@ -961,6 +1082,7 @@ def train_topics(model_dict):
     args = {
         "sample_rate": model_dict["sample_rate"],
         "upload": model_dict["upload"],
+        "version": model_dict["version"]
     }
     pipeline.run(
         build_type=model_dict["build_type"],
@@ -986,13 +1108,19 @@ async def train_model(model_dict: dict, response: Response):
             "eval": run_evals,
             "meta": update_metadata,
             "topics": train_topics,
+            "title": train_title
         }
 
         # Set the training method to be loaded onto the thread
-        if "build_type" in model_dict and model_dict["build_type"] in training_switch:
+        if (
+            "build_type" in model_dict
+            and model_dict["build_type"] in training_switch
+        ):
             training_method = training_switch[model_dict["build_type"]]
         else:  # PLACEHOLDER
-            logger.warn("No build type specified in model_dict, defaulting to sentence")
+            logger.warn(
+                "No build type specified in model_dict, defaulting to sentence"
+            )
             model_dict["build_type"] = "sentence"
             training_method = training_switch[model_dict["build_type"]]
 
@@ -1000,10 +1128,13 @@ async def train_model(model_dict: dict, response: Response):
         training_method = training_switch.get(build_type)
 
         if not training_method:
-            raise Exception(f"No training method mapped for build type {build_type}")
-
+            raise Exception(
+                f"No training method mapped for build type {build_type}"
+            )
         # Set the training method to be loaded onto the thread
-        training_thread = MlThread(training_method, args={"model_dict": model_dict})
+        training_thread = MlThread(
+            training_method, args={"model_dict": model_dict}
+        )
         training_thread.start()
         processmanager.running_threads[training_thread.ident] = training_thread
         processmanager.update_status(
@@ -1047,27 +1178,30 @@ async def stop_process(thread_dict: dict, response: Response):
 
 
 @router.post("/sendUserAggregations")
-async def get_user_data(data_dict: dict, response: Response):
+async def get_user_data( response: Response):
     """get_user_data - Get user aggregation data for selected date and write to data folder
     Args:
-        date_dict: dict; {data}
         Response: Response class; for status codes(apart of fastapi do not need to pass param)
     Returns:
         confirmation of data download
     """
-
-    userData = data_dict["params"]["userData"]
-    GC_USER_DATA = os.path.join(
-        DATA_PATH, "user_data", "search_history", "UserAggregations.json"
+    start_date = (datetime.now() - relativedelta(months=+6)).replace(
+        hour=0, minute=0
     )
-    with open(GC_USER_DATA, "w") as f:
-        json.dump(userData, f)
-
-    searchData = data_dict["params"]["searchData"]
-    df = pd.DataFrame(searchData)
-    GC_SEARCH_DATA = os.path.join(
-        DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
+    end_date = datetime.now()
+    user_aggs = gcClient.getUserAggregations(
+        start_date=start_date, end_date=end_date
     )
-    df.to_csv(GC_SEARCH_DATA)
+    user_json = user_aggs.decode('utf8')
+    user_data = json.loads(user_json)
+    with open(USER_AGGREGATIONS_FILE, "w") as f:
+        json.dump(user_data, f)
+    mappings = gcClient.getSearchMappings(
+        start_date=start_date, end_date=end_date
+    )
+    search_json = mappings.decode('utf8')
+    data = json.loads(search_json)
+    df = pd.DataFrame(data['data'])
+    df.to_csv(SEARCH_PDF_MAPPING_FILE, index=False)
+    return f"wrote {len(data['data'])} user data and searches to file"
 
-    return f"wrote {len(userData)} user data and searches to file"

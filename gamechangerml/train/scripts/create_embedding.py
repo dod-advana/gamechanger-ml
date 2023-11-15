@@ -1,19 +1,7 @@
 from gamechangerml.src.search.sent_transformer.model import SentenceEncoder
 from gamechangerml.src.utilities.arg_parser import LocalParser
 
-from gamechangerml.src.utilities import utils as utils
-
-from gamechangerml.src.utilities import aws_helper as aws_helper
-from datetime import datetime
-from distutils.dir_util import copy_tree
-
-import os
 import logging
-import json
-from pathlib import Path
-import tarfile
-import typing as t
-import subprocess
 from gamechangerml.train.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)

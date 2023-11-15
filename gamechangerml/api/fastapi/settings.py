@@ -2,9 +2,9 @@ import os
 
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.api.utils.logger import logger
-from gamechangerml.api.utils.redisdriver import CacheVariable, REDIS_HOST, REDIS_PORT
+from gamechangerml.api.utils.redis_driver import CacheVariable
 from gamechangerml import CORPUS_PATH
-from gamechangerml.configs import QAConfig
+from gamechangerml.configs import QAConfig, RedisConfig
 
 # get environ vars
 GC_ML_HOST = os.environ.get("GC_ML_HOST", default="localhost")
@@ -13,7 +13,7 @@ MEMORY_LOAD_LIMIT = os.environ.get("MEMORY_LOAD_LIMIT", default=None)
 if MEMORY_LOAD_LIMIT:
     MEMORY_LOAD_LIMIT = int(MEMORY_LOAD_LIMIT)
 MODEL_LOAD_FLAG = os.environ.get("MODEL_LOAD", default=True)
-if MODEL_LOAD_FLAG in ["False", "false", "0"]:
+if MODEL_LOAD_FLAG in ["False", "false", "0"] or os.environ.get("CONTAINER_TYPE")=="training":
     MODEL_LOAD_FLAG = False
 else:
     MODEL_LOAD_FLAG = True
@@ -47,7 +47,7 @@ WORD_SIM_MODEL = CacheVariable("WORD_SIM_MODEL")
 TOPICS_MODEL = CacheVariable("TOPICS_MODEL")
 QA_MODEL = CacheVariable("QA_MODEL")
 DOC_COMPARE_SENT_INDEX_PATH = CacheVariable("DOC_COMPARE_SENT_INDEX_PATH")
-
+TITLE_INDEX_PATH = CacheVariable("TITLE_INDEX_PATH")
 
 model_path_dict = get_model_paths()
 LOCAL_TRANSFORMERS_DIR.value = model_path_dict["transformers"]
@@ -58,6 +58,7 @@ WORD_SIM_MODEL.value = model_path_dict["word_sim"]
 TOPICS_MODEL.value = model_path_dict["topics"]
 QA_MODEL.value = QAConfig.BASE_MODEL
 DOC_COMPARE_SENT_INDEX_PATH.value = model_path_dict["doc_compare"]
+TITLE_INDEX_PATH.value = model_path_dict["title"]
 
 t_list = []
 try:
@@ -74,5 +75,6 @@ logger.info(f"API AVAILABLE TRANSFORMERS are: {t_list}")
 logger.info(f"API TRANSFORMERS DIRECTORY is: {LOCAL_TRANSFORMERS_DIR.value}")
 logger.info(f"API INDEX PATH is: {SENT_INDEX_PATH.value}")
 logger.info(f"API DOC COMPARE INDEX PATH is: {DOC_COMPARE_SENT_INDEX_PATH.value}")
-logger.info(f"API REDIS HOST is: {REDIS_HOST}")
-logger.info(f"API REDIS PORT is: {REDIS_PORT}")
+logger.info(f"API REDIS HOST is: {RedisConfig.HOST}")
+logger.info(f"API REDIS PORT is: {RedisConfig.PORT}")
+logger.info(f"API TITLE INDEX PATH is: {TITLE_INDEX_PATH.value}")

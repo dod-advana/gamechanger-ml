@@ -12,7 +12,7 @@ select: `Remote Attach`
 
 Enter the host name... : `localhost`
 
-Enter the port number... : `5678`
+Enter the port number... : `5679`
 
 your launch.json should look like below
 ```
@@ -28,7 +28,7 @@ your launch.json should look like below
 			"request": "attach",
 			"connect": {
 				"host": "localhost",
-				"port": 5678
+				"port": 5679
 			},
 			"pathMappings": [
 				{
@@ -48,7 +48,7 @@ When you use
 
 `docker-compose up` - `gamechanger-ml/gamechangerml/api/docker-compose.yml`
 
-This exposes port `5678` for `gamechanger-ml-gpu`
+This exposes port `5679` for `gamechanger-ml-gpu`
 
 <br>
 
@@ -56,7 +56,7 @@ In the entrypoint `gamechanger-ml/gamechangerml/api/fastapi/mlapp.py`
 
 `debug_if_flagged()` is called immediately, which is from `gamechanger-ml/gamechangerml/debug/debug_connector.py`
 
-This starts up `debugpy` to listen on `5678` if the ENV variable `ENABLE_DEBUGGER` in `setup_env.sh` is set to `true`
+This starts up `debugpy` to listen on `5679` if the ENV variable `ENABLE_DEBUGGER` in `setup_env.sh` is set to `true`
 
 The vscode debugger will attach to it using `launch.json` config
 

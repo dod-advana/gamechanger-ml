@@ -2,6 +2,7 @@
 #  -- https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/11.2.2/ubi8-x86_64/base/Dockerfile
 #  -- not yet found on ironbank, unfortunately
 ARG BASE_IMAGE="nvidia/cuda:11.2.2-cudnn8-runtime-ubi8"
+# ARG BASE_IMAGE="092912502985.dkr.ecr.us-east-1.amazonaws.com/registry1.dso.mil/ironbank/opensource/python/python38:latest"
 FROM $BASE_IMAGE
 
 # tmp switch to root for sys pkg setup
@@ -16,44 +17,64 @@ ENV LANG="C.utf8" \
 
 # App & Dep Preqrequisites
 RUN dnf install -y \
-        gcc \
-        gcc-c++ \
-        glibc-langpack-en \
-        python38 \
-        python38-devel \
-        git \
-        zip \
-        unzip \
-        python3-cffi \
-        libffi-devel \
-        libpq \
-        libpq-devel \
-        libomp \
-        libomp-devel \
-        openblas \
-        cairo \
-        cryptsetup-libs \
-        cyrus-sasl-lib \
-        gzip \
-        systemd \ 
+    gcc \
+    gcc-c++ \
+    glibc-langpack-en \
+    openssl-devel \
+    python38 \
+    python38-devel \
+    python38-libs \
+    python38-setuptools-wheel \
+    expat-devel \
+    dbus \
+    libtasn1 \
+    libxml2 \
+    libcurl \
+    zip \
+    zlib-devel \
+    sqlite-devel \
+    bzip2-devel \
+    glibc \
+    unzip \
+    python3-cffi \
+    libffi-devel \
+    libpq \
+    libpq-devel \
+    libomp \
+    libomp-devel \
+    openblas \
+    openssl \
+    openssl-devel \
+    cairo \
+    tar \
+    nss \
+    nss-util \
+    curl \
+    cryptsetup-libs \
+    cyrus-sasl-lib \
+    gzip \
+    systemd \ 
+    make \
     && dnf clean all \
     && rm -rf /var/cache/yum
 
+RUN dnf upgrade -y
 # AWS CLI
-RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
-    && unzip -q /tmp/awscliv2.zip -d /opt \
-    && /opt/aws/install \
-    && rm -f /tmp/awscliv2.zip
+# RUN curl -LfSo /tmp/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
+#     && unzip -q /tmp/awscliv2.zip -d /opt \
+#     && /opt/aws/install \
+#     && rm -f /tmp/awscliv2.zip
 
+RUN pip3 install awscli==1.27.32
 # non-root app USER/GROUP
 ARG APP_UID=1001
 ARG APP_GID=1001
 
 # ensure user/group exists, formally
 RUN ( (getent group $APP_GID &> /dev/null) \
-        || groupadd --system --gid $APP_GID app_default \
+    || groupadd --system --gid $APP_GID app_default \
     ) && ((getent passwd $APP_UID &> /dev/null) \
-        || useradd --system --shell /sbin/nologin --gid $APP_GID --uid $APP_UID app_default \
+    || useradd --system --shell /sbin/nologin --gid $APP_GID --uid $APP_UID app_default \
     )
 
 # key directories
@@ -72,6 +93,9 @@ RUN python3 -m venv "${APP_VENV}" --prompt mlapp-venv \
     && "${APP_VENV}/bin/python" -m pip install --upgrade --no-cache-dir pip setuptools wheel \
     && "${APP_VENV}/bin/python" -m pip install --no-cache-dir -r "/tmp/requirements.txt" \
     && chown -R $APP_UID:$APP_GID "${APP_ROOT}" "${APP_VENV}" "${LOCAL_CORPUS_PATH}"
+
+RUN rm "${APP_VENV}/lib/python3.8/site-packages/tensorflow/include/external/local_config_python/python_include/patchlevel.h"
+RUN dnf remove -y kernel-headers
 
 # thou shall not root
 USER $APP_UID:$APP_GID

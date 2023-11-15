@@ -12,6 +12,7 @@ from gamechangerml.api.fastapi.settings import (
     QEXP_MODEL_NAME,
     LOCAL_TRANSFORMERS_DIR,
     SENT_INDEX_PATH,
+    TITLE_INDEX_PATH,
     latest_intel_model_encoder,
     latest_intel_model_sim,
     latest_intel_model_sent,
@@ -38,6 +39,8 @@ model_functions = [
     MODELS.initTopics,
     MODELS.initRecommender,
     MODELS.initDocumentCompareSearcher,
+    MODELS.initSemanticSearcher,
+    MODELS.initGcSentenceTransformer
 ]
 
 
@@ -47,9 +50,14 @@ async def load_models():
     if MODEL_LOAD_FLAG:
         count = 0
         for f in model_functions:
-            f()
-            ram_used, surpassed, cpu_usage = get_hw_usage()
             count += 1
+            try:
+                f()
+            except Exception as e:
+                logger.warning(f"---- WARNING: {f} failed to load model because of {e}")
+                models_not_loaded = model_functions[:count]
+                break
+            ram_used, surpassed, cpu_usage = get_hw_usage()
             if surpassed:
                 logger.warning(
                     f" ---- WARNING: RAM used is {ram_used}%, which is passed the threshold, will not load any other models"
@@ -117,6 +125,10 @@ def check_dep_exist():
 
     if not os.path.isdir(DOC_COMPARE_SENT_INDEX_PATH.value):
         logger.warning(f"{DOC_COMPARE_SENT_INDEX_PATH.value} does NOT exist")
+        healthy = False
+    
+    if not os.path.isdir(TITLE_INDEX_PATH.value):
+        logger.warning(f"{TITLE_INDEX_PATH.value} does NOT exist")
         healthy = False
 
     if not os.path.isdir(QEXP_MODEL_NAME.value):

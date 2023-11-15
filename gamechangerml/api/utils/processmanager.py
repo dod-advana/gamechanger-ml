@@ -1,6 +1,7 @@
 import threading
+import os
 from datetime import datetime
-from gamechangerml.api.utils.redisdriver import CacheVariable
+from gamechangerml.api.utils.redis_driver import CacheVariable
 
 # from gamechangerml.api.fastapi.settings import logger   # commenting out because of API calls failing for gamechanger-data
 # Process Keys
@@ -71,6 +72,7 @@ def update_status(
                 "total": total,
                 "message": message,
                 "date": date_string,
+                "container": os.environ.get("CONTAINER_TYPE")
             }
             with thread_lock:
                 if thread_id in PROCESS_STATUS.value:
@@ -92,7 +94,11 @@ def update_status(
 
                 COMPLETED_PROCESS.value = completed_list
         else:
-            status = {"progress": progress, "total": total}
+            status = {
+                "progress": progress, 
+                "total": total, 
+                "container": os.environ.get("CONTAINER_TYPE")
+            }
             with thread_lock:
                 status_dict = PROCESS_STATUS.value
 

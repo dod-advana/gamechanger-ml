@@ -1,22 +1,33 @@
 import os
 import numpy as np
+import json
 import pandas as pd
 import csv
 import math
 import logging
 from datetime import datetime
-from sentence_transformers import util
-from gamechangerml import REPO_PATH, CORPUS_PATH
-from gamechangerml.src.search.sent_transformer.model import (
-    SentenceEncoder,
-    SentenceSearcher,
-    SimilarityRanker,
-)
+from gamechangerml import CORPUS_PATH
+try:
+    from gamechangerml.src.search.sent_transformer.model import (
+        SentenceEncoder,
+        SentenceSearcher,
+        SimilarityRanker,
+    )
+except ModuleNotFoundError:
+    print('could not load encoders due to hnswlib giving illegal instructions on host')
 from gamechangerml.src.search.QA.QAReader import DocumentReader as QAReader
 from gamechangerml.src.search.query_expansion.qe import QE
 from gamechangerml.src.search.query_expansion.utils import remove_original_kw
-from gamechangerml.src.utilities.text_utils import normalize_answer
 from gamechangerml.src.utilities.test_utils import *
+from gamechangerml.src.utilities.text_utils import normalize_answer
+from gamechangerml.src.utilities import (
+    save_json,
+    open_json,
+    open_txt,
+    create_directory_if_not_exists,
+    TimeoutException,
+    init_timer,
+)
 from gamechangerml.src.model_testing.validation_data import (
     SQuADData,
     NLIData,
@@ -32,7 +43,6 @@ import torch
 
 retriever_k = 5
 
-init_timer()
 model_path_dict = get_model_paths()
 try:
     LOCAL_TRANSFORMERS_DIR = model_path_dict["transformers"]
@@ -40,6 +50,7 @@ except:
     LOCAL_TRANSFORMERS_DIR = "gamechangerml/models/transformers"
 SENT_INDEX_PATH = model_path_dict["sentence"]
 logger = logging.getLogger(__name__)
+init_timer(logger)
 
 
 class TransformerEvaluator:
@@ -258,7 +269,7 @@ class SQuADQAEvaluator(QAEvaluator):
         )
 
         self.data = SQuADData(sample_limit)
-        self.eval_path = check_directory(os.path.join(self.model_path, "evals_squad"))
+        self.eval_path = create_directory_if_not_exists(os.path.join(self.model_path, "evals_squad"))
         self.results = self.eval(data=self.data, eval_path=self.eval_path)
 
 
@@ -287,7 +298,7 @@ class IndomainQAEvaluator(QAEvaluator):
         )
 
         self.data = QADomainData()
-        self.eval_path = check_directory(os.path.join(self.model_path, "evals_gc"))
+        self.eval_path = create_directory_if_not_exists(os.path.join(self.model_path, "evals_gc"))
         self.results = self.eval(data=self.data, eval_path=self.eval_path)
 
 
@@ -520,7 +531,7 @@ class MSMarcoRetrieverEvaluator(RetrieverEvaluator):
                 index_path=self.index_path,
                 transformer_path=transformer_path,
             )
-        self.eval_path = check_directory(os.path.join(self.index_path, "evals_msmarco"))
+        self.eval_path = create_directory_if_not_exists(os.path.join(self.index_path, "evals_msmarco"))
         logger.info("Evals path: {}".format(self.eval_path))
         self.results = self.eval(
             data=self.data,
@@ -565,7 +576,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
                 transformer_path, encoder_model_name, "sent_index_TEST"
             )
             # make evaluations path
-            self.eval_path = check_directory(
+            self.eval_path = create_directory_if_not_exists(
                 os.path.join(self.model_path, "evals_gc", data_level)
             )
             if os.path.isdir(self.index_path) and len(os.listdir(self.index_path)) > 0:
@@ -632,7 +643,7 @@ class IndomainRetrieverEvaluator(RetrieverEvaluator):
             self.index_path = os.path.join(os.path.dirname(transformer_path), index)
 
             # make evaluations path
-            self.eval_path = check_directory(
+            self.eval_path = create_directory_if_not_exists(
                 os.path.join(self.index_path, "evals_gc", data_level)
             )
 
@@ -770,7 +781,7 @@ class NLIEvaluator(SimilarityEvaluator):
         super().__init__(sim_model_name, model, transformer_path, use_gpu)
 
         self.data = NLIData(sample_limit)
-        self.eval_path = check_directory(os.path.join(self.model_path, "evals_nli"))
+        self.eval_path = create_directory_if_not_exists(os.path.join(self.model_path, "evals_nli"))
         self.results = self.eval(
             predictions=self.predict_nli(), eval_path=self.eval_path
         )
@@ -817,7 +828,7 @@ class GCSimEvaluator(SimilarityEvaluator):
         super().__init__(sim_model_name, model, transformer_path, use_gpu)
 
         # self.data = NLIData(sample_limit)
-        self.eval_path = check_directory(os.path.join(self.model_path, "evals_gc"))
+        self.eval_path = create_directory_if_not_exists(os.path.join(self.model_path, "evals_gc"))
         # self.results = self.eval(predictions=self.predict_nli(), eval_path=self.eval_path)
 
 

@@ -14,7 +14,7 @@ def debug_if_flagged():
     if check_debug_flagged():
         try:
             import debugpy
-            debugger_port = 5678
+            debugger_port = 5679
             debugpy.listen(('0.0.0.0', debugger_port))
             logger.info(f"\n Debugger listening on {debugger_port}  🥾🦟 \n")
 

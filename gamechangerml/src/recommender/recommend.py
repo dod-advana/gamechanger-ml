@@ -1,16 +1,12 @@
-import numpy as np
 import pandas as pd
-import os
-import csv
 import logging
 import random
 from collections import Counter
 import networkx as nx
-from typing import List, Dict, Union
+from typing import List
 from gamechangerml.src.utilities.user_utils import process_keywords
-from gamechangerml import DATA_PATH, REPO_PATH
+from gamechangerml.src.paths import SEARCH_PDF_MAPPING_FILE
 
-CORPUS_DIR = os.path.join(REPO_PATH, "gamechangerml", "corpus")
 # corpus_list = [i.strip('.json').strip().lstrip() for i in os.listdir(
 #    CORPUS_DIR) if os.path.isfile(os.path.join(CORPUS_DIR, i))]
 corpus_list = [
@@ -41,12 +37,10 @@ class Recommender:
 
         logger.info(" ****    BUILDING RECOMMENDER: Making user graph")
         try:
-            user_file = os.path.join(
-                DATA_PATH, "user_data", "search_history", "SearchPdfMapping.csv"
-            )
-            user = pd.read_csv(user_file)
+            user = pd.read_csv(SEARCH_PDF_MAPPING_FILE, index_col=False)
             user = process_keywords(user)
             user.dropna(subset=["document"], inplace=True)
+            user = user[~user["document"].str.contains('.html')]
             user["clean_search"] = user["search"].apply(
                 lambda x: str(x).replace("&quot;", '"')
             )

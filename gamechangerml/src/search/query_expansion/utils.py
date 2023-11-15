@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-from gamechangerml.src.utilities.np_utils import is_zero_vector
+from gamechangerml.src.utilities.numpy_utils import is_zero_vector
 
 logger = logging.getLogger(__name__)
 

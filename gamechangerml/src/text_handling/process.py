@@ -1,7 +1,7 @@
 from gensim.parsing.preprocessing import STOPWORDS
 from gensim.utils import simple_preprocess
 from gamechangerml import MODEL_PATH
-from transformers import BertTokenizer, AutoTokenizer
+from transformers import AutoTokenizer
 import os
 
 
@@ -55,17 +55,3 @@ def topic_processing(text: str, phrase_model: object):
     """
     tokens = phrase_model[simple_preprocess(text, min_len=4, max_len=15)]
     return tokens
-
-
-class bert_tokenizer(object):
-    def __init__(self, vocab_file=None):
-
-        if vocab_file is None:
-            vocab_file = "./assets/bert_vocab.txt"
-        self.tokenizer = BertTokenizer(
-            vocab_file=vocab_file, do_lower_case=True)
-
-    def tokenize(self, text):
-        tokens = self.tokenizer.tokenize(text)
-
-        return tokens, len(tokens)

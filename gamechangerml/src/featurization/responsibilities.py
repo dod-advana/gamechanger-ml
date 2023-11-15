@@ -3,7 +3,8 @@ import os
 import pandas as pd
 
 import nltk
-from gamechangerml import NLTK_DATA_PATH, DATA_PATH
+from gamechangerml import NLTK_DATA_PATH
+from gamechangerml.src.paths import ORGS_FILE
 
 if not NLTK_DATA_PATH in nltk.data.path:
     nltk.data.path.append(NLTK_DATA_PATH)
@@ -31,7 +32,7 @@ if os.environ.get("DOWNLOAD_NLTK_DATA") == "yes":
 def get_responsibilities(text, agencies=None):
     check = True
     if not agencies:
-        df = pd.read_csv(os.path.join(DATA_PATH, "features", "agencies.csv"))
+        df = pd.read_csv(ORGS_FILE)
         agencies = list(df["Agency_Name"])
         agencies = [x.lower() for x in agencies]
 

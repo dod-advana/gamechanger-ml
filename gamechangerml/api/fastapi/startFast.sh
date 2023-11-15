@@ -13,6 +13,7 @@ ENV_TYPE="${ENV_TYPE:+${ENV_TYPE^^}}"
 DOWNLOAD_DEP="${DOWNLOAD_DEP:+${DOWNLOAD_DEP,,}}"
 CONTAINER_RELOAD="${CONTAINER_RELOAD:+${CONTAINER_RELOAD,,}}"
 UVICORN_WORKERS="${UVICORN_WORKERS:+${UVICORN_WORKERS,,}}"
+PORT="${PORT:+${PORT,,}}"
 
 [[ -z "${DOWNLOAD_DEP:-}" ]] && {
   >&2 echo "[WARNING] No DOWNLOAD_DEP specified, setting to 'false' ..."
@@ -41,16 +42,27 @@ export ENV_TYPE
 }
 export CONTAINER_RELOAD
 export UVICORN_WORKERS
+export PORT
 
 function download_dependencies() {
     [[ "${DOWNLOAD_DEP}" == "true" ]] && {
       echo "[INFO] Attempting to download models from S3 ..."
       echo "[INFO] GC_ML_API_MODEL_NAME=${GC_ML_API_MODEL_NAME:-[DEFAULT]}"
       echo "[INFO] Attempting to download transformer cache and sentence index from S3 ..."
-      source "${REPO_DIR}/gamechangerml/scripts/download_dependencies.sh"
+      source "${REPO_DIR}/gamechangerml/scripts/data_transfer/download_dependencies_from_s3.sh"
     } || {
       echo "[INFO] Skipping model download"
     }
+}
+
+function upload_egg() {
+  [[ "${CONTAINER_TYPE}" != "training" ]] && {
+      echo "[INFO] Creating python egg"
+      source "${REPO_DIR}/gamechangerml/scripts/data_transfer/upload_python_egg.sh"
+    } || {
+      echo "[INFO] Skipping egg for training container"
+    }
+    
 }
 
 function activate_venv() {
@@ -61,6 +73,8 @@ function activate_venv() {
   else
     echo "[INFO] Activating venv at ${MLAPP_VENV_DIR} ..."
     source ${MLAPP_VENV_DIR}/bin/activate
+    python -c 'from gamechangerml.src.search.query_expansion import qe 
+from gamechangerml.src.search.sent_transformer.model import (SentenceSearcher,SentenceEncoder)' && echo "worked" || pip uninstall -y hnswlib
   fi
 
   # if gamechangerml wasn't installed as module in the venv, just alter pythonpath
@@ -89,8 +103,9 @@ function start_env_prod() {
   source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
+  upload_egg
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
-    --bind 0.0.0.0:5000 \
+    --bind 0.0.0.0:$PORT \
     --workers $UVICORN_WORKERS \
     --graceful-timeout 900 \
     --timeout 1200 \
@@ -102,17 +117,18 @@ function start_env_dev() {
   source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
+  upload_egg
   if [[ "${CONTAINER_RELOAD}" == "true" ]]; then
     start_uvicorn gamechangerml.api.fastapi.mlapp:app \
       --host 0.0.0.0 \
-      --port 5000 \
+      --port $PORT \
       --workers $UVICORN_WORKERS \
       --log-level debug \
       --timeout-keep-alive 240 \
       --reload
   else
     start_gunicorn gamechangerml.api.fastapi.mlapp:app \
-        --bind 0.0.0.0:5000 \
+        --bind 0.0.0.0:$PORT \
         --workers $UVICORN_WORKERS \
         --graceful-timeout 1000 \
         --timeout 1200 \
@@ -128,7 +144,7 @@ function start_env_devlocal() {
   activate_venv
   download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
-      --bind 0.0.0.0:5000 \
+      --bind 0.0.0.0:$PORT \
       --workers 1 \
       --graceful-timeout 900 \
       --timeout 1600 \
@@ -138,7 +154,19 @@ function start_env_devlocal() {
 }
 
 function start_env_k8s_dev() {
-  start_env_dev
+  source "${DS_SETUP_PATH}"
+  activate_venv
+  download_dependencies
+  upload_egg
+  start_gunicorn gamechangerml.api.fastapi.mlapp:app \
+        --bind 0.0.0.0:$PORT \
+        --workers $UVICORN_WORKERS \
+        --graceful-timeout 1000 \
+        --timeout 1200 \
+        --keep-alive 30 \
+        --reload \
+        -k uvicorn.workers.UvicornWorker \
+        --log-level debug
 }
 
 function start_env_k8s_test() {
@@ -146,7 +174,7 @@ function start_env_k8s_test() {
   activate_venv
   download_dependencies
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
-      --bind 0.0.0.0:5000 \
+      --bind 0.0.0.0:$PORT \
       --workers 1 \
       --graceful-timeout 900 \
       --timeout 1200 \
@@ -158,8 +186,9 @@ function start_env_k8s_prod() {
   source "${DS_SETUP_PATH}"
   activate_venv
   download_dependencies
+  upload_egg
   start_gunicorn gamechangerml.api.fastapi.mlapp:app \
-      --bind 0.0.0.0:5000 \
+      --bind 0.0.0.0:$PORT \
       --workers 1 \
       --graceful-timeout 900 \
       --timeout 1200 \

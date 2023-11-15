@@ -19,6 +19,9 @@ services:
     build:
       context: ../../.
       dockerfile: gamechangerml/api/fastapi/gpu.mlapp.Dockerfile
+    environment:
+      - CONTAINER_TYPE=inference
+      - PORT=5000
     deploy:
       resources:
         reservations:
@@ -26,7 +29,33 @@ services:
           - capabilities: [gpu]
     ports:
       - "5000:5000"
-      - "5678:5678"
+      - "5679:5679"
+    env_file:
+      - .env
+    volumes:
+      - "../../gamechangerml/:/opt/app-root/src/gamechangerml/"
+      - ~/.aws/:/.aws
+    depends_on:
+      - gc-redis
+    networks:
+      - app-net
+  gamechanger-ml-gpu-train:
+    container_name: gc-ml-gpu-train
+    image: gamechanger-ml-gpu
+    build:
+      context: ../../.
+      dockerfile: gamechangerml/api/fastapi/gpu.mlapp.Dockerfile
+    environment:
+      - CONTAINER_TYPE=training
+      - PORT=5001
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities: [gpu]
+    ports:
+      - "5001:5001"
+      - "5677:5679"
     env_file:
       - .env
     volumes:

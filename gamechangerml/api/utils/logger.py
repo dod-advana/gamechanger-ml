@@ -1,6 +1,4 @@
 import logging
-from logging import handlers
-import sys
 from gamechangerml.src.utilities import configure_logger
 
 # set loggers

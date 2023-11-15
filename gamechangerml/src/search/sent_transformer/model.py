@@ -1,6 +1,7 @@
 from txtai.embeddings import Embeddings
 from txtai.pipeline import Similarity
 from txtai.ann import ANN
+from sentence_transformers import SentenceTransformer
 
 import os
 import numpy as np
@@ -10,13 +11,15 @@ import torch
 import time
 import threading
 import logging
+import json
 
-from gamechangerml.src.text_handling.corpus import LocalCorpus
+from gamechangerml.src.text_handling.local_corpus_tokenizer import LocalCorpusTokenizer
 from gamechangerml.src.utilities.test_utils import *
 from gamechangerml.src.text_handling.process import preprocess
 from gamechangerml.api.utils.pathselect import get_model_paths
 from gamechangerml.src.model_testing.validation_data import MSMarcoData
 from gamechangerml.configs import EmbedderConfig
+from gamechangerml.src.utilities import open_json
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +43,6 @@ class SentenceEncoder(object):
         transformer_path,
         model=None,
         use_gpu=False,
-        bert_tokenize=False,
         processmanager=None,
     ):
 
@@ -48,9 +50,9 @@ class SentenceEncoder(object):
             self.encoder_model = model
         else:
             self.encoder_model = os.path.join(transformer_path, encoder_model_name)
-        self.bert_tokenizer = None
-        if bert_tokenize:
-            self.bert_tokenizer = self.encoder_model
+        #self.bert_tokenizer = None
+       # if bert_tokenize:
+        #    self.bert_tokenizer = self.encoder_model
         self.min_token_len = min_token_len
         self.return_id = return_id
         self.verbose = verbose
@@ -64,7 +66,7 @@ class SentenceEncoder(object):
             {"method": "transformers", "path": self.encoder_model, "gpu": self.use_gpu}
         )
 
-    def _index(self, corpus, index_path, overwrite=False, save_embedding=False):
+    def _index(self, corpus, index_path, overwrite=False, save_embedding=False, use_title=False):
         """
         Builds an embeddings index.
         Args:
@@ -90,14 +92,21 @@ class SentenceEncoder(object):
         os.remove(stream)
         logger.info("Making dataframe")
         all_text = []
-        for para_id, text, _ in corpus:
-            all_text.append([text, para_id])
 
-        df = pd.DataFrame(all_text, columns=["text", "paragraph_id"])
+        # get an ID and the text that was embedded and save as csv
+        if use_title==True:
+            for doc_id, title, _ in corpus:
+                all_text.append([title, doc_id])
+
+                df = pd.DataFrame(all_text, columns=["title", "doc_id"])
+        else:
+            for para_id, text, _ in corpus:
+                all_text.append([text, para_id])
+
+            df = pd.DataFrame(all_text, columns=["text", "paragraph_id"])
 
         embedding_path = os.path.join(index_path, "embeddings.npy")
         dataframe_path = os.path.join(index_path, "data.csv")
-        ids_path = os.path.join(index_path, "doc_ids.txt")
 
         """
         # Load new data
@@ -127,10 +136,12 @@ class SentenceEncoder(object):
         # for future reference
         if save_embedding:
             np.save(embedding_path, embeddings)
-        with open(ids_path, "w") as fp:
-            fp.writelines([i + "\n" for i in ids])
+        if use_title==False:
+            ids_path = os.path.join(index_path, "doc_ids.txt")
+            with open(ids_path, "w") as fp:
+                fp.writelines([i + "\n" for i in ids])
 
-        # Save data csv
+        # Save dataframe as csv
         logger.info(f"Saving data.csv to {str(dataframe_path)}")
         df.to_csv(dataframe_path, index=False)
 
@@ -163,7 +174,7 @@ class SentenceEncoder(object):
         logger.info(f"Indexing documents from {corpus_path}")
 
         if corpus_path:
-            corp = LocalCorpus(
+            corp = LocalCorpusTokenizer(
                 corpus_path,
                 return_id=self.return_id,
                 min_token_len=self.min_token_len,
@@ -202,6 +213,60 @@ class SentenceEncoder(object):
             )
         self.embedder.save(index_path)
         logger.info(f"Saved embedder to {index_path}")
+    
+    def index_titles(self, corpus_path, index_path, files_to_use=None):
+        """
+        Create the index and accompanying dataframe to perform  title
+        and document id search
+        Args:
+            corpus_path (str): Folder path containing JSON files having
+                GAMECHANGER format
+            index_path (str): Folder path to where the index of the document
+                would be storred
+        """
+        logger.info(f"Indexing titles from {corpus_path}")
+
+        if corpus_path:
+            files = [os.path.join(corpus_path, file) for file in os.listdir(corpus_path)]
+            corpus = []
+            for file in files:
+                with open(file, "r") as f:
+                    file_dict = json.loads(f.readline())
+                    title = file_dict['title']
+                    doc_id = file_dict['id']
+                    if (doc_id, title, None) not in corpus:  # Check if tuple (doc_id, title) already exists in corpus
+                        corpus.append((doc_id, title, None))  # If not, append it
+
+            logger.info(
+                f"\nLength of batch (in doc ids) for indexing : {str(len(corpus))}"
+            )
+
+        else:
+            logger.info(
+                "Did not include path to corpus, making test index with msmarco data"
+            )
+            data = MSMarcoData()
+            corpus = data.corpus
+
+        if self.processmanager:
+            self.processmanager.update_status(
+                self.processmanager.training,
+                0,
+                1,
+                "building title embed index",
+                thread_id=threading.current_thread().ident,
+            )
+        self._index(corpus, index_path, use_title=True)
+        if self.processmanager:
+            self.processmanager.update_status(
+                self.processmanager.training,
+                1,
+                1,
+                "finished building title embed index",
+                thread_id=threading.current_thread().ident,
+            )
+        self.embedder.save(index_path)
+        logger.info(f"Saved title embedder to {index_path}")
 
 
 class SimilarityRanker(object):
@@ -273,7 +338,7 @@ class SentenceSearcher(object):
         results = []
         for doc_id, score in retrieved:
             doc = {}
-            text = self.data[self.data["paragraph_id"] == str(doc_id)].iloc[0]["text"]
+            text = self.data[self.data["paragraph_id"] == str(doc_id)].iloc[0]["title"]
             doc["id"] = doc_id
             doc["text"] = text
             doc["text_length"] = len(text)
@@ -336,3 +401,95 @@ class SentenceSearcher(object):
                 return finalResults
         else:
             return []
+
+class SemanticSearcher(object):
+    """
+    Imports the title index generated by the SentenceEncoder and
+    performs the search functionality. Initial set of documents
+    are first retrieved through an ANNOY index then reranked with
+    the similarity model. 
+    *Currently only works for title embeddings.
+
+    Args:
+        index_path (str): Path to index directory generated by the
+            SentenceEncoder
+        encoder_model (str): Model name supported by huggingface
+            and txtai to generate the document embeddings
+    """
+
+    def __init__(self, sim_model_name, index_path, transformer_path):
+
+        self.embedder = Embeddings()
+        # load pre-generated embeddings from index_path
+        self.embedder.load(index_path)
+        # replace this with looking up ES
+        self.data = pd.read_csv(
+            os.path.join(index_path, "data.csv"), dtype={"doc_id": str}
+        )
+        
+        self.similarity = SimilarityRanker(sim_model_name, transformer_path)
+
+    def retrieve_topn(self, query, num_results, threshold, target_field):
+        # We'll use the title field for retrieval
+        retrieved = self.embedder.search(query, num_results)
+        results = []
+        for doc_id, score in retrieved:
+            doc = {}
+            if score < threshold:
+                continue
+            target_field_result = self.data[self.data['doc_id'] == str(doc_id)][target_field].values[0]
+            if not isinstance(target_field_result, str):
+                target_field_result = str(target_field_result)
+            doc["id"] = doc_id
+            doc[f"{target_field}"] = target_field_result
+            doc[f"{target_field}_length"] = len(target_field)
+            doc["score"] = score
+            results.append(doc)
+        return results
+    
+    def search(
+        self, query_text, num_results, threshold, target_field="title"
+    ):
+        """
+        Search the index and perform a similarity scoring reranker at
+        the topn returned titles
+        Args:
+            query (str): Query text to search in titles
+        Returns:
+            rerank (list): List of tuples following a (score, doc_id,
+                title) format ranked based on similarity with query
+        """
+        logger.info(f"Sentence searching for: {query_text}")
+        if len(query_text) > 2:
+            top_results = self.retrieve_topn(
+                query=query_text, num_results=num_results, target_field=target_field, threshold=threshold
+            )
+
+            top_results = sorted(
+                top_results, key=lambda i: i["score"], reverse=True
+            )
+
+            return top_results
+        else:
+            return []
+    
+    def embed_query(self, query_text):
+        embeddings = self.embedder.transform(query_text)
+        return embeddings
+
+class GcSentenceTransformer(object):
+    """
+    Instantiates Sentence Transformer model 
+
+    Args:
+        transformer_path (str): Path to transformer directory
+        encoder_model (str): Model name supported by sentence_transformers
+    """
+
+    def __init__(self, encoder_model_name, transformer_path):
+        self.encoder_model = SentenceTransformer(os.path.join(transformer_path, encoder_model_name))
+    
+    def embed_query(self, query_text):
+        query_text = " ".join(preprocess(query_text))
+        embeddings = self.encoder_model.encode(query_text)
+        return embeddings

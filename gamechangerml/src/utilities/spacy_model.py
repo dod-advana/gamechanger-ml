@@ -5,27 +5,12 @@ See: http://www.aleax.it/5ep.html
 
 """
 import logging
-
-# import en_core_web_lg
 import en_core_web_md
-from gamechangerml.src.utilities.borg import Borg
+from gamechangerml.configs import SpacyConfig
 
 logger = logging.getLogger(__name__)
 sp_logger = logging.getLogger("spacy")
 sp_logger.setLevel(logging.ERROR)
-
-
-class SpacyConfig(Borg):
-    def __init__(self):
-        Borg.__init__(self)
-
-    def _set_config(self, val):
-        self._value = val
-
-    def _get_config(self):
-        return getattr(self, "_value", None)
-
-    config = property(_get_config, _set_config)
 
 
 def _log_metadata(nlp):

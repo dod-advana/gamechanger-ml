@@ -227,6 +227,7 @@ worker-tracking.json
 out/
 gc_test/
 tmp/
+src/text_classif/utils/cola-test/
 
 # mlflow
 mlruns/
@@ -235,6 +236,7 @@ mlruns/
 models/transformers
 # Corpus files
 corpus/*
+gamechangerml/corpus/*
 
 # Don't ignore .gitkeep files
 !**/.gitkeep

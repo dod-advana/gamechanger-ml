@@ -5,4 +5,3 @@ mkdir -p $FILE_DIR && mlflow server \
       --default-artifact-root s3://${AWS_BUCKET}/artifacts \
       --host 0.0.0.0 \
       --port 5050
-
